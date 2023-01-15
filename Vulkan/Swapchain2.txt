@@ -1,0 +1,202 @@
+using Dwarf.Engine.Windowing;
+using Vortice.Vulkan;
+using static Dwarf.Extensions.GLFW.GLFW;
+using static Vortice.Vulkan.Vulkan;
+
+namespace Dwarf.Vulkan;
+
+public unsafe class Swapchain : IDisposable {
+  public VkSwapchainKHR Handle = VkSwapchainKHR.Null;
+  public VkFramebuffer[] Framebuffers = null!;
+  public VkExtent2D Extent2D;
+  public VkFormat Format;
+  public VkRenderPass RenderPass;
+  public VkPipeline Pipeline;
+  public int ImageCount => _swapChainImageViews.Length;
+
+  private readonly VkSurfaceKHR _surface = VkSurfaceKHR.Null;
+  private readonly GraphicsDevice _device = null!;
+  private readonly Window _window = null!;
+  private VkImageView[] _swapChainImageViews = null!;
+
+  public Swapchain(VkSurfaceKHR surface, GraphicsDevice device, Window window) {
+    _surface = surface;
+    _device = device;
+    _window = window;
+
+    Setup();
+  }
+
+  private unsafe void Setup() {
+    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(_device.VkPhysicalDevice, _surface);
+
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+    Extent2D = ChooseSwapExtent(swapChainSupport.Capabilities);
+
+    CreateRenderPass(surfaceFormat.format);
+
+    uint imageCount = swapChainSupport.Capabilities.minImageCount + 1;
+    if (swapChainSupport.Capabilities.maxImageCount > 0 &&
+        imageCount > swapChainSupport.Capabilities.maxImageCount) {
+      imageCount = swapChainSupport.Capabilities.maxImageCount;
+    }
+
+    Format = surfaceFormat.format;
+
+    var createInfo = new VkSwapchainCreateInfoKHR {
+      sType = VkStructureType.SwapchainCreateInfoKHR,
+      surface = _surface,
+      minImageCount = imageCount,
+      imageFormat = surfaceFormat.format,
+      imageColorSpace = surfaceFormat.colorSpace,
+      imageExtent = Extent2D,
+      imageArrayLayers = 1,
+      imageUsage = VkImageUsageFlags.ColorAttachment,
+      imageSharingMode = VkSharingMode.Exclusive,
+      preTransform = swapChainSupport.Capabilities.currentTransform,
+      compositeAlpha = VkCompositeAlphaFlagsKHR.Opaque,
+      presentMode = presentMode,
+      clipped = true,
+      oldSwapchain = VkSwapchainKHR.Null
+    };
+
+    createInfo.imageSharingMode = VkSharingMode.Exclusive;
+    createInfo.queueFamilyIndexCount = 0; // Optional
+    createInfo.pQueueFamilyIndices = null; // Optional
+
+    vkCreateSwapchainKHR(_device.VkLogicalDevice, &createInfo, null, out Handle);
+    ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.VkLogicalDevice, Handle);
+    _swapChainImageViews = new VkImageView[swapChainImages.Length];
+    Framebuffers = new VkFramebuffer[swapChainImages.Length];
+
+    for (int i = 0; i < swapChainImages.Length; i++) {
+      var viewCreateInfo = new VkImageViewCreateInfo(
+          swapChainImages[i],
+          VkImageViewType.Image2D,
+          surfaceFormat.format,
+          VkComponentMapping.Rgba,
+          new VkImageSubresourceRange(VkImageAspectFlags.Color, 0, 1, 0, 1)
+          );
+
+      vkCreateImageView(_device.VkLogicalDevice, &viewCreateInfo, null, out _swapChainImageViews[i]).CheckResult();
+      vkCreateFramebuffer(_device.VkLogicalDevice, RenderPass, new[] { _swapChainImageViews[i] }, Extent2D, 1u, out Framebuffers[i]);
+    }
+  }
+
+  private VkSurfaceFormatKHR ChooseSwapSurfaceFormat(ReadOnlySpan<VkSurfaceFormatKHR> availableFormats) {
+    // If the surface format list only includes one entry with VK_FORMAT_UNDEFINED,
+    // there is no preferred format, so we assume VK_FORMAT_B8G8R8A8_UNORM
+    if ((availableFormats.Length == 1) && (availableFormats[0].format == VkFormat.Undefined)) {
+      return new VkSurfaceFormatKHR(VkFormat.B8G8R8A8Unorm, availableFormats[0].colorSpace);
+    }
+
+    // iterate over the list of available surface format and
+    // check for the presence of VK_FORMAT_B8G8R8A8_UNORM
+    foreach (VkSurfaceFormatKHR availableFormat in availableFormats) {
+      if (availableFormat.format == VkFormat.B8G8R8A8Unorm) {
+        return availableFormat;
+      }
+    }
+
+    return availableFormats[0];
+  }
+
+  private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
+    foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
+      if (availablePresentMode == VkPresentModeKHR.Mailbox) {
+        return availablePresentMode;
+      }
+    }
+
+    return VkPresentModeKHR.Fifo;
+  }
+
+  private VkExtent2D ChooseSwapExtent(VkSurfaceCapabilitiesKHR capabilities) {
+    if (capabilities.currentExtent.width > 0) {
+      return capabilities.currentExtent;
+    } else {
+      VkExtent2D actualExtent = _window.Extent;
+
+      actualExtent = new VkExtent2D(
+          Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
+          Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
+          );
+
+      return actualExtent;
+    }
+  }
+  private unsafe void CreateRenderPass(VkFormat colorFormat) {
+    VkAttachmentDescription attachment = new VkAttachmentDescription(
+        colorFormat,
+        VkSampleCountFlags.Count1,
+        VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.Store,
+        VkAttachmentLoadOp.DontCare, VkAttachmentStoreOp.DontCare,
+        VkImageLayout.Undefined, VkImageLayout.PresentSrcKHR
+    );
+
+    VkAttachmentReference colorAttachmentRef = new VkAttachmentReference(0, VkImageLayout.ColorAttachmentOptimal);
+
+    VkSubpassDescription subpass = new VkSubpassDescription {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics,
+      colorAttachmentCount = 1,
+      pColorAttachments = &colorAttachmentRef
+    };
+
+    VkSubpassDependency[] dependencies = new VkSubpassDependency[2];
+
+    dependencies[0] = new VkSubpassDependency {
+      srcSubpass = VK_SUBPASS_EXTERNAL,
+      dstSubpass = 0,
+      srcStageMask = VkPipelineStageFlags.BottomOfPipe,
+      dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput,
+      srcAccessMask = VkAccessFlags.MemoryRead,
+      dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite,
+      dependencyFlags = VkDependencyFlags.ByRegion
+    };
+
+    dependencies[1] = new VkSubpassDependency {
+      srcSubpass = 0,
+      dstSubpass = VK_SUBPASS_EXTERNAL,
+      srcStageMask = VkPipelineStageFlags.ColorAttachmentOutput,
+      dstStageMask = VkPipelineStageFlags.BottomOfPipe,
+      srcAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite,
+      dstAccessMask = VkAccessFlags.MemoryRead,
+      dependencyFlags = VkDependencyFlags.ByRegion
+    };
+
+    fixed (VkSubpassDependency* dependenciesPtr = &dependencies[0]) {
+      VkRenderPassCreateInfo createInfo = new VkRenderPassCreateInfo {
+        sType = VkStructureType.RenderPassCreateInfo,
+        attachmentCount = 1,
+        pAttachments = &attachment,
+        subpassCount = 1,
+        pSubpasses = &subpass,
+        dependencyCount = 2,
+        pDependencies = dependenciesPtr
+      };
+
+      vkCreateRenderPass(_device.VkLogicalDevice, &createInfo, null, out RenderPass).CheckResult();
+    }
+  }
+
+  public void Dispose() {
+    for (int i = 0; i < _swapChainImageViews.Length; i++) {
+      vkDestroyImageView(_device.VkLogicalDevice, _swapChainImageViews[i]);
+    }
+
+    for (int i = 0; i < Framebuffers.Length; i++) {
+      vkDestroyFramebuffer(_device.VkLogicalDevice, Framebuffers[i]);
+    }
+
+    vkDestroyRenderPass(_device.VkLogicalDevice, RenderPass);
+
+    if (Handle != VkSwapchainKHR.Null) {
+      vkDestroySwapchainKHR(_device.VkLogicalDevice, Handle);
+    }
+
+    if (_surface != VkSurfaceKHR.Null) {
+      vkDestroySurfaceKHR(_device.VkInstance, _surface);
+    }
+  }
+}

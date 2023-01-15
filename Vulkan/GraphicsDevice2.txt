@@ -1,0 +1,79 @@
+using Dwarf.Engine.Windowing;
+using Dwarf.Extensions.GLFW;
+using Dwarf.Vulkan;
+using Vortice.Vulkan;
+using static Dwarf.Extensions.GLFW.GLFW;
+using static Vortice.Vulkan.Vulkan;
+
+public unsafe class GraphicsDevice : IDisposable {
+  public VkInstance VkInstance = VkInstance.Null;
+  public VkPhysicalDevice VkPhysicalDevice = VkPhysicalDevice.Null;
+  public VkDevice VkLogicalDevice = VkDevice.Null;
+  public VkQueue GraphicsQueue = VkQueue.Null;
+  public VkQueue PresentQueue = VkQueue.Null;
+
+  public Swapchain Swapchain = null!;
+
+  private readonly Window _window;
+
+  public GraphicsDevice(Window window) {
+    _window = window;
+    Init();
+  }
+
+  private void Init() {
+    int count = 0;
+    var ext = glfwGetRequiredInstanceExtensions(out count);
+
+    var instanceLayersInfo = DeviceHelper.GetInstanceLayers();
+    using VkStringArray vkLayerNames = new(instanceLayersInfo);
+
+    var appInfo = new VkApplicationInfo {
+      sType = VkStructureType.ApplicationInfo,
+      pApplicationName = _window.AppName,
+      pEngineName = _window.EngineName,
+      apiVersion = VkVersion.Version_1_2,
+      engineVersion = new(1, 0, 0),
+      applicationVersion = new(1, 0, 0)
+    };
+
+    var createInfo = new VkInstanceCreateInfo {
+      sType = VkStructureType.InstanceCreateInfo,
+      pApplicationInfo = &appInfo,
+      enabledExtensionCount = (uint)count,
+      ppEnabledExtensionNames = ext,
+      enabledLayerCount = vkLayerNames.Length,
+      ppEnabledLayerNames = vkLayerNames
+    };
+
+    VkResult result = vkCreateInstance(&createInfo, null, out VkInstance);
+    if (result != VkResult.Success) {
+      throw new InvalidOperationException($"Failed to create vulkan instance: {result}");
+    }
+    vkLoadInstanceOnly(VkInstance);
+
+    VkSurfaceKHR surface;
+    _window.CreateSurface(VkInstance, &surface).CheckResult();
+
+    VkPhysicalDevice = DeviceHelper.GetPhysicalDevice(VkInstance, surface);
+    VkLogicalDevice = DeviceHelper.CreateLogicalDevice(VkPhysicalDevice, surface);
+
+    vkLoadDevice(VkLogicalDevice);
+
+    var queueFamilies = DeviceHelper.FindQueueFamilies(VkPhysicalDevice, surface);
+    vkGetDeviceQueue(VkLogicalDevice, queueFamilies.graphicsFamily, 0, out GraphicsQueue);
+    vkGetDeviceQueue(VkLogicalDevice, queueFamilies.presentFamily, 0, out PresentQueue);
+
+    Swapchain = new Swapchain(surface, this, _window);
+  }
+
+  public VkResult CreateShaderModule(byte[] data, out VkShaderModule module) {
+    return vkCreateShaderModule(VkLogicalDevice, data, null, out module);
+  }
+
+  public void Dispose() {
+    Swapchain.Dispose();
+    vkDestroyDevice(VkLogicalDevice, null);
+    vkDestroyInstance(VkInstance, null);
+  }
+}

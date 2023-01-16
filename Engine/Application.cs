@@ -50,7 +50,7 @@ public unsafe class Application {
     _swapchain = new Swapchain(_device, _window.Extent);
     LoadModels();
     CreatePipelineLayout();
-    CreatePipeline();
+    RecreateSwapchain();
     CreateCommandBuffers();
     Run();
   }
@@ -86,35 +86,74 @@ public unsafe class Application {
     vertices[1].Color = new Vector3(0.0f, 1.0f, 0.0f);
     vertices[2].Color = new Vector3(0.0f, 0.0f, 1.0f);
 
-    //List<Vertex> sVertices = new();
-    //int depth = 10;
-    //System.Numerics.Vector2 left = new(-0.5f, 0.5f);
-    //System.Numerics.Vector2 right = new(0.5f, 0.5f);
-    //System.Numerics.Vector2 top = new(0.5f, -0.5f);
-
-    // ierpinski(depth, left, right, top, ref sVertices);
-
     _model = new Model(_device, vertices);
   }
 
-  private void Sierpinski(int depth, Vector2 left, Vector2 right, Vector2 top, ref List<Vertex> vertices) {
-    if (depth <= 0) {
-      var v = new Vertex[3];
-      v[0].Position = top;
-      v[1].Position = right;
-      v[2].Position = left;
-      vertices.AddRange(v);
-    } else {
-      var leftTop = 0.5f * (left + top);
-      var rightTop = 0.5f * (right + top);
-      var leftRight = 0.5f * (left + right);
-
-      Sierpinski(depth - 1, left, leftRight, leftTop, ref vertices);
-      Sierpinski(depth - 1, leftRight, right, rightTop, ref vertices);
-      Sierpinski(depth - 1, leftTop, rightTop, top, ref vertices);
+  private void RecreateSwapchain() {
+    var extent = _window.Extent;
+    while (extent.width == 0 || extent.height == 0) {
+      extent = _window.Extent;
+      glfwWaitEvents();
     }
+
+    vkDeviceWaitIdle(_device.LogicalDevice);
+
+    if (_swapchain == null) {
+      _swapchain?.Dispose();
+      _swapchain = new(_device, extent);
+    } else {
+      var copy = _swapchain;
+      _swapchain = new(_device, extent, ref copy);
+      if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
+        FreeCommandBuffers();
+        CreateCommandBuffers();
+      }
+    }
+
+    CreatePipeline();
   }
 
+  private void RecordCommandBuffer(int imageIndex) {
+    VkCommandBufferBeginInfo beginInfo = new();
+    beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
+
+    vkBeginCommandBuffer(_commandBuffers[imageIndex], &beginInfo).CheckResult();
+
+    VkRenderPassBeginInfo renderPassInfo = new();
+    renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
+    renderPassInfo.renderPass = _swapchain.RenderPass;
+    renderPassInfo.framebuffer = _swapchain.GetFramebuffer(imageIndex);
+
+    renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
+    renderPassInfo.renderArea.extent = _swapchain.Extent2D;
+
+    VkClearValue* values = stackalloc VkClearValue[2];
+    values[0].color = new VkClearColorValue(0.1f, 0.1f, 0.1f, 1.0f);
+    values[1].depthStencil = new(1.0f, 0);
+    renderPassInfo.clearValueCount = 2;
+    renderPassInfo.pClearValues = values;
+
+    vkCmdBeginRenderPass(_commandBuffers[imageIndex], &renderPassInfo, VkSubpassContents.Inline);
+
+    VkViewport viewport = new();
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = _swapchain.Extent2D.width;
+    viewport.height = _swapchain.Extent2D.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = new(0, 0, _swapchain.Extent2D.width, _swapchain.Extent2D.height);
+    vkCmdSetViewport(_commandBuffers[imageIndex], 0, 1, &viewport);
+    vkCmdSetScissor(_commandBuffers[imageIndex], 0, 1, &scissor);
+
+    _pipeline.Bind(_commandBuffers[imageIndex]);
+    _model.Bind(_commandBuffers[imageIndex]);
+    _model.Draw(_commandBuffers[imageIndex]);
+
+    vkCmdEndRenderPass(_commandBuffers[imageIndex]);
+    vkEndCommandBuffer(_commandBuffers[imageIndex]).CheckResult();
+  }
   private void CreatePipelineLayout() {
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
@@ -126,8 +165,9 @@ public unsafe class Application {
   }
 
   private void CreatePipeline() {
+    _pipeline?.Dispose();
     PipelineConfigInfo configInfo = new();
-    var pipelineConfig = Pipeline.DefaultConfigInfo(configInfo, (int)_swapchain.Extent2D.width, (int)_swapchain.Extent2D.height);
+    var pipelineConfig = Pipeline.DefaultConfigInfo(configInfo);
     pipelineConfig.RenderPass = _swapchain.RenderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
     _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig);
@@ -147,42 +187,16 @@ public unsafe class Application {
     VkCommandBuffer* bufferPtr = (VkCommandBuffer*)ptr;
 
     vkAllocateCommandBuffers(_device.LogicalDevice, &allocInfo, bufferPtr).CheckResult();
-
-    for (int i = 0; i < _commandBuffers.Length; i++) {
-      VkCommandBufferBeginInfo beginInfo = new();
-      beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
-
-      vkBeginCommandBuffer(_commandBuffers[i], &beginInfo).CheckResult();
-
-      VkRenderPassBeginInfo renderPassInfo = new();
-      renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
-      renderPassInfo.renderPass = _swapchain.RenderPass;
-      renderPassInfo.framebuffer = _swapchain.GetFramebuffer(i);
-
-      renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
-      renderPassInfo.renderArea.extent = _swapchain.Extent2D;
-
-      VkClearValue* values = stackalloc VkClearValue[2];
-      values[0].color = new VkClearColorValue(0.1f, 0.1f, 0.1f, 1.0f);
-      values[1].depthStencil = new(1.0f, 0);
-      renderPassInfo.clearValueCount = 2;
-      renderPassInfo.pClearValues = values;
-
-      vkCmdBeginRenderPass(_commandBuffers[i], &renderPassInfo, VkSubpassContents.Inline);
-
-      _pipeline.Bind(_commandBuffers[i]);
-      // vkCmdDraw(_commandBuffers[i], 3)
-      _model.Bind(_commandBuffers[i]);
-      _model.Draw(_commandBuffers[i]);
-
-      vkCmdEndRenderPass(_commandBuffers[i]);
-      vkEndCommandBuffer(_commandBuffers[i]).CheckResult();
-    }
   }
 
   private void DrawFrame() {
     uint imageIndex;
     var result = _swapchain.AcquireNextImage(out imageIndex);
+
+    if (result == VkResult.ErrorOutOfDateKHR) {
+      RecreateSwapchain();
+      return;
+    }
 
     if (result != VkResult.Success && result != VkResult.SuboptimalKHR) {
       Logger.Error("Failed to acquire next swapchain image");
@@ -193,17 +207,32 @@ public unsafe class Application {
     IntPtr elementPtr = new IntPtr(ptr.ToInt64() + imageIndex * Marshal.SizeOf(typeof(VkCommandBuffer)));
     VkCommandBuffer* bufferPtr = (VkCommandBuffer*)elementPtr;
 
+    RecordCommandBuffer((int)imageIndex);
     result = _swapchain.SubmitCommandBuffers(bufferPtr, imageIndex);
+
+    if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || _window.WasWindowResized()) {
+      _window.ResetWindowResizedFlag();
+      RecreateSwapchain();
+      return;
+    }
+
     if (result != VkResult.Success) {
       Logger.Error("Error while submitting Command buffer");
     }
   }
 
+  private void FreeCommandBuffers() {
+    if (_commandBuffers != null) {
+      for (int i = 0; i < _commandBuffers.Length; i++) {
+        vkFreeCommandBuffers(_device.LogicalDevice, _device.CommandPool, _commandBuffers[i]);
+      }
+      Array.Clear(_commandBuffers);
+    }
+  }
+
   private void Cleanup() {
     _model.Dispose();
-    for (int i = 0; i < _commandBuffers.Length; i++) {
-      vkFreeCommandBuffers(_device.LogicalDevice, _device.CommandPool, _commandBuffers[i]);
-    }
+    FreeCommandBuffers();
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
     _swapchain?.Dispose();

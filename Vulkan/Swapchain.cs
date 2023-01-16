@@ -32,12 +32,29 @@ public class Swapchain : IDisposable {
   private VkFence[] _inFlightFences;
   private VkFence[] _imagesInFlight;
 
+  private Swapchain _oldSwapchain;
+
   private int _currentFrame = 0;
 
   public Swapchain(Device device, VkExtent2D extent) {
     _device = device;
     _extent = extent;
 
+    Init();
+  }
+
+  public Swapchain(Device device, VkExtent2D extent, ref Swapchain previous) {
+    _device = device;
+    _extent = extent;
+    _oldSwapchain = previous;
+
+    Init();
+
+    _oldSwapchain?.Dispose();
+    _oldSwapchain = null!;
+  }
+
+  private void Init() {
     CreateSwapChain();
     CreateImageViews();
     CreateRenderPass();
@@ -89,7 +106,12 @@ public class Swapchain : IDisposable {
     createInfo.compositeAlpha = VkCompositeAlphaFlagsKHR.Opaque;
     createInfo.presentMode = presentMode;
     createInfo.clipped = true;
-    createInfo.oldSwapchain = VkSwapchainKHR.Null;
+
+    if (_oldSwapchain == null) {
+      createInfo.oldSwapchain = VkSwapchainKHR.Null;
+    } else {
+      createInfo.oldSwapchain = _oldSwapchain.Handle;
+    }
 
     var result = vkCreateSwapchainKHR(_device.LogicalDevice, &createInfo, null, out _handle);
     if (result != VkResult.Success) throw new Exception("Error while creating swapchain!");
@@ -377,7 +399,8 @@ public class Swapchain : IDisposable {
     // iterate over the list of available surface format and
     // check for the presence of VK_FORMAT_B8G8R8A8_UNORM
     foreach (VkSurfaceFormatKHR availableFormat in availableFormats) {
-      if (availableFormat.format == VkFormat.B8G8R8A8Unorm) {
+      // B8G8R8A8Unorm
+      if (availableFormat.format == VkFormat.B8G8R8A8Srgb) {
         return availableFormat;
       }
     }

@@ -13,14 +13,17 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public struct PipelineConfigInfo {
-  public VkViewport Viewport;
-  public VkRect2D Scissor;
+  public VkPipelineViewportStateCreateInfo ViewportInfo;
   public VkPipelineInputAssemblyStateCreateInfo InputAssemblyInfo;
   public VkPipelineRasterizationStateCreateInfo RasterizationInfo;
   public VkPipelineMultisampleStateCreateInfo MultisampleInfo;
   public VkPipelineColorBlendAttachmentState ColorBlendAttachment;
   public VkPipelineColorBlendStateCreateInfo ColorBlendInfo;
   public VkPipelineDepthStencilStateCreateInfo DepthStencilInfo;
+
+  public VkDynamicState[] DynamicStatesEnables;
+  public VkPipelineDynamicStateCreateInfo DynamicStateInfo;
+
   public VkPipelineLayout PipelineLayout;
   public VkRenderPass RenderPass;
   public uint Subpass;
@@ -81,13 +84,6 @@ public class Pipeline : IDisposable {
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
     vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions;
 
-    VkPipelineViewportStateCreateInfo viewportInfo = new();
-    viewportInfo.sType = VkStructureType.PipelineViewportStateCreateInfo;
-    viewportInfo.viewportCount = 1;
-    viewportInfo.pViewports = &configInfo.Viewport;
-    viewportInfo.scissorCount = 1;
-    viewportInfo.pScissors = &configInfo.Scissor;
-
     var pipelineInfo = new VkGraphicsPipelineCreateInfo();
     pipelineInfo.sType = VkStructureType.GraphicsPipelineCreateInfo;
     pipelineInfo.stageCount = 2;
@@ -95,12 +91,12 @@ public class Pipeline : IDisposable {
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
     pipelineInfo.pInputAssemblyState = &configInfo.InputAssemblyInfo;
-    pipelineInfo.pViewportState = &viewportInfo;
+    pipelineInfo.pViewportState = &configInfo.ViewportInfo;
     pipelineInfo.pRasterizationState = &configInfo.RasterizationInfo;
     pipelineInfo.pMultisampleState = &configInfo.MultisampleInfo;
     pipelineInfo.pColorBlendState = &configInfo.ColorBlendInfo;
     pipelineInfo.pDepthStencilState = &configInfo.DepthStencilInfo;
-    pipelineInfo.pDynamicState = null;
+    pipelineInfo.pDynamicState = &configInfo.DynamicStateInfo;
 
     pipelineInfo.layout = configInfo.PipelineLayout;
     pipelineInfo.renderPass = configInfo.RenderPass;
@@ -128,20 +124,16 @@ public class Pipeline : IDisposable {
     vkCreateShaderModule(_device.LogicalDevice, data, null, out module).CheckResult();
   }
 
-  public unsafe static PipelineConfigInfo DefaultConfigInfo(PipelineConfigInfo configInfo, int width, int height) {
+  public unsafe static PipelineConfigInfo DefaultConfigInfo(PipelineConfigInfo configInfo) {
     configInfo.InputAssemblyInfo.sType = VkStructureType.PipelineInputAssemblyStateCreateInfo;
     configInfo.InputAssemblyInfo.topology = VkPrimitiveTopology.TriangleList;
     configInfo.InputAssemblyInfo.primitiveRestartEnable = false;
 
-    configInfo.Viewport.x = 0.0f;
-    configInfo.Viewport.y = 0.0f;
-    configInfo.Viewport.width = (float)width;
-    configInfo.Viewport.height = (float)height;
-    configInfo.Viewport.minDepth = 0.0f;
-    configInfo.Viewport.maxDepth = 1.0f;
-
-    configInfo.Scissor.offset = new(0, 0);
-    configInfo.Scissor.extent = new(width, height);
+    configInfo.ViewportInfo.sType = VkStructureType.PipelineViewportStateCreateInfo;
+    configInfo.ViewportInfo.viewportCount = 1;
+    configInfo.ViewportInfo.pViewports = null;
+    configInfo.ViewportInfo.scissorCount = 1;
+    configInfo.ViewportInfo.pScissors = null;
 
     configInfo.RasterizationInfo.sType = VkStructureType.PipelineRasterizationStateCreateInfo;
     configInfo.RasterizationInfo.depthClampEnable = false;
@@ -196,6 +188,15 @@ public class Pipeline : IDisposable {
     configInfo.PipelineLayout = VkPipelineLayout.Null;
     configInfo.RenderPass = VkRenderPass.Null;
     configInfo.Subpass = 0;
+
+    configInfo.DynamicStatesEnables = new VkDynamicState[] { VkDynamicState.Viewport, VkDynamicState.Scissor };
+
+    fixed (VkDynamicState* pStates = configInfo.DynamicStatesEnables) {
+      configInfo.DynamicStateInfo.sType = VkStructureType.PipelineDynamicStateCreateInfo;
+      configInfo.DynamicStateInfo.pDynamicStates = pStates;
+      configInfo.DynamicStateInfo.dynamicStateCount = (uint)configInfo.DynamicStatesEnables.Length;
+      configInfo.DynamicStateInfo.flags = 0;
+    }
 
     return configInfo;
   }

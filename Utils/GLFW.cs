@@ -167,12 +167,14 @@ public static unsafe class GLFW {
   public const int GLFW_FALSE = 0;
 
   private static readonly IntPtr s_library;
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void* glfwGetWindowUserPointer_t(GLFWwindow* window);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwTerminate_t();
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-  private delegate void glfwDestroyWindow_t(GLFWwindow* window);
+  private unsafe delegate void glfwDestroyWindow_t(GLFWwindow* window);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwInitHint_t(int hint, int value);
@@ -184,7 +186,13 @@ public static unsafe class GLFW {
   private delegate glfwErrorCallback glfwSetErrorCallback_t(glfwErrorCallback callback);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate glfwFramebufferCallback glfwSetFramebufferSizeCallback_t(GLFWwindow* window, glfwFramebufferCallback callback);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   public unsafe delegate void glfwErrorCallback(int code, sbyte* message);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  public unsafe delegate void glfwFramebufferCallback(GLFWwindow* window, int width, int height);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   public delegate GLFWwindow* glfwCreateWindow_t(int width, int height, byte* title, GLFWmonitor* monitor, GLFWwindow* share);
@@ -205,15 +213,20 @@ public static unsafe class GLFW {
   private delegate void glfwPollEvents_t();
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate void glfwWaitEvents_t();
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate byte** glfwGetRequiredInstanceExtensions_t(out int count);
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
 
+  private static readonly glfwGetWindowUserPointer_t s_glfwGetWindowUserPointer;
   private static readonly glfwTerminate_t s_glfwTerminate;
   private static readonly glfwDestroyWindow_t s_glfwDestoryWindow;
   private static readonly glfwInitHint_t s_glfwInitHint;
   private static readonly glfwGetVersion_t s_glfwGetVersion;
   private static readonly glfwSetErrorCallback_t s_glfwSetErrorCallback;
+  private static readonly glfwSetFramebufferSizeCallback_t s_glfwSetFramebufferSizeCallback;
 
   private static readonly glfwInitHint_t s_glfwWindowHint;
   private static readonly glfwCreateWindow_t s_glfwCreateWindow;
@@ -222,6 +235,7 @@ public static unsafe class GLFW {
   private static readonly glfwShowWindow_t s_glfwShowWindow;
   private static readonly glfwGetPrimaryMonitor_t s_glfwGetPrimaryMonitor;
   private static readonly glfwPollEvents_t s_glfwPollEvents;
+  private static readonly glfwWaitEvents_t s_glfwWaitEvents;
   private static readonly glfwGetRequiredInstanceExtensions_t s_glfwGetRequiredInstanceExtensions;
   private static readonly delegate* unmanaged[Cdecl]<VkInstance, GLFWwindow*, void*, VkSurfaceKHR*, int> s_glfwCreateWindowSurface;
 
@@ -230,6 +244,7 @@ public static unsafe class GLFW {
 
   public static void glfwGetVersion(int* major, int* minor, int* revision) => s_glfwGetVersion(major, minor, revision);
   public static glfwErrorCallback glfwSetErrorCallback(glfwErrorCallback callback) => s_glfwSetErrorCallback(callback);
+  public static glfwFramebufferCallback glfwSetFramebufferSizeCallback(GLFWwindow* window, glfwFramebufferCallback callback) => s_glfwSetFramebufferSizeCallback(window, callback);
 
   public static void glfwInitHint(InitHintBool hint, bool value) => s_glfwInitHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
 
@@ -252,11 +267,13 @@ public static unsafe class GLFW {
   public static void glfwGetWindowSize(GLFWwindow* window, out int width, out int height) => s_glfwGetWindowSize(window, out width, out height);
   public static void glfwShowWindow(GLFWwindow* window) => glfwShowWindow(window);
   public static void glfwDestroyWindow(GLFWwindow* window) => glfwDestroyWindow(window);
+  public static void* glfwGetWindowUserPointer(GLFWwindow* window) => s_glfwGetWindowUserPointer(window);
 
   public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
 
 
   public static void glfwPollEvents() => s_glfwPollEvents();
+  public static void glfwWaitEvents() => s_glfwWaitEvents();
 
   public static byte** glfwGetRequiredInstanceExtensions(out int count) => s_glfwGetRequiredInstanceExtensions(out count);
 
@@ -279,10 +296,12 @@ public static unsafe class GLFW {
     s_library = LoadGLFWLibrary();
 
     s_glfwInit = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwInit));
+    s_glfwGetWindowUserPointer = LoadFunction<glfwGetWindowUserPointer_t>(nameof(glfwGetWindowUserPointer));
     s_glfwTerminate = LoadFunction<glfwTerminate_t>(nameof(glfwTerminate));
     s_glfwInitHint = LoadFunction<glfwInitHint_t>(nameof(glfwInitHint));
     s_glfwGetVersion = LoadFunction<glfwGetVersion_t>(nameof(glfwGetVersion));
     s_glfwSetErrorCallback = LoadFunction<glfwSetErrorCallback_t>(nameof(glfwSetErrorCallback));
+    s_glfwSetFramebufferSizeCallback = LoadFunction<glfwSetFramebufferSizeCallback_t>(nameof(glfwSetFramebufferSizeCallback));
 
     s_glfwWindowHint = LoadFunction<glfwInitHint_t>(nameof(glfwWindowHint));
     s_glfwCreateWindow = LoadFunction<glfwCreateWindow_t>(nameof(glfwCreateWindow));
@@ -293,6 +312,7 @@ public static unsafe class GLFW {
     s_glfwShowWindow = LoadFunction<glfwShowWindow_t>(nameof(glfwShowWindow));
 
     s_glfwPollEvents = LoadFunction<glfwPollEvents_t>(nameof(glfwPollEvents));
+    s_glfwWaitEvents = LoadFunction<glfwWaitEvents_t>(nameof(glfwWaitEvents));
 
     // Vulkan
     s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));

@@ -16,6 +16,7 @@ public unsafe class Renderer : IDisposable {
   private VkCommandBuffer[] _commandBuffers;
 
   private uint _imageIndex = 0;
+  private int _frameIndex = 0;
   private bool _isFrameStarted = false;
   public Renderer(Window window, Device device) {
     _window = window;
@@ -80,6 +81,7 @@ public unsafe class Renderer : IDisposable {
     }
 
     _isFrameStarted = false;
+    _frameIndex = (_frameIndex + 1) % _swapchain.GetMaxFramesInFlight();
   }
 
   public void BeginSwapchainRenderPass(VkCommandBuffer commandBuffer) {
@@ -149,15 +151,23 @@ public unsafe class Renderer : IDisposable {
     } else {
       var copy = _swapchain;
       _swapchain = new(_device, extent, ref copy);
+
+      if (!copy.CompareSwapFormats(_swapchain)) {
+        Logger.Warn("Swapchain Format has been changed");
+      }
+
+      /*
       if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
         FreeCommandBuffers();
         CreateCommandBuffers();
       }
+      */
     }
   }
 
   private void CreateCommandBuffers() {
-    _commandBuffers = new VkCommandBuffer[_swapchain.ImageCount];
+    int len = _swapchain.GetMaxFramesInFlight();
+    _commandBuffers = new VkCommandBuffer[len];
 
     VkCommandBufferAllocateInfo allocInfo = new();
     allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
@@ -188,7 +198,11 @@ public unsafe class Renderer : IDisposable {
 
   public bool IsFrameInProgress => _isFrameStarted;
   public VkCommandBuffer GetCurrentCommandBuffer() {
-    return _commandBuffers[_imageIndex];
+    return _commandBuffers[_frameIndex];
+  }
+
+  public int GetFrameIndex() {
+    return _frameIndex;
   }
   public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
 }

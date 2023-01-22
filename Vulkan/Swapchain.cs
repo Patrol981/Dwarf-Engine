@@ -25,6 +25,7 @@ public class Swapchain : IDisposable {
   private VkDeviceMemory[] _depthImagesMemories;
   private VkImageView[] _depthImageViews;
   private VkFormat _swapchainImageFormat;
+  private VkFormat _swapchainDepthFormat;
   private VkExtent2D _swapchainExtent;
   private VkFramebuffer[] _swapchainFramebuffers;
   private VkSemaphore[] _imageAvailableSemaphores;
@@ -52,6 +53,11 @@ public class Swapchain : IDisposable {
 
     _oldSwapchain?.Dispose();
     _oldSwapchain = null!;
+  }
+
+  public bool CompareSwapFormats(Swapchain swapchain) {
+    return swapchain._swapchainDepthFormat == _swapchainDepthFormat &&
+           swapchain._swapchainImageFormat == _swapchainImageFormat;
   }
 
   private void Init() {
@@ -221,6 +227,8 @@ public class Swapchain : IDisposable {
 
   private unsafe void CreateDepthResources() {
     var depthFormat = FindDepthFormat();
+    _swapchainDepthFormat = depthFormat;
+
     ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
 
     _depthImages = new VkImage[swapChainImages.Length];
@@ -480,4 +488,5 @@ public class Swapchain : IDisposable {
   public VkExtent2D Extent2D => _extent;
   public VkRenderPass RenderPass => _renderPass;
   public uint ImageCount => GetImageCount();
+  public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;
 }

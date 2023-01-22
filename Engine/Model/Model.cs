@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
@@ -8,12 +9,14 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
-public class Model : IDisposable {
+public class Model : Component, IDisposable {
   private readonly Device _device;
 
   private VkBuffer _vertexBuffer;
   private VkDeviceMemory _vertexBufferMemory;
   private ulong _vertexCount;
+
+  public Model() { }
 
   public Model(Device device, Vertex[] vertices) {
     _device = device;

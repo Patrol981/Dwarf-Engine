@@ -1,5 +1,5 @@
-using System.Numerics;
 using Dwarf.Engine.EntityComponentSystem;
+using OpenTK.Mathematics;
 
 namespace Dwarf.Engine;
 
@@ -18,18 +18,18 @@ public class Transform2D : Component {
     Scale = scale;
   }
 
-  private Matrix4x4 GetMatrix() {
+  private Matrix4 GetMatrix() {
     var s = MathF.Sin(Rotation);
     var c = MathF.Cos(Rotation);
 
-    var rotationMatrix = new Matrix4x4();
+    var rotationMatrix = new Matrix4();
     rotationMatrix[0, 0] = c;
     rotationMatrix[0, 1] = s;
     rotationMatrix[1, 0] = -s;
     rotationMatrix[1, 1] = c;
 
-    return rotationMatrix * Matrix4x4.CreateScale(Scale);
+    return rotationMatrix * Matrix4.CreateScale(Scale);
   }
 
-  public Matrix4x4 Matrix4 => GetMatrix();
+  public Matrix4 Matrix4 => GetMatrix();
 }

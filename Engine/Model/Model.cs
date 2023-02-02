@@ -1,9 +1,9 @@
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+using OpenTK.Mathematics;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
@@ -92,7 +92,7 @@ public class Model : Component, IDisposable {
     var attributeDescriptions = new VkVertexInputAttributeDescription[2];
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VkFormat.R32G32Sfloat;
+    attributeDescriptions[0].format = VkFormat.R32G32B32Sfloat;
     attributeDescriptions[0].offset = (uint)Marshal.OffsetOf<Vertex>("Position");
 
     attributeDescriptions[1].binding = 0;

@@ -13,6 +13,10 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Windowing;
 
+public static class WindowState {
+  public static Window s_Window = null!;
+}
+
 public unsafe class Window : IDisposable {
   public VkString AppName = new("Dwarf App");
   public VkString EngineName = new("Dwarf Engine");
@@ -34,7 +38,7 @@ public unsafe class Window : IDisposable {
 
   }
 
-  private void InitWindow() {
+  private unsafe void InitWindow() {
     glfwInit();
     glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
     glfwWindowHint((int)WindowHintBool.Resizable, 1);
@@ -42,6 +46,10 @@ public unsafe class Window : IDisposable {
     _extent = new VkExtent2D(_windowSize.X, _windowSize.Y);
 
     // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
+    //var w = this;
+    //var ptr = GetWindowPtr(&w);
+    //glfwSetWindowUserPointer(_window, ptr);
+    WindowState.s_Window = this;
     glfwSetFramebufferSizeCallback(_window, FrambufferResizedCallback);
   }
 
@@ -49,10 +57,28 @@ public unsafe class Window : IDisposable {
     // GraphicsDevice = new GraphicsDevice(this);
   }
 
-  private void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
-    _frambufferWindowResized = true;
-    _extent.width = (uint)width;
-    _extent.height = (uint)height;
+  public static unsafe void* GetWindowPtr(Window* window) {
+    void* ptr;
+    ptr = (void*)window;
+    return ptr;
+  }
+
+  private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
+    //app.FramebufferResized = true;
+    //app.Extent = new VkExtent2D((uint)width, (uint)height);
+    //var ptr = glfwGetWindowUserPointer(window);
+    //Console.WriteLine((IntPtr)ptr);
+    //var winPtr = (Window*)ptr;
+    //Console.WriteLine((IntPtr)winPtr);
+    //Console.WriteLine(winPtr->FramebufferResized);
+    //Console.WriteLine(ptr);
+    //Window* test = (Window*)ptr;
+    //Console.WriteLine(test->Extent.width);
+    //_frambufferWindowResized = true;
+    //_extent.width = (uint)width;
+    //_extent.height = (uint)height;
+    WindowState.s_Window.FramebufferResized = true;
+    WindowState.s_Window.Extent = new VkExtent2D((uint)width, (uint)height);
   }
 
   public void Dispose() {
@@ -74,7 +100,10 @@ public unsafe class Window : IDisposable {
     set { _frambufferWindowResized = value; }
   }
 
-  public VkExtent2D Extent => _extent;
+  public VkExtent2D Extent {
+    get { return _extent; }
+    set { _extent = value; }
+  }
 
   public Vector2I Size => _windowSize;
 }

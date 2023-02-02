@@ -17,16 +17,22 @@ public unsafe class SimpleRenderSystem : IDisposable {
     CreatePipeline(renderPass);
   }
 
-  public void RenderEntities(VkCommandBuffer commandBuffer, Span<Entity> entities) {
+  public void RenderEntities(VkCommandBuffer commandBuffer, Span<Entity> entities, Camera camera) {
     _pipeline.Bind(commandBuffer);
 
+    // var projectionView = camera.ProjectionMatrix() * camera.ViewMatrix();
+
     for (int i = 0; i < entities.Length; i++) {
-      //var x = entities[i].GetComponent<Transform2D>().Rotation + 0.01f;
-      //entities[i].GetComponent<Transform2D>().Rotation = x % (MathF.PI * 2);
+      var y = entities[i].GetComponent<Transform>().Rotation.Y + 0.01f;
+      var x = entities[i].GetComponent<Transform>().Rotation.X + 0.01f;
+      var z = entities[i].GetComponent<Transform>().Rotation.Z + 0.01f;
+      entities[i].GetComponent<Transform>().Rotation.Y = y;
+      // entities[i].GetComponent<Transform>().Rotation.X = x;
+      // entities[i].GetComponent<Transform>().Rotation.Z = z;
+      //entities[i].GetComponent<Transform>().Position.X += 0.1f;
 
       var pushConstantData = new SimplePushConstantData();
-      pushConstantData.Transform = entities[i].GetComponent<Transform2D>().Matrix4;
-      pushConstantData.Offset = entities[i].GetComponent<Transform2D>().Translation;
+      pushConstantData.Transform = camera.GetMVP(entities[i].GetComponent<Transform>().Matrix4);
       pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
 
       vkCmdPushConstants(

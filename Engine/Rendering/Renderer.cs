@@ -149,12 +149,15 @@ public unsafe class Renderer : IDisposable {
       _swapchain?.Dispose();
       _swapchain = new(_device, extent);
     } else {
-      var copy = _swapchain;
-      _swapchain = new(_device, extent, ref copy);
+      //var copy = _swapchain;
+      //_swapchain = new(_device, extent, ref copy);
 
-      if (!copy.CompareSwapFormats(_swapchain)) {
-        Logger.Warn("Swapchain Format has been changed");
-      }
+      _swapchain?.Dispose();
+      _swapchain = new(_device, extent);
+
+      //if (!copy.CompareSwapFormats(_swapchain)) {
+      //Logger.Warn("Swapchain Format has been changed");
+      //}
 
       /*
       if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
@@ -205,4 +208,5 @@ public unsafe class Renderer : IDisposable {
     return _frameIndex;
   }
   public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
+  public float AspectRatio => _swapchain.ExtentAspectRatio();
 }

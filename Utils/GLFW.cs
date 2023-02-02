@@ -168,6 +168,9 @@ public static unsafe class GLFW {
 
   private static readonly IntPtr s_library;
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void glfwSetWindowUserPointer_t(GLFWwindow* window, void* pointer);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void* glfwGetWindowUserPointer_t(GLFWwindow* window);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -220,6 +223,7 @@ public static unsafe class GLFW {
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
 
+  private static readonly glfwSetWindowUserPointer_t s_glfwSetWindowUserPointer;
   private static readonly glfwGetWindowUserPointer_t s_glfwGetWindowUserPointer;
   private static readonly glfwTerminate_t s_glfwTerminate;
   private static readonly glfwDestroyWindow_t s_glfwDestoryWindow;
@@ -268,6 +272,7 @@ public static unsafe class GLFW {
   public static void glfwShowWindow(GLFWwindow* window) => glfwShowWindow(window);
   public static void glfwDestroyWindow(GLFWwindow* window) => glfwDestroyWindow(window);
   public static void* glfwGetWindowUserPointer(GLFWwindow* window) => s_glfwGetWindowUserPointer(window);
+  public static void glfwSetWindowUserPointer(GLFWwindow* window, void* pointer) => s_glfwSetWindowUserPointer(window, pointer);
 
   public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
 
@@ -296,6 +301,7 @@ public static unsafe class GLFW {
     s_library = LoadGLFWLibrary();
 
     s_glfwInit = (delegate* unmanaged[Cdecl]<int>)GetSymbol(nameof(glfwInit));
+    s_glfwSetWindowUserPointer = LoadFunction<glfwSetWindowUserPointer_t>(nameof(glfwSetWindowUserPointer));
     s_glfwGetWindowUserPointer = LoadFunction<glfwGetWindowUserPointer_t>(nameof(glfwGetWindowUserPointer));
     s_glfwTerminate = LoadFunction<glfwTerminate_t>(nameof(glfwTerminate));
     s_glfwInitHint = LoadFunction<glfwInitHint_t>(nameof(glfwInitHint));

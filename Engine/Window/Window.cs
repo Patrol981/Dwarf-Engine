@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
 // using GLFW;
 using Dwarf.Extensions.GLFW;
@@ -51,6 +52,8 @@ public unsafe class Window : IDisposable {
     //glfwSetWindowUserPointer(_window, ptr);
     WindowState.s_Window = this;
     glfwSetFramebufferSizeCallback(_window, FrambufferResizedCallback);
+    glfwSetCursorPosCallback(_window, MouseState.MouseCallback);
+    glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
   }
 
   private void InitVulkan() {
@@ -106,4 +109,5 @@ public unsafe class Window : IDisposable {
   }
 
   public Vector2I Size => _windowSize;
+  public GLFWwindow* GLFWwindow => _window;
 }

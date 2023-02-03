@@ -29,7 +29,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
       entities[i].GetComponent<Transform>().Rotation.Y = y;
       // entities[i].GetComponent<Transform>().Rotation.X = x;
       // entities[i].GetComponent<Transform>().Rotation.Z = z;
-      //entities[i].GetComponent<Transform>().Position.X += 0.1f;
+      // entities[i].GetComponent<Transform>().Position.X += 0.0001f;
 
       var pushConstantData = new SimplePushConstantData();
       pushConstantData.Transform = camera.GetMVP(entities[i].GetComponent<Transform>().Matrix4);

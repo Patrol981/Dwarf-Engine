@@ -2,9 +2,11 @@ using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Windowing;
+using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 using OpenTK.Mathematics;
@@ -43,7 +45,8 @@ public unsafe class Application {
   private Renderer _renderer = null!;
   private SimpleRenderSystem _simpleRender = null!;
   private List<Entity> _entities = new();
-  private Camera _camera;
+  // private Camera _camera;
+  private Entity _camera = new();
 
   // private Model _model;
   // private Entity _testEntity;
@@ -53,9 +56,8 @@ public unsafe class Application {
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
     _simpleRender = new(_device, _renderer.GetSwapchainRenderPass());
-    _camera = new();
 
-    LoadEntities();
+    Init();
     Run();
   }
 
@@ -63,22 +65,26 @@ public unsafe class Application {
     while (!_window.ShouldClose) {
       glfwPollEvents();
       float aspect = _renderer.AspectRatio;
-      //_camera.SetOrthograpicProjection(-aspect, aspect, -1, 1, -1f, 1f);
-      //_camera.SetPerspectiveProjection(-aspect, aspect, -1, 1, -1f, 1f);
-      //_camera.SetViewDirection(new Vector3(0, 0, -2), new Vector3(0, 0, 0), Vector3.Zero);
-      // _camera.SetPerspectiveProjection(MathHelper.DegreesToRadians(50f), aspect, 0.01f, 100f);
-      _camera.SetPerspectiveProjection(50, aspect, 0.01f, 100f);
+      if (aspect != _camera.GetComponent<Camera>().Aspect) {
+        _camera.GetComponent<Camera>().Aspect = aspect;
+        _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+      }
 
-
-      // _camera.SetViewTarget(new Vector3(-1, 0, 0), new Vector3(0, 0, 0), Vector3.Zero);
+      // _camera.GetComponent<Camera>().UpdateVectors();
 
       var commandBuffer = _renderer.BeginFrame();
       if (commandBuffer != VkCommandBuffer.Null) {
         _renderer.BeginSwapchainRenderPass(commandBuffer);
-        _simpleRender.RenderEntities(commandBuffer, _entities.ToArray(), _camera);
+        _simpleRender.RenderEntities(commandBuffer, _entities.ToArray(), _camera.GetComponent<Camera>());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
       }
+
+      // _camera.GetComponent<Transform>().Position.X += 0.001f;
+      // _camera.GetComponent<Camera>()._yaw -= 0.0001f;
+      //Console.WriteLine(_camera.GetComponent<Camera>()._yaw);
+
+      MoveCam();
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
@@ -88,11 +94,53 @@ public unsafe class Application {
     Cleanup();
   }
 
+  private void MoveCam() {
+    if (CameraState.GetFirstMove()) {
+      CameraState.SetFirstMove(false);
+      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+    } else {
+      var deltaX = (float)MouseState.GetInstance().MousePosition.X - (float)CameraState.GetLastPosition().X;
+      var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
+      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+
+      _camera.GetComponent<Camera>().Yaw -= deltaX * CameraState.GetSensitivity();
+      _camera.GetComponent<Camera>().Pitch -= deltaY * CameraState.GetSensitivity();
+
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0.01f, 0, 0));
+        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Right * 0.001f;
+      }
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_A) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(-0.01f, 0, 0));
+        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Right * 0.001f;
+      }
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_S) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0f, 0, -0.01f));
+        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Front * 0.001f;
+      }
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_W) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0f, 0, 0.01f));
+        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Front * 0.001f;
+      }
+    }
+
+
+  }
+
   public void AddEntity(Entity entity) {
     _entities.Add(entity);
   }
 
   private void Init() {
+    float aspect = _renderer.AspectRatio;
+    _camera.AddComponent(new Transform(new Vector3(0, 0, 0)));
+    _camera.AddComponent(new Camera(50, aspect));
+    _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+    _camera.GetComponent<Camera>()._yaw = 1.3811687f;
+
+    CameraState.SetCamera(_camera.GetComponent<Camera>());
+    CameraState.SetCameraEntity(_camera);
+
     LoadEntities();
   }
 
@@ -308,11 +356,19 @@ public unsafe class Application {
     // en.AddComponent(new Model(_device, GenericLoader.LoadModel("./Models/dwarf_test_model.obj")));
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
     en.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    en.AddComponent(new Transform(new Vector3(0.0f, 1.0f, -5f)));
+    en.AddComponent(new Transform(new Vector3(0.0f, -1f, 5f)));
     // en.GetComponent<Transform>().Translation = new(0f, -1.5f, 2f);
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
-    en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
+    en.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(en);
+
+    var box = new Entity();
+    box.AddComponent(GetCube(new Vector3(0, 0, 0)));
+    box.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    box.AddComponent(new Transform(new Vector3(2.0f, 1f, 5f)));
+    box.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+    box.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+    AddEntity(box);
   }
 
   private void Cleanup() {

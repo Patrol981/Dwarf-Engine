@@ -54,6 +54,12 @@ public unsafe class Window : IDisposable {
     glfwSetFramebufferSizeCallback(_window, FrambufferResizedCallback);
     glfwSetCursorPosCallback(_window, MouseState.MouseCallback);
     glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
+
+    var monitor = glfwGetPrimaryMonitor();
+    var mode = glfwGetVideoMode(monitor);
+
+    glfwGetWindowSize(_window, out int wW, out int wH);
+    glfwSetWindowPos(_window, (mode->Width / 2) - (wW / 2), (mode->Height / 2) - (wH / 2));
   }
 
   private void InitVulkan() {
@@ -67,19 +73,6 @@ public unsafe class Window : IDisposable {
   }
 
   private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
-    //app.FramebufferResized = true;
-    //app.Extent = new VkExtent2D((uint)width, (uint)height);
-    //var ptr = glfwGetWindowUserPointer(window);
-    //Console.WriteLine((IntPtr)ptr);
-    //var winPtr = (Window*)ptr;
-    //Console.WriteLine((IntPtr)winPtr);
-    //Console.WriteLine(winPtr->FramebufferResized);
-    //Console.WriteLine(ptr);
-    //Window* test = (Window*)ptr;
-    //Console.WriteLine(test->Extent.width);
-    //_frambufferWindowResized = true;
-    //_extent.width = (uint)width;
-    //_extent.height = (uint)height;
     WindowState.s_Window.FramebufferResized = true;
     WindowState.s_Window.Extent = new VkExtent2D((uint)width, (uint)height);
   }

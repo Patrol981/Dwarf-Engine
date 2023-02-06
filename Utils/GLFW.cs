@@ -201,6 +201,9 @@ public static unsafe class GLFW {
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void glfwSetWindowUserPointer_t(GLFWwindow* window, void* pointer);
 
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void glfwSetWindowPos_t(GLFWwindow* window, int xpos, int ypos);
+
 
   #endregion
 
@@ -222,6 +225,8 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate int glfwGetKey_t(GLFWwindow* window, int key);
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate GLFWvidmode* glfwGetVideoMode_t(GLFWmonitor* monitor);
   #endregion
 
 
@@ -253,6 +258,7 @@ public static unsafe class GLFW {
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
 
+  private static readonly glfwSetWindowPos_t s_glfwSetWindowPos;
   private static readonly glfwSetWindowUserPointer_t s_glfwSetWindowUserPointer;
   private static readonly glfwGetWindowUserPointer_t s_glfwGetWindowUserPointer;
   private static readonly glfwTerminate_t s_glfwTerminate;
@@ -271,6 +277,7 @@ public static unsafe class GLFW {
   private static readonly glfwGetWindowSize_t s_glfwGetWindowSize;
   private static readonly glfwShowWindow_t s_glfwShowWindow;
   private static readonly glfwGetPrimaryMonitor_t s_glfwGetPrimaryMonitor;
+  private static readonly glfwGetVideoMode_t s_glfwGetVideoMode;
   private static readonly glfwPollEvents_t s_glfwPollEvents;
   private static readonly glfwWaitEvents_t s_glfwWaitEvents;
   private static readonly glfwGetRequiredInstanceExtensions_t s_glfwGetRequiredInstanceExtensions;
@@ -314,7 +321,8 @@ public static unsafe class GLFW {
   public static int glfwGetKey(GLFWwindow* window, int key) => s_glfwGetKey(window, key);
 
   public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
-
+  public static GLFWvidmode* glfwGetVideoMode(GLFWmonitor* monitor) => s_glfwGetVideoMode(monitor);
+  public static void glfwSetWindowPos(GLFWwindow* window, int xpos, int ypos) => s_glfwSetWindowPos(window, xpos, ypos);
 
   public static void glfwPollEvents() => s_glfwPollEvents();
   public static void glfwWaitEvents() => s_glfwWaitEvents();
@@ -361,6 +369,9 @@ public static unsafe class GLFW {
 
     s_glfwPollEvents = LoadFunction<glfwPollEvents_t>(nameof(glfwPollEvents));
     s_glfwWaitEvents = LoadFunction<glfwWaitEvents_t>(nameof(glfwWaitEvents));
+
+    s_glfwSetWindowPos = LoadFunction<glfwSetWindowPos_t>(nameof(glfwSetWindowPos));
+    s_glfwGetVideoMode = LoadFunction<glfwGetVideoMode_t>(nameof(glfwGetVideoMode));
 
     // Vulkan
     s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));
@@ -419,4 +430,28 @@ public readonly partial struct GLFWwindow : IEquatable<GLFWwindow> {
   /// <inheritdoc/>
   public override int GetHashCode() => Handle.GetHashCode();
   private string DebuggerDisplay => string.Format("GLFWwindow [0x{0}]", Handle.ToString("X"));
+}
+
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
+public readonly partial struct GLFWvidmode : IEquatable<GLFWvidmode> {
+  public int Width { get; }
+  public int Height { get; }
+  public int RedBits { get; }
+  public int GreenBits { get; }
+  public int BlueBits { get; }
+  public int RefreshRate { get; }
+  public GLFWvidmode(nint handle) { Handle = handle; }
+  public nint Handle { get; }
+  public bool IsNull => Handle == 0;
+  public static GLFWvidmode Null => new(0);
+  public static bool operator ==(GLFWvidmode left, GLFWvidmode right) => left.Handle == right.Handle;
+  public static bool operator !=(GLFWvidmode left, GLFWvidmode right) => left.Handle != right.Handle;
+  public static bool operator ==(GLFWvidmode left, nint right) => left.Handle == right;
+  public static bool operator !=(GLFWvidmode left, nint right) => left.Handle != right;
+  public bool Equals(GLFWvidmode other) => Handle == other.Handle;
+  /// <inheritdoc/>
+  public override bool Equals(object? obj) => obj is GLFWvidmode handle && Equals(handle);
+  /// <inheritdoc/>
+  public override int GetHashCode() => Handle.GetHashCode();
+  private string DebuggerDisplay => string.Format("GLFWvidmode [0x{0}]", Handle.ToString("X"));
 }

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Globals;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
@@ -22,18 +23,16 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
     // var projectionView = camera.ProjectionMatrix() * camera.ViewMatrix();
 
+    var speed = Time.DeltaTime;
+
     for (int i = 0; i < entities.Length; i++) {
-      var y = entities[i].GetComponent<Transform>().Rotation.Y + 0.01f;
-      var x = entities[i].GetComponent<Transform>().Rotation.X + 0.01f;
-      var z = entities[i].GetComponent<Transform>().Rotation.Z + 0.01f;
-      entities[i].GetComponent<Transform>().Rotation.Y = y;
-      // entities[i].GetComponent<Transform>().Rotation.X = x;
-      // entities[i].GetComponent<Transform>().Rotation.Z = z;
-      // entities[i].GetComponent<Transform>().Position.X += 0.0001f;
+      entities[i].GetComponent<Transform>().Rotation.Y += 20.0f * speed;
 
       var pushConstantData = new SimplePushConstantData();
-      pushConstantData.Transform = camera.GetMVP(entities[i].GetComponent<Transform>().Matrix4);
-      pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
+      var model = entities[i].GetComponent<Transform>().Matrix4;
+      pushConstantData.Transform = camera.GetMVP(model);
+      pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
+      //pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
 
       vkCmdPushConstants(
         commandBuffer,
@@ -44,8 +43,13 @@ public unsafe class SimpleRenderSystem : IDisposable {
         &pushConstantData
       );
 
-      entities[i].GetComponent<Model>()?.Bind(commandBuffer);
-      entities[i].GetComponent<Model>()?.Draw(commandBuffer);
+      var entity = entities[i].GetComponent<Model>();
+      for (uint x = 0; x < entity.MeshsesCount; x++) {
+        entity.Bind(commandBuffer, x);
+        entity.Draw(commandBuffer, x);
+      }
+      //entities[i].GetComponent<Model>()?.Bind(commandBuffer);
+      //entities[i].GetComponent<Model>()?.Draw(commandBuffer);
     }
   }
 

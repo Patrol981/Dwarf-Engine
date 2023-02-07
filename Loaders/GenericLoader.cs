@@ -17,23 +17,19 @@ public class GenericLoader {
     );
 
     var node = scene.RootNode;
-    var mesh = new List<Vertex>();
+    var meshes = new List<Dwarf.Engine.Mesh>();
 
     // if (!node.HasChildren) return mesh.ToArray();
     foreach (var child in node.Children) {
       foreach (int index in child.MeshIndices) {
-        List<Vector3> posList = new();
-        List<Color4> colorList = new();
-        List<Vector3> texList = new();
-        List<Vector3> normalList = new();
-        List<int> indices = new();
+        List<uint> indices = new();
 
         var aMesh = scene.Meshes[index];
         var vertexArray = new List<Vertex>();
 
         foreach (Face face in aMesh.Faces) {
           for (int i = 0; i < face.IndexCount; i++) {
-            int indice = face.Indices[i];
+            uint indice = (uint)face.Indices[i];
 
             indices.Add(indice);
             var vertex = new Vertex();
@@ -41,22 +37,46 @@ public class GenericLoader {
             bool hasColors = aMesh.HasVertexColors(0);
             bool hasTexCoords = aMesh.HasTextureCoords(0);
 
-            Vector3 pos = FromVector(aMesh.Vertices[indice]);
-            //posList.Add(pos);
+            if (hasColors) {
+              Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
+              vertex.Color = new Vector3(vertColor.R, vertColor.G, vertColor.B);
+            } else {
+              vertex.Color = new Vector3(1f, 1f, 1f);
+            }
+
+            if (aMesh.HasNormals) {
+              Vector3 normal = FromVector(aMesh.Normals[(int)indice]);
+              vertex.Normal = normal;
+            }
+
+            if (hasTexCoords) {
+              Vector3 uvw = FromVector(aMesh.TextureCoordinateChannels[0][(int)indice]);
+              vertex.Uv = uvw.Xy;
+            }
+            Vector3 pos = FromVector(aMesh.Vertices[(int)indice]);
             vertex.Position = pos;
-            vertex.Color = new Vector3(0.2f, 0.5f, 0.9f);
+            // vertex.Color = new Vector3(1f, 1f, 1f);
 
             vertexArray.Add(vertex);
           }
         }
 
-        mesh.AddRange(vertexArray);
+        var mesh = new Mesh();
+        mesh.Vertices = vertexArray.ToArray();
+        mesh.Indices = indices.ToArray();
+        meshes.Add(mesh);
+
+        // mesh.Vertices.AddRange(vertexArray);
+        //verts.AddRange(vertexArray);
+        //inds.AddRange(indices);
       }
     }
 
 
     assimpContext.Dispose();
-    return new Model(device, mesh.ToArray());
+    //mesh.Vertices = verts.ToArray();
+    //mesh.Indices = inds.ToArray();
+    return new Model(device, meshes.ToArray());
 
     //for (int i = 0; i < node.ChildCount; i++) {
     //ProcessNode(node.Children[i], scene, ref mesh);
@@ -95,5 +115,14 @@ public class GenericLoader {
     v.Y = vec.Y;
     v.Z = vec.Z;
     return v;
+  }
+
+  private Color4 FromColor(Color4D color) {
+    Color4 c;
+    c.R = color.R;
+    c.G = color.G;
+    c.B = color.B;
+    c.A = color.A;
+    return c;
   }
 }

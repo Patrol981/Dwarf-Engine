@@ -61,6 +61,18 @@ public class Device : IDisposable {
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
   }
 
+  public unsafe void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
+    VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+
+    VkBufferCopy copyRegion = new();
+    copyRegion.srcOffset = 0;  // Optional
+    copyRegion.dstOffset = 0;  // Optional
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    EndSingleTimeCommands(commandBuffer);
+  }
+
   public VkFormat FindSupportedFormat(List<VkFormat> candidates, VkImageTiling tilling, VkFormatFeatureFlags features) {
     foreach (var format in candidates) {
       VkFormatProperties props;
@@ -108,6 +120,38 @@ public class Device : IDisposable {
     }
 
     throw new Exception("Failed to find suitable memory type");
+  }
+
+  private unsafe VkCommandBuffer BeginSingleTimeCommands() {
+    VkCommandBufferAllocateInfo allocInfo = new();
+    allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
+    allocInfo.level = VkCommandBufferLevel.Primary;
+    allocInfo.commandPool = _commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = new();
+    beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
+    beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    return commandBuffer;
+  }
+
+  private unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo = new();
+    submitInfo.sType = VkStructureType.SubmitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VkFence.Null);
+    vkQueueWaitIdle(GraphicsQueue);
+
+    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
   }
 
   private unsafe void CreateInstance() {

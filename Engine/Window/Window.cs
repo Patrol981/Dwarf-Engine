@@ -14,10 +14,6 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Windowing;
 
-public static class WindowState {
-  public static Window s_Window = null!;
-}
-
 public unsafe class Window : IDisposable {
   public VkString AppName = new("Dwarf App");
   public VkString EngineName = new("Dwarf Engine");
@@ -55,11 +51,10 @@ public unsafe class Window : IDisposable {
     glfwSetCursorPosCallback(_window, MouseState.MouseCallback);
     glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
 
-    var monitor = glfwGetPrimaryMonitor();
-    var mode = glfwGetVideoMode(monitor);
-
-    glfwGetWindowSize(_window, out int wW, out int wH);
-    glfwSetWindowPos(_window, (mode->Width / 2) - (wW / 2), (mode->Height / 2) - (wH / 2));
+    WindowState.CenterWindow();
+    // WindowState.MaximizeWindow();
+    WindowState.FocusOnWindow();
+    //WindowState.SetCursorMode(InputValue.GLFW_CURSOR_DISABLED);
   }
 
   private void InitVulkan() {

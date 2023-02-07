@@ -8,6 +8,20 @@ using Vortice.Vulkan;
 
 namespace Dwarf.Extensions.GLFW;
 
+public enum InputMode {
+  GLFW_CURSOR = 0x00033001,
+  GLFW_STICKY_KEYS = 0x00033002,
+  GLFW_STICKY_MOUSE_BUTTONS = 0x00033003
+}
+
+public enum InputValue {
+  GLFW_CURSOR_NORMAL = 0x00034001,
+  GLFW_CURSOR_HIDDEN = 0x00034002,
+  GLFW_CURSOR_DISABLED = 0x00034003,
+  GL_TRUE = 1,
+  GL_FALSE = 0
+}
+
 public enum InitHintBool {
   /// <summary>
   /// Joystick hat buttons init hint.
@@ -204,6 +218,9 @@ public static unsafe class GLFW {
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void glfwSetWindowPos_t(GLFWwindow* window, int xpos, int ypos);
 
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void glfwSetInputMode_t(GLFWwindow* window, int mode, int value);
+
 
   #endregion
 
@@ -254,12 +271,16 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwWaitEvents_t();
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate void glfwMaximizeWindow_t(GLFWwindow* window);
   #endregion
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
 
   private static readonly glfwSetWindowPos_t s_glfwSetWindowPos;
   private static readonly glfwSetWindowUserPointer_t s_glfwSetWindowUserPointer;
+  private static readonly glfwSetInputMode_t s_glfwSetInputMode;
   private static readonly glfwGetWindowUserPointer_t s_glfwGetWindowUserPointer;
   private static readonly glfwTerminate_t s_glfwTerminate;
   private static readonly glfwDestroyWindow_t s_glfwDestoryWindow;
@@ -271,6 +292,7 @@ public static unsafe class GLFW {
   private static readonly glfwSetKeyCallback_t s_glfwSetKeyCallback;
   private static readonly glfwGetKey_t s_glfwGetKey;
 
+  private static readonly glfwMaximizeWindow_t s_glfwMaximizeWindow;
   private static readonly glfwInitHint_t s_glfwWindowHint;
   private static readonly glfwCreateWindow_t s_glfwCreateWindow;
   private static readonly glfwWindowShouldClose_t s_glfwWindowShouldClose;
@@ -296,11 +318,10 @@ public static unsafe class GLFW {
 
 
   public static void glfwInitHint(InitHintBool hint, bool value) => s_glfwInitHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
-
+  public static void glfwMaximizeWindow(GLFWwindow* window) => s_glfwMaximizeWindow(window);
   public static void glfwWindowHint(int hint, int value) => s_glfwWindowHint(hint, value);
-
   public static void glfwWindowHint(WindowHintBool hint, bool value) => s_glfwWindowHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
-
+  public static void glfwSetInputMode(GLFWwindow* window, int mode, int value) => s_glfwSetInputMode(window, mode, value);
 
   public static GLFWwindow* glfwCreateWindow(int width, int height, string title, GLFWmonitor* monitor, GLFWwindow* share) {
     var ptr = Marshal.StringToHGlobalAnsi(title);
@@ -372,6 +393,8 @@ public static unsafe class GLFW {
 
     s_glfwSetWindowPos = LoadFunction<glfwSetWindowPos_t>(nameof(glfwSetWindowPos));
     s_glfwGetVideoMode = LoadFunction<glfwGetVideoMode_t>(nameof(glfwGetVideoMode));
+    s_glfwSetInputMode = LoadFunction<glfwSetInputMode_t>(nameof(glfwSetInputMode));
+    s_glfwMaximizeWindow = LoadFunction<glfwMaximizeWindow_t>(nameof(glfwMaximizeWindow));
 
     // Vulkan
     s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));

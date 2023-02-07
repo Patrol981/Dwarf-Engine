@@ -64,6 +64,8 @@ public unsafe class Application {
   public void Run() {
     while (!_window.ShouldClose) {
       glfwPollEvents();
+      Time.StartTick();
+
       float aspect = _renderer.AspectRatio;
       if (aspect != _camera.GetComponent<Camera>().Aspect) {
         _camera.GetComponent<Camera>().Aspect = aspect;
@@ -85,6 +87,8 @@ public unsafe class Application {
       //Console.WriteLine(_camera.GetComponent<Camera>()._yaw);
 
       MoveCam();
+
+      Time.EndTick();
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
@@ -103,25 +107,34 @@ public unsafe class Application {
       var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
       CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
 
-      _camera.GetComponent<Camera>().Yaw -= deltaX * CameraState.GetSensitivity();
-      _camera.GetComponent<Camera>().Pitch -= deltaY * CameraState.GetSensitivity();
+      if (WindowState.s_MouseCursorState == InputValue.GLFW_CURSOR_DISABLED) {
+        _camera.GetComponent<Camera>().Yaw += deltaX * CameraState.GetSensitivity();
+        _camera.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
+      }
 
       if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0.01f, 0, 0));
-        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Right * 0.001f;
+        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
       if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_A) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(-0.01f, 0, 0));
-        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Right * 0.001f;
+        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
       if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_S) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0f, 0, -0.01f));
-        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Front * 0.001f;
+        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
       if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_W) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        // _camera.GetComponent<Transform>().IncreasePosition(new Vector3(0f, 0, 0.01f));
-        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Front * 0.001f;
+        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
+
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT_SHIFT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
+      }
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_SPACE) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
+      }
+
+      //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      //WindowState.FocusOnWindow();
+      //}
     }
 
 
@@ -144,209 +157,6 @@ public unsafe class Application {
     LoadEntities();
   }
 
-  private Model GetCube(Vector3 offset) {
-    List<Vertex> m = new();
-    Vertex v = new();
-    // start
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -.5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 1
-
-    v = new();
-    v.Position = new(-.5f, .5f, .5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 2
-
-    v = new();
-    v.Position = new(-.5f, -.5f, .5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 3
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -.5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 4
-
-    v = new();
-    v.Position = new(-.5f, .5f, -.5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 5
-
-    v = new();
-    v.Position = new(-.5f, .5f, .5f);
-    v.Color = new(.9f, .9f, .9f);
-    m.Add(v); // 6
-
-    // right face
-
-    v = new();
-    v.Position = new(.5f, -.5f, -.5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 7
-
-    v = new();
-    v.Position = new(.5f, .5f, .5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 8
-
-    v = new();
-    v.Position = new(.5f, -.5f, .5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 9
-
-    v = new();
-    v.Position = new(.5f, -.5f, -.5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 10
-
-    v = new();
-    v.Position = new(.5f, .5f, -.5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 11
-
-    v = new();
-    v.Position = new(.5f, .5f, .5f);
-    v.Color = new(.8f, .8f, .1f);
-    m.Add(v); // 12
-
-    // top face
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -.5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 13
-
-    v = new();
-    v.Position = new(.5f, -.5f, .5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 14
-
-    v = new();
-    v.Position = new(-.5f, -.5f, .5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 15
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -.5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 16
-
-    v = new();
-    v.Position = new(.5f, -.5f, -.5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 17
-
-    v = new();
-    v.Position = new(.5f, -.5f, .5f);
-    v.Color = new(.9f, .6f, .1f);
-    m.Add(v); // 18
-
-    // bottom face
-
-    v = new();
-    v.Position = new(-.5f, .5f, -.5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 19
-
-    v = new();
-    v.Position = new(.5f, .5f, .5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 20
-
-    v = new();
-    v.Position = new(-.5f, .5f, .5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 21
-
-    v = new();
-    v.Position = new(-.5f, .5f, -.5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 22
-
-    v = new();
-    v.Position = new(.5f, .5f, -.5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 23
-
-    v = new();
-    v.Position = new(.5f, .5f, .5f);
-    v.Color = new(.8f, .1f, .1f);
-    m.Add(v); // 24
-
-    // nose face
-
-    v = new();
-    v.Position = new(-.5f, -.5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 25
-
-    v = new();
-    v.Position = new(.5f, .5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 26
-
-    v = new();
-    v.Position = new(-.5f, .5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 27
-
-    v = new();
-    v.Position = new(-.5f, -.5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 28
-
-    v = new();
-    v.Position = new(.5f, -.5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 29
-
-    v = new();
-    v.Position = new(.5f, .5f, 0.5f);
-    v.Color = new(.1f, .1f, .8f);
-    m.Add(v); // 30
-
-    // tail face
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 31
-
-    v = new();
-    v.Position = new(.5f, .5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 32
-
-    v = new();
-    v.Position = new(-.5f, .5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 33
-
-    v = new();
-    v.Position = new(-.5f, -.5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 34
-
-    v = new();
-    v.Position = new(.5f, -.5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 35
-
-    v = new();
-    v.Position = new(.5f, .5f, -0.5f);
-    v.Color = new(.1f, .8f, .1f);
-    m.Add(v); // 36
-
-
-    for (int i = 0; i < m.Count; i++) {
-      var target = m[i];
-      target.Position += offset;
-    }
-
-    return new Model(_device, m.ToArray());
-  }
 
   private void LoadEntities() {
     Console.WriteLine(Directory.GetCurrentDirectory());
@@ -356,19 +166,43 @@ public unsafe class Application {
     // en.AddComponent(new Model(_device, GenericLoader.LoadModel("./Models/dwarf_test_model.obj")));
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
     en.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    en.AddComponent(new Transform(new Vector3(0.0f, -1f, 5f)));
+    en.AddComponent(new Transform(new Vector3(0.0f, 2f, 2f)));
     // en.GetComponent<Transform>().Translation = new(0f, -1.5f, 2f);
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
-    en.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+    en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     AddEntity(en);
 
     var box = new Entity();
-    box.AddComponent(GetCube(new Vector3(0, 0, 0)));
+    box.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
     box.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    box.AddComponent(new Transform(new Vector3(2.0f, 1f, 5f)));
+    box.AddComponent(new Transform(new Vector3(3.0f, 0f, 5f)));
     box.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     box.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(box);
+
+    var box2 = new Entity();
+    box2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/colored_cube.obj"));
+    box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    box2.AddComponent(new Transform(new Vector3(1.0f, -3.0f, -1f)));
+    box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+    box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+    AddEntity(box2);
+
+    var vase = new Entity();
+    vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
+    vase.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    vase.AddComponent(new Transform(new Vector3(0.5f, 1f, -1f)));
+    vase.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
+    vase.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+    AddEntity(vase);
+
+    var vase2 = new Entity();
+    vase2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/smooth_vase.obj"));
+    vase2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    vase2.AddComponent(new Transform(new Vector3(.0f, .5f, 2.5f)));
+    vase2.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
+    vase2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+    AddEntity(vase2);
   }
 
   private void Cleanup() {

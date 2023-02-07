@@ -38,101 +38,10 @@ public class Camera : Component {
     _projectionMatrix[2, 3] = -near / (far - near);
   }
 
-  public void SetPerspectiveProjection(float left, float right, float top, float bottom, float near, float far) {
-    float zRange = far / (far - near);
-
-    var result = new Matrix4();
-    result.M11 = 2.0f * near / (right - left);
-    result.M22 = 2.0f * near / (top - bottom);
-    result.M31 = (left + right) / (left - right);
-    result.M32 = (top + bottom) / (bottom - top);
-    result.M33 = zRange;
-    result.M34 = 1.0f;
-    result.M43 = -near * zRange;
-
-    result.M31 *= -1.0f;
-    result.M32 *= -1.0f;
-    result.M33 *= -1.0f;
-    result.M34 *= -1.0f;
-
-    _projectionMatrix = result;
-  }
-
   public void SetPerspectiveProjection(float near, float far) {
     //_projectionMatrix = Matrix4.Identity;
     // _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.PiOver4, aspect, near, far);
     _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), _aspect, near, far);
-
-
-    /*
-    float tanHalfFovy = MathF.Tan(fovy / 2f);
-    _projectionMatrix = Matrix4.Zero;
-    _projectionMatrix[0, 0] = 1f / (aspect * tanHalfFovy);
-    _projectionMatrix[1, 1] = 1f / (tanHalfFovy);
-    _projectionMatrix[2, 2] = far / (far - near);
-    _projectionMatrix[2, 3] = 1f;
-    _projectionMatrix[3, 2] = -(far * near) / (far - near);
-    _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(fovy, aspect, 0.01f, 100f);
-    */
-  }
-
-  public void SetViewDirection(Vector3 position, Vector3 direction, Vector3 up) {
-    if (up == Vector3.Zero) {
-      up = _localUp;
-    }
-
-    var w = Vector3.Normalize(direction);
-    var u = Vector3.Normalize(Vector3.Cross(w, up));
-    var v = Vector3.Cross(w, u);
-
-    _viewMatrix = Matrix4.Identity;
-    _viewMatrix[0, 0] = u.X;
-    _viewMatrix[1, 0] = u.Y;
-    _viewMatrix[2, 0] = u.Z;
-    _viewMatrix[0, 1] = v.X;
-    _viewMatrix[1, 1] = v.Y;
-    _viewMatrix[2, 1] = v.Z;
-    _viewMatrix[0, 2] = w.X;
-    _viewMatrix[1, 2] = w.Y;
-    _viewMatrix[2, 2] = w.Z;
-    _viewMatrix[3, 0] = -Vector3.Dot(u, position);
-    _viewMatrix[3, 1] = -Vector3.Dot(v, position);
-    _viewMatrix[3, 2] = -Vector3.Dot(w, position);
-  }
-
-  public void SetViewTarget(Vector3 position, Vector3 target, Vector3 up) {
-    if (up == Vector3.Zero) {
-      up = _localUp;
-    }
-
-    SetViewDirection(position, target - position, up);
-  }
-
-  public void SetViewYXZ(Vector3 position, Vector3 rotation) {
-    float c3 = MathF.Cos(rotation.Z);
-    float s3 = MathF.Sin(rotation.Z);
-    float c2 = MathF.Cos(rotation.X);
-    float s2 = MathF.Sin(rotation.X);
-    float c1 = MathF.Cos(rotation.Y);
-    float s1 = MathF.Sin(rotation.Y);
-
-    var u = new Vector3((c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1));
-    var v = new Vector3((c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3));
-    var w = new Vector3((c2 * s1), (-s2), (c1 * c2));
-
-    _viewMatrix = Matrix4.Identity;
-    _viewMatrix[0, 0] = u.X;
-    _viewMatrix[1, 0] = u.Y;
-    _viewMatrix[2, 0] = u.Z;
-    _viewMatrix[0, 1] = v.X;
-    _viewMatrix[1, 1] = v.Y;
-    _viewMatrix[2, 1] = v.Z;
-    _viewMatrix[0, 2] = w.X;
-    _viewMatrix[1, 2] = w.Y;
-    _viewMatrix[2, 2] = w.Z;
-    _viewMatrix[3, 0] = -Vector3.Dot(u, position);
-    _viewMatrix[3, 1] = -Vector3.Dot(v, position);
-    _viewMatrix[3, 2] = -Vector3.Dot(w, position);
   }
 
   public Matrix4 ProjectionMatrix() {
@@ -185,7 +94,7 @@ public class Camera : Component {
     _front = Vector3.Normalize(_front);
 
     _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
-    _up = Vector3.Normalize(Vector3.Cross(_right, -_front));
+    _up = Vector3.Normalize(Vector3.Cross(_right, _front));
   }
 
   public float Aspect {
@@ -195,4 +104,5 @@ public class Camera : Component {
 
   public Vector3 Front => _front;
   public Vector3 Right => _right;
+  public Vector3 Up => _up;
 }

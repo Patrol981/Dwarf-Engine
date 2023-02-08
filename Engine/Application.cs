@@ -62,6 +62,19 @@ public unsafe class Application {
   }
 
   public void Run() {
+    Vulkan.Buffer[] uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < uboBuffers.Length; i++) {
+      uboBuffers[i] = new(
+        _device,
+        (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
+        1,
+        VkBufferUsageFlags.UniformBuffer,
+        VkMemoryPropertyFlags.HostVisible,
+        _device.Properties.limits.minUniformBufferOffsetAlignment
+      );
+      uboBuffers[i].Map();
+    }
+
     while (!_window.ShouldClose) {
       glfwPollEvents();
       Time.StartTick();
@@ -76,8 +89,30 @@ public unsafe class Application {
 
       var commandBuffer = _renderer.BeginFrame();
       if (commandBuffer != VkCommandBuffer.Null) {
+        int frameIndex = _renderer.GetFrameIndex();
+        FrameInfo frameInfo = new();
+
+        // update
+        GlobalUniformBufferObject ubo = new();
+        ubo.Model = Matrix4.Identity;
+        ubo.View = Matrix4.Identity;
+        ubo.Projection = Matrix4.Identity;
+        ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
+        ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
+        ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+
+        uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo));
+        uboBuffers[frameIndex].Flush();
+        //globalUBO.WrtieToIndex(&ubo, frameIndex);
+        //globalUBO.FlushIndex(frameIndex);
+
+        frameInfo.Camera = _camera.GetComponent<Camera>();
+        frameInfo.CommandBuffer = commandBuffer;
+        frameInfo.FrameIndex = frameIndex;
+
+        // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
-        _simpleRender.RenderEntities(commandBuffer, _entities.ToArray(), _camera.GetComponent<Camera>());
+        _simpleRender.RenderEntities(frameInfo, _entities.ToArray());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
       }
@@ -94,6 +129,11 @@ public unsafe class Application {
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
       Logger.Error(result.ToString());
+    }
+
+    // globalUBO.Dispose();
+    for (int i = 0; i < uboBuffers.Length; i++) {
+      uboBuffers[i].Dispose();
     }
     Cleanup();
   }

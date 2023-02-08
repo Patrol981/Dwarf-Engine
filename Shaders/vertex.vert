@@ -20,7 +20,7 @@ void main() {
 
   //mat3 normalMatrix = transpose(inverse(mat3(push.modelMatrix)));
   //vec3 normalWorldSpace = normalize(normalMatrix * normal);
-  vec3 normalWorldSpace = normalize(push.normalMatrix * normal);
+  vec3 normalWorldSpace = normalize(mat3(push.normalMatrix) * normal);
 
   float lightIntesitivity = AMBIENT + max(dot(normalWorldSpace, DIRECTION_TO_LIGHT), 0);
 

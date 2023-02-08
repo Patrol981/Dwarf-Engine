@@ -209,4 +209,5 @@ public unsafe class Renderer : IDisposable {
   }
   public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
   public float AspectRatio => _swapchain.ExtentAspectRatio();
+  public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
 }

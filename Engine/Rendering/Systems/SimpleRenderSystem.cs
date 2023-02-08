@@ -18,8 +18,8 @@ public unsafe class SimpleRenderSystem : IDisposable {
     CreatePipeline(renderPass);
   }
 
-  public void RenderEntities(VkCommandBuffer commandBuffer, Span<Entity> entities, Camera camera) {
-    _pipeline.Bind(commandBuffer);
+  public void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
+    _pipeline.Bind(frameInfo.CommandBuffer);
 
     // var projectionView = camera.ProjectionMatrix() * camera.ViewMatrix();
 
@@ -30,12 +30,12 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
       var pushConstantData = new SimplePushConstantData();
       var model = entities[i].GetComponent<Transform>().Matrix4;
-      pushConstantData.Transform = camera.GetMVP(model);
+      pushConstantData.Transform = frameInfo.Camera.GetMVP(model);
       pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
       //pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
 
       vkCmdPushConstants(
-        commandBuffer,
+        frameInfo.CommandBuffer,
         _pipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
@@ -45,8 +45,8 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
       var entity = entities[i].GetComponent<Model>();
       for (uint x = 0; x < entity.MeshsesCount; x++) {
-        entity.Bind(commandBuffer, x);
-        entity.Draw(commandBuffer, x);
+        entity.Bind(frameInfo.CommandBuffer, x);
+        entity.Draw(frameInfo.CommandBuffer, x);
       }
       //entities[i].GetComponent<Model>()?.Bind(commandBuffer);
       //entities[i].GetComponent<Model>()?.Draw(commandBuffer);

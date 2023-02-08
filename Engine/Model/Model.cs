@@ -12,13 +12,15 @@ namespace Dwarf.Engine;
 public class Model : Component, IDisposable {
   private readonly Device _device;
 
-  private VkBuffer[] _vertexBuffers;
-  private VkDeviceMemory[] _vertexBufferMemories;
+  //private VkBuffer[] _vertexBuffers;
+  //private VkDeviceMemory[] _vertexBufferMemories;
+  private Dwarf.Vulkan.Buffer[] _vertexBuffers;
   private ulong[] _vertexCount;
 
   private bool[] _hasIndexBuffer;
-  private VkBuffer[] _indexBuffers;
-  private VkDeviceMemory[] _indexBufferMemories;
+  //private VkBuffer[] _indexBuffers;
+  //private VkDeviceMemory[] _indexBufferMemories;
+  private Dwarf.Vulkan.Buffer[] _indexBuffers;
   private ulong[] _indexCount;
 
   private int _meshesCount = 0;
@@ -30,11 +32,11 @@ public class Model : Component, IDisposable {
   public Model(Device device, Mesh[] meshes) {
     _device = device;
     _indexCount = new ulong[meshes.Length];
-    _indexBuffers = new VkBuffer[meshes.Length];
-    _indexBufferMemories = new VkDeviceMemory[meshes.Length];
+    _indexBuffers = new Vulkan.Buffer[meshes.Length];
+    // _indexBufferMemories = new VkDeviceMemory[meshes.Length];
     _indexCount = new ulong[meshes.Length];
-    _vertexBuffers = new VkBuffer[meshes.Length];
-    _vertexBufferMemories = new VkDeviceMemory[meshes.Length];
+    _vertexBuffers = new Vulkan.Buffer[meshes.Length];
+    // _vertexBufferMemories = new VkDeviceMemory[meshes.Length];
     _vertexCount = new ulong[meshes.Length];
     _hasIndexBuffer = new bool[meshes.Length];
     _meshesCount = meshes.Length;
@@ -46,7 +48,7 @@ public class Model : Component, IDisposable {
   }
 
   public unsafe void Bind(VkCommandBuffer commandBuffer, uint index) {
-    VkBuffer[] buffers = new VkBuffer[] { _vertexBuffers[index] };
+    VkBuffer[] buffers = new VkBuffer[] { _vertexBuffers[index].GetBuffer() };
     // VkBuffer[] buffers = _vertexBuffers.ToArray();
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -55,7 +57,7 @@ public class Model : Component, IDisposable {
     }
 
     if (_hasIndexBuffer[index]) {
-      vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index], 0, VkIndexType.Uint32);
+      vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
   }
 
@@ -70,10 +72,23 @@ public class Model : Component, IDisposable {
   private unsafe void CreateVertexBuffer(Vertex[] vertices, uint index) {
     _vertexCount[index] = (ulong)vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount[index];
+    ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new VkBuffer();
-    var stagingBufferMemory = new VkDeviceMemory();
+    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+      _device,
+      vertexSize,
+      _vertexCount[index],
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
 
+    stagingBuffer.Map(bufferSize);
+    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices));
+    stagingBuffer.Unmap();
+
+    // var stagingBuffer = new VkBuffer();
+    // var stagingBufferMemory = new VkDeviceMemory();
+    /*
     _device.CreateBuffer(
       bufferSize,
       VkBufferUsageFlags.TransferSrc,
@@ -81,13 +96,23 @@ public class Model : Component, IDisposable {
       out stagingBuffer,
       out stagingBufferMemory
     );
+    */
 
     // IntPtr data = nint.Zero;
-    void* data;
-    vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
-    Utils.MemCopy((IntPtr)data, ToIntPtr(vertices), (int)bufferSize);
-    vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
+    // void* data;
+    // vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
+    // Utils.MemCopy((IntPtr)data, Utils.ToIntPtr(vertices), (int)bufferSize);
+    // vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
 
+    _vertexBuffers[index] = new Vulkan.Buffer(
+      _device,
+      vertexSize,
+      _vertexCount[index],
+      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
+      VkMemoryPropertyFlags.DeviceLocal
+    );
+
+    /*
     _device.CreateBuffer(
       bufferSize,
       VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
@@ -95,10 +120,12 @@ public class Model : Component, IDisposable {
       out _vertexBuffers[index],
       out _vertexBufferMemories[index]
     );
+    */
 
-    _device.CopyBuffer(stagingBuffer, _vertexBuffers[index], bufferSize);
-    vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
-    vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffers[index].GetBuffer(), bufferSize);
+    stagingBuffer.Dispose();
+    // vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
+    // vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
   }
 
   private unsafe void CreateIndexBuffer(uint[] indices, uint index) {
@@ -106,10 +133,24 @@ public class Model : Component, IDisposable {
     // _hasIndexBuffer = _indexCount[index] > 0;
     if (!_hasIndexBuffer[index]) return;
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount[index];
+    ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new VkBuffer();
-    var stagingBufferMemory = new VkDeviceMemory();
+    var stagingBuffer = new Vulkan.Buffer(
+      _device,
+      indexSize,
+      _indexCount[index],
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
 
+    stagingBuffer.Map(bufferSize);
+    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices));
+    stagingBuffer.Unmap();
+
+    // var stagingBuffer = new VkBuffer();
+    // var stagingBufferMemory = new VkDeviceMemory();
+
+    /*
     _device.CreateBuffer(
       bufferSize,
       VkBufferUsageFlags.TransferSrc,
@@ -117,12 +158,23 @@ public class Model : Component, IDisposable {
       out stagingBuffer,
       out stagingBufferMemory
     );
+    */
 
-    void* data;
-    vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
-    Utils.MemCopy((IntPtr)data, ToIntPtr(indices), (int)bufferSize);
-    vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
+    // void* data;
+    // vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
+    // Utils.MemCopy((IntPtr)data, Utils.ToIntPtr(indices), (int)bufferSize);
+    // vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
 
+    _indexBuffers[index] = new Vulkan.Buffer(
+      _device,
+      indexSize,
+      _indexCount[index],
+      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
+      VkMemoryPropertyFlags.DeviceLocal
+    );
+
+
+    /*
     _device.CreateBuffer(
       bufferSize,
       VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
@@ -130,39 +182,27 @@ public class Model : Component, IDisposable {
       out _indexBuffers[index],
       out _indexBufferMemories[index]
     );
+    */
 
-    _device.CopyBuffer(stagingBuffer, _indexBuffers[index], bufferSize);
-    vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
-    vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffers[index].GetBuffer(), bufferSize);
+    stagingBuffer.Dispose();
+    //vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
+    //vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
   }
 
   public unsafe void Dispose() {
     for (int i = 0; i < _vertexBuffers.Length; i++) {
-      vkDestroyBuffer(_device.LogicalDevice, _vertexBuffers[i]);
-      vkFreeMemory(_device.LogicalDevice, _vertexBufferMemories[i]);
+      //vkDestroyBuffer(_device.LogicalDevice, _vertexBuffers[i]);
+      //vkFreeMemory(_device.LogicalDevice, _vertexBufferMemories[i]);
+
+      _vertexBuffers[i].Dispose();
 
       if (_hasIndexBuffer[i]) {
-        vkDestroyBuffer(_device.LogicalDevice, _indexBuffers[i]);
-        vkFreeMemory(_device.LogicalDevice, _indexBufferMemories[i]);
+        // vkDestroyBuffer(_device.LogicalDevice, _indexBuffers[i]);
+        // vkFreeMemory(_device.LogicalDevice, _indexBufferMemories[i]);
+        _indexBuffers[i].Dispose();
       }
     }
-  }
-
-  public static IntPtr ToIntPtr<T>(T[] arr) where T : struct {
-    int size = Unsafe.SizeOf<T>();
-    IntPtr ptr = IntPtr.Zero;
-    try {
-      ptr = Marshal.AllocHGlobal(size * arr.Length);
-      for (int i = 0; i < arr.Length; i++) {
-        Marshal.StructureToPtr(arr[i], IntPtr.Add(ptr, i * size), true);
-      }
-    } catch {
-      if (ptr != IntPtr.Zero) {
-        Marshal.FreeHGlobal(ptr);
-      }
-      throw;
-    }
-    return ptr;
   }
 
   public unsafe static VkVertexInputBindingDescription* GetBindingDescsFunc() {

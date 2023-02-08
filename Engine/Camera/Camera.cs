@@ -44,11 +44,11 @@ public class Camera : Component {
     _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), _aspect, near, far);
   }
 
-  public Matrix4 ProjectionMatrix() {
+  public Matrix4 GetProjectionMatrix() {
     return _projectionMatrix;
   }
 
-  public Matrix4 ViewMatrix() {
+  public Matrix4 GetViewMatrix() {
     Vector3 position = Owner!.GetComponent<Transform>().Position;
     // var position = new Vector3(0, 0, -2);
     _viewMatrix = Matrix4.Identity;
@@ -59,7 +59,7 @@ public class Camera : Component {
   }
 
   public Matrix4 GetMVP(Matrix4 modelMatrix) {
-    return modelMatrix * ViewMatrix() * _projectionMatrix;
+    return modelMatrix * GetViewMatrix() * _projectionMatrix;
   }
 
   public float Pitch {

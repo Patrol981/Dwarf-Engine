@@ -25,6 +25,7 @@ public class Device : IDisposable {
   private VkCommandPool _commandPool = VkCommandPool.Null;
   public VkQueue GraphicsQueue = VkQueue.Null;
   public VkQueue PresentQueue = VkQueue.Null;
+  public VkPhysicalDeviceProperties Properties;
   public Device(Window window) {
     _window = window;
     CreateInstance();
@@ -271,7 +272,7 @@ public class Device : IDisposable {
   }
 
   private unsafe void CreateLogicalDevice() {
-    vkGetPhysicalDeviceProperties(_physicalDevice, out VkPhysicalDeviceProperties properties);
+    vkGetPhysicalDeviceProperties(_physicalDevice, out Properties);
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
     var availableDeviceExtensions = vkEnumerateDeviceExtensionProperties(_physicalDevice);
 

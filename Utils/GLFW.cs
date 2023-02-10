@@ -252,9 +252,6 @@ public static unsafe class GLFW {
   private delegate void glfwTerminate_t();
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-  private unsafe delegate void glfwDestroyWindow_t(GLFWwindow* window);
-
-  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwInitHint_t(int hint, int value);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -283,7 +280,6 @@ public static unsafe class GLFW {
   private static readonly glfwSetInputMode_t s_glfwSetInputMode;
   private static readonly glfwGetWindowUserPointer_t s_glfwGetWindowUserPointer;
   private static readonly glfwTerminate_t s_glfwTerminate;
-  private static readonly glfwDestroyWindow_t s_glfwDestoryWindow;
   private static readonly glfwInitHint_t s_glfwInitHint;
   private static readonly glfwGetVersion_t s_glfwGetVersion;
   private static readonly glfwSetErrorCallback_t s_glfwSetErrorCallback;
@@ -382,7 +378,6 @@ public static unsafe class GLFW {
 
     s_glfwWindowHint = LoadFunction<glfwInitHint_t>(nameof(glfwWindowHint));
     s_glfwCreateWindow = LoadFunction<glfwCreateWindow_t>(nameof(glfwCreateWindow));
-    s_glfwDestoryWindow = LoadFunction<glfwDestroyWindow_t>(nameof(glfwDestroyWindow));
     s_glfwGetPrimaryMonitor = LoadFunction<glfwGetPrimaryMonitor_t>(nameof(glfwGetPrimaryMonitor));
     s_glfwWindowShouldClose = LoadFunction<glfwWindowShouldClose_t>(nameof(glfwWindowShouldClose));
     s_glfwGetWindowSize = LoadFunction<glfwGetWindowSize_t>(nameof(glfwGetWindowSize));

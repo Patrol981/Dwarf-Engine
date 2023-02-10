@@ -1,9 +1,12 @@
 using System.Runtime.InteropServices;
+
 using Dwarf.Engine;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using Vortice.Vulkan;
+
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -13,7 +16,7 @@ public unsafe class Renderer : IDisposable {
   private Window _window = null!;
   private Device _device = null!;
   private Swapchain _swapchain = null!;
-  private VkCommandBuffer[] _commandBuffers;
+  private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
 
   private uint _imageIndex = 0;
   private int _frameIndex = 0;
@@ -64,13 +67,6 @@ public unsafe class Renderer : IDisposable {
     var commandBuffer = GetCurrentCommandBuffer();
     vkEndCommandBuffer(commandBuffer).CheckResult();
 
-    /*
-    GCHandle handle = GCHandle.Alloc(_commandBuffers, GCHandleType.Pinned);
-    IntPtr ptr = handle.AddrOfPinnedObject();
-    IntPtr elementPtr = new IntPtr(ptr.ToInt64() + _imageIndex * Marshal.SizeOf(typeof(VkCommandBuffer)));
-    VkCommandBuffer* bufferPtr = (VkCommandBuffer*)elementPtr;
-    */
-
     var result = _swapchain.SubmitCommandBuffers(&commandBuffer, _imageIndex);
 
     if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || _window.WasWindowResized()) {
@@ -102,13 +98,16 @@ public unsafe class Renderer : IDisposable {
     renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
     renderPassInfo.renderArea.extent = _swapchain.Extent2D;
 
-    VkClearValue* values = stackalloc VkClearValue[2];
+    VkClearValue[] values = new VkClearValue[2];
+    // VkClearValue* values = stackalloc VkClearValue[2];
     values[0].color = new VkClearColorValue(0.01f, 0.01f, 0.01f, 1.0f);
     values[1].depthStencil = new(1.0f, 0);
-    renderPassInfo.clearValueCount = 2;
-    renderPassInfo.pClearValues = values;
+    fixed (VkClearValue* ptr = values) {
+      renderPassInfo.clearValueCount = 2;
+      renderPassInfo.pClearValues = ptr;
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.Inline);
+      vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.Inline);
+    }
 
     VkViewport viewport = new();
     viewport.x = 0.0f;
@@ -145,27 +144,31 @@ public unsafe class Renderer : IDisposable {
 
     vkDeviceWaitIdle(_device.LogicalDevice);
 
-    if (_swapchain == null) {
-      _swapchain?.Dispose();
-      _swapchain = new(_device, extent);
-    } else {
-      //var copy = _swapchain;
-      //_swapchain = new(_device, extent, ref copy);
+    if (_swapchain != null) _swapchain.Dispose();
+    _swapchain = new(_device, extent);
 
-      _swapchain?.Dispose();
-      _swapchain = new(_device, extent);
+    Logger.Info("Recreated Swapchain");
 
-      //if (!copy.CompareSwapFormats(_swapchain)) {
-      //Logger.Warn("Swapchain Format has been changed");
-      //}
+    // if (_swapchain == null) {
 
-      /*
-      if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
-        FreeCommandBuffers();
-        CreateCommandBuffers();
-      }
-      */
+    //} else {
+    //var copy = _swapchain;
+    //_swapchain = new(_device, extent, ref copy);
+
+    //_swapchain?.Dispose();
+    //_swapchain = new(_device, extent);
+
+    //if (!copy.CompareSwapFormats(_swapchain)) {
+    //Logger.Warn("Swapchain Format has been changed");
+    //}
+
+    /*
+    if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
+      FreeCommandBuffers();
+      CreateCommandBuffers();
     }
+    */
+    // }
   }
 
   private void CreateCommandBuffers() {
@@ -178,11 +181,13 @@ public unsafe class Renderer : IDisposable {
     allocInfo.commandPool = _device.CommandPool;
     allocInfo.commandBufferCount = (uint)_commandBuffers.Length;
 
-    GCHandle handle = GCHandle.Alloc(_commandBuffers, GCHandleType.Pinned);
-    IntPtr ptr = handle.AddrOfPinnedObject();
-    VkCommandBuffer* bufferPtr = (VkCommandBuffer*)ptr;
+    //GCHandle handle = GCHandle.Alloc(_commandBuffers, GCHandleType.Pinned);
+    //IntPtr ptr = handle.AddrOfPinnedObject();
+    //VkCommandBuffer* bufferPtr = (VkCommandBuffer*)ptr;
 
-    vkAllocateCommandBuffers(_device.LogicalDevice, &allocInfo, bufferPtr).CheckResult();
+    fixed (VkCommandBuffer* ptr = _commandBuffers) {
+      vkAllocateCommandBuffers(_device.LogicalDevice, &allocInfo, ptr).CheckResult();
+    }
   }
 
   private void FreeCommandBuffers() {
@@ -196,7 +201,7 @@ public unsafe class Renderer : IDisposable {
 
   public void Dispose() {
     FreeCommandBuffers();
-    _swapchain?.Dispose();
+    _swapchain.Dispose();
   }
 
   public bool IsFrameInProgress => _isFrameStarted;

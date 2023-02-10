@@ -21,13 +21,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
   public void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
     _pipeline.Bind(frameInfo.CommandBuffer);
 
-    // var projectionView = camera.ProjectionMatrix() * camera.ViewMatrix();
-
-    var speed = Time.DeltaTime;
-
     for (int i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Transform>().Rotation.Y += 20.0f * speed;
-
       var pushConstantData = new SimplePushConstantData();
       var model = entities[i].GetComponent<Transform>().Matrix4;
       pushConstantData.Transform = frameInfo.Camera.GetMVP(model);
@@ -48,8 +42,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
         entity.Bind(frameInfo.CommandBuffer, x);
         entity.Draw(frameInfo.CommandBuffer, x);
       }
-      //entities[i].GetComponent<Model>()?.Bind(commandBuffer);
-      //entities[i].GetComponent<Model>()?.Draw(commandBuffer);
     }
   }
 

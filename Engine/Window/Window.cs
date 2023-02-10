@@ -61,12 +61,6 @@ public unsafe class Window : IDisposable {
     // GraphicsDevice = new GraphicsDevice(this);
   }
 
-  public static unsafe void* GetWindowPtr(Window* window) {
-    void* ptr;
-    ptr = (void*)window;
-    return ptr;
-  }
-
   private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
     WindowState.s_Window.FramebufferResized = true;
     WindowState.s_Window.Extent = new VkExtent2D((uint)width, (uint)height);

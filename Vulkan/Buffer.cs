@@ -6,8 +6,7 @@ namespace Dwarf.Vulkan;
 
 public unsafe class Buffer : IDisposable {
   private Device _device;
-  // private IntPtr _mapped;
-  private void* _mapped;
+  private IntPtr _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
   private VkDeviceMemory _memory = VkDeviceMemory.Null;
 
@@ -43,9 +42,10 @@ public unsafe class Buffer : IDisposable {
   }
 
   public void Unmap() {
-    if (_mapped != null) {
+    if (_mapped != IntPtr.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
-      _mapped = null;
+      _mapped = IntPtr.Zero;
+      GC.Collect();
     }
   }
 
@@ -105,7 +105,7 @@ public unsafe class Buffer : IDisposable {
     return _buffer;
   }
 
-  public void* GetMappedMemory() {
+  public IntPtr GetMappedMemory() {
     return _mapped;
   }
 

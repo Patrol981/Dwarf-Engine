@@ -6,45 +6,6 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 public unsafe static class DeviceHelper {
-  public static VkDevice CreateLogicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
-    var queueFamilies = FindQueueFamilies(physicalDevice, surface);
-
-    var queueCreateInfo = new VkDeviceQueueCreateInfo {
-      sType = VkStructureType.DeviceQueueCreateInfo,
-      queueFamilyIndex = queueFamilies.graphicsFamily,
-      queueCount = 1,
-    };
-
-    float priority = 1.0f;
-    queueCreateInfo.pQueuePriorities = &priority;
-
-    List<string> enabledExtensions = new() {
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
-
-    VkPhysicalDeviceFeatures2 deviceFeatures2 = new() {
-      sType = VkStructureType.PhysicalDeviceFeatures2
-    };
-    using var deviceExtensionNames = new VkStringArray(enabledExtensions);
-
-    var physicalDeviceFeatures = new VkPhysicalDeviceFeatures {
-
-    };
-
-    var createInfo = new VkDeviceCreateInfo {
-      sType = VkStructureType.DeviceCreateInfo,
-      pNext = default,
-      queueCreateInfoCount = 1,
-      pQueueCreateInfos = &queueCreateInfo,
-      enabledExtensionCount = deviceExtensionNames.Length,
-      ppEnabledExtensionNames = deviceExtensionNames,
-      pEnabledFeatures = null,
-    };
-
-    VkDevice device = VkDevice.Null;
-    vkCreateDevice(physicalDevice, &createInfo, null, out device);
-    return device;
-  }
   public static VkPhysicalDevice GetPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     VkPhysicalDevice returnDevice = VkPhysicalDevice.Null;
 
@@ -55,8 +16,12 @@ public unsafe static class DeviceHelper {
     }
 
     vkEnumeratePhysicalDevices(instance, &count, null);
-    VkPhysicalDevice* physicalDevices = stackalloc VkPhysicalDevice[count];
-    vkEnumeratePhysicalDevices(instance, &count, physicalDevices);
+
+    VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[count];
+    // VkPhysicalDevice* physicalDevices = stackalloc VkPhysicalDevice[count];
+    fixed (VkPhysicalDevice* ptr = physicalDevices) {
+      vkEnumeratePhysicalDevices(instance, &count, ptr);
+    }
 
     for (int i = 0; i < count; i++) {
       VkPhysicalDevice physicalDevice = physicalDevices[i];
@@ -87,17 +52,6 @@ public unsafe static class DeviceHelper {
     }
   }
 
-  public static List<string> GetInstanceLayers() {
-    // get available
-    HashSet<string> availableLayers = new(EnumerateInstanceLayers());
-    List<string> instanceLayers = new();
-
-    // validate
-    // GetOptimalValidationLayers(availableLayers, instanceLayers);
-
-    return instanceLayers;
-  }
-
   public static string[] EnumerateInstanceLayers() {
     if (!IsSupported()) {
       return Array.Empty<string>();
@@ -113,8 +67,12 @@ public unsafe static class DeviceHelper {
       return Array.Empty<string>();
     }
 
-    VkLayerProperties* properties = stackalloc VkLayerProperties[count];
-    vkEnumerateInstanceLayerProperties(&count, properties).CheckResult();
+    VkLayerProperties[] properties = new VkLayerProperties[count];
+    // VkLayerProperties* properties = stackalloc VkLayerProperties[count];
+
+    fixed (VkLayerProperties* ptr = properties) {
+      vkEnumerateInstanceLayerProperties(&count, ptr).CheckResult();
+    }
 
     string[] resultExt = new string[count];
     for (int i = 0; i < count; i++) {
@@ -216,8 +174,11 @@ public unsafe static class DeviceHelper {
       return Array.Empty<string>();
     }
 
-    VkExtensionProperties* props = stackalloc VkExtensionProperties[count];
-    vkEnumerateInstanceExtensionProperties((byte*)null, &count, props);
+    VkExtensionProperties[] props = new VkExtensionProperties[count];
+    // VkExtensionProperties* props = stackalloc VkExtensionProperties[count];
+    fixed (VkExtensionProperties* ptr = props) {
+      vkEnumerateInstanceExtensionProperties((byte*)null, &count, ptr);
+    }
 
     string[] extensions = new string[count];
     for (int i = 0; i < count; i++) {

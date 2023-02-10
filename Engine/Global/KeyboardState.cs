@@ -4,7 +4,7 @@ using OpenTK.Mathematics;
 namespace Dwarf.Engine.Globals;
 
 public sealed class KeyboardState {
-  private static KeyboardState s_instance;
+  private static KeyboardState s_instance = null!;
 
   public static unsafe void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     // Console.WriteLine(key);

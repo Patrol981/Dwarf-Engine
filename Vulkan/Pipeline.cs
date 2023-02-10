@@ -56,7 +56,8 @@ public class Pipeline : IDisposable {
     CreateShaderModule(fragmentCode, out _fragmentShaderModule);
 
     VkString entryPoint = new("main");
-    VkPipelineShaderStageCreateInfo* shaderStages = stackalloc VkPipelineShaderStageCreateInfo[2];
+    VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
+    // VkPipelineShaderStageCreateInfo* shaderStages = stackalloc VkPipelineShaderStageCreateInfo[2];
 
     //vertex
     shaderStages[0].sType = VkStructureType.PipelineShaderStageCreateInfo;
@@ -87,7 +88,9 @@ public class Pipeline : IDisposable {
     var pipelineInfo = new VkGraphicsPipelineCreateInfo();
     pipelineInfo.sType = VkStructureType.GraphicsPipelineCreateInfo;
     pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = shaderStages;
+    fixed (VkPipelineShaderStageCreateInfo* ptr = shaderStages) {
+      pipelineInfo.pStages = ptr;
+    }
     pipelineInfo.pVertexInputState = &vertexInputInfo;
 
     pipelineInfo.pInputAssemblyState = &configInfo.InputAssemblyInfo;

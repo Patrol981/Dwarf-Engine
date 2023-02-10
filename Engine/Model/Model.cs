@@ -1,27 +1,27 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
 public class Model : Component, IDisposable {
-  private readonly Device _device;
+  private readonly Device _device = null!;
 
-  //private VkBuffer[] _vertexBuffers;
-  //private VkDeviceMemory[] _vertexBufferMemories;
-  private Dwarf.Vulkan.Buffer[] _vertexBuffers;
-  private ulong[] _vertexCount;
+  private Dwarf.Vulkan.Buffer[] _vertexBuffers = new Vulkan.Buffer[0];
+  private ulong[] _vertexCount = new ulong[0];
 
-  private bool[] _hasIndexBuffer;
-  //private VkBuffer[] _indexBuffers;
-  //private VkDeviceMemory[] _indexBufferMemories;
-  private Dwarf.Vulkan.Buffer[] _indexBuffers;
-  private ulong[] _indexCount;
+  private bool[] _hasIndexBuffer = new bool[0];
+  private Dwarf.Vulkan.Buffer[] _indexBuffers = new Vulkan.Buffer[0];
+  private ulong[] _indexCount = new ulong[0];
 
   private int _meshesCount = 0;
 
@@ -33,10 +33,8 @@ public class Model : Component, IDisposable {
     _device = device;
     _indexCount = new ulong[meshes.Length];
     _indexBuffers = new Vulkan.Buffer[meshes.Length];
-    // _indexBufferMemories = new VkDeviceMemory[meshes.Length];
     _indexCount = new ulong[meshes.Length];
     _vertexBuffers = new Vulkan.Buffer[meshes.Length];
-    // _vertexBufferMemories = new VkDeviceMemory[meshes.Length];
     _vertexCount = new ulong[meshes.Length];
     _hasIndexBuffer = new bool[meshes.Length];
     _meshesCount = meshes.Length;
@@ -49,7 +47,6 @@ public class Model : Component, IDisposable {
 
   public unsafe void Bind(VkCommandBuffer commandBuffer, uint index) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffers[index].GetBuffer() };
-    // VkBuffer[] buffers = _vertexBuffers.ToArray();
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
     fixed (ulong* offsetsPtr = offsets) {
@@ -83,26 +80,7 @@ public class Model : Component, IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices));
-    stagingBuffer.Unmap();
-
-    // var stagingBuffer = new VkBuffer();
-    // var stagingBufferMemory = new VkDeviceMemory();
-    /*
-    _device.CreateBuffer(
-      bufferSize,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-      out stagingBuffer,
-      out stagingBufferMemory
-    );
-    */
-
-    // IntPtr data = nint.Zero;
-    // void* data;
-    // vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
-    // Utils.MemCopy((IntPtr)data, Utils.ToIntPtr(vertices), (int)bufferSize);
-    // vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
+    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffers[index] = new Vulkan.Buffer(
       _device,
@@ -112,20 +90,8 @@ public class Model : Component, IDisposable {
       VkMemoryPropertyFlags.DeviceLocal
     );
 
-    /*
-    _device.CreateBuffer(
-      bufferSize,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal,
-      out _vertexBuffers[index],
-      out _vertexBufferMemories[index]
-    );
-    */
-
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffers[index].GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
-    // vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
-    // vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
   }
 
   private unsafe void CreateIndexBuffer(uint[] indices, uint index) {
@@ -144,8 +110,8 @@ public class Model : Component, IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices));
-    stagingBuffer.Unmap();
+    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
+    //stagingBuffer.Unmap();
 
     // var stagingBuffer = new VkBuffer();
     // var stagingBufferMemory = new VkDeviceMemory();
@@ -186,6 +152,7 @@ public class Model : Component, IDisposable {
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffers[index].GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
+    // _indexBuffers[index].Dispose();
     //vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
     //vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
   }

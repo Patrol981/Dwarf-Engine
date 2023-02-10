@@ -282,7 +282,8 @@ public class Device : IDisposable {
 
     float priority = 1.0f;
     uint queueCount = 0;
-    VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[2];
+    // VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[2];
+    VkDeviceQueueCreateInfo[] queueCreateInfos = new VkDeviceQueueCreateInfo[2];
 
     foreach (uint queueFamily in uniqueQueueFamilies) {
       VkDeviceQueueCreateInfo queueCreateInfo = new();
@@ -301,7 +302,9 @@ public class Device : IDisposable {
     createInfo.sType = VkStructureType.DeviceCreateInfo;
 
     createInfo.queueCreateInfoCount = queueCount;
-    createInfo.pQueueCreateInfos = queueCreateInfos;
+    fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
+      createInfo.pQueueCreateInfos = ptr;
+    }
 
     List<string> enabledExtensions = new() {
       VK_KHR_SWAPCHAIN_EXTENSION_NAME

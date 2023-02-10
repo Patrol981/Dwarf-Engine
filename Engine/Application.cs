@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
@@ -9,8 +10,11 @@ using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
+
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -69,10 +73,10 @@ public unsafe class Application {
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
         1,
         VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible,
+        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
-      uboBuffers[i].Map();
+      uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
     }
 
     while (!_window.ShouldClose) {
@@ -101,8 +105,8 @@ public unsafe class Application {
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
 
-        uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo));
-        uboBuffers[frameIndex].Flush();
+        uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+        // uboBuffers[frameIndex].Flush((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
         //globalUBO.WrtieToIndex(&ubo, frameIndex);
         //globalUBO.FlushIndex(frameIndex);
 
@@ -123,7 +127,25 @@ public unsafe class Application {
 
       MoveCam();
 
+      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_ENTER) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+        Span<Entity> entities = _entities.ToArray();
+        for (int i = 0; i < entities.Length; i++) {
+          entities[i].GetComponent<Model>()?.Dispose();
+        }
+        _entities = new List<Entity>();
+        // _renderer.EndFrame();
+        _simpleRender.Dispose();
+        _renderer.Dispose();
+        //_device.Dispose();
+        //_device = new(_window);
+        _renderer = new(_window, _device);
+        _simpleRender = new(_device, _renderer.GetSwapchainRenderPass());
+        LoadEntities();
+      }
+
+      GC.Collect();
       Time.EndTick();
+      // Logger.Info(Time.DeltaTime.ToString());
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);

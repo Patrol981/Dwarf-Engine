@@ -12,19 +12,35 @@ public unsafe class SimpleRenderSystem : IDisposable {
   private Pipeline _pipeline = null!;
   private VkPipelineLayout _pipelineLayout;
 
-  public SimpleRenderSystem(Device device, VkRenderPass renderPass) {
+  public SimpleRenderSystem(Device device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout) {
     _device = device;
-    CreatePipelineLayout();
+    CreatePipelineLayout(globalSetLayout);
     CreatePipeline(renderPass);
   }
 
   public void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
     _pipeline.Bind(frameInfo.CommandBuffer);
 
+    if (frameInfo.GlobalDescriptorSet.IsNotNull) {
+      // Console.WriteLine(frameInfo.GlobalDescriptorSet.IsNotNull);
+    }
+
+    vkCmdBindDescriptorSets(
+      frameInfo.CommandBuffer,
+      VkPipelineBindPoint.Graphics,
+      _pipelineLayout,
+      0,
+      1,
+      &frameInfo.GlobalDescriptorSet,
+      0,
+      null
+    );
+
     for (int i = 0; i < entities.Length; i++) {
       var pushConstantData = new SimplePushConstantData();
       var model = entities[i].GetComponent<Transform>().Matrix4;
-      pushConstantData.Transform = frameInfo.Camera.GetMVP(model);
+      // pushConstantData.ModelMatrix = frameInfo.Camera.GetMVP(model);
+      pushConstantData.ModelMatrix = model;
       pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
       //pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
 
@@ -45,16 +61,20 @@ public unsafe class SimpleRenderSystem : IDisposable {
     }
   }
 
-  private void CreatePipelineLayout() {
+  private void CreatePipelineLayout(VkDescriptorSetLayout globalSetLayout) {
     VkPushConstantRange pushConstantRange = new();
     pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
     pushConstantRange.offset = 0;
     pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
 
+    VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] { globalSetLayout };
+
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
-    pipelineInfo.setLayoutCount = 0;
-    pipelineInfo.pSetLayouts = null;
+    pipelineInfo.setLayoutCount = (uint)descriptorSetLayouts.Length;
+    fixed (VkDescriptorSetLayout* ptr = descriptorSetLayouts) {
+      pipelineInfo.pSetLayouts = ptr;
+    }
     pipelineInfo.pushConstantRangeCount = 1;
     pipelineInfo.pPushConstantRanges = &pushConstantRange;
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();

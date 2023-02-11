@@ -59,7 +59,7 @@ public class Camera : Component {
   }
 
   public Matrix4 GetMVP(Matrix4 modelMatrix) {
-    return modelMatrix * GetViewMatrix() * _projectionMatrix;
+    return modelMatrix * GetViewMatrix() * GetProjectionMatrix();
   }
 
   public float Pitch {

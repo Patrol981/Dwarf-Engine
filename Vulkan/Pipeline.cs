@@ -57,7 +57,6 @@ public class Pipeline : IDisposable {
 
     VkString entryPoint = new("main");
     VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
-    // VkPipelineShaderStageCreateInfo* shaderStages = stackalloc VkPipelineShaderStageCreateInfo[2];
 
     //vertex
     shaderStages[0].sType = VkStructureType.PipelineShaderStageCreateInfo;

@@ -48,6 +48,7 @@ public unsafe class Application {
   private Device _device = null!;
   private Renderer _renderer = null!;
   private SimpleRenderSystem _simpleRender = null!;
+  private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
   // private Camera _camera;
   private Entity _camera = new();
@@ -59,7 +60,6 @@ public unsafe class Application {
     _window = new Window(1200, 900);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
-    _simpleRender = new(_device, _renderer.GetSwapchainRenderPass());
 
     Init();
     Run();
@@ -78,6 +78,20 @@ public unsafe class Application {
       );
       uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
     }
+
+    var globalSetLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.Vertex)
+      .Build();
+
+    VkDescriptorSet[] globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < globalDescriptorSets.Length; i++) {
+      var bufferInfo = uboBuffers[i].GetDescriptorBufferInfo();
+      var writer = new DescriptorWriter(globalSetLayout, _globalPool)
+        .WriteBuffer(0, &bufferInfo)
+        .Build(out globalDescriptorSets[i]);
+    }
+
+    _simpleRender = new(_device, _renderer.GetSwapchainRenderPass(), globalSetLayout.GetDescriptorSetLayout());
 
     while (!_window.ShouldClose) {
       glfwPollEvents();
@@ -98,9 +112,9 @@ public unsafe class Application {
 
         // update
         GlobalUniformBufferObject ubo = new();
-        ubo.Model = Matrix4.Identity;
-        ubo.View = Matrix4.Identity;
-        ubo.Projection = Matrix4.Identity;
+        // ubo.Model = Matrix4.Identity;
+        //ubo.View = Matrix4.Identity;
+        //ubo.Projection = Matrix4.Identity;
         ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
@@ -113,6 +127,7 @@ public unsafe class Application {
         frameInfo.Camera = _camera.GetComponent<Camera>();
         frameInfo.CommandBuffer = commandBuffer;
         frameInfo.FrameIndex = frameIndex;
+        frameInfo.GlobalDescriptorSet = globalDescriptorSets[frameIndex];
 
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
@@ -139,14 +154,18 @@ public unsafe class Application {
         //_device.Dispose();
         //_device = new(_window);
         _renderer = new(_window, _device);
-        _simpleRender = new(_device, _renderer.GetSwapchainRenderPass());
+        _simpleRender = new(_device, _renderer.GetSwapchainRenderPass(), globalSetLayout.GetDescriptorSetLayout()); ;
         LoadEntities();
       }
 
-      GC.Collect();
+      // GC.Collect();
+      GC.Collect(2, GCCollectionMode.Optimized, false);
       Time.EndTick();
       // Logger.Info(Time.DeltaTime.ToString());
     }
+
+    globalSetLayout.Dispose();
+    _globalPool.Dispose();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
@@ -207,6 +226,11 @@ public unsafe class Application {
   }
 
   private void Init() {
+    _globalPool = new DescriptorPool.Builder(_device)
+      .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
+      .Build();
+
     float aspect = _renderer.AspectRatio;
     _camera.AddComponent(new Transform(new Vector3(0, 0, 0)));
     _camera.AddComponent(new Camera(50, aspect));

@@ -102,7 +102,7 @@ public class Swapchain : IDisposable {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_device.PhysicalDevice, _device.Surface);
 
     uint[] indices = new uint[2];
-    // uint* indices = stackalloc uint[2];
+
     indices[0] = queueFamilies.graphicsFamily;
     indices[1] = queueFamilies.presentFamily;
 
@@ -136,7 +136,7 @@ public class Swapchain : IDisposable {
 
     int c = (int)imageCount;
     vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle, &c, null);
-    // var imgs = stackalloc VkImage[c];
+
     VkImage[] imgs = new VkImage[c];
     fixed (VkImage* ptr = imgs) {
       vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle, &c, ptr);
@@ -334,21 +334,9 @@ public class Swapchain : IDisposable {
   }
 
   public unsafe VkResult AcquireNextImage(out uint imageIndex) {
-    GCHandle handle = GCHandle.Alloc(_inFlightFences, GCHandleType.Pinned);
-    IntPtr ptr = handle.AddrOfPinnedObject();
-    VkFence* fencePtr = (VkFence*)ptr;
-
-    /*
-    vkWaitForFences(
-      _device.LogicalDevice,
-      1,
-      fencePtr,
-      true,
-      ulong.MaxValue
-    ).CheckResult();
-    */
-
-    vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue).CheckResult();
+    fixed (VkFence* fencePtr = _inFlightFences) {
+      vkWaitForFences(_device.LogicalDevice, _inFlightFences.Length, fencePtr, true, ulong.MaxValue);
+    }
 
     VkResult result = vkAcquireNextImageKHR(
       _device.LogicalDevice,
@@ -371,11 +359,9 @@ public class Swapchain : IDisposable {
     VkSubmitInfo submitInfo = new();
     submitInfo.sType = VkStructureType.SubmitInfo;
 
-    // VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
     VkSemaphore[] waitSemaphores = new VkSemaphore[1];
     waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
 
-    // VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
     VkPipelineStageFlags[] waitStages = new VkPipelineStageFlags[1];
     waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
     submitInfo.waitSemaphoreCount = 1;
@@ -389,7 +375,6 @@ public class Swapchain : IDisposable {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = buffers;
 
-    // VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
     VkSemaphore[] signalSemaphores = new VkSemaphore[1];
     signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
     fixed (VkSemaphore* signalPtr = signalSemaphores) {
@@ -405,7 +390,6 @@ public class Swapchain : IDisposable {
       presentInfo.waitSemaphoreCount = 1;
       presentInfo.pWaitSemaphores = signalPtr;
 
-      //VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
       VkSwapchainKHR[] swapchains = new VkSwapchainKHR[1];
       swapchains[0] = _handle;
       presentInfo.swapchainCount = 1;

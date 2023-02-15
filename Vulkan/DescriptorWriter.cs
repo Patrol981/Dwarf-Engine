@@ -17,7 +17,7 @@ public class DescriptorWriter {
     var bindingDescription = _setLayout.Bindings[binding];
 
     if (bindingDescription.descriptorCount == 1) {
-      Logger.Warn("Binding single descriptor info, but binding expects multiple");
+      // Logger.Warn("Binding single descriptor info, but binding expects multiple");
       // return this;
     }
 
@@ -57,20 +57,15 @@ public class DescriptorWriter {
 
   public bool Build(out VkDescriptorSet set) {
     bool success = _pool.AllocateDescriptor(_setLayout.GetDescriptorSetLayout(), out set);
-    Console.WriteLine(success);
     if (!success) {
       return false;
     }
-    if (set.IsNotNull) {
-      Overwrite(set);
-    } else {
-      Logger.Error($"{set.ToString()} is null!");
-    }
+    Overwrite(ref set);
 
     return true;
   }
 
-  public unsafe void Overwrite(VkDescriptorSet set) {
+  public unsafe void Overwrite(ref VkDescriptorSet set) {
     for (uint i = 0; i < _writes.Length; i++) {
       _writes[i].dstSet = set;
     }
@@ -78,5 +73,8 @@ public class DescriptorWriter {
     //fixed (VkWriteDescriptorSet* ptr = _writes) {
     //vkUpdateDescriptorSets(_pool.Device.LogicalDevice, _writes.Length, ptr, 0, null);
     //}
+  }
+
+  public void Free() {
   }
 }

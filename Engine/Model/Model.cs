@@ -22,26 +22,31 @@ public class Model : Component, IDisposable {
   private bool[] _hasIndexBuffer = new bool[0];
   private Dwarf.Vulkan.Buffer[] _indexBuffers = new Vulkan.Buffer[0];
   private ulong[] _indexCount = new ulong[0];
+  private Texture[] _textures = new Texture[0];
 
   private int _meshesCount = 0;
 
   public int MeshsesCount => _meshesCount;
+  public bool CanBeDisposed = false;
 
   public Model() { }
 
   public Model(Device device, Mesh[] meshes) {
     _device = device;
-    _indexCount = new ulong[meshes.Length];
-    _indexBuffers = new Vulkan.Buffer[meshes.Length];
-    _indexCount = new ulong[meshes.Length];
-    _vertexBuffers = new Vulkan.Buffer[meshes.Length];
-    _vertexCount = new ulong[meshes.Length];
-    _hasIndexBuffer = new bool[meshes.Length];
     _meshesCount = meshes.Length;
+    _indexCount = new ulong[_meshesCount];
+    _indexBuffers = new Vulkan.Buffer[_meshesCount];
+    _indexCount = new ulong[_meshesCount];
+    _vertexBuffers = new Vulkan.Buffer[_meshesCount];
+    _vertexCount = new ulong[_meshesCount];
+    _hasIndexBuffer = new bool[_meshesCount];
+    _textures = new Texture[_meshesCount];
     for (uint i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
       CreateVertexBuffer(meshes[i].Vertices, i);
       CreateIndexBuffer(meshes[i].Indices, i);
+      // _textures[i] = new Texture(_device);
+      // _textures[i].CreateTexture("./Models/viking_room.png");
     }
   }
 
@@ -56,6 +61,8 @@ public class Model : Component, IDisposable {
     if (_hasIndexBuffer[index]) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
+
+    // vkCmdCopyBufferToImage(commandBuffer, )
   }
 
   public void Draw(VkCommandBuffer commandBuffer, uint index) {
@@ -96,7 +103,6 @@ public class Model : Component, IDisposable {
 
   private unsafe void CreateIndexBuffer(uint[] indices, uint index) {
     _indexCount[index] = (ulong)indices.Length;
-    // _hasIndexBuffer = _indexCount[index] > 0;
     if (!_hasIndexBuffer[index]) return;
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount[index];
     ulong indexSize = (ulong)sizeof(uint);
@@ -113,24 +119,6 @@ public class Model : Component, IDisposable {
     stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
-    // var stagingBuffer = new VkBuffer();
-    // var stagingBufferMemory = new VkDeviceMemory();
-
-    /*
-    _device.CreateBuffer(
-      bufferSize,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-      out stagingBuffer,
-      out stagingBufferMemory
-    );
-    */
-
-    // void* data;
-    // vkMapMemory(_device.LogicalDevice, stagingBufferMemory, 0, bufferSize, VkMemoryMapFlags.None, &data).CheckResult();
-    // Utils.MemCopy((IntPtr)data, Utils.ToIntPtr(indices), (int)bufferSize);
-    // vkUnmapMemory(_device.LogicalDevice, stagingBufferMemory);
-
     _indexBuffers[index] = new Vulkan.Buffer(
       _device,
       indexSize,
@@ -139,35 +127,16 @@ public class Model : Component, IDisposable {
       VkMemoryPropertyFlags.DeviceLocal
     );
 
-
-    /*
-    _device.CreateBuffer(
-      bufferSize,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal,
-      out _indexBuffers[index],
-      out _indexBufferMemories[index]
-    );
-    */
-
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffers[index].GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
-    // _indexBuffers[index].Dispose();
-    //vkDestroyBuffer(_device.LogicalDevice, stagingBuffer);
-    //vkFreeMemory(_device.LogicalDevice, stagingBufferMemory);
   }
 
   public unsafe void Dispose() {
     for (int i = 0; i < _vertexBuffers.Length; i++) {
-      //vkDestroyBuffer(_device.LogicalDevice, _vertexBuffers[i]);
-      //vkFreeMemory(_device.LogicalDevice, _vertexBufferMemories[i]);
-
-      _vertexBuffers[i].Dispose();
-
+      _vertexBuffers[i]?.Dispose();
+      _textures[i]?.Dispose();
       if (_hasIndexBuffer[i]) {
-        // vkDestroyBuffer(_device.LogicalDevice, _indexBuffers[i]);
-        // vkFreeMemory(_device.LogicalDevice, _indexBufferMemories[i]);
-        _indexBuffers[i].Dispose();
+        _indexBuffers[i]?.Dispose();
       }
     }
   }

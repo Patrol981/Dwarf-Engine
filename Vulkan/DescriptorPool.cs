@@ -94,6 +94,10 @@ public class DescriptorPool : IDisposable {
     vkResetDescriptorPool(_device.LogicalDevice, _descriptorPool, 0).CheckResult();
   }
 
+  public VkDescriptorPool GetVkDescriptorPool() {
+    return _descriptorPool;
+  }
+
   public Device Device => _device;
 
   public unsafe void Dispose() {

@@ -20,6 +20,25 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
+public static class ApplicationState {
+  public static Application s_App = null!;
+
+  public static List<Vulkan.Buffer> s_BuffersToDestroyCandidates = new();
+  public static List<VkDescriptorSet> s_DescSetsToDestroyCandidates = new();
+
+  public unsafe static void ClearGarbage(DescriptorPool pool) {
+    var buffArr = s_BuffersToDestroyCandidates.ToArray();
+    for (int i = 0; i < buffArr.Length; i++) {
+      buffArr[i].Dispose();
+    }
+
+    var descArr = s_DescSetsToDestroyCandidates.ToArray();
+    fixed (VkDescriptorSet* ptr = descArr) {
+      vkFreeDescriptorSets(s_App.Device.LogicalDevice, pool.GetVkDescriptorPool(), descArr.Length, ptr);
+    }
+  }
+}
+
 public unsafe class Application {
   public delegate void EventCallback();
 
@@ -50,16 +69,17 @@ public unsafe class Application {
   private SimpleRenderSystem _simpleRender = null!;
   private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
-  // private Camera _camera;
   private Entity _camera = new();
 
-  // private Model _model;
-  // private Entity _testEntity;
+  // ubos
+  private DescriptorSetLayout _globalSetLayout = null!;
 
   public Application() {
     _window = new Window(1200, 900);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
+
+    ApplicationState.s_App = this;
 
     Init();
     Run();
@@ -79,31 +99,41 @@ public unsafe class Application {
       uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
     }
 
-    var globalSetLayout = new DescriptorSetLayout.Builder(_device)
+    _globalSetLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.Vertex)
       .Build();
 
     VkDescriptorSet[] globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < globalDescriptorSets.Length; i++) {
-      var bufferInfo = uboBuffers[i].GetDescriptorBufferInfo();
-      var writer = new DescriptorWriter(globalSetLayout, _globalPool)
+      var bufferInfo = uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      var writer = new DescriptorWriter(_globalSetLayout, _globalPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out globalDescriptorSets[i]);
     }
 
-    _simpleRender = new(_device, _renderer.GetSwapchainRenderPass(), globalSetLayout.GetDescriptorSetLayout());
+    _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
+    _simpleRender.SetupRenderData(_entities.Count);
+
+    var elasped = 0.0f;
+    var testState = true;
+    var totalSpawned = 0;
 
     while (!_window.ShouldClose) {
       glfwPollEvents();
       Time.StartTick();
+
+      var sizes = _simpleRender.CheckSizes(_entities.Count);
+      if (!sizes) {
+        _simpleRender.Dispose();
+        _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
+        _simpleRender.SetupRenderData(_entities.Count);
+      }
 
       float aspect = _renderer.AspectRatio;
       if (aspect != _camera.GetComponent<Camera>().Aspect) {
         _camera.GetComponent<Camera>().Aspect = aspect;
         _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
       }
-
-      // _camera.GetComponent<Camera>().UpdateVectors();
 
       var commandBuffer = _renderer.BeginFrame();
       if (commandBuffer != VkCommandBuffer.Null) {
@@ -112,17 +142,12 @@ public unsafe class Application {
 
         // update
         GlobalUniformBufferObject ubo = new();
-        // ubo.Model = Matrix4.Identity;
-        //ubo.View = Matrix4.Identity;
-        //ubo.Projection = Matrix4.Identity;
         ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
 
         uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
         // uboBuffers[frameIndex].Flush((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-        //globalUBO.WrtieToIndex(&ubo, frameIndex);
-        //globalUBO.FlushIndex(frameIndex);
 
         frameInfo.Camera = _camera.GetComponent<Camera>();
         frameInfo.CommandBuffer = commandBuffer;
@@ -134,95 +159,74 @@ public unsafe class Application {
         _simpleRender.RenderEntities(frameInfo, _entities.ToArray());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
+
+        // cleanup
+
+        Collect();
+
       }
 
-      // _camera.GetComponent<Transform>().Position.X += 0.001f;
-      // _camera.GetComponent<Camera>()._yaw -= 0.0001f;
-      //Console.WriteLine(_camera.GetComponent<Camera>()._yaw);
+      _camera.GetComponent<Camera>().UpdateControls();
 
-      MoveCam();
-
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_ENTER) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        Span<Entity> entities = _entities.ToArray();
-        for (int i = 0; i < entities.Length; i++) {
-          entities[i].GetComponent<Model>()?.Dispose();
+      if (elasped > 1.0f) {
+        if (testState) {
+          var box2 = new Entity();
+          box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
+          box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+          box2.AddComponent(new Transform(new Vector3(1.0f, -3.0f, -1f)));
+          box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+          box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+          ApplicationState.s_App.AddEntity(box2);
+          testState = !testState;
+          elasped = 0.0f;
+          totalSpawned += 1;
+          Logger.Info($"Total spawned: {totalSpawned.ToString()}");
+        } else {
+          var count = ApplicationState.s_App.GetEntities().Count - 1;
+          var entities = ApplicationState.s_App.GetEntities();
+          entities[count].GetComponent<Model>().CanBeDisposed = true;
+          testState = !testState;
+          elasped = 0.0f;
         }
-        _entities = new List<Entity>();
-        // _renderer.EndFrame();
-        _simpleRender.Dispose();
-        _renderer.Dispose();
-        //_device.Dispose();
-        //_device = new(_window);
-        _renderer = new(_window, _device);
-        _simpleRender = new(_device, _renderer.GetSwapchainRenderPass(), globalSetLayout.GetDescriptorSetLayout()); ;
-        LoadEntities();
       }
 
-      // GC.Collect();
       GC.Collect(2, GCCollectionMode.Optimized, false);
       Time.EndTick();
-      // Logger.Info(Time.DeltaTime.ToString());
+      elasped += Time.DeltaTime;
+      // _simpleRender.ClearRenderData();
     }
-
-    globalSetLayout.Dispose();
-    _globalPool.Dispose();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
       Logger.Error(result.ToString());
     }
 
-    // globalUBO.Dispose();
+    // _simpleRender.DestoryBuffers();
+    // _simpleRender.ClearRenderData();
     for (int i = 0; i < uboBuffers.Length; i++) {
       uboBuffers[i].Dispose();
     }
     Cleanup();
   }
 
-  private void MoveCam() {
-    if (CameraState.GetFirstMove()) {
-      CameraState.SetFirstMove(false);
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
-    } else {
-      var deltaX = (float)MouseState.GetInstance().MousePosition.X - (float)CameraState.GetLastPosition().X;
-      var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
-
-      if (WindowState.s_MouseCursorState == InputValue.GLFW_CURSOR_DISABLED) {
-        _camera.GetComponent<Camera>().Yaw += deltaX * CameraState.GetSensitivity();
-        _camera.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
-      }
-
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_A) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_S) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_W) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT_SHIFT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position -= _camera.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-      if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_SPACE) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        _camera.GetComponent<Transform>().Position += _camera.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-
-      //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-      //WindowState.FocusOnWindow();
-      //}
-    }
-
-
-  }
-
   public void AddEntity(Entity entity) {
     _entities.Add(entity);
+  }
+
+  public List<Entity> GetEntities() {
+    return _entities;
+  }
+
+  public void RemoveEntityAt(int index) {
+    _entities.RemoveAt(index);
+  }
+
+  public void RemoveEntity(Entity entity) {
+    _entities.Remove(entity);
+  }
+
+  public void RemoveEntityRange(int index, int count) {
+    _entities.RemoveRange(index, count);
   }
 
   private void Init() {
@@ -236,6 +240,7 @@ public unsafe class Application {
     _camera.AddComponent(new Camera(50, aspect));
     _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
     _camera.GetComponent<Camera>()._yaw = 1.3811687f;
+    _camera.AddComponent(new FreeCameraController());
 
     CameraState.SetCamera(_camera.GetComponent<Camera>());
     CameraState.SetCameraEntity(_camera);
@@ -248,12 +253,9 @@ public unsafe class Application {
     Console.WriteLine(Directory.GetCurrentDirectory());
 
     var en = new Entity();
-    //en.AddComponent(GetCube(new Vector3(0, 0, 0)));
-    // en.AddComponent(new Model(_device, GenericLoader.LoadModel("./Models/dwarf_test_model.obj")));
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
-    en.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 2f, 2f)));
-    // en.GetComponent<Transform>().Translation = new(0f, -1.5f, 2f);
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     AddEntity(en);
@@ -265,14 +267,6 @@ public unsafe class Application {
     box.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     box.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(box);
-
-    var box2 = new Entity();
-    box2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/colored_cube.obj"));
-    box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    box2.AddComponent(new Transform(new Vector3(1.0f, -3.0f, -1f)));
-    box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
-    box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
-    AddEntity(box2);
 
     var vase = new Entity();
     vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
@@ -289,6 +283,14 @@ public unsafe class Application {
     vase2.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
     vase2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(vase2);
+
+    var room = new Entity();
+    room.AddComponent(new GenericLoader().LoadModel(_device, "./Models/viking_room.obj"));
+    room.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
+    room.AddComponent(new Transform(new Vector3(2.5f, 1, 1f)));
+    room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
+    room.GetComponent<Transform>().Scale = new Vector3(3, 3, 3);
+    AddEntity(room);
   }
 
   private void Cleanup() {
@@ -296,9 +298,24 @@ public unsafe class Application {
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Model>()?.Dispose();
     }
-    _renderer?.Dispose();
+    _globalSetLayout.Dispose();
+    _globalPool.Dispose();
     _simpleRender?.Dispose();
+    _renderer?.Dispose();
     _window?.Dispose();
     _device?.Dispose();
   }
+
+  private void Collect() {
+    for (int i = 0; i < _entities.Count; i++) {
+      if (_entities[i].GetComponent<Model>().CanBeDisposed) {
+        Console.WriteLine($"Disposing at index {i}");
+        _entities[i].GetComponent<Model>().Dispose();
+        Console.WriteLine($"Removing at index {i}");
+        ApplicationState.s_App.RemoveEntity(_entities[i]);
+      }
+    }
+  }
+
+  public Device Device => _device;
 }

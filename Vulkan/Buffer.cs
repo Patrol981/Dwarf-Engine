@@ -5,6 +5,8 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public unsafe class Buffer : IDisposable {
+  public float LastTimeUsed = 0.0f;
+
   private Device _device;
   private IntPtr _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
@@ -32,6 +34,23 @@ public unsafe class Buffer : IDisposable {
     _memoryPropertyFlags = propertyFlags;
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
+    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+  }
+
+  public Buffer(
+    Device device,
+    ulong bufferSize,
+    VkBufferUsageFlags usageFlags,
+    VkMemoryPropertyFlags propertyFlags,
+    ulong minOffsetAlignment = 1
+  ) {
+    _device = device;
+    _instanceSize = 0;
+    _instanceCount = 0;
+    _usageFlags = usageFlags;
+    _memoryPropertyFlags = propertyFlags;
+    _alignmentSize = 0;
+    _bufferSize = bufferSize;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
   }
 
@@ -105,6 +124,10 @@ public unsafe class Buffer : IDisposable {
     return _buffer;
   }
 
+  public VkDeviceMemory GetVkDeviceMemory() {
+    return _memory;
+  }
+
   public IntPtr GetMappedMemory() {
     return _mapped;
   }
@@ -140,9 +163,32 @@ public unsafe class Buffer : IDisposable {
     return instanceSize;
   }
 
+  public void FreeMemory() {
+    vkFreeMemory(_device.LogicalDevice, _memory);
+  }
+
+  public void DestoryBuffer() {
+    vkDestroyBuffer(_device.LogicalDevice, _buffer);
+  }
+
   public void Dispose() {
     Unmap();
-    vkDestroyBuffer(_device.LogicalDevice, _buffer);
-    vkFreeMemory(_device.LogicalDevice, _memory);
+    DestoryBuffer();
+    FreeMemory();
+  }
+
+  public void ResetTime() {
+    // Console.WriteLine(LastTimeUsed);
+    LastTimeUsed = 0.0f;
+  }
+
+  public void UpdateTime() {
+    LastTimeUsed += Dwarf.Engine.Globals.Time.DeltaTime;
+  }
+
+  public void RemoveUnused() {
+    if (LastTimeUsed > 5.0f) {
+      Dispose();
+    }
   }
 }

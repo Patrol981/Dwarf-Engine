@@ -39,8 +39,6 @@ public class Camera : Component {
   }
 
   public void SetPerspectiveProjection(float near, float far) {
-    //_projectionMatrix = Matrix4.Identity;
-    // _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.PiOver4, aspect, near, far);
     _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), _aspect, near, far);
   }
 
@@ -50,11 +48,8 @@ public class Camera : Component {
 
   public Matrix4 GetViewMatrix() {
     Vector3 position = Owner!.GetComponent<Transform>().Position;
-    // var position = new Vector3(0, 0, -2);
     _viewMatrix = Matrix4.Identity;
     _viewMatrix = Matrix4.LookAt(position, position + _front, _up);
-    // return Matrix4.LookAt(position, position + _front, _up);
-    // _viewMatrix = Matrix4.LookAt(new Vector3(0, 0, -2), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
     return _viewMatrix;
   }
 
@@ -95,6 +90,10 @@ public class Camera : Component {
 
     _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
     _up = Vector3.Normalize(Vector3.Cross(_right, _front));
+  }
+
+  public void UpdateControls() {
+    Owner!.GetComponent<FreeCameraController>()?.Update();
   }
 
   public float Aspect {

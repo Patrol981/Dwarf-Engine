@@ -109,7 +109,7 @@ public class Device : IDisposable {
     vkBindImageMemory(_logicalDevice, image, imageMemory, 0);
   }
 
-  private uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties) {
+  public uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out memProperties);
     for (int i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -165,7 +165,7 @@ public class Device : IDisposable {
     appInfo.applicationVersion = new(1, 0, 0);
     appInfo.pEngineName = new VkString("No Engine");
     appInfo.engineVersion = new(1, 0, 0);
-    appInfo.apiVersion = VkVersion.Version_1_2;
+    appInfo.apiVersion = VkVersion.Version_1_3;
 
     var createInfo = new VkInstanceCreateInfo();
     createInfo.sType = VkStructureType.InstanceCreateInfo;

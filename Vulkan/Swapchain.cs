@@ -425,10 +425,6 @@ public class Swapchain : IDisposable {
     // check for the presence of VK_FORMAT_B8G8R8A8_UNORM
     foreach (VkSurfaceFormatKHR availableFormat in availableFormats) {
       // B8G8R8A8Unorm
-
-      if (availableFormat.format == VkFormat.B8G8R8A8Unorm) {
-        return availableFormat;
-      }
       if (availableFormat.format == VkFormat.B8G8R8A8Srgb) {
         return availableFormat;
       }
@@ -439,7 +435,7 @@ public class Swapchain : IDisposable {
 
   private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
     foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
-      if (availablePresentMode == VkPresentModeKHR.Mailbox) {
+      if (availablePresentMode == VkPresentModeKHR.Mailbox || availablePresentMode == VkPresentModeKHR.Immediate) {
         return availablePresentMode;
       }
     }

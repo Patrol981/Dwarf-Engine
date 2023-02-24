@@ -118,10 +118,6 @@ public class Device : IDisposable {
 
       if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
         return (uint)i;
-      } else {
-        Logger.Error($"Memory Property error ");
-        Logger.Error($"Flags: {memProperties.memoryTypes[i].propertyFlags.ToString()}");
-        Logger.Error($"Props: {properties.ToString()}");
       }
 
       //if ((typeFilter & (1 << 1)) != 0 && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {

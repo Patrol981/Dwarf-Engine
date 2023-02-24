@@ -184,6 +184,7 @@ public unsafe class Application {
           elasped = 0.0f;
           totalSpawned += 1;
           Logger.Info($"Total spawned: {totalSpawned.ToString()}");
+          Logger.Info($"Time: {Time.DeltaTime}");
         } else {
           var count = ApplicationState.s_App.GetEntities().Count - 1;
           var entities = ApplicationState.s_App.GetEntities();

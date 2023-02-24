@@ -37,6 +37,7 @@ public unsafe static class DeviceHelper {
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
         returnDevice = physicalDevice;
+        break;
         if (discrete) break;
       }
     }

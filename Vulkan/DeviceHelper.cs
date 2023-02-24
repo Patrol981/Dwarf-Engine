@@ -12,7 +12,7 @@ public unsafe static class DeviceHelper {
     int count = 0;
     vkEnumeratePhysicalDevices(instance, &count, null).CheckResult();
     if (count == 0) {
-      Logger.Error("Faild to find any Vulkan capable GPU");
+      Logger.Error("Failed to find any Vulkan capable GPU");
     }
 
     vkEnumeratePhysicalDevices(instance, &count, null);
@@ -23,18 +23,22 @@ public unsafe static class DeviceHelper {
       vkEnumeratePhysicalDevices(instance, &count, ptr);
     }
 
+    VkPhysicalDeviceProperties checkProperties = new();
+
     for (int i = 0; i < count; i++) {
       VkPhysicalDevice physicalDevice = physicalDevices[i];
       if (IsDeviceSuitable(physicalDevice, surface) == false)
         continue;
 
-      vkGetPhysicalDeviceProperties(physicalDevice, out VkPhysicalDeviceProperties checkProperties);
+      vkGetPhysicalDeviceProperties(physicalDevice, out checkProperties);
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
         returnDevice = physicalDevice;
         if (discrete) break;
       }
     }
+
+    Logger.Info($"Successfully found a device: {checkProperties.GetDeviceName().ToString()}");
 
     return returnDevice;
   }

@@ -51,8 +51,8 @@ public class Transform : Component {
     var angleZ = MathHelper.DegreesToRadians(Rotation.Z);
 
     var rotation = Matrix4.CreateRotationX(angleX) * Matrix4.CreateRotationY(angleY) * Matrix4.CreateRotationZ(angleZ);
-    var worldModel = rotation * Matrix4.CreateTranslation(modelPos);
-    worldModel *= Matrix4.CreateScale(Scale);
+    var worldModel = Matrix4.CreateScale(Scale) * rotation * Matrix4.CreateTranslation(modelPos);
+    // worldModel *= 
     return worldModel;
   }
 

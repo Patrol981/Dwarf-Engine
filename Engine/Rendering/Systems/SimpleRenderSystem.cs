@@ -24,7 +24,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
     _renderer = renderer;
 
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
@@ -96,8 +96,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
       0,
       null
     );
-
-    var toDeleteList = new List<int>();
 
     for (int i = 0; i < entities.Length; i++) {
       var modelUBO = new ModelUniformBufferObject();

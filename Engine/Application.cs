@@ -100,7 +100,7 @@ public unsafe class Application {
     }
 
     _globalSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
 
     VkDescriptorSet[] globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
@@ -142,9 +142,14 @@ public unsafe class Application {
 
         // update
         GlobalUniformBufferObject ubo = new();
-        ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
+        // ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+
+        // ubo.LightPosition = new Vector3(-1, -2, -1);
+        ubo.LightPosition = _camera.GetComponent<Transform>().Position;
+        ubo.LightColor = new Vector4(1, 1, 1, 1);
+        ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 0.2f);
 
         uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
         // uboBuffers[frameIndex].Flush((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -161,9 +166,7 @@ public unsafe class Application {
         _renderer.EndFrame();
 
         // cleanup
-
         Collect();
-
       }
 
       _camera.GetComponent<Camera>().UpdateControls();
@@ -173,7 +176,7 @@ public unsafe class Application {
           var box2 = new Entity();
           box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
           box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-          box2.AddComponent(new Transform(new Vector3(1.0f, -3.0f, -1f)));
+          box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
           box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
           box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
           ApplicationState.s_App.AddEntity(box2);
@@ -255,7 +258,7 @@ public unsafe class Application {
     var en = new Entity();
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
-    en.AddComponent(new Transform(new Vector3(0.0f, 2f, 2f)));
+    en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     AddEntity(en);
@@ -271,7 +274,7 @@ public unsafe class Application {
     var vase = new Entity();
     vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
     vase.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    vase.AddComponent(new Transform(new Vector3(0.5f, 1f, -1f)));
+    vase.AddComponent(new Transform(new Vector3(0.5f, 0f, -2f)));
     vase.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
     vase.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(vase);
@@ -279,7 +282,7 @@ public unsafe class Application {
     var vase2 = new Entity();
     vase2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/smooth_vase.obj"));
     vase2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    vase2.AddComponent(new Transform(new Vector3(.0f, .5f, 2.5f)));
+    vase2.AddComponent(new Transform(new Vector3(.0f, 0f, 3.5f)));
     vase2.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
     vase2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     AddEntity(vase2);
@@ -287,10 +290,18 @@ public unsafe class Application {
     var room = new Entity();
     room.AddComponent(new GenericLoader().LoadModel(_device, "./Models/viking_room.obj"));
     room.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
-    room.AddComponent(new Transform(new Vector3(2.5f, 1, 1f)));
+    room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
     room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
     room.GetComponent<Transform>().Scale = new Vector3(3, 3, 3);
     AddEntity(room);
+
+    var floor = new Entity();
+    floor.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
+    floor.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
+    floor.AddComponent(new Transform(new Vector3(0f, 0.1f, 0f)));
+    floor.GetComponent<Transform>().Rotation = new Vector3(0, 0, 0);
+    floor.GetComponent<Transform>().Scale = new Vector3(7, 0.1f, 7);
+    AddEntity(floor);
   }
 
   private void Cleanup() {

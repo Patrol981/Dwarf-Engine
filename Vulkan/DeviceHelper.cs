@@ -37,9 +37,9 @@ public unsafe static class DeviceHelper {
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
         returnDevice = physicalDevice;
-        break;
         if (discrete) break;
       }
+      returnDevice = physicalDevice;
     }
 
     Logger.Info($"Successfully found a device: {checkProperties.GetDeviceName().ToString()}");

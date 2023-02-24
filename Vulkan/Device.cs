@@ -115,12 +115,21 @@ public class Device : IDisposable {
     for (int i = 0; i < memProperties.memoryTypeCount; i++) {
       // 1 << n is basically an equivalent to 2^n.
       // if ((typeFilter & (1 << i)) &&
-      if ((typeFilter & (1 << 1)) != 0 && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+
+      if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
         return (uint)i;
+      } else {
+        Logger.Error($"Memory Property error ");
+        Logger.Error($"Flags: {memProperties.memoryTypes[i].propertyFlags.ToString()}");
+        Logger.Error($"Props: {properties.ToString()}");
       }
+
+      //if ((typeFilter & (1 << 1)) != 0 && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+      //  return (uint)i;
+      //}
     }
 
-    throw new Exception("Failed to find suitable memory type");
+    throw new Exception($"Failed to find suitable memory type");
   }
 
   private unsafe VkCommandBuffer BeginSingleTimeCommands() {

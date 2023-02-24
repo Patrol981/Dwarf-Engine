@@ -25,12 +25,15 @@ public unsafe static class DeviceHelper {
 
     VkPhysicalDeviceProperties checkProperties = new();
 
+    Logger.Info("Available GPU'S:");
+
     for (int i = 0; i < count; i++) {
       VkPhysicalDevice physicalDevice = physicalDevices[i];
       if (IsDeviceSuitable(physicalDevice, surface) == false)
         continue;
 
       vkGetPhysicalDeviceProperties(physicalDevice, out checkProperties);
+      Logger.Info($"{checkProperties.GetDeviceName().ToString()}");
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
         returnDevice = physicalDevice;

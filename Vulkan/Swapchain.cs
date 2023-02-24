@@ -435,6 +435,7 @@ public class Swapchain : IDisposable {
 
   private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
     foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
+      // render mode
       if (availablePresentMode == VkPresentModeKHR.Mailbox || availablePresentMode == VkPresentModeKHR.Immediate) {
         return availablePresentMode;
       }

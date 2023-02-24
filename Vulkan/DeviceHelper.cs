@@ -23,7 +23,7 @@ public unsafe static class DeviceHelper {
       vkEnumeratePhysicalDevices(instance, &count, ptr);
     }
 
-    VkPhysicalDeviceProperties checkProperties = new();
+    VkPhysicalDeviceProperties gpuInfo = new();
 
     Logger.Info("Available GPU'S:");
 
@@ -32,17 +32,17 @@ public unsafe static class DeviceHelper {
       if (IsDeviceSuitable(physicalDevice, surface) == false)
         continue;
 
-      vkGetPhysicalDeviceProperties(physicalDevice, out checkProperties);
+      vkGetPhysicalDeviceProperties(physicalDevice, out var checkProperties);
       Logger.Info($"{checkProperties.GetDeviceName().ToString()}");
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
+        gpuInfo = checkProperties;
         returnDevice = physicalDevice;
         if (discrete) break;
       }
-      returnDevice = physicalDevice;
     }
 
-    Logger.Info($"Successfully found a device: {checkProperties.GetDeviceName().ToString()}");
+    Logger.Info($"Successfully found a device: {gpuInfo.GetDeviceName().ToString()}");
 
     return returnDevice;
   }

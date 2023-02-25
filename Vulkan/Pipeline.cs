@@ -142,7 +142,7 @@ public class Pipeline : IDisposable {
     configInfo.RasterizationInfo.rasterizerDiscardEnable = false;
     configInfo.RasterizationInfo.polygonMode = VkPolygonMode.Fill;
     configInfo.RasterizationInfo.lineWidth = 1.0f;
-    configInfo.RasterizationInfo.cullMode = VkCullModeFlags.None;
+    configInfo.RasterizationInfo.cullMode = VkCullModeFlags.Back;
     configInfo.RasterizationInfo.frontFace = VkFrontFace.Clockwise;
     configInfo.RasterizationInfo.depthBiasEnable = false;
     configInfo.RasterizationInfo.depthBiasConstantFactor = 0.0f;  // Optional

@@ -170,7 +170,7 @@ public class Device : IDisposable {
     appInfo.applicationVersion = new(1, 0, 0);
     appInfo.pEngineName = new VkString("No Engine");
     appInfo.engineVersion = new(1, 0, 0);
-    appInfo.apiVersion = VkVersion.Version_1_2;
+    appInfo.apiVersion = VkVersion.Version_1_3;
 
     var createInfo = new VkInstanceCreateInfo();
     createInfo.sType = VkStructureType.InstanceCreateInfo;
@@ -244,7 +244,7 @@ public class Device : IDisposable {
     VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* userData
   ) {
-    string message = Interop.GetString(pCallbackData->pMessage);
+    string message = new(pCallbackData->pMessage);
     if (messageTypes == VkDebugUtilsMessageTypeFlagsEXT.Validation) {
       if (messageSeverity == VkDebugUtilsMessageSeverityFlagsEXT.Error) {
         Logger.Error($"[Vulkan]: Validation: {messageSeverity} - {message}");

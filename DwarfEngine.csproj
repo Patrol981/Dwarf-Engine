@@ -17,9 +17,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Vortice.Vulkan" Version="1.5.27" />
-    <PackageReference Include="OpenTK" Version="4.7.5" />
-    <PackageReference Include="StbImageSharp" Version="2.27.11" />
+    <PackageReference Include="Vortice.Vulkan" Version="1.5.28" />
+    <PackageReference Include="OpenTK" Version="4.7.7" />
+    <PackageReference Include="StbImageSharp" Version="2.27.13" />
     <PackageReference Include="AssimpNet" Version="4.1.0" />
   </ItemGroup>
 

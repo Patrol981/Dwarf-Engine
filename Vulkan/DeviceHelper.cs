@@ -173,7 +173,7 @@ public unsafe static class DeviceHelper {
 
   public static string[] GetInstanceExtensions() {
     int count = 0;
-    VkResult result = vkEnumerateInstanceExtensionProperties((byte*)null, &count, null);
+    VkResult result = vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, null);
     if (result != VkResult.Success) {
       return Array.Empty<string>();
     }
@@ -185,7 +185,7 @@ public unsafe static class DeviceHelper {
     VkExtensionProperties[] props = new VkExtensionProperties[count];
     // VkExtensionProperties* props = stackalloc VkExtensionProperties[count];
     fixed (VkExtensionProperties* ptr = props) {
-      vkEnumerateInstanceExtensionProperties((byte*)null, &count, ptr);
+      vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, ptr);
     }
 
     string[] extensions = new string[count];

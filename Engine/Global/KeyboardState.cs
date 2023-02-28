@@ -3,6 +3,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
 using Dwarf.Extensions.GLFW;
+using Dwarf.Vulkan;
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine.Globals;
@@ -18,8 +19,18 @@ public sealed class KeyboardState {
         if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_F1) WindowState.MaximizeWindow();
         if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_ENTER) AddEntity();
         if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_RIGHT_SHIFT) RemoveEntity();
+        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_GRAVE_ACCENT) ChangeWireframeMode();
         break;
     }
+  }
+
+  static void ChangeWireframeMode() {
+    if (ApplicationState.s_App.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)) {
+      ApplicationState.s_App.CurrentPipelineConfig = new VertexDebugPipeline();
+    } else {
+      ApplicationState.s_App.CurrentPipelineConfig = new PipelineConfigInfo();
+    }
+    ApplicationState.s_App.ReloadSimpleRenderSystem = true;
   }
 
   static void AddEntity() {
@@ -48,7 +59,7 @@ public sealed class KeyboardState {
     //if (_renderer.IsFrameStarted || _renderer.IsFrameInProgress) return;
     var count = ApplicationState.s_App.GetEntities().Count - 1;
     var entities = ApplicationState.s_App.GetEntities();
-    entities[count].GetComponent<Model>().CanBeDisposed = true;
+    entities[count].CanBeDisposed = true;
     //entities[count].GetComponent<Model>()?.Dispose();
     //ApplicationState.s_App.RemoveEntityAt(count);
   }
@@ -57,7 +68,7 @@ public sealed class KeyboardState {
     var entities = ApplicationState.s_App.GetEntities();
     entities.Reverse();
     for (int i = 0; i < range; i++) {
-      entities[i].GetComponent<Model>().CanBeDisposed = true;
+      entities[i].CanBeDisposed = true;
       // entities[i].GetComponent<Model>()?.Dispose();
     }
     // ApplicationState.s_App.RemoveEntityRange(count, range);

@@ -1,6 +1,8 @@
 namespace Dwarf.Engine.EntityComponentSystem;
 
 public class Entity {
+  public bool CanBeDisposed = false;
+
   private ComponentManager _componentManager;
   private string _name = "Entity";
   private Guid _guid = Guid.NewGuid();

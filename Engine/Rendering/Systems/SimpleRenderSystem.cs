@@ -10,6 +10,7 @@ namespace Dwarf.Engine.Rendering;
 public unsafe class SimpleRenderSystem : IDisposable {
   private readonly Device _device = null!;
   private readonly Renderer _renderer = null!;
+  private PipelineConfigInfo _configInfo = null!;
   private Pipeline _pipeline = null!;
   private VkPipelineLayout _pipelineLayout;
 
@@ -19,9 +20,16 @@ public unsafe class SimpleRenderSystem : IDisposable {
   private DescriptorSetLayout _setLayout = null!;
   private VkDescriptorSet[] _descriptorSets = new VkDescriptorSet[0];
 
-  public SimpleRenderSystem(Device device, Renderer renderer, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout) {
+  public SimpleRenderSystem(
+    Device device,
+    Renderer renderer,
+    VkRenderPass renderPass,
+    VkDescriptorSetLayout globalSetLayout,
+    PipelineConfigInfo configInfo = null!
+  ) {
     _device = device;
     _renderer = renderer;
+    _configInfo = configInfo;
 
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
@@ -137,13 +145,21 @@ public unsafe class SimpleRenderSystem : IDisposable {
       );
 
       var entity = entities[i].GetComponent<Model>();
-      if (!entity.CanBeDisposed) {
+      if (!entity.Owner!.CanBeDisposed) {
         for (uint x = 0; x < entity.MeshsesCount; x++) {
           entity.Bind(frameInfo.CommandBuffer, x);
           entity.Draw(frameInfo.CommandBuffer, x);
         }
       }
     }
+  }
+
+  public void SetPipelineConfigInfo(PipelineConfigInfo configInfo) {
+    _configInfo = configInfo;
+  }
+
+  public PipelineConfigInfo GetPipelineConfigInfo() {
+    return _configInfo;
   }
 
   private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
@@ -167,8 +183,11 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
   private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    PipelineConfigInfo configInfo = new();
-    var pipelineConfig = Pipeline.DefaultConfigInfo(configInfo);
+    // PipelineConfigInfo configInfo = new();
+    if (_configInfo == null) {
+      _configInfo = new PipelineConfigInfo();
+    }
+    var pipelineConfig = _configInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
     _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig);

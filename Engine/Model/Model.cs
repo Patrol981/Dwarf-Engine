@@ -27,7 +27,6 @@ public class Model : Component, IDisposable {
   private int _meshesCount = 0;
 
   public int MeshsesCount => _meshesCount;
-  public bool CanBeDisposed = false;
 
   public Model() { }
 

@@ -58,6 +58,9 @@ public unsafe class Application {
     _onLoad = eventCallback;
   }
 
+  public PipelineConfigInfo CurrentPipelineConfig = new PipelineConfigInfo();
+  public bool ReloadSimpleRenderSystem = false;
+
   private EventCallback? _onUpdate;
   private EventCallback? _onRender;
   private EventCallback? _onGUI;
@@ -123,10 +126,12 @@ public unsafe class Application {
       Time.StartTick();
 
       var sizes = _simpleRender.CheckSizes(_entities.Count);
-      if (!sizes) {
-        _simpleRender.Dispose();
-        _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
-        _simpleRender.SetupRenderData(_entities.Count);
+      if (!sizes || ReloadSimpleRenderSystem) {
+        ReloadSimpleRenderSystem = false;
+        ReloadRenderSystem();
+        // _simpleRender.Dispose();
+        // _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
+        // _simpleRender.SetupRenderData(_entities.Count);
       }
 
       float aspect = _renderer.AspectRatio;
@@ -183,12 +188,10 @@ public unsafe class Application {
           testState = !testState;
           elasped = 0.0f;
           totalSpawned += 1;
-          Logger.Info($"Total spawned: {totalSpawned.ToString()}");
-          Logger.Info($"Time: {Time.DeltaTime}");
         } else {
           var count = ApplicationState.s_App.GetEntities().Count - 1;
           var entities = ApplicationState.s_App.GetEntities();
-          entities[count].GetComponent<Model>().CanBeDisposed = true;
+          entities[count].CanBeDisposed = true;
           testState = !testState;
           elasped = 0.0f;
         }
@@ -229,8 +232,18 @@ public unsafe class Application {
     _entities.Remove(entity);
   }
 
+  public void DestroyEntity(Entity entity) {
+    entity.CanBeDisposed = true;
+  }
+
   public void RemoveEntityRange(int index, int count) {
     _entities.RemoveRange(index, count);
+  }
+
+  public void ReloadRenderSystem() {
+    _simpleRender.Dispose();
+    _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
+    _simpleRender.SetupRenderData(_entities.Count);
   }
 
   private void Init() {
@@ -320,10 +333,8 @@ public unsafe class Application {
 
   private void Collect() {
     for (int i = 0; i < _entities.Count; i++) {
-      if (_entities[i].GetComponent<Model>().CanBeDisposed) {
-        Console.WriteLine($"Disposing at index {i}");
+      if (_entities[i].CanBeDisposed) {
         _entities[i].GetComponent<Model>().Dispose();
-        Console.WriteLine($"Removing at index {i}");
         ApplicationState.s_App.RemoveEntity(_entities[i]);
       }
     }

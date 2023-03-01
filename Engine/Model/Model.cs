@@ -18,15 +18,12 @@ public class Model : Component, IDisposable {
 
   private Dwarf.Vulkan.Buffer[] _vertexBuffers = new Vulkan.Buffer[0];
   private ulong[] _vertexCount = new ulong[0];
-
   private bool[] _hasIndexBuffer = new bool[0];
   private Dwarf.Vulkan.Buffer[] _indexBuffers = new Vulkan.Buffer[0];
   private ulong[] _indexCount = new ulong[0];
-  private Texture[] _textures = new Texture[0];
-
   private int _meshesCount = 0;
-
-  public int MeshsesCount => _meshesCount;
+  private bool _usesTexture = false;
+  private Guid _textureIdRef = Guid.Empty;
 
   public Model() { }
 
@@ -39,13 +36,10 @@ public class Model : Component, IDisposable {
     _vertexBuffers = new Vulkan.Buffer[_meshesCount];
     _vertexCount = new ulong[_meshesCount];
     _hasIndexBuffer = new bool[_meshesCount];
-    _textures = new Texture[_meshesCount];
     for (uint i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
       CreateVertexBuffer(meshes[i].Vertices, i);
       CreateIndexBuffer(meshes[i].Indices, i);
-      // _textures[i] = new Texture(_device);
-      // _textures[i].CreateTexture("./Models/viking_room.png");
     }
   }
 
@@ -62,6 +56,15 @@ public class Model : Component, IDisposable {
     }
 
     // vkCmdCopyBufferToImage(commandBuffer, )
+  }
+
+  public void BindToTexture(ref TextureManager textureManager, string texturePath) {
+    _textureIdRef = textureManager.GetTextureId(texturePath);
+    if (_textureIdRef != Guid.Empty) {
+      _usesTexture = true;
+    } else {
+      Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
+    }
   }
 
   public void Draw(VkCommandBuffer commandBuffer, uint index) {
@@ -133,7 +136,6 @@ public class Model : Component, IDisposable {
   public unsafe void Dispose() {
     for (int i = 0; i < _vertexBuffers.Length; i++) {
       _vertexBuffers[i]?.Dispose();
-      _textures[i]?.Dispose();
       if (_hasIndexBuffer[i]) {
         _indexBuffers[i]?.Dispose();
       }
@@ -179,4 +181,7 @@ public class Model : Component, IDisposable {
     }
   }
   public static uint GetAttribsLength() => 4;
+  public int MeshsesCount => _meshesCount;
+  public bool UsesTexture => _usesTexture;
+  public Guid TextureIdReference => _textureIdRef;
 }

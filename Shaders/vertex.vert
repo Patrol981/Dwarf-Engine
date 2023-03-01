@@ -23,37 +23,16 @@ layout (set = 1, binding = 0) uniform ModelUBO {
   mat4 modelMatrix;
   mat4 normalMatrix;
   vec3 material;
+  bool useTexture;
 } modelUBO;
-
-layout (push_constant) uniform Push {
-  mat4 modelMatrix;
-  mat4 normalMatrix;
-} push;
 
 void main() {
   vec4 positionWorld = modelUBO.modelMatrix * vec4(position, 1.0);
-  // gl_Position = ubo.projection * ubo.view * push.modelMatrix * vec4(position, 1.0);
   gl_Position = ubo.projection * ubo.view * positionWorld;
-  // gl_Position = modelUBO.modelMatrix * vec4(position, 1.0);
 
-  fragNormalWorld = normalize(mat3(push.normalMatrix) * normal);
+  fragNormalWorld = normalize(mat3(modelUBO.normalMatrix) * normal);
   fragPositionWorld = positionWorld.xyz;
   fragColor = color;
-
+  // fragColor = vec3(0.7,0.9,0.7);
   texCoord = uv;
-
-  /*
-  vec3 directionToLight = ubo.lightPosition - positionWorld.xyz;
-  float attenuation = 1.0 / dot(directionToLight, directionToLight);
-  vec3 lightColor = ubo.lightColor.xyz * ubo.lightColor.w * attenuation;
-  vec3 ambientLight = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
-  // ubo.lightDirection
-  vec3 diffuse = lightColor * max(dot(normalWorldSpace, normalize(directionToLight)), 0);
-  // float lightIntesitivity = AMBIENT + 
-
-  // fragColor = lightIntesitivity * color;
-  fragColor = (diffuse + ambientLight) * color;
-  // fragColor *= modelUBO.material;
-  // fragColor = modelUBO.material;
-  */
 }

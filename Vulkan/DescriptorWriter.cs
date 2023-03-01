@@ -16,11 +16,6 @@ public class DescriptorWriter {
   public unsafe DescriptorWriter WriteBuffer(uint binding, VkDescriptorBufferInfo* bufferInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
 
-    if (bindingDescription.descriptorCount == 1) {
-      // Logger.Warn("Binding single descriptor info, but binding expects multiple");
-      // return this;
-    }
-
     VkWriteDescriptorSet write = new();
     write.sType = VkStructureType.WriteDescriptorSet;
     write.descriptorType = bindingDescription.descriptorType;
@@ -36,11 +31,6 @@ public class DescriptorWriter {
 
   public unsafe DescriptorWriter WriteImage(uint binding, VkDescriptorImageInfo* imageInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
-
-    if (bindingDescription.descriptorCount == 1) {
-      Logger.Warn("Binding single descriptor info, but binding expects multiple");
-      // return this;
-    }
 
     VkWriteDescriptorSet write = new();
     write.sType = VkStructureType.WriteDescriptorSet;

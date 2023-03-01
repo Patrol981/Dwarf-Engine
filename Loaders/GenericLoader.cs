@@ -41,7 +41,7 @@ public class GenericLoader {
               Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
               vertex.Color = new Vector3(vertColor.R, vertColor.G, vertColor.B);
             } else {
-              vertex.Color = new Vector3(1f, 1f, 1f);
+              vertex.Color = new Vector3(0.99f, 0.99f, 0.99f);
             }
 
             if (aMesh.HasNormals) {
@@ -51,6 +51,7 @@ public class GenericLoader {
 
             if (hasTexCoords) {
               Vector3 uvw = FromVector(aMesh.TextureCoordinateChannels[0][(int)indice]);
+              uvw.Y = 1.0f - uvw.Y;
               vertex.Uv = uvw.Xy;
             }
             Vector3 pos = FromVector(aMesh.Vertices[(int)indice]);

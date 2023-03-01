@@ -17,8 +17,12 @@ public unsafe class SimpleRenderSystem : IDisposable {
   // Uniforms
   private Vulkan.Buffer[] _modelBuffer = new Vulkan.Buffer[0];
   private DescriptorPool _pool = null!;
+  private DescriptorPool _texturePool = null!;
   private DescriptorSetLayout _setLayout = null!;
+  private DescriptorSetLayout _textureSetLayout = null!;
   private VkDescriptorSet[] _descriptorSets = new VkDescriptorSet[0];
+  private VkDescriptorSet[] _textureSets = new VkDescriptorSet[0];
+  // private Dictionary<int, VkDescriptorSet> _textureSets = new();
 
   public SimpleRenderSystem(
     Device device,
@@ -33,27 +37,50 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      // .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
       .Build();
+
+    _textureSetLayout = new DescriptorSetLayout.Builder(_device)
+    .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
       globalSetLayout,
-      _setLayout.GetDescriptorSetLayout()
+      _setLayout.GetDescriptorSetLayout(),
+      _textureSetLayout.GetDescriptorSetLayout()
     };
     CreatePipelineLayout(descriptorSetLayouts);
     CreatePipeline(renderPass);
   }
 
-  public void SetupRenderData(int numberOfEntities) {
+  private int GetLengthOfTexturedEntites(ReadOnlySpan<Entity> entities) {
+    int count = 0;
+    for (int i = 0; i < entities.Length; i++) {
+      if (entities[i].GetComponent<Model>().UsesTexture) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  public void SetupRenderData(ReadOnlySpan<Entity> entities, TextureManager textures) {
     _pool = new DescriptorPool.Builder(_device)
-      .SetMaxSets((uint)numberOfEntities)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)numberOfEntities)
+      .SetMaxSets((uint)entities.Length)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _modelBuffer = new Vulkan.Buffer[numberOfEntities];
-    _descriptorSets = new VkDescriptorSet[numberOfEntities];
+    _texturePool = new DescriptorPool.Builder(_device)
+    .SetMaxSets((uint)entities.Length)
+    .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)entities.Length)
+    .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
+    .Build();
 
-    for (int i = 0; i < numberOfEntities; i++) {
+    _modelBuffer = new Vulkan.Buffer[entities.Length];
+    _descriptorSets = new VkDescriptorSet[entities.Length];
+    _textureSets = new VkDescriptorSet[entities.Length];
+
+    for (int i = 0; i < entities.Length; i++) {
       _modelBuffer[i] = new Vulkan.Buffer(
         _device,
         (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
@@ -63,10 +90,27 @@ public unsafe class SimpleRenderSystem : IDisposable {
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
 
+      if (entities[i].GetComponent<Model>().UsesTexture) {
+
+        var id = entities[i].GetComponent<Model>().TextureIdReference;
+        var texture = textures.GetTexture(id);
+        VkDescriptorImageInfo imageInfo = new();
+        imageInfo.sampler = texture.GetSampler();
+        imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+        imageInfo.imageView = texture.GetImageView();
+        // var imageInfo = _modelBuffer[i].get
+        VkDescriptorSet set;
+        var texWriter = new DescriptorWriter(_textureSetLayout, _texturePool)
+          .WriteImage(0, &imageInfo)
+          .Build(out set);
+
+        _textureSets[i] = set;
+        // _textureSets.Add(i, set);
+      }
       var bufferInfo = _modelBuffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       var writer = new DescriptorWriter(_setLayout, _pool)
-        .WriteBuffer(0, &bufferInfo)
-        .Build(out _descriptorSets[i]);
+          .WriteBuffer(0, &bufferInfo)
+          .Build(out _descriptorSets[i]);
     }
   }
 
@@ -77,18 +121,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
       return true;
     }
     return true;
-  }
-
-  public void ClearRenderData() {
-    for (int i = 0; i < _modelBuffer.Length; i++) {
-      if (_modelBuffer[i] == null) continue;
-      _modelBuffer[i].Dispose();
-
-      fixed (VkDescriptorSet* ptr = &_descriptorSets[i]) {
-        vkFreeDescriptorSets(_device.LogicalDevice, _pool.GetVkDescriptorPool(), 1, ptr);
-      }
-    }
-    _pool?.Dispose();
   }
 
   public void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
@@ -110,6 +142,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
       modelUBO.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
       modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
+      modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
 
       _modelBuffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       _modelBuffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
@@ -128,21 +161,20 @@ public unsafe class SimpleRenderSystem : IDisposable {
         );
       }
 
-      var pushConstantData = new SimplePushConstantData();
-      var model = entities[i].GetComponent<Transform>().Matrix4;
-      // pushConstantData.ModelMatrix = frameInfo.Camera.GetMVP(model);
-      pushConstantData.ModelMatrix = model;
-      pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
-      //pushConstantData.Color = entities[i].GetComponent<Material>().GetColor();
-
-      vkCmdPushConstants(
-        frameInfo.CommandBuffer,
-        _pipelineLayout,
-        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-        0,
-        (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-        &pushConstantData
-      );
+      if (entities[i].GetComponent<Model>().UsesTexture) {
+        fixed (VkDescriptorSet* ptr = &_textureSets[i]) {
+          vkCmdBindDescriptorSets(
+           frameInfo.CommandBuffer,
+           VkPipelineBindPoint.Graphics,
+           _pipelineLayout,
+           2,
+           1,
+           ptr,
+           0,
+           null
+         );
+        }
+      }
 
       var entity = entities[i].GetComponent<Model>();
       if (!entity.Owner!.CanBeDisposed) {
@@ -195,11 +227,14 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
   public void Dispose() {
     _setLayout?.Dispose();
+    _textureSetLayout?.Dispose();
     for (int i = 0; i < _modelBuffer.Length; i++) {
       _modelBuffer[i]?.Dispose();
     }
     _pool?.FreeDescriptors(_descriptorSets);
     _pool?.Dispose();
+    // _texturePool?.FreeDescriptors(_textureSets);
+    _texturePool?.Dispose();
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
   }

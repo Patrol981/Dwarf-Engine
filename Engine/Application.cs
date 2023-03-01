@@ -69,6 +69,7 @@ public unsafe class Application {
   private Window _window = null!;
   private Device _device = null!;
   private Renderer _renderer = null!;
+  private TextureManager _textureManager = null!;
   private SimpleRenderSystem _simpleRender = null!;
   private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
@@ -115,7 +116,7 @@ public unsafe class Application {
     }
 
     _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
-    _simpleRender.SetupRenderData(_entities.Count);
+    _simpleRender.SetupRenderData(_entities.ToArray(), _textureManager);
 
     var elasped = 0.0f;
     var testState = true;
@@ -163,6 +164,7 @@ public unsafe class Application {
         frameInfo.CommandBuffer = commandBuffer;
         frameInfo.FrameIndex = frameIndex;
         frameInfo.GlobalDescriptorSet = globalDescriptorSets[frameIndex];
+        frameInfo.TextureManager = _textureManager;
 
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
@@ -180,6 +182,7 @@ public unsafe class Application {
         if (testState) {
           var box2 = new Entity();
           box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
+          box2.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
           box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
           box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
           box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
@@ -243,7 +246,7 @@ public unsafe class Application {
   public void ReloadRenderSystem() {
     _simpleRender.Dispose();
     _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
-    _simpleRender.SetupRenderData(_entities.Count);
+    _simpleRender.SetupRenderData(_entities.ToArray(), _textureManager);
   }
 
   private void Init() {
@@ -262,15 +265,25 @@ public unsafe class Application {
     CameraState.SetCamera(_camera.GetComponent<Camera>());
     CameraState.SetCameraEntity(_camera);
 
+    _textureManager = new(_device);
+
+    LoadTextures();
     LoadEntities();
   }
 
+  private void LoadTextures() {
+    _textureManager.AddTexture("./Models/viking_room.png");
+    Logger.Info(_textureManager.LoadedTextures.Count.ToString());
+    _textureManager.AddTexture("./Models/viking_room.png");
+    Logger.Info(_textureManager.LoadedTextures.Count.ToString());
+  }
 
   private void LoadEntities() {
     Console.WriteLine(Directory.GetCurrentDirectory());
 
     var en = new Entity();
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
+    en.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
@@ -279,6 +292,7 @@ public unsafe class Application {
 
     var box = new Entity();
     box.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
+    box.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     box.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
     box.AddComponent(new Transform(new Vector3(3.0f, 0f, 5f)));
     box.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
@@ -287,6 +301,7 @@ public unsafe class Application {
 
     var vase = new Entity();
     vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
+    vase.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     vase.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
     vase.AddComponent(new Transform(new Vector3(0.5f, 0f, -2f)));
     vase.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
@@ -295,6 +310,7 @@ public unsafe class Application {
 
     var vase2 = new Entity();
     vase2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/smooth_vase.obj"));
+    vase2.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     vase2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
     vase2.AddComponent(new Transform(new Vector3(.0f, 0f, 3.5f)));
     vase2.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
@@ -303,6 +319,7 @@ public unsafe class Application {
 
     var room = new Entity();
     room.AddComponent(new GenericLoader().LoadModel(_device, "./Models/viking_room.obj"));
+    room.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     room.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
     room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
     room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
@@ -311,6 +328,7 @@ public unsafe class Application {
 
     var floor = new Entity();
     floor.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
+    floor.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
     floor.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
     floor.AddComponent(new Transform(new Vector3(0f, 0.1f, 0f)));
     floor.GetComponent<Transform>().Rotation = new Vector3(0, 0, 0);
@@ -323,6 +341,7 @@ public unsafe class Application {
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Model>()?.Dispose();
     }
+    _textureManager?.Dispose();
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
     _simpleRender?.Dispose();

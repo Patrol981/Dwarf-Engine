@@ -128,7 +128,7 @@ public class Device : IDisposable {
     throw new Exception($"Failed to find suitable memory type");
   }
 
-  private unsafe VkCommandBuffer BeginSingleTimeCommands() {
+  public unsafe VkCommandBuffer BeginSingleTimeCommands() {
     VkCommandBufferAllocateInfo allocInfo = new();
     allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
     allocInfo.level = VkCommandBufferLevel.Primary;
@@ -146,7 +146,7 @@ public class Device : IDisposable {
     return commandBuffer;
   }
 
-  private unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+  public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = new();

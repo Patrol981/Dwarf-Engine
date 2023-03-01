@@ -49,9 +49,6 @@ public class DescriptorSetLayout {
     for (uint i = 0; i < bindings.Count; i++) {
       setLayoutBindings[i] = bindings[i];
     }
-    //foreach(var kv in bindings) {
-    //setLayoutBindings.Add(kv.Value);
-    //}
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo = new();
     descriptorSetLayoutInfo.sType = VkStructureType.DescriptorSetLayoutCreateInfo;

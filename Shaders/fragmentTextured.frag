@@ -7,6 +7,8 @@ layout (location = 3) in vec2 texCoord;
 
 layout (location = 0) out vec4 outColor;
 
+// layout (set = 2, binding = 0) uniform sampler2D textureSampler;
+
 layout (set = 0, binding = 0) uniform GlobalUbo {
   mat4 view;
   mat4 projection;
@@ -15,14 +17,10 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 ambientLightColor;
 } ubo;
 
-layout (set = 1, binding = 0) uniform ModelUBO {
+layout (push_constant) uniform Push {
   mat4 modelMatrix;
   mat4 normalMatrix;
-  vec3 material;
-  bool useTexture;
-} modelUBO;
-
-layout (set = 2, binding = 0) uniform sampler2D textureSampler;
+} push;
 
 void main() {
   vec3 directionToLight = ubo.lightPosition - fragPositionWorld;
@@ -33,12 +31,5 @@ void main() {
   vec3 diffuse = lightColor * max(dot(normalize(fragNormalWorld), normalize(directionToLight)), 0);
 
   // outColor = texture(textureSampler, texCoord) * vec4((diffuse + ambientLight) * fragColor, 1.0);
-  if(modelUBO.useTexture) {
-    // outColor = texture(textureSampler, texCoord) * vec4((diffuse + ambientLight) * fragColor, 1.0);
-    outColor = texture(textureSampler, texCoord) * vec4(fragColor, 1.0);
-    // outColor = vec4(texCoord, 0.0, 1.0);
-  } else {
-    outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
-  }
-  // outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
+  outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
 }

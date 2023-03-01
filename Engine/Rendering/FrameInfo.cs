@@ -6,4 +6,5 @@ public struct FrameInfo {
   public VkCommandBuffer CommandBuffer;
   public Camera Camera;
   public VkDescriptorSet GlobalDescriptorSet;
+  public TextureManager TextureManager;
 }

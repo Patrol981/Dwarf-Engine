@@ -23,6 +23,18 @@ public class TextureManager : IDisposable {
     _loadedTextures.Add(Guid.NewGuid(), new Texture(_device, texturePath));
   }
 
+  public void AddTextureFromLocal(string textureName) {
+    var basePath = "./Textures/";
+    var finalPath = Path.Combine(basePath, textureName);
+    foreach (var tex in _loadedTextures) {
+      if (tex.Value.TextureName == finalPath) {
+        Logger.Warn($"Texture [{finalPath}] is already loaded. Skipping current add call.");
+        return;
+      }
+    }
+    _loadedTextures.Add(Guid.NewGuid(), new Texture(_device, finalPath));
+  }
+
   public void RemoveTexture(Guid key) {
     _loadedTextures[key].Dispose();
     _loadedTextures.Remove(key);

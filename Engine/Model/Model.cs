@@ -23,7 +23,7 @@ public class Model : Component, IDisposable {
   private ulong[] _indexCount = new ulong[0];
   private int _meshesCount = 0;
   private bool _usesTexture = false;
-  private Guid _textureIdRef = Guid.Empty;
+  private Guid[] _textureIdRefs = new Guid[0];
 
   public Model() { }
 
@@ -36,11 +36,27 @@ public class Model : Component, IDisposable {
     _vertexBuffers = new Vulkan.Buffer[_meshesCount];
     _vertexCount = new ulong[_meshesCount];
     _hasIndexBuffer = new bool[_meshesCount];
+    _textureIdRefs = new Guid[_meshesCount];
     for (uint i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
+      _textureIdRefs[i] = Guid.Empty;
       CreateVertexBuffer(meshes[i].Vertices, i);
       CreateIndexBuffer(meshes[i].Indices, i);
     }
+  }
+
+  public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
+    // Logger.Info($"{modelPart} - {_textureSets.Length}");
+    vkCmdBindDescriptorSets(
+     frameInfo.CommandBuffer,
+     VkPipelineBindPoint.Graphics,
+     pipelineLayout,
+     2,
+     1,
+     &textureSet,
+     0,
+     null
+   );
   }
 
   public unsafe void Bind(VkCommandBuffer commandBuffer, uint index) {
@@ -54,16 +70,34 @@ public class Model : Component, IDisposable {
     if (_hasIndexBuffer[index]) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
-
-    // vkCmdCopyBufferToImage(commandBuffer, )
   }
 
-  public void BindToTexture(ref TextureManager textureManager, string texturePath) {
-    _textureIdRef = textureManager.GetTextureId(texturePath);
-    if (_textureIdRef != Guid.Empty) {
+  public void BindToTexture(
+    ref TextureManager textureManager,
+    string texturePath,
+    bool useLocalPath = false,
+    int modelPart = 0
+  ) {
+    if (useLocalPath) {
+      _textureIdRefs[modelPart] = textureManager.GetTextureId($"./Textures/{texturePath}");
+    } else {
+      _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
+    }
+
+    if (_textureIdRefs[modelPart] != Guid.Empty) {
       _usesTexture = true;
     } else {
       Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
+    }
+  }
+
+  public void BindMultipleModelPartsToTextures(
+    ref TextureManager textureManager,
+    ReadOnlySpan<string> paths,
+    bool useLocalPath = false
+  ) {
+    for (int i = 0; i < paths.Length; i++) {
+      BindToTexture(ref textureManager, paths[i], useLocalPath, i);
     }
   }
 
@@ -183,5 +217,7 @@ public class Model : Component, IDisposable {
   public static uint GetAttribsLength() => 4;
   public int MeshsesCount => _meshesCount;
   public bool UsesTexture => _usesTexture;
-  public Guid TextureIdReference => _textureIdRef;
+  public Guid GetTextureIdReference(int index = 0) {
+    return _textureIdRefs[index];
+  }
 }

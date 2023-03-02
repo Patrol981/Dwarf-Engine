@@ -32,13 +32,9 @@ void main() {
   vec3 ambientLight = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
   vec3 diffuse = lightColor * max(dot(normalize(fragNormalWorld), normalize(directionToLight)), 0);
 
-  // outColor = texture(textureSampler, texCoord) * vec4((diffuse + ambientLight) * fragColor, 1.0);
   if(modelUBO.useTexture) {
-    // outColor = texture(textureSampler, texCoord) * vec4((diffuse + ambientLight) * fragColor, 1.0);
     outColor = texture(textureSampler, texCoord) * vec4(modelUBO.material * fragColor, 1.0);
-    // outColor = vec4(texCoord, 0.0, 1.0);
   } else {
     outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
   }
-  // outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
 }

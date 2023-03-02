@@ -1,3 +1,5 @@
+using System.Reflection;
+using Dwarf.Extensions.Lists;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
@@ -87,6 +89,14 @@ public class DescriptorPool : IDisposable {
   public unsafe void FreeDescriptors(VkDescriptorSet[] descriptorSets) {
     fixed (VkDescriptorSet* ptr = descriptorSets) {
       vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, descriptorSets.Length, ptr).CheckResult();
+    }
+  }
+
+  public unsafe void FreeDescriptors(PublicList<PublicList<VkDescriptorSet>> descriptorSets) {
+    for (int i = 0; i < descriptorSets.Size; i++) {
+      fixed (VkDescriptorSet* ptr = descriptorSets.GetAt(i).GetData()) {
+        vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, descriptorSets.GetAt(i).Size, ptr).CheckResult();
+      }
     }
   }
 

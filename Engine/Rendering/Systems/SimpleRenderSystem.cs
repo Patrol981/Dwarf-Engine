@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Vulkan;
+using OpenTK.Mathematics;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
@@ -22,7 +23,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
   private DescriptorSetLayout _textureSetLayout = null!;
   private VkDescriptorSet[] _descriptorSets = new VkDescriptorSet[0];
   private VkDescriptorSet[] _textureSets = new VkDescriptorSet[0];
-  // private Dictionary<int, VkDescriptorSet> _textureSets = new();
 
   public SimpleRenderSystem(
     Device device,
@@ -37,7 +37,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
-      // .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
@@ -73,7 +72,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
     _texturePool = new DescriptorPool.Builder(_device)
     .SetMaxSets((uint)entities.Length)
     .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)entities.Length)
-    .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
+    .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
     _modelBuffer = new Vulkan.Buffer[entities.Length];
@@ -105,7 +104,6 @@ public unsafe class SimpleRenderSystem : IDisposable {
           .Build(out set);
 
         _textureSets[i] = set;
-        // _textureSets.Add(i, set);
       }
       var bufferInfo = _modelBuffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       var writer = new DescriptorWriter(_setLayout, _pool)
@@ -233,7 +231,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
     }
     _pool?.FreeDescriptors(_descriptorSets);
     _pool?.Dispose();
-    // _texturePool?.FreeDescriptors(_textureSets);
+    _texturePool?.FreeDescriptors(_textureSets);
     _texturePool?.Dispose();
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);

@@ -56,7 +56,7 @@ public class PipelineConfigInfo {
     configInfo.MultisampleInfo.alphaToCoverageEnable = false;  // Optional
     configInfo.MultisampleInfo.alphaToOneEnable = false;       // Optional
 
-    configInfo.ColorBlendAttachment.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.B | VkColorComponentFlags.B | VkColorComponentFlags.A;
+    configInfo.ColorBlendAttachment.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
     configInfo.ColorBlendAttachment.blendEnable = false;
     configInfo.ColorBlendAttachment.srcColorBlendFactor = VkBlendFactor.One;   // Optional
     configInfo.ColorBlendAttachment.dstColorBlendFactor = VkBlendFactor.DstAlpha;  // Optional

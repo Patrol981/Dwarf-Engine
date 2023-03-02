@@ -32,7 +32,7 @@ void main() {
 
   fragNormalWorld = normalize(mat3(modelUBO.normalMatrix) * normal);
   fragPositionWorld = positionWorld.xyz;
-  fragColor = color;
-  // fragColor = vec3(0.7,0.9,0.7);
+  // fragColor = color;
+  fragColor = vec3(1.0,1.0,1.0);
   texCoord = uv;
 }

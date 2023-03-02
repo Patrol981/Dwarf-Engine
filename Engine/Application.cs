@@ -203,7 +203,6 @@ public unsafe class Application {
       GC.Collect(2, GCCollectionMode.Optimized, false);
       Time.EndTick();
       elasped += Time.DeltaTime;
-      // _simpleRender.ClearRenderData();
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
@@ -211,8 +210,6 @@ public unsafe class Application {
       Logger.Error(result.ToString());
     }
 
-    // _simpleRender.DestoryBuffers();
-    // _simpleRender.ClearRenderData();
     for (int i = 0; i < uboBuffers.Length; i++) {
       uboBuffers[i].Dispose();
     }
@@ -272,10 +269,8 @@ public unsafe class Application {
   }
 
   private void LoadTextures() {
+    _textureManager.AddTexture("./Models/no_texture.png");
     _textureManager.AddTexture("./Models/viking_room.png");
-    Logger.Info(_textureManager.LoadedTextures.Count.ToString());
-    _textureManager.AddTexture("./Models/viking_room.png");
-    Logger.Info(_textureManager.LoadedTextures.Count.ToString());
   }
 
   private void LoadEntities() {
@@ -283,25 +278,16 @@ public unsafe class Application {
 
     var en = new Entity();
     en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
-    en.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
+    en.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/no_texture.png");
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     AddEntity(en);
 
-    var box = new Entity();
-    box.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
-    box.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
-    box.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    box.AddComponent(new Transform(new Vector3(3.0f, 0f, 5f)));
-    box.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
-    box.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
-    AddEntity(box);
-
     var vase = new Entity();
     vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
-    vase.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
+    vase.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/no_texture.png");
     vase.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
     vase.AddComponent(new Transform(new Vector3(0.5f, 0f, -2f)));
     vase.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
@@ -310,7 +296,7 @@ public unsafe class Application {
 
     var vase2 = new Entity();
     vase2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/smooth_vase.obj"));
-    vase2.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
+    vase2.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/no_texture.png");
     vase2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
     vase2.AddComponent(new Transform(new Vector3(.0f, 0f, 3.5f)));
     vase2.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
@@ -320,15 +306,16 @@ public unsafe class Application {
     var room = new Entity();
     room.AddComponent(new GenericLoader().LoadModel(_device, "./Models/viking_room.obj"));
     room.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
-    room.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
+    room.AddComponent(new Material(new Vector3(1.0f, 1.0f, 1.0f)));
     room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
     room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
     room.GetComponent<Transform>().Scale = new Vector3(3, 3, 3);
+    room.Name = "viking room";
     AddEntity(room);
 
     var floor = new Entity();
     floor.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
-    floor.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/viking_room.png");
+    floor.GetComponent<Model>().BindToTexture(ref _textureManager, "./Models/no_texture.png");
     floor.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
     floor.AddComponent(new Transform(new Vector3(0f, 0.1f, 0f)));
     floor.GetComponent<Transform>().Rotation = new Vector3(0, 0, 0);

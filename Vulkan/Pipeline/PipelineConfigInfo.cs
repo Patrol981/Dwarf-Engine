@@ -11,7 +11,7 @@ public class PipelineConfigInfo {
   public VkPipelineColorBlendStateCreateInfo ColorBlendInfo;
   public VkPipelineDepthStencilStateCreateInfo DepthStencilInfo;
 
-  public VkDynamicState[] DynamicStatesEnables;
+  public VkDynamicState[] DynamicStatesEnables = new VkDynamicState[0];
   public VkPipelineDynamicStateCreateInfo DynamicStateInfo;
 
   public VkPipelineLayout PipelineLayout;
@@ -49,12 +49,12 @@ public class PipelineConfigInfo {
     configInfo.RasterizationInfo.depthBiasSlopeFactor = 0.0f;     // Optional
 
     configInfo.MultisampleInfo.sType = VkStructureType.PipelineMultisampleStateCreateInfo;
-    configInfo.MultisampleInfo.sampleShadingEnable = false;
+    configInfo.MultisampleInfo.sampleShadingEnable = true;
     configInfo.MultisampleInfo.rasterizationSamples = VkSampleCountFlags.Count1;
     configInfo.MultisampleInfo.minSampleShading = 1.0f;           // Optional
     configInfo.MultisampleInfo.pSampleMask = null;             // Optional
-    configInfo.MultisampleInfo.alphaToCoverageEnable = false;  // Optional
-    configInfo.MultisampleInfo.alphaToOneEnable = false;       // Optional
+    configInfo.MultisampleInfo.alphaToCoverageEnable = true;  // Optional
+    configInfo.MultisampleInfo.alphaToOneEnable = true;       // Optional
 
     configInfo.ColorBlendAttachment.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
     configInfo.ColorBlendAttachment.blendEnable = false;

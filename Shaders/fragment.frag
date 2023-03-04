@@ -34,6 +34,7 @@ void main() {
 
   if(modelUBO.useTexture) {
     outColor = texture(textureSampler, texCoord) * vec4(modelUBO.material * fragColor, 1.0);
+    // outColor = texture(textureSampler, texCoord);
   } else {
     outColor = vec4((diffuse + ambientLight) * fragColor, 1.0);
   }

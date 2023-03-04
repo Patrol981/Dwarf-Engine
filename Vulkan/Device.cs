@@ -303,6 +303,8 @@ public class Device : IDisposable {
     VkPhysicalDeviceFeatures deviceFeatures = new();
     deviceFeatures.samplerAnisotropy = true;
     deviceFeatures.fillModeNonSolid = true;
+    deviceFeatures.alphaToOne = true;
+    deviceFeatures.sampleRateShading = true;
 
     VkDeviceCreateInfo createInfo = new();
     createInfo.sType = VkStructureType.DeviceCreateInfo;

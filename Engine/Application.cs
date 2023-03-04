@@ -39,7 +39,7 @@ public static class ApplicationState {
   }
 }
 
-public unsafe class Application {
+public class Application {
   public delegate void EventCallback();
 
   public void SetUpdateCallback(EventCallback eventCallback) {
@@ -89,7 +89,7 @@ public unsafe class Application {
     Run();
   }
 
-  public void Run() {
+  public unsafe void Run() {
     Vulkan.Buffer[] uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < uboBuffers.Length; i++) {
       uboBuffers[i] = new(
@@ -248,7 +248,7 @@ public unsafe class Application {
     _simpleRender.SetupRenderData(_entities.ToArray(), ref _textureManager);
   }
 
-  private void Init() {
+  private async void Init() {
     _globalPool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
@@ -266,43 +266,147 @@ public unsafe class Application {
 
     _textureManager = new(_device);
 
-    LoadTextures();
+    // await LoadTextures();
+    await LoadTexturesAsSeparateThreads();
     LoadEntities();
   }
 
-  private void LoadTextures() {
-    _textureManager.AddTextureFromLocal("base/no_texture.png");
-    _textureManager.AddTextureFromLocal("viking_room/viking_room.png");
+  private Task LoadTexturesAsSeparateThreads() {
+    var basicTextures = new Texture[4];
+    var anime1 = new Texture[17];
+    var anime2 = new Texture[16];
 
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_01.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_02.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_03.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_04.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_05.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_06.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_07.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_08.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_09.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_10.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_11.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_12.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_13.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_14.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_15.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_16.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_17.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_18.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_19.png");
-    _textureManager.AddTextureFromLocal("dwarf_test_model/_20.png");
+    var prefix = "./Textures/";
 
+    string[] basePaths =  {
+      $"{prefix}base/no_texture.png",
+      $"{prefix}viking_room/viking_room.png",
+      $"{prefix}chr_knight/chr_knight.png",
+      $"{prefix}chr_sword/chr_sword.png"
+    };
+
+    string[] anime1Paths = {
+      $"{prefix}dwarf_test_model/_01.png", // mouth
+      $"{prefix}dwarf_test_model/_02.png", // eyes
+      $"{prefix}dwarf_test_model/_03.png", // eye mid
+      $"{prefix}dwarf_test_model/_04.png", // face
+      $"{prefix}dwarf_test_model/_06.png", // possibly face shadow ?
+      $"{prefix}dwarf_test_model/_07.png", // eyebrows
+      $"{prefix}dwarf_test_model/_08.png", // eyeleashes
+      $"{prefix}dwarf_test_model/_09.png", // eyeleashes
+      $"{prefix}dwarf_test_model/_10.png", // body
+      $"{prefix}dwarf_test_model/_12.png", // hair base
+      $"{prefix}dwarf_test_model/_13.png", // outfit
+      $"{prefix}dwarf_test_model/_14.png", // outfit
+      $"{prefix}dwarf_test_model/_15.png", // outfit
+      $"{prefix}dwarf_test_model/_16.png", // outfit
+      $"{prefix}dwarf_test_model/_17.png", // outfit
+      $"{prefix}dwarf_test_model/_18.png", // outfit
+      $"{prefix}dwarf_test_model/_19.png", // hair
+    };
+
+    string[] anime2Paths = {
+      $"{prefix}dwarf_test_model2/_01.png", // mouth
+      $"{prefix}dwarf_test_model2/_02.png", // eyes
+      $"{prefix}dwarf_test_model2/_03.png", // eye mid
+      $"{prefix}dwarf_test_model2/_04.png", // face
+      $"{prefix}dwarf_test_model2/_06.png", // possibly face shadow ?
+      $"{prefix}dwarf_test_model2/_07.png", // eyebrows
+      $"{prefix}dwarf_test_model2/_09.png", // eyeleashes
+      $"{prefix}dwarf_test_model2/_10.png", // body
+      $"{prefix}dwarf_test_model2/_12.png", // hair base
+      $"{prefix}dwarf_test_model2/_13.png", // outfit
+      $"{prefix}dwarf_test_model2/_14.png", // outfit
+      $"{prefix}dwarf_test_model2/_15.png", // outfit
+      $"{prefix}dwarf_test_model2/_16.png", // outfit
+      $"{prefix}dwarf_test_model2/_17.png", // outfit
+      $"{prefix}dwarf_test_model2/_18.png", // outfit
+      $"{prefix}dwarf_test_model2/_19.png", // hair
+    };
+
+    for (int i = 0; i < basicTextures.Length; i++) {
+      basicTextures[i] = new(_device, basePaths[i]);
+    }
+    for (int i = 0; i < anime1.Length; i++) {
+      anime1[i] = new(_device, anime1Paths[i]);
+    }
+    for (int i = 0; i < anime2.Length; i++) {
+      anime2[i] = new(_device, anime2Paths[i]);
+    }
+
+    var baseThread = new TextureThread(ref _device, ref basicTextures, basePaths);
+    var anime1Thread = new TextureThread(ref _device, ref anime1, anime1Paths);
+    var anime2Thread = new TextureThread(ref _device, ref anime2, anime2Paths);
+
+    Thread t = new(new ThreadStart(baseThread.Process));
+    Thread t2 = new(new ThreadStart(anime1Thread.Process));
+    Thread t3 = new(new ThreadStart(anime2Thread.Process));
+
+    t.Start();
+    t2.Start();
+    t3.Start();
+
+    t.Join();
+    t2.Join();
+    t3.Join();
+
+    _textureManager.AddRange(basicTextures);
+    _textureManager.AddRange(anime1);
+    _textureManager.AddRange(anime2);
+
+    return Task.CompletedTask;
+  }
+
+  private async Task<Task> LoadTextures() {
+    var tasks = new Task[] {
+      _textureManager.AddTextureFromLocal("base/no_texture.png"),
+      _textureManager.AddTextureFromLocal("viking_room/viking_room.png"),
+
+      _textureManager.AddTextureFromLocal("chr_knight/chr_knight.png"),
+      _textureManager.AddTextureFromLocal("chr_sword/chr_sword.png"),
+
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_01.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_02.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_03.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_04.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_06.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_07.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_08.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_09.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_10.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_12.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_13.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_14.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_15.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_16.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_17.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_18.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model/_19.png"),
+
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_01.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_02.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_03.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_04.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_06.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_07.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_09.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_10.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_12.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_13.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_14.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_15.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_16.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_17.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_18.png"),
+      _textureManager.AddTextureFromLocal("dwarf_test_model2/_19.png")
+    }.AsParallel();
+
+    await Task.WhenAll(tasks);
+    return Task.CompletedTask;
   }
 
   private void LoadEntities() {
     Console.WriteLine(Directory.GetCurrentDirectory());
-
-    var en = new Entity();
-    en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
-    // en.GetComponent<Model>().BindToTexture(ref _textureManager, "base/no_texture.png", true);
 
     string[] texturesToLoad = {
       "dwarf_test_model/_01.png", // mouth
@@ -324,13 +428,62 @@ public unsafe class Application {
       "dwarf_test_model/_19.png", // hair
     };
 
+    var en = new Entity();
+    en.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model.obj"));
     en.GetComponent<Model>().BindMultipleModelPartsToTextures(ref _textureManager, texturesToLoad, true);
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
-    Logger.Info(en.GetComponent<Model>().MeshsesCount.ToString());
     AddEntity(en);
+
+
+    string[] texturesToLoad2 = {
+      "dwarf_test_model2/_01.png", // mouth
+      "dwarf_test_model2/_02.png", // eyes
+      "dwarf_test_model2/_03.png", // eye mid
+      "dwarf_test_model2/_04.png", // face
+      "dwarf_test_model2/_06.png", // possibly face shadow ?
+      "dwarf_test_model2/_07.png", // eyebrows
+      "dwarf_test_model2/_09.png", // eyeleashes
+      "dwarf_test_model2/_10.png", // body
+      "dwarf_test_model2/_12.png", // hair base
+      "dwarf_test_model2/_13.png", // outfit
+      "dwarf_test_model2/_14.png", // outfit
+      "dwarf_test_model2/_15.png", // outfit
+      "dwarf_test_model2/_16.png", // outfit
+      "dwarf_test_model2/_17.png", // outfit
+      "dwarf_test_model2/_18.png", // outfit
+      "dwarf_test_model2/_19.png", // hair
+    };
+
+    var en2 = new Entity();
+    en2.AddComponent(new GenericLoader().LoadModel(_device, "./Models/dwarf_test_model2.fbx"));
+    Logger.Info(en2.GetComponent<Model>().MeshsesCount.ToString());
+    en2.GetComponent<Model>().BindMultipleModelPartsToTextures(ref _textureManager, texturesToLoad2, true);
+    en2.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
+    en2.AddComponent(new Transform(new Vector3(1.5f, 0f, 0.0f)));
+    en2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+    en2.GetComponent<Transform>().Rotation = new(90, 180f, 0);
+    AddEntity(en2);
+
+    var knight = new Entity();
+    knight.AddComponent(new GenericLoader().LoadModel(_device, "./Models/chr_knight.obj"));
+    knight.GetComponent<Model>().BindToTexture(ref _textureManager, "chr_knight/chr_knight.png", true);
+    knight.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    knight.AddComponent(new Transform(new Vector3(3f, -.1f, 3f)));
+    knight.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+    knight.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
+    AddEntity(knight);
+
+    var sword = new Entity();
+    sword.AddComponent(new GenericLoader().LoadModel(_device, "./Models/chr_sword.obj"));
+    sword.GetComponent<Model>().BindToTexture(ref _textureManager, "chr_sword/chr_sword.png", true);
+    sword.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+    sword.AddComponent(new Transform(new Vector3(6f, -.1f, 6f)));
+    sword.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+    sword.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
+    AddEntity(sword);
 
     var vase = new Entity();
     vase.AddComponent(new GenericLoader().LoadModel(_device, "./Models/flat_vase.obj"));
@@ -339,7 +492,6 @@ public unsafe class Application {
     vase.AddComponent(new Transform(new Vector3(0.5f, 0f, -2f)));
     vase.GetComponent<Transform>().Scale = new(3f, 3f, 3f);
     vase.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
-    Logger.Info(vase.GetComponent<Model>().MeshsesCount.ToString());
     AddEntity(vase);
 
     var vase2 = new Entity();
@@ -364,7 +516,7 @@ public unsafe class Application {
     var floor = new Entity();
     floor.AddComponent(new GenericLoader().LoadModel(_device, "./Models/cube.obj"));
     floor.GetComponent<Model>().BindToTexture(ref _textureManager, "base/no_texture.png", true);
-    floor.AddComponent(new Material(new Vector3(0.5f, 1, 0.5f)));
+    floor.AddComponent(new Material(new Vector3(0.02f, 0.02f, 0.02f)));
     floor.AddComponent(new Transform(new Vector3(0f, 0.1f, 0f)));
     floor.GetComponent<Transform>().Rotation = new Vector3(0, 0, 0);
     floor.GetComponent<Transform>().Scale = new Vector3(7, 0.1f, 7);

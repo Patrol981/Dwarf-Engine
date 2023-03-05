@@ -26,6 +26,9 @@ public class Device : IDisposable {
   public VkQueue GraphicsQueue = VkQueue.Null;
   public VkQueue PresentQueue = VkQueue.Null;
   public VkPhysicalDeviceProperties Properties;
+
+  internal Mutex _mutex = new();
+
   public Device(Window window) {
     _window = window;
     CreateInstance();
@@ -135,6 +138,7 @@ public class Device : IDisposable {
     allocInfo.commandPool = _commandPool;
     allocInfo.commandBufferCount = 1;
 
+    _mutex.WaitOne();
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
@@ -143,10 +147,12 @@ public class Device : IDisposable {
     beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    _mutex.ReleaseMutex();
     return commandBuffer;
   }
 
   public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+    _mutex.WaitOne();
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = new();
@@ -158,6 +164,7 @@ public class Device : IDisposable {
     vkQueueWaitIdle(GraphicsQueue);
 
     vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+    _mutex.ReleaseMutex();
   }
 
   private unsafe void CreateInstance() {

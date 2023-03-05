@@ -73,7 +73,7 @@ public class Model : Component, IDisposable {
   }
 
   public void BindToTexture(
-    ref TextureManager textureManager,
+    TextureManager textureManager,
     string texturePath,
     bool useLocalPath = false,
     int modelPart = 0
@@ -92,12 +92,12 @@ public class Model : Component, IDisposable {
   }
 
   public void BindMultipleModelPartsToTextures(
-    ref TextureManager textureManager,
+    TextureManager textureManager,
     ReadOnlySpan<string> paths,
     bool useLocalPath = false
   ) {
     for (int i = 0; i < paths.Length; i++) {
-      BindToTexture(ref textureManager, paths[i], useLocalPath, i);
+      BindToTexture(textureManager, paths[i], useLocalPath, i);
     }
   }
 

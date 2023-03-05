@@ -17,12 +17,23 @@ public class Texture : IDisposable {
   internal VkImageView _imageView = VkImageView.Null;
   internal VkSampler _imageSampler = VkSampler.Null;
 
+  private Mutex _mutex = new();
+
   public Texture(Device device, string texturePath, bool createOnStart = false) {
     TextureName = texturePath;
     _device = device;
     if (createOnStart) {
       CreateTexture(_device, texturePath, out _textureImage, out _textureImageMemory, out _imageView, out _imageSampler);
     }
+  }
+
+  public static Texture[] InitTextures(ref Device device, ReadOnlySpan<string> texturePaths) {
+    var textures = new Texture[texturePaths.Length];
+    for (int i = 0; i < textures.Length; i++) {
+      textures[i] = new(device, texturePaths[i]);
+    }
+
+    return textures;
   }
 
   public unsafe static void CreateTexture(
@@ -70,7 +81,7 @@ public class Texture : IDisposable {
 
     // Console.WriteLine("Create Image");
     CreateImage(
-      device,
+      ref device,
       (uint)img.Width,
       (uint)img.Height,
       VkFormat.R8G8B8A8Srgb,
@@ -103,7 +114,7 @@ public class Texture : IDisposable {
   }
 
   private unsafe static void CreateImage(
-    Device device,
+    ref Device device,
     uint width,
     uint height,
     VkFormat format,
@@ -158,7 +169,9 @@ public class Texture : IDisposable {
     region.imageOffset = new(0, 0, 0);
     region.imageExtent = new(width, height, 1);
 
+    device._mutex.WaitOne();
     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VkImageLayout.TransferDstOptimal, 1, &region);
+    device._mutex.ReleaseMutex();
 
     device.EndSingleTimeCommands(commandBuffer);
   }
@@ -203,6 +216,7 @@ public class Texture : IDisposable {
       Logger.Error($"Unsupported layout transition");
     }
 
+    device._mutex.WaitOne();
     vkCmdPipelineBarrier(
       commandBuffer,
       sourceStage,
@@ -212,6 +226,7 @@ public class Texture : IDisposable {
       0, null,
       1, &barrier
     );
+    device._mutex.ReleaseMutex();
 
     device.EndSingleTimeCommands(commandBuffer);
   }

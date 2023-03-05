@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -70,7 +71,7 @@ public class Application {
   private Device _device = null!;
   private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
-  private SimpleRenderSystem _simpleRender = null!;
+  private Render3DSystem _3dRenderSystem = null!;
   private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
   private Entity _camera = new();
@@ -115,8 +116,8 @@ public class Application {
         .Build(out globalDescriptorSets[i]);
     }
 
-    _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
-    _simpleRender.SetupRenderData(_entities.ToArray(), ref _textureManager);
+    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
+    _3dRenderSystem.SetupRenderData(_entities.ToArray(), ref _textureManager);
 
     var elasped = 0.0f;
     var testState = true;
@@ -126,7 +127,7 @@ public class Application {
       glfwPollEvents();
       Time.StartTick();
 
-      var sizes = _simpleRender.CheckSizes(_entities.Count);
+      var sizes = _3dRenderSystem.CheckSizes(_entities.Count);
       if (!sizes || ReloadSimpleRenderSystem) {
         ReloadSimpleRenderSystem = false;
         ReloadRenderSystem();
@@ -168,7 +169,7 @@ public class Application {
 
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
-        _simpleRender.RenderEntities(frameInfo, _entities.ToArray());
+        _3dRenderSystem.RenderEntities(frameInfo, _entities.ToArray());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
 
@@ -243,9 +244,9 @@ public class Application {
   }
 
   public void ReloadRenderSystem() {
-    _simpleRender.Dispose();
-    _simpleRender = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
-    _simpleRender.SetupRenderData(_entities.ToArray(), ref _textureManager);
+    _3dRenderSystem.Dispose();
+    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
+    _3dRenderSystem.SetupRenderData(_entities.ToArray(), ref _textureManager);
   }
 
   private async void Init() {
@@ -272,10 +273,6 @@ public class Application {
   }
 
   private Task LoadTexturesAsSeparateThreads() {
-    var basicTextures = new Texture[4];
-    var anime1 = new Texture[17];
-    var anime2 = new Texture[16];
-
     var prefix = "./Textures/";
 
     string[] basePaths =  {
@@ -324,37 +321,47 @@ public class Application {
       $"{prefix}dwarf_test_model2/_19.png", // hair
     };
 
-    for (int i = 0; i < basicTextures.Length; i++) {
-      basicTextures[i] = new(_device, basePaths[i]);
-    }
-    for (int i = 0; i < anime1.Length; i++) {
-      anime1[i] = new(_device, anime1Paths[i]);
-    }
-    for (int i = 0; i < anime2.Length; i++) {
-      anime2[i] = new(_device, anime2Paths[i]);
-    }
+    List<List<string>> paths = new();
+    paths.Add(basePaths.ToList());
+    paths.Add(anime1Paths.ToList());
+    paths.Add(anime2Paths.ToList());
+    MultiThreadedTextureLoad(paths);
 
-    var baseThread = new TextureThread(ref _device, ref basicTextures, basePaths);
-    var anime1Thread = new TextureThread(ref _device, ref anime1, anime1Paths);
-    var anime2Thread = new TextureThread(ref _device, ref anime2, anime2Paths);
-
-    Thread t = new(new ThreadStart(baseThread.Process));
-    Thread t2 = new(new ThreadStart(anime1Thread.Process));
-    Thread t3 = new(new ThreadStart(anime2Thread.Process));
-
-    t.Start();
-    t2.Start();
-    t3.Start();
-
-    t.Join();
-    t2.Join();
-    t3.Join();
-
-    _textureManager.AddRange(basicTextures);
-    _textureManager.AddRange(anime1);
-    _textureManager.AddRange(anime2);
+    Logger.Info("Done Loading Textures");
 
     return Task.CompletedTask;
+  }
+
+  public void MultiThreadedTextureLoad(List<List<string>> paths) {
+    List<Thread> threads = new();
+    List<TextureThread> textureThreads = new();
+    List<List<Texture>> textures = new();
+    for (int i = 0; i < paths.Count; i++) {
+      textures.Add(InitTextures(paths[i].ToArray()).ToList());
+      textureThreads.Add(new TextureThread(ref _device, textures[i].ToArray(), paths[i].ToArray()));
+      threads.Add(new(new ThreadStart(textureThreads[i].Process)));
+    }
+
+    for (int i = 0; i < paths.Count; i++) {
+      threads[i].Start();
+    }
+
+    for (int i = 0; i < paths.Count; i++) {
+      threads[i].Join();
+    }
+
+    for (int i = 0; i < paths.Count; i++) {
+      _textureManager.AddRange(textures[i].ToArray());
+    }
+  }
+
+  public Texture[] InitTextures(ReadOnlySpan<string> texturePaths) {
+    var textures = new Texture[texturePaths.Length];
+    for (int i = 0; i < textures.Length; i++) {
+      textures[i] = new(_device, texturePaths[i]);
+    }
+
+    return textures;
   }
 
   private async Task<Task> LoadTextures() {
@@ -531,7 +538,7 @@ public class Application {
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
-    _simpleRender?.Dispose();
+    _3dRenderSystem?.Dispose();
     _renderer?.Dispose();
     _window?.Dispose();
     _device?.Dispose();

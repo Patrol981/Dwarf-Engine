@@ -9,7 +9,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 
-public unsafe class SimpleRenderSystem : IDisposable {
+public unsafe class Render3DSystem : IDisposable {
   private readonly Device _device = null!;
   private readonly Renderer _renderer = null!;
   private PipelineConfigInfo _configInfo = null!;
@@ -28,7 +28,7 @@ public unsafe class SimpleRenderSystem : IDisposable {
 
   private int _texturesCount = 0;
 
-  public SimpleRenderSystem(
+  public Render3DSystem(
     Device device,
     Renderer renderer,
     VkRenderPass renderPass,

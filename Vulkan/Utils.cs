@@ -39,4 +39,19 @@ public static class Utils {
     }
     return ptr;
   }
+
+  public static IntPtr ToIntPtr<T>(T data) where T : struct {
+    int size = Unsafe.SizeOf<T>();
+    IntPtr ptr = IntPtr.Zero;
+    try {
+      ptr = Marshal.AllocHGlobal(size);
+      Marshal.StructureToPtr(data, ptr, true);
+    } catch {
+      if (ptr != IntPtr.Zero) {
+        Marshal.FreeHGlobal(ptr);
+      }
+      throw;
+    }
+    return ptr;
+  }
 }

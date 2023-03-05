@@ -220,7 +220,8 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void glfwSetInputMode_t(GLFWwindow* window, int mode, int value);
-
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void glfwSetWindowIcon_t(GLFWwindow* window, int count, GLFWImage* images);
 
   #endregion
 
@@ -271,6 +272,15 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwMaximizeWindow_t(GLFWwindow* window);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  public delegate void* glfwCreateCursor_t(GLFWImage* image, int xhot, int yhot);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate void glfwSetCursor_t(GLFWwindow* window, void* cursor);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate void glfwDestroyCursor_t(void* cursor);
   #endregion
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
@@ -288,6 +298,9 @@ public static unsafe class GLFW {
   private static readonly glfwSetKeyCallback_t s_glfwSetKeyCallback;
   private static readonly glfwGetKey_t s_glfwGetKey;
 
+  private static readonly glfwCreateCursor_t s_glfwCreateCursor;
+  private static readonly glfwSetCursor_t s_glfwSetCursor;
+  private static readonly glfwDestroyCursor_t s_glfwDestroyCursor;
   private static readonly glfwMaximizeWindow_t s_glfwMaximizeWindow;
   private static readonly glfwInitHint_t s_glfwWindowHint;
   private static readonly glfwCreateWindow_t s_glfwCreateWindow;
@@ -296,6 +309,7 @@ public static unsafe class GLFW {
   private static readonly glfwShowWindow_t s_glfwShowWindow;
   private static readonly glfwGetPrimaryMonitor_t s_glfwGetPrimaryMonitor;
   private static readonly glfwGetVideoMode_t s_glfwGetVideoMode;
+  private static readonly glfwSetWindowIcon_t s_glfwSetWindowIcon;
   private static readonly glfwPollEvents_t s_glfwPollEvents;
   private static readonly glfwWaitEvents_t s_glfwWaitEvents;
   private static readonly glfwGetRequiredInstanceExtensions_t s_glfwGetRequiredInstanceExtensions;
@@ -318,6 +332,7 @@ public static unsafe class GLFW {
   public static void glfwWindowHint(int hint, int value) => s_glfwWindowHint(hint, value);
   public static void glfwWindowHint(WindowHintBool hint, bool value) => s_glfwWindowHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
   public static void glfwSetInputMode(GLFWwindow* window, int mode, int value) => s_glfwSetInputMode(window, mode, value);
+  public static void glfwSetWindowIcon(GLFWwindow* window, int count, GLFWImage* images) => s_glfwSetWindowIcon(window, count, images);
 
   public static GLFWwindow* glfwCreateWindow(int width, int height, string title, GLFWmonitor* monitor, GLFWwindow* share) {
     var ptr = Marshal.StringToHGlobalAnsi(title);
@@ -328,6 +343,11 @@ public static unsafe class GLFW {
       Marshal.FreeHGlobal(ptr);
     }
   }
+
+  public static void* glfwCreateCursor(GLFWImage* image, int xhot, int yhot) => s_glfwCreateCursor(image, xhot, yhot);
+  public static void glfwSetCursor(GLFWwindow* window, void* cursor) => s_glfwSetCursor(window, cursor);
+  public static void glfwDestroyCursor(void* cursor) => s_glfwDestroyCursor(cursor);
+
   public static bool glfwWindowShouldClose(GLFWwindow* window) => s_glfwWindowShouldClose(window) == GLFW_TRUE;
 
   public static void glfwGetWindowSize(GLFWwindow* window, out int width, out int height) => s_glfwGetWindowSize(window, out width, out height);
@@ -386,10 +406,14 @@ public static unsafe class GLFW {
     s_glfwPollEvents = LoadFunction<glfwPollEvents_t>(nameof(glfwPollEvents));
     s_glfwWaitEvents = LoadFunction<glfwWaitEvents_t>(nameof(glfwWaitEvents));
 
+    s_glfwSetWindowIcon = LoadFunction<glfwSetWindowIcon_t>(nameof(glfwSetWindowIcon));
     s_glfwSetWindowPos = LoadFunction<glfwSetWindowPos_t>(nameof(glfwSetWindowPos));
     s_glfwGetVideoMode = LoadFunction<glfwGetVideoMode_t>(nameof(glfwGetVideoMode));
     s_glfwSetInputMode = LoadFunction<glfwSetInputMode_t>(nameof(glfwSetInputMode));
     s_glfwMaximizeWindow = LoadFunction<glfwMaximizeWindow_t>(nameof(glfwMaximizeWindow));
+    s_glfwCreateCursor = LoadFunction<glfwCreateCursor_t>(nameof(glfwCreateCursor));
+    s_glfwSetCursor = LoadFunction<glfwSetCursor_t>(nameof(glfwSetCursor));
+    s_glfwDestroyCursor = LoadFunction<glfwDestroyCursor_t>(nameof(glfwDestroyCursor));
 
     // Vulkan
     s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));
@@ -472,4 +496,43 @@ public readonly partial struct GLFWvidmode : IEquatable<GLFWvidmode> {
   /// <inheritdoc/>
   public override int GetHashCode() => Handle.GetHashCode();
   private string DebuggerDisplay => string.Format("GLFWvidmode [0x{0}]", Handle.ToString("X"));
+}
+
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
+public unsafe partial struct GLFWImage : IEquatable<GLFWImage> {
+  public int Width { get; set; }
+  public int Height { get; set; }
+  public char* Pixels { get; set; }
+  public GLFWImage(nint handle) { Handle = handle; }
+  public nint Handle { get; }
+  public bool IsNull => Handle == 0;
+  public static GLFWImage Null => new(0);
+  public static bool operator ==(GLFWImage left, GLFWImage right) => left.Handle == right.Handle;
+  public static bool operator !=(GLFWImage left, GLFWImage right) => left.Handle != right.Handle;
+  public static bool operator ==(GLFWImage left, nint right) => left.Handle == right;
+  public static bool operator !=(GLFWImage left, nint right) => left.Handle != right;
+  public bool Equals(GLFWImage other) => Handle == other.Handle;
+  /// <inheritdoc/>
+  public override bool Equals(object? obj) => obj is GLFWImage handle && Equals(handle);
+  /// <inheritdoc/>
+  public override int GetHashCode() => Handle.GetHashCode();
+  private string DebuggerDisplay => string.Format("GLFWImage [0x{0}]", Handle.ToString("X"));
+}
+
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
+public unsafe readonly partial struct GLFWcursor : IEquatable<GLFWcursor> {
+  public GLFWcursor(nint handle) { Handle = handle; }
+  public nint Handle { get; }
+  public bool IsNull => Handle == 0;
+  public static GLFWcursor Null => new(0);
+  public static bool operator ==(GLFWcursor left, GLFWcursor right) => left.Handle == right.Handle;
+  public static bool operator !=(GLFWcursor left, GLFWcursor right) => left.Handle != right.Handle;
+  public static bool operator ==(GLFWcursor left, nint right) => left.Handle == right;
+  public static bool operator !=(GLFWcursor left, nint right) => left.Handle != right;
+  public bool Equals(GLFWcursor other) => Handle == other.Handle;
+  /// <inheritdoc/>
+  public override bool Equals(object? obj) => obj is GLFWcursor handle && Equals(handle);
+  /// <inheritdoc/>
+  public override int GetHashCode() => Handle.GetHashCode();
+  private string DebuggerDisplay => string.Format("GLFWcursor [0x{0}]", Handle.ToString("X"));
 }

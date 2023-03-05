@@ -34,14 +34,14 @@ public class Texture : IDisposable {
     out VkSampler sampler,
     int flip = 1
   ) {
-    Console.WriteLine("Start");
+    // Console.WriteLine("Start");
     StbImage.stbi_set_flip_vertically_on_load(flip);
 
     using var stream = File.OpenRead($"{texturePath}");
     var img = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
     stream.Dispose();
 
-    Console.WriteLine("Map");
+    // Console.WriteLine("Map");
 
     // This takes the longest
     var size = img.Width * img.Height * 4;
@@ -68,7 +68,7 @@ public class Texture : IDisposable {
     // _device.CopyBuffer(buffer.GetBuffer(), _textureBuffer.GetBuffer(), (ulong)size);
     // buffer.Dispose();
 
-    Console.WriteLine("Create Image");
+    // Console.WriteLine("Create Image");
     CreateImage(
       device,
       (uint)img.Width,
@@ -81,7 +81,7 @@ public class Texture : IDisposable {
       out textureMemory
     );
 
-    Console.WriteLine("Create Transitions");
+    // Console.WriteLine("Create Transitions");
     CreateImageTransitions(device, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, textureImage);
     CopyBufferToImage(device, stagingBuffer.GetBuffer(), textureImage, img.Width, img.Height);
     CreateImageTransitions(device, VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal, textureImage);
@@ -94,9 +94,9 @@ public class Texture : IDisposable {
 
     //vkDestroyBuffer(device, stagingBuffer, nullptr);
     //vkFreeMemory(device, stagingBufferMemory, nullptr);
-    Console.WriteLine("Creating View");
+    // Console.WriteLine("Creating View");
     CreateTextureImageView(device, textureImage, out imageView);
-    Console.WriteLine("Create Sampler");
+    // Console.WriteLine("Create Sampler");
     CreateSampler(device, out sampler);
 
     // _textureBuffer.Dispose();

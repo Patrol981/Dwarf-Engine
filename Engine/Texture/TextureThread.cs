@@ -7,7 +7,7 @@ public class TextureThread {
   private Texture[] _textures;
   private string[] _paths;
 
-  public TextureThread(ref Device device, ref Texture[] textures, string[] paths) {
+  public TextureThread(ref Device device, Texture[] textures, string[] paths) {
     _device = device;
     _textures = textures;
     _paths = paths;

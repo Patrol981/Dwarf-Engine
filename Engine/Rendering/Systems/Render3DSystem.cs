@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Lists;
+using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 using OpenTK.Mathematics;
 using Vortice.Vulkan;
@@ -75,6 +76,14 @@ public unsafe class Render3DSystem : IDisposable {
     return count;
   }
 
+  private int GetTextureSetsLength() {
+    int count = 0;
+    for (int i = 0; i < _textureSets.Size; i++) {
+      count += _textureSets.GetAt(i).Size;
+    }
+    return count;
+  }
+
   private void BindDescriptorTexture(Entity entity, ref TextureManager textures, int index, int modelPart = 0) {
     var id = entity.GetComponent<Model>().GetTextureIdReference(modelPart);
     var texture = textures.GetTexture(id);
@@ -91,11 +100,9 @@ public unsafe class Render3DSystem : IDisposable {
     _textureSets.GetAt(index).SetAt(set, modelPart);
   }
 
-  private void BindDescriptorSet(int index, FrameInfo frameInfo) {
-
-  }
-
   public void SetupRenderData(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+    Logger.Info("Recreating Renderer 3D");
+
     _pool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
@@ -153,12 +160,23 @@ public unsafe class Render3DSystem : IDisposable {
     }
   }
 
-  public bool CheckSizes(int numberOfEntities) {
-    if (numberOfEntities > _modelBuffer.Length) {
+  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+    if (entities.Length > _modelBuffer.Length) {
       return false;
-    } else if (numberOfEntities < _modelBuffer.Length) {
+    } else if (entities.Length < _modelBuffer.Length) {
       return true;
     }
+
+    return true;
+  }
+
+  public bool CheckTextures(ReadOnlySpan<Entity> entities) {
+    var len = CalculateLengthOfPool(entities);
+    var sets = GetTextureSetsLength();
+    if (len != sets) {
+      return false;
+    }
+
     return true;
   }
 
@@ -254,6 +272,7 @@ public unsafe class Render3DSystem : IDisposable {
   }
 
   public unsafe void Dispose() {
+    vkQueueWaitIdle(_device.GraphicsQueue);
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
     for (int i = 0; i < _modelBuffer.Length; i++) {

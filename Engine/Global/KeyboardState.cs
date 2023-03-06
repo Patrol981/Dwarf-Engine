@@ -36,8 +36,9 @@ public sealed class KeyboardState {
   static void AddEntity() {
     var box2 = new Entity();
     box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
+    box2.GetComponent<Model>().BindToTexture(ApplicationState.s_App.TextureManager, "viking_room/viking_room.png", true);
     box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-    box2.AddComponent(new Transform(new Vector3(1.0f, -3.0f, -1f)));
+    box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
     box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
     ApplicationState.s_App.AddEntity(box2);
@@ -47,8 +48,9 @@ public sealed class KeyboardState {
     for (int i = 0; i < range; i++) {
       var box2 = new Entity();
       box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
+      box2.GetComponent<Model>().BindToTexture(ApplicationState.s_App.TextureManager, "viking_room/viking_room.png", true);
       box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-      box2.AddComponent(new Transform(new Vector3(i, -3.0f, -i * 2)));
+      box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
       box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
       box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
       ApplicationState.s_App.AddEntity(box2);

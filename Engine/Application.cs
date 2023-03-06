@@ -98,6 +98,12 @@ public class Application {
     _currentScene = scene;
   }
 
+  public void ReloadRenderSystem() {
+    _3dRenderSystem.Dispose();
+    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
+    _3dRenderSystem.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+  }
+
   public unsafe void Run() {
     Vulkan.Buffer[] uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < uboBuffers.Length; i++) {
@@ -125,14 +131,20 @@ public class Application {
     }
 
     _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
-    _3dRenderSystem.SetupRenderData(_entities.ToArray(), ref _textureManager);
+    _3dRenderSystem.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+
+    var elasped = 0.0f;
+    var testState = true;
+    var totalSpawned = 0;
 
     while (!_window.ShouldClose) {
       glfwPollEvents();
       Time.StartTick();
 
-      var sizes = _3dRenderSystem.CheckSizes(_entities.Count);
-      if (!sizes || ReloadSimpleRenderSystem) {
+      var ents = Entity.Distinct<Model>(_entities).ToArray();
+      var sizes = _3dRenderSystem.CheckSizes(ents);
+      var textures = _3dRenderSystem.CheckTextures(ents);
+      if (!sizes || !textures || ReloadSimpleRenderSystem) {
         ReloadSimpleRenderSystem = false;
         ReloadRenderSystem();
       }
@@ -169,7 +181,7 @@ public class Application {
 
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
-        _3dRenderSystem.RenderEntities(frameInfo, _entities.ToArray());
+        _3dRenderSystem.RenderEntities(frameInfo, Entity.Distinct<Model>(_entities).ToArray());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
 
@@ -179,8 +191,36 @@ public class Application {
 
       _camera.GetComponent<Camera>().UpdateControls();
 
+      /*
+      if (elasped > 1.0f) {
+        //elasped = 0.0f;
+        //continue;
+        if (testState) {
+          var box2 = new Entity();
+          box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
+          box2.GetComponent<Model>().BindToTexture(_textureManager, "viking_room/viking_room.png", true);
+          box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
+          box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
+          box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
+          box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
+          ApplicationState.s_App.AddEntity(box2);
+          testState = !testState;
+          elasped = 0.0f;
+          totalSpawned += 1;
+        } else {
+          var count = ApplicationState.s_App.GetEntities().Count - 1;
+          var entities = ApplicationState.s_App.GetEntities();
+          entities[count].CanBeDisposed = true;
+          testState = !testState;
+          elasped = 0.0f;
+        }
+      }
+      */
+
       GC.Collect(2, GCCollectionMode.Optimized, false);
       Time.EndTick();
+      elasped += Time.DeltaTime;
+      // Console.WriteLine(elasped);
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
@@ -210,18 +250,17 @@ public class Application {
     _entities.Remove(entity);
   }
 
+  public void RemoveEntity(Guid id) {
+    var target = _entities.Where((x) => x.EntityID == id).First();
+    _entities.Remove(target);
+  }
+
   public void DestroyEntity(Entity entity) {
     entity.CanBeDisposed = true;
   }
 
   public void RemoveEntityRange(int index, int count) {
     _entities.RemoveRange(index, count);
-  }
-
-  public void ReloadRenderSystem() {
-    _3dRenderSystem.Dispose();
-    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
-    _3dRenderSystem.SetupRenderData(_entities.ToArray(), ref _textureManager);
   }
 
   public async void Init() {
@@ -303,10 +342,12 @@ public class Application {
   }
 
   private void Collect() {
-    for (int i = 0; i < _entities.Count; i++) {
-      if (_entities[i].CanBeDisposed) {
-        _entities[i].GetComponent<Model>().Dispose();
-        ApplicationState.s_App.RemoveEntity(_entities[i]);
+    // Colect Models
+    var models = Entity.Distinct<Model>(_entities);
+    for (int i = 0; i < models.Count; i++) {
+      if (models[i].CanBeDisposed) {
+        models[i].GetComponent<Model>().Dispose();
+        ApplicationState.s_App.RemoveEntity(models[i].EntityID);
       }
     }
   }

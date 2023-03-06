@@ -20,12 +20,24 @@ public class Entity {
     return _componentManager.GetComponent<T>();
   }
 
+  public bool HasComponent<T>() where T : Component {
+    return _componentManager.GetComponent<T>() != null;
+  }
+
   public void RemoveComponent<T>() where T : Component {
     _componentManager.RemoveComponent<T>();
   }
 
   public ComponentManager GetComponentManager() {
     return _componentManager;
+  }
+
+  public static List<Entity> Distinct<T>(List<Entity> entities) where T : Component {
+    var returnEntities = new List<Entity>();
+    for (int i = 0; i < entities.Count; i++) {
+      if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
+    }
+    return returnEntities;
   }
 
   public string Name {

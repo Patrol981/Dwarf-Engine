@@ -4,14 +4,12 @@ using Dwarf.Vulkan;
 namespace Dwarf.Engine;
 
 public abstract class Scene {
-  protected readonly Device _device = null!;
-  protected readonly TextureManager _textureManager = null!;
+  protected readonly Application _app;
   private List<Entity> _entities = new();
   private List<List<string>> _texturePaths = new();
 
-  public Scene(Device device, TextureManager textureManager) {
-    _device = device;
-    _textureManager = textureManager;
+  public Scene(Application app) {
+    _app = app;
   }
 
   public virtual void LoadEntities() { }

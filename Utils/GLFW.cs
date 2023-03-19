@@ -3,7 +3,9 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+
 using Dwarf.Extensions.Loaders;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Extensions.GLFW;
@@ -194,12 +196,14 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   public unsafe delegate void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  public unsafe delegate void glfwJoystickCallback(int jid, int j_event);
   #endregion
 
   #region callbacks setters
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate glfwCursorPosCallback glfwSetCursorPosCallback_t(GLFWwindow* window, glfwCursorPosCallback callback);
-
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate glfwErrorCallback glfwSetErrorCallback_t(glfwErrorCallback callback);
@@ -209,6 +213,9 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate glfwKeyCallback glfwSetKeyCallback_t(GLFWwindow* window, glfwKeyCallback callback);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate glfwJoystickCallback glfwSetJoystickCallback_t(glfwJoystickCallback callback);
   #endregion
 
   #region setters
@@ -247,6 +254,29 @@ public static unsafe class GLFW {
   private delegate GLFWvidmode* glfwGetVideoMode_t(GLFWmonitor* monitor);
   #endregion
 
+  #region gamepad support
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate int glfwUpdateGamepadMappings_t(char* data);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate char* glfwGetGamepadName_t(int jid);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate int glfwJoystickIsGamepad_t(int jid);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate int glfwGetGamepadState_t(int jid, GLFWgamepadstate* state);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate int glfwJoystickPresent_t(int jid);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate float* glfwGetJoystickAxes_t(int jid, int* count);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate char* glfwGetJoystickButtons_t(int jid, int* count);
+
+  #endregion
 
   #region other functions
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -281,6 +311,9 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate void glfwDestroyCursor_t(void* cursor);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate double glfwGetTime_t();
   #endregion
 
   private static delegate* unmanaged[Cdecl]<int> s_glfwInit;
@@ -315,6 +348,16 @@ public static unsafe class GLFW {
   private static readonly glfwGetRequiredInstanceExtensions_t s_glfwGetRequiredInstanceExtensions;
   private static readonly delegate* unmanaged[Cdecl]<VkInstance, GLFWwindow*, void*, VkSurfaceKHR*, int> s_glfwCreateWindowSurface;
 
+  private static readonly glfwGetGamepadName_t s_glfwGetGamepadName;
+  private static readonly glfwGetGamepadState_t s_glfwGetGamepadState;
+  private static readonly glfwJoystickIsGamepad_t s_glfwJoystickIsGamepad;
+  private static readonly glfwUpdateGamepadMappings_t s_glfwUpdateGamepadMappings;
+  private static readonly glfwSetJoystickCallback_t s_glfwSetJoystickCallback;
+  private static readonly glfwJoystickPresent_t s_glfwJoystickPresent;
+  private static readonly glfwGetJoystickAxes_t s_glfwGetJoystickAxes;
+  private static readonly glfwGetJoystickButtons_t s_glfwGetJoystickButtons;
+  private static readonly glfwGetTime_t s_glfwGetTime;
+
   public static bool glfwInit() => s_glfwInit() == GLFW_TRUE;
   public static void glfwTerminate() => s_glfwTerminate();
 
@@ -325,7 +368,7 @@ public static unsafe class GLFW {
   public static glfwFramebufferCallback glfwSetFramebufferSizeCallback(GLFWwindow* window, glfwFramebufferCallback callback) => s_glfwSetFramebufferSizeCallback(window, callback);
   public static glfwCursorPosCallback glfwSetCursorPosCallback(GLFWwindow* window, glfwCursorPosCallback callback) => s_glfwSetCursorPosCallback(window, callback);
   public static glfwKeyCallback glfwSetKeyCallback(GLFWwindow* window, glfwKeyCallback callback) => s_glfwSetKeyCallback(window, callback);
-
+  public static glfwJoystickCallback glfwSetJoystickCallback(glfwJoystickCallback callback) => s_glfwSetJoystickCallback(callback);
 
   public static void glfwInitHint(InitHintBool hint, bool value) => s_glfwInitHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
   public static void glfwMaximizeWindow(GLFWwindow* window) => s_glfwMaximizeWindow(window);
@@ -347,6 +390,7 @@ public static unsafe class GLFW {
   public static void* glfwCreateCursor(GLFWImage* image, int xhot, int yhot) => s_glfwCreateCursor(image, xhot, yhot);
   public static void glfwSetCursor(GLFWwindow* window, void* cursor) => s_glfwSetCursor(window, cursor);
   public static void glfwDestroyCursor(void* cursor) => s_glfwDestroyCursor(cursor);
+  public static double glfwGetTime() => s_glfwGetTime();
 
   public static bool glfwWindowShouldClose(GLFWwindow* window) => s_glfwWindowShouldClose(window) == GLFW_TRUE;
 
@@ -356,6 +400,15 @@ public static unsafe class GLFW {
   public static void* glfwGetWindowUserPointer(GLFWwindow* window) => s_glfwGetWindowUserPointer(window);
   public static void glfwSetWindowUserPointer(GLFWwindow* window, void* pointer) => s_glfwSetWindowUserPointer(window, pointer);
   public static int glfwGetKey(GLFWwindow* window, int key) => s_glfwGetKey(window, key);
+
+  // gamepad support
+  public static int glfwUpdateGamepadMappings(char* data) => s_glfwUpdateGamepadMappings(data);
+  public static char* glfwGetGamepadName(int jid) => s_glfwGetGamepadName(jid);
+  public static int glfwJoystickIsGamepad(int jid) => s_glfwJoystickIsGamepad(jid);
+  public static int glfwGetGamepadState(int jid, GLFWgamepadstate* state) => s_glfwGetGamepadState(jid, state);
+  public static int glfwJoystickPresent(int jid) => s_glfwJoystickPresent(jid);
+  public static float* glfwGetJoystickAxes(int jid, int* count) => s_glfwGetJoystickAxes(jid, count);
+  public static char* glfwGetJoystickButtons(int jid, int* count) => s_glfwGetJoystickButtons(jid, count);
 
   public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
   public static GLFWvidmode* glfwGetVideoMode(GLFWmonitor* monitor) => s_glfwGetVideoMode(monitor);
@@ -414,6 +467,16 @@ public static unsafe class GLFW {
     s_glfwCreateCursor = LoadFunction<glfwCreateCursor_t>(nameof(glfwCreateCursor));
     s_glfwSetCursor = LoadFunction<glfwSetCursor_t>(nameof(glfwSetCursor));
     s_glfwDestroyCursor = LoadFunction<glfwDestroyCursor_t>(nameof(glfwDestroyCursor));
+    s_glfwGetTime = LoadFunction<glfwGetTime_t>(nameof(glfwGetTime));
+
+    s_glfwGetGamepadName = LoadFunction<glfwGetGamepadName_t>(nameof(glfwGetGamepadName));
+    s_glfwGetGamepadState = LoadFunction<glfwGetGamepadState_t>(nameof(glfwGetGamepadState));
+    s_glfwJoystickIsGamepad = LoadFunction<glfwJoystickIsGamepad_t>(nameof(glfwJoystickIsGamepad));
+    s_glfwUpdateGamepadMappings = LoadFunction<glfwUpdateGamepadMappings_t>(nameof(glfwUpdateGamepadMappings));
+    s_glfwSetJoystickCallback = LoadFunction<glfwSetJoystickCallback_t>(nameof(glfwSetJoystickCallback));
+    s_glfwJoystickPresent = LoadFunction<glfwJoystickPresent_t>(nameof(glfwJoystickPresent));
+    s_glfwGetJoystickAxes = LoadFunction<glfwGetJoystickAxes_t>(nameof(glfwGetJoystickAxes));
+    s_glfwGetJoystickButtons = LoadFunction<glfwGetJoystickButtons_t>(nameof(glfwGetJoystickButtons));
 
     // Vulkan
     s_glfwGetRequiredInstanceExtensions = LoadFunction<glfwGetRequiredInstanceExtensions_t>(nameof(glfwGetRequiredInstanceExtensions));
@@ -520,19 +583,21 @@ public unsafe partial struct GLFWImage : IEquatable<GLFWImage> {
 }
 
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public unsafe readonly partial struct GLFWcursor : IEquatable<GLFWcursor> {
-  public GLFWcursor(nint handle) { Handle = handle; }
+public unsafe readonly partial struct GLFWgamepadstate : IEquatable<GLFWgamepadstate> {
+  public char[] Buttons { get; } = null!;
+  public float[] Axes { get; } = null!;
+  public GLFWgamepadstate(nint handle) { Handle = handle; }
   public nint Handle { get; }
   public bool IsNull => Handle == 0;
-  public static GLFWcursor Null => new(0);
-  public static bool operator ==(GLFWcursor left, GLFWcursor right) => left.Handle == right.Handle;
-  public static bool operator !=(GLFWcursor left, GLFWcursor right) => left.Handle != right.Handle;
-  public static bool operator ==(GLFWcursor left, nint right) => left.Handle == right;
-  public static bool operator !=(GLFWcursor left, nint right) => left.Handle != right;
-  public bool Equals(GLFWcursor other) => Handle == other.Handle;
+  public static GLFWgamepadstate Null => new(0);
+  public static bool operator ==(GLFWgamepadstate left, GLFWgamepadstate right) => left.Handle == right.Handle;
+  public static bool operator !=(GLFWgamepadstate left, GLFWgamepadstate right) => left.Handle != right.Handle;
+  public static bool operator ==(GLFWgamepadstate left, nint right) => left.Handle == right;
+  public static bool operator !=(GLFWgamepadstate left, nint right) => left.Handle != right;
+  public bool Equals(GLFWgamepadstate other) => Handle == other.Handle;
   /// <inheritdoc/>
-  public override bool Equals(object? obj) => obj is GLFWcursor handle && Equals(handle);
+  public override bool Equals(object? obj) => obj is GLFWgamepadstate handle && Equals(handle);
   /// <inheritdoc/>
   public override int GetHashCode() => Handle.GetHashCode();
-  private string DebuggerDisplay => string.Format("GLFWcursor [0x{0}]", Handle.ToString("X"));
+  private string DebuggerDisplay => string.Format("GLFWgamepadstate [0x{0}]", Handle.ToString("X"));
 }

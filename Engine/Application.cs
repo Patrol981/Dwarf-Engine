@@ -73,6 +73,7 @@ public class Application {
   private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
   private Render3DSystem _3dRenderSystem = null!;
+  private RenderUISystem _uiRenderSystem = null!;
   private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
   private Entity _camera = new();
@@ -82,16 +83,13 @@ public class Application {
   // ubos
   private DescriptorSetLayout _globalSetLayout = null!;
 
-  public Application() {
-    _window = new Window(1200, 900);
+  public Application(string appName = "Dwarf Vulkan") {
+    _window = new Window(1200, 900, appName);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
 
     ApplicationState.s_App = this;
     _textureManager = new(_device);
-
-    // Init();
-    // Run();
   }
 
   public void SetupScene(Scene scene) {
@@ -133,13 +131,14 @@ public class Application {
     _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
     _3dRenderSystem.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
 
-    var elasped = 0.0f;
-    var testState = true;
-    var totalSpawned = 0;
+    _uiRenderSystem = new(_device, _renderer.GetSwapchainRenderPass());
+    _uiRenderSystem.SetupUIData(1000);
+
+    _onLoad?.Invoke();
 
     while (!_window.ShouldClose) {
       glfwPollEvents();
-      Time.StartTick();
+      Time.Tick();
 
       var ents = Entity.Distinct<Model>(_entities).ToArray();
       var sizes = _3dRenderSystem.CheckSizes(ents);
@@ -166,10 +165,10 @@ public class Application {
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
 
-        // ubo.LightPosition = new Vector3(-1, -2, -1);
-        ubo.LightPosition = _camera.GetComponent<Transform>().Position;
+        ubo.LightPosition = new Vector3(0, -10, 0);
+        // ubo.LightPosition = _camera.GetComponent<Transform>().Position;
         ubo.LightColor = new Vector4(1, 1, 1, 1);
-        ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 0.2f);
+        ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 1f);
 
         uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
 
@@ -181,6 +180,7 @@ public class Application {
 
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
+        _onRender?.Invoke();
         _3dRenderSystem.RenderEntities(frameInfo, Entity.Distinct<Model>(_entities).ToArray());
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
@@ -190,37 +190,9 @@ public class Application {
       }
 
       _camera.GetComponent<Camera>().UpdateControls();
-
-      /*
-      if (elasped > 1.0f) {
-        //elasped = 0.0f;
-        //continue;
-        if (testState) {
-          var box2 = new Entity();
-          box2.AddComponent(new GenericLoader().LoadModel(ApplicationState.s_App.Device, "./Models/colored_cube.obj"));
-          box2.GetComponent<Model>().BindToTexture(_textureManager, "viking_room/viking_room.png", true);
-          box2.AddComponent(new Material(new Vector3(0.1f, 0.1f, 0.1f)));
-          box2.AddComponent(new Transform(new Vector3(1.0f, -7.0f, -1f)));
-          box2.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
-          box2.GetComponent<Transform>().Rotation = new(0f, 0f, 0);
-          ApplicationState.s_App.AddEntity(box2);
-          testState = !testState;
-          elasped = 0.0f;
-          totalSpawned += 1;
-        } else {
-          var count = ApplicationState.s_App.GetEntities().Count - 1;
-          var entities = ApplicationState.s_App.GetEntities();
-          entities[count].CanBeDisposed = true;
-          testState = !testState;
-          elasped = 0.0f;
-        }
-      }
-      */
+      _onUpdate?.Invoke();
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
-      Time.EndTick();
-      elasped += Time.DeltaTime;
-      // Console.WriteLine(elasped);
     }
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
@@ -232,6 +204,10 @@ public class Application {
       uboBuffers[i].Dispose();
     }
     Cleanup();
+  }
+
+  public void SetCamera(Entity camera) {
+    _camera = camera;
   }
 
   public void AddEntity(Entity entity) {
@@ -268,16 +244,6 @@ public class Application {
       .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
       .Build();
-
-    float aspect = _renderer.AspectRatio;
-    _camera.AddComponent(new Transform(new Vector3(0, 0, 0)));
-    _camera.AddComponent(new Camera(50, aspect));
-    _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
-    _camera.GetComponent<Camera>()._yaw = 1.3811687f;
-    _camera.AddComponent(new FreeCameraController());
-
-    CameraState.SetCamera(_camera.GetComponent<Camera>());
-    CameraState.SetCameraEntity(_camera);
 
     await LoadTextures();
     await LoadEntities();
@@ -336,6 +302,7 @@ public class Application {
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
     _3dRenderSystem?.Dispose();
+    _uiRenderSystem?.Dispose();
     _renderer?.Dispose();
     _window?.Dispose();
     _device?.Dispose();
@@ -354,4 +321,5 @@ public class Application {
 
   public Device Device => _device;
   public TextureManager TextureManager => _textureManager;
+  public Renderer Renderer => _renderer;
 }

@@ -1,0 +1,20 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Dwarf.Engine.Globals;
+public sealed class JoystickState {
+  private static JoystickState s_instance = null!;
+  public static unsafe void JoystickCallback(int jid, int j_event) {
+    Console.WriteLine(jid + " " + j_event);
+  }
+
+  public JoystickState GetInstance() {
+    if (s_instance == null) {
+      s_instance = new JoystickState();
+    }
+    return s_instance;
+  }
+}

@@ -24,6 +24,7 @@ layout (set = 1, binding = 0) uniform ModelUBO {
   mat4 normalMatrix;
   vec3 material;
   bool useTexture;
+  bool useLight;
 } modelUBO;
 
 void main() {

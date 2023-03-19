@@ -1,16 +1,22 @@
 using System.Runtime.CompilerServices;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
+using DwarfEngine.Engine;
+
 using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 
-public unsafe class Render3DSystem : IDisposable {
+public unsafe class Render3DSystem : IRenderSystem {
   private readonly Device _device = null!;
   private readonly Renderer _renderer = null!;
   private PipelineConfigInfo _configInfo = null!;
@@ -200,6 +206,7 @@ public unsafe class Render3DSystem : IDisposable {
       modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
       modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
+      modelUBO.UseLight = entities[i].GetComponent<Model>().UsesLight;
 
       _modelBuffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       _modelBuffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());

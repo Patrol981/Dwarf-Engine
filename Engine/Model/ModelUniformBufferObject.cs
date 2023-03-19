@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
+
 using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
 namespace Dwarf.Engine;
 
@@ -9,4 +11,5 @@ public struct ModelUniformBufferObject {
   [FieldOffset(64)] public Matrix4 NormalMatrix;
   [FieldOffset(128)] public Vector3 Material;
   [FieldOffset(140)] public bool UseTexture;
+  [FieldOffset(144)] public bool UseLight;
 }

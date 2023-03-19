@@ -14,6 +14,8 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class Model : Component, IDisposable {
+  public bool UsesLight = true;
+
   private readonly Device _device = null!;
 
   private Dwarf.Vulkan.Buffer[] _vertexBuffers = new Vulkan.Buffer[0];

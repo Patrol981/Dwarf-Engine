@@ -18,6 +18,6 @@ public class SystemHelper {
     var pipelineConfig = configInfo!.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = layout;
-    pipeline = new Pipeline(device, "gui_vertex", "gui_fragment", pipelineConfig);
+    // pipeline = new Pipeline(device, "gui_vertex", "gui_fragment", pipelineConfig);
   }
 }

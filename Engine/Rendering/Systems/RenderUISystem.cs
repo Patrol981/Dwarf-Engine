@@ -15,16 +15,21 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using DwarfEngine.Engine;
+using Assimp;
 
 namespace Dwarf.Engine.Rendering;
 
-public class RenderUISystem : IRenderSystem {
+public class RenderUISystem : SystemBase, IRenderSystem {
   private readonly Device _device;
 
   private PipelineConfigInfo _configInfo = null!;
   private Pipeline _pipeline = null!;
   private VkPipelineLayout _pipelineLayout;
 
+  private bool _frameBegun = false;
+  private int _windowWidth;
+  private int _windowHeight;
+  private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
   private IntPtr _fontAtlasID = (IntPtr)1;
 
@@ -38,6 +43,8 @@ public class RenderUISystem : IRenderSystem {
 
   // Texturing
   private VkImageView _imageView;
+
+  public RenderUISystem() { }
 
   public RenderUISystem(Device device, VkRenderPass renderPass) {
     _device = device;
@@ -56,7 +63,19 @@ public class RenderUISystem : IRenderSystem {
     CreatePipeline(renderPass);
   }
 
-  public void SetupUIData(int uiElements) {
+  public override IRenderSystem Create(
+    Device device,
+    Renderer renderer,
+    VkDescriptorSetLayout globalSet,
+    PipelineConfigInfo configInfo = null!
+  ) {
+    return new RenderUISystem(device, renderer.GetSwapchainRenderPass());
+  }
+
+  public void SetupUIData(int uiElements, int width, int height) {
+    _windowHeight = height;
+    _windowWidth = width;
+
     _uiPool = new DescriptorPool.Builder(_device)
     .SetMaxSets((uint)uiElements)
     .AddPoolSize(VkDescriptorType.Sampler, (uint)uiElements)
@@ -73,8 +92,8 @@ public class RenderUISystem : IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    IntPtr ctx = ImGui.CreateContext();
-    ImGui.SetCurrentContext(ctx);
+    ImGui.CreateContext();
+    // ImGui.SetCurrentContext(ctx);
     var io = ImGui.GetIO();
 
     io.Fonts.AddFontDefault();
@@ -86,10 +105,30 @@ public class RenderUISystem : IRenderSystem {
 
     CreateDeviceResources();
     SetKeyMappings();
+
+    SetPerFrameImGuiData(1f / 60f);
+
+    // ImGui.NewFrame();
+    _frameBegun = true;
   }
 
   public void DrawUI() {
+    // ImGui.Render();
+    // Console.WriteLine("UI LOOP");
+  }
 
+  public void WindowResized(int width, int height) {
+    _windowWidth = width;
+    _windowHeight = height;
+  }
+
+  private void SetPerFrameImGuiData(float deltaSeconds) {
+    var io = ImGui.GetIO();
+    io.DisplaySize = new System.Numerics.Vector2(
+      _windowWidth / _scaleFactor.X,
+      _windowHeight / _scaleFactor.Y);
+    io.DisplayFramebufferScale = _scaleFactor;
+    io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
   }
 
   private void SetKeyMappings() {
@@ -153,7 +192,7 @@ public class RenderUISystem : IRenderSystem {
     var pipelineConfig = _configInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "gui_vertex", "gui_fragment", pipelineConfig);
+    _pipeline = new Pipeline(_device, "gui_vertex", "gui_fragment", pipelineConfig, new PipelineUIProvider());
   }
 
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {

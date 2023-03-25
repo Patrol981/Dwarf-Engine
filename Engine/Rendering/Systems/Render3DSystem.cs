@@ -16,7 +16,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 
-public unsafe class Render3DSystem : IRenderSystem {
+public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   private readonly Device _device = null!;
   private readonly Renderer _renderer = null!;
   private PipelineConfigInfo _configInfo = null!;
@@ -35,10 +35,11 @@ public unsafe class Render3DSystem : IRenderSystem {
 
   private int _texturesCount = 0;
 
+  public Render3DSystem() { }
+
   public Render3DSystem(
     Device device,
     Renderer renderer,
-    VkRenderPass renderPass,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) {
@@ -60,7 +61,15 @@ public unsafe class Render3DSystem : IRenderSystem {
       _textureSetLayout.GetDescriptorSetLayout()
     };
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(renderPass);
+    CreatePipeline(renderer.GetSwapchainRenderPass());
+  }
+
+  public override IRenderSystem Create(Device device,
+    Renderer renderer,
+    VkDescriptorSetLayout globalSet,
+    PipelineConfigInfo configInfo = null!
+  ) {
+    return new Render3DSystem(device, renderer, globalSet, configInfo);
   }
 
   private int GetLengthOfTexturedEntites(ReadOnlySpan<Entity> entities) {
@@ -275,7 +284,7 @@ public unsafe class Render3DSystem : IRenderSystem {
     var pipelineConfig = _configInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig);
+    _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig, new PipelineModelProvider());
   }
 
   public unsafe void Dispose() {

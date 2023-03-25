@@ -23,22 +23,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public static class ApplicationState {
-  public static Application s_App = null!;
-
-  public static List<Vulkan.Buffer> s_BuffersToDestroyCandidates = new();
-  public static List<VkDescriptorSet> s_DescSetsToDestroyCandidates = new();
-
-  public unsafe static void ClearGarbage(DescriptorPool pool) {
-    var buffArr = s_BuffersToDestroyCandidates.ToArray();
-    for (int i = 0; i < buffArr.Length; i++) {
-      buffArr[i].Dispose();
-    }
-
-    var descArr = s_DescSetsToDestroyCandidates.ToArray();
-    fixed (VkDescriptorSet* ptr = descArr) {
-      vkFreeDescriptorSets(s_App.Device.LogicalDevice, pool.GetVkDescriptorPool(), descArr.Length, ptr);
-    }
-  }
+  public static Application Instance = null!;
 }
 
 public class Application {
@@ -61,7 +46,7 @@ public class Application {
   }
 
   public PipelineConfigInfo CurrentPipelineConfig = new PipelineConfigInfo();
-  public bool ReloadSimpleRenderSystem = false;
+  public bool Reload3DRenderSystem = false;
 
   private EventCallback? _onUpdate;
   private EventCallback? _onRender;
@@ -72,8 +57,7 @@ public class Application {
   private Device _device = null!;
   private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
-  private Render3DSystem _3dRenderSystem = null!;
-  private RenderUISystem _uiRenderSystem = null!;
+  private SystemCollection _systems = new();
   private DescriptorPool _globalPool = null!;
   private List<Entity> _entities = new();
   private Entity _camera = new();
@@ -82,24 +66,32 @@ public class Application {
 
   // ubos
   private DescriptorSetLayout _globalSetLayout = null!;
+  private readonly SystemCreationFlags _systemCreationFlags;
 
-  public Application(string appName = "Dwarf Vulkan") {
+  public Application(string appName = "Dwarf Vulkan", SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D) {
     _window = new Window(1200, 900, appName);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
 
-    ApplicationState.s_App = this;
+    ApplicationState.Instance = this;
     _textureManager = new(_device);
+
+    _systemCreationFlags = systemCreationFlags;
   }
 
   public void SetupScene(Scene scene) {
     _currentScene = scene;
   }
 
-  public void ReloadRenderSystem() {
-    _3dRenderSystem.Dispose();
-    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout(), CurrentPipelineConfig);
-    _3dRenderSystem.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+  public void Reload3DRenderer() {
+    _systems.GetRender3DSystem()?.Dispose();
+    _systems.SetRender3DSystem((Render3DSystem)new Render3DSystem().Create(
+      _device,
+      _renderer,
+      _globalSetLayout.GetDescriptorSetLayout(),
+      CurrentPipelineConfig
+    ));
+    _systems.GetRender3DSystem().SetupRenderData(_entities.ToArray(), ref _textureManager);
   }
 
   public unsafe void Run() {
@@ -128,11 +120,10 @@ public class Application {
         .Build(out globalDescriptorSets[i]);
     }
 
-    _3dRenderSystem = new(_device, _renderer, _renderer.GetSwapchainRenderPass(), _globalSetLayout.GetDescriptorSetLayout());
-    _3dRenderSystem.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+    SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
 
-    _uiRenderSystem = new(_device, _renderer.GetSwapchainRenderPass());
-    _uiRenderSystem.SetupUIData(1000);
+    _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+    _systems.GetRenderUISystem()?.SetupUIData(1000, (int)_renderer.Extent2D.width, (int)_renderer.Extent2D.height);
 
     _onLoad?.Invoke();
 
@@ -140,12 +131,15 @@ public class Application {
       glfwPollEvents();
       Time.Tick();
 
-      var ents = Entity.Distinct<Model>(_entities).ToArray();
-      var sizes = _3dRenderSystem.CheckSizes(ents);
-      var textures = _3dRenderSystem.CheckTextures(ents);
-      if (!sizes || !textures || ReloadSimpleRenderSystem) {
-        ReloadSimpleRenderSystem = false;
-        ReloadRenderSystem();
+      var render3D = _systems.GetRender3DSystem();
+      if (render3D != null) {
+        var modelEntities = Entity.Distinct<Model>(_entities).ToArray();
+        var sizes = render3D.CheckSizes(modelEntities);
+        var textures = render3D.CheckTextures(modelEntities);
+        if (!sizes || !textures || Reload3DRenderSystem) {
+          Reload3DRenderSystem = false;
+          Reload3DRenderer();
+        }
       }
 
       float aspect = _renderer.AspectRatio;
@@ -181,7 +175,7 @@ public class Application {
         // render
         _renderer.BeginSwapchainRenderPass(commandBuffer);
         _onRender?.Invoke();
-        _3dRenderSystem.RenderEntities(frameInfo, Entity.Distinct<Model>(_entities).ToArray());
+        _systems.UpdateSystems(_entities.ToArray(), frameInfo);
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
 
@@ -191,6 +185,7 @@ public class Application {
 
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
+      _onGUI?.Invoke();
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
@@ -208,6 +203,16 @@ public class Application {
 
   public void SetCamera(Entity camera) {
     _camera = camera;
+  }
+
+  private void SetupSystems(
+    SystemCreationFlags creationFlags,
+    Device device,
+    Renderer renderer,
+    DescriptorSetLayout globalSetLayout,
+    PipelineConfigInfo configInfo
+  ) {
+    SystemCreator.CreateSystems(ref _systems, creationFlags, device, renderer, globalSetLayout, configInfo);
   }
 
   public void AddEntity(Entity entity) {
@@ -301,8 +306,7 @@ public class Application {
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
-    _3dRenderSystem?.Dispose();
-    _uiRenderSystem?.Dispose();
+    _systems?.Dispose();
     _renderer?.Dispose();
     _window?.Dispose();
     _device?.Dispose();
@@ -314,7 +318,7 @@ public class Application {
     for (int i = 0; i < models.Count; i++) {
       if (models[i].CanBeDisposed) {
         models[i].GetComponent<Model>().Dispose();
-        ApplicationState.s_App.RemoveEntity(models[i].EntityID);
+        ApplicationState.Instance.RemoveEntity(models[i].EntityID);
       }
     }
   }

@@ -181,16 +181,16 @@ public class FreeCameraController : Component {
       // DEBUG remove later
 
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_RIGHT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.s_App.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(-1, 0, 0) * Time.DeltaTime);
+        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(-1, 0, 0) * Time.DeltaTime);
       }
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.s_App.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(1, 0, 0) * Time.DeltaTime);
+        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(1, 0, 0) * Time.DeltaTime);
       }
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_DOWN) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.s_App.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, -1) * Time.DeltaTime);
+        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, -1) * Time.DeltaTime);
       }
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_UP) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.s_App.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, 1) * Time.DeltaTime);
+        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, 1) * Time.DeltaTime);
       }
 
       //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {

@@ -40,6 +40,14 @@ public class Entity {
     return returnEntities;
   }
 
+  public static ReadOnlySpan<Entity> Distinct<T>(ReadOnlySpan<Entity> entities) where T : Component {
+    var returnEntities = new List<Entity>();
+    for (int i = 0; i < entities.Length; i++) {
+      if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
+    }
+    return returnEntities.ToArray();
+  }
+
   public string Name {
     get { return _name; }
     set { _name = value; }

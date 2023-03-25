@@ -5,6 +5,8 @@ using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
+using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
 
 using static Dwarf.Extensions.GLFW.GLFW;
@@ -214,6 +216,7 @@ public unsafe class Renderer : IDisposable {
   }
   public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
   public float AspectRatio => _swapchain.ExtentAspectRatio();
+  public VkExtent2D Extent2D => _swapchain.Extent2D;
   public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
   public bool IsFrameStarted => _isFrameStarted;
 }

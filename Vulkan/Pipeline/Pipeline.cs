@@ -1,12 +1,17 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+
 using Dwarf.Engine;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
+using DwarfEngine.Vulkan;
+
 using Vortice.Vulkan;
+
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -35,9 +40,11 @@ public class Pipeline : IDisposable {
   private VkPipeline _graphicsPipeline;
   private VkShaderModule _vertexShaderModule;
   private VkShaderModule _fragmentShaderModule;
+  private readonly PipelineProvider _pipelineProvider;
 
-  public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo) {
+  public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
     _device = device;
+    _pipelineProvider = pipelineProvider;
 
     CreateGraphicsPipeline(vertexName, fragmentName, configInfo);
   }
@@ -74,13 +81,13 @@ public class Pipeline : IDisposable {
     shaderStages[1].flags = 0;
     shaderStages[1].pNext = null;
 
-    var bindingDescriptions = Model.GetBindingDescsFunc();
-    var attributeDescriptions = Model.GetAttribDescsFunc();
+    var bindingDescriptions = _pipelineProvider.GetBindingDescsFunc();
+    var attributeDescriptions = _pipelineProvider.GetAttribDescsFunc();
 
     var vertexInputInfo = new VkPipelineVertexInputStateCreateInfo();
     vertexInputInfo.sType = VkStructureType.PipelineVertexInputStateCreateInfo;
-    vertexInputInfo.vertexAttributeDescriptionCount = Model.GetAttribsLength();
-    vertexInputInfo.vertexBindingDescriptionCount = Model.GetBindingsLength();
+    vertexInputInfo.vertexAttributeDescriptionCount = _pipelineProvider.GetAttribsLength();
+    vertexInputInfo.vertexBindingDescriptionCount = _pipelineProvider.GetBindingsLength();
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
     vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions;
 

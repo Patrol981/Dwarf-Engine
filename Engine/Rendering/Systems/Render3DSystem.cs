@@ -116,6 +116,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void SetupRenderData(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+    if (entities.Length < 1) {
+      Logger.Warn("Entities that are capable of using 3D renderer are less than 1, thus 3D Render System won't be recreated");
+      return;
+    }
+
     Logger.Info("Recreating Renderer 3D");
 
     _pool = new DescriptorPool.Builder(_device)
@@ -248,19 +253,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     }
   }
 
-  public void SetPipelineConfigInfo(PipelineConfigInfo configInfo) {
-    _configInfo = configInfo;
-  }
-
-  public PipelineConfigInfo GetPipelineConfigInfo() {
-    return _configInfo;
-  }
-
   private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new();
-    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
+    // VkPushConstantRange pushConstantRange = new();
+    // pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
+    // pushConstantRange.offset = 0;
+    // pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
 
     // VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] { globalSetLayout };
 
@@ -270,8 +267,8 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
     }
-    pipelineInfo.pushConstantRangeCount = 1;
-    pipelineInfo.pPushConstantRanges = &pushConstantRange;
+    pipelineInfo.pushConstantRangeCount = 0;
+    pipelineInfo.pPushConstantRanges = null;
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 

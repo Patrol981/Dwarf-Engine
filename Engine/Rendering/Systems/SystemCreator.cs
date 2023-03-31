@@ -33,7 +33,7 @@ public class SystemCreator {
       systemCollection.SetRender3DSystem((Render3DSystem)new Render3DSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
     }
     if (flags.HasFlag(SystemCreationFlags.Renderer2D)) {
-
+      systemCollection.SetRender2DSystem((Render2DSystem)new Render2DSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
     }
   }
 }

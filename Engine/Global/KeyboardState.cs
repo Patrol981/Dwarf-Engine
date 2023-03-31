@@ -29,7 +29,8 @@ public sealed class KeyboardState {
     } else {
       ApplicationState.Instance.CurrentPipelineConfig = new PipelineConfigInfo();
     }
-    ApplicationState.Instance.Reload3DRenderSystem = true;
+    ApplicationState.Instance.GetSystems().Reload3DRenderSystem = true;
+    ApplicationState.Instance.GetSystems().Reload2DRenderSystem = true;
   }
 
   public KeyboardState GetInstance() {

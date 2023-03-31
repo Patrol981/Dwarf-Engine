@@ -46,7 +46,6 @@ public class Application {
   }
 
   public PipelineConfigInfo CurrentPipelineConfig = new PipelineConfigInfo();
-  public bool Reload3DRenderSystem = false;
 
   private EventCallback? _onUpdate;
   private EventCallback? _onRender;
@@ -83,17 +82,6 @@ public class Application {
     _currentScene = scene;
   }
 
-  public void Reload3DRenderer() {
-    _systems.GetRender3DSystem()?.Dispose();
-    _systems.SetRender3DSystem((Render3DSystem)new Render3DSystem().Create(
-      _device,
-      _renderer,
-      _globalSetLayout.GetDescriptorSetLayout(),
-      CurrentPipelineConfig
-    ));
-    _systems.GetRender3DSystem().SetupRenderData(_entities.ToArray(), ref _textureManager);
-  }
-
   public unsafe void Run() {
     Vulkan.Buffer[] uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < uboBuffers.Length; i++) {
@@ -123,6 +111,7 @@ public class Application {
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
 
     _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+    _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.GetRenderUISystem()?.SetupUIData(1000, (int)_renderer.Extent2D.width, (int)_renderer.Extent2D.height);
 
     _onLoad?.Invoke();
@@ -131,21 +120,28 @@ public class Application {
       glfwPollEvents();
       Time.Tick();
 
-      var render3D = _systems.GetRender3DSystem();
-      if (render3D != null) {
-        var modelEntities = Entity.Distinct<Model>(_entities).ToArray();
-        var sizes = render3D.CheckSizes(modelEntities);
-        var textures = render3D.CheckTextures(modelEntities);
-        if (!sizes || !textures || Reload3DRenderSystem) {
-          Reload3DRenderSystem = false;
-          Reload3DRenderer();
-        }
-      }
+      _systems.ValidateSystems(
+        _entities.ToArray(),
+        _device, _renderer,
+        _globalSetLayout.GetDescriptorSetLayout(),
+        CurrentPipelineConfig,
+        ref _textureManager
+      );
 
       float aspect = _renderer.AspectRatio;
       if (aspect != _camera.GetComponent<Camera>().Aspect) {
         _camera.GetComponent<Camera>().Aspect = aspect;
-        _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+        switch (_camera.GetComponent<Camera>().CameraType) {
+          case CameraType.Perspective:
+            _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+            break;
+          case CameraType.Orthographic:
+            _camera.GetComponent<Camera>()?.SetOrthograpicProjection();
+            break;
+          default:
+            break;
+        }
+
       }
 
       var commandBuffer = _renderer.BeginFrame();
@@ -213,6 +209,10 @@ public class Application {
     PipelineConfigInfo configInfo
   ) {
     SystemCreator.CreateSystems(ref _systems, creationFlags, device, renderer, globalSetLayout, configInfo);
+  }
+
+  public SystemCollection GetSystems() {
+    return _systems;
   }
 
   public void AddEntity(Entity entity) {
@@ -302,6 +302,7 @@ public class Application {
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Model>()?.Dispose();
+      entities[i].GetComponent<Sprite>()?.Dispose();
     }
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();

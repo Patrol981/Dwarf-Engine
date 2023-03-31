@@ -158,6 +158,8 @@ public class FreeCameraController : Component {
         Owner!.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
       }
 
+      // Console.WriteLine(Owner!.GetComponent<Camera>().Yaw);
+
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }

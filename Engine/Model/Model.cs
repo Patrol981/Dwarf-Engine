@@ -48,7 +48,6 @@ public class Model : Component, IDisposable {
   }
 
   public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
-    // Logger.Info($"{modelPart} - {_textureSets.Length}");
     vkCmdBindDescriptorSets(
      frameInfo.CommandBuffer,
      VkPipelineBindPoint.Graphics,
@@ -177,46 +176,6 @@ public class Model : Component, IDisposable {
       }
     }
   }
-
-  public unsafe static VkVertexInputBindingDescription* GetBindingDescsFunc() {
-    var bindingDescriptions = new VkVertexInputBindingDescription[1];
-    bindingDescriptions[0].binding = 0;
-    bindingDescriptions[0].stride = ((uint)Unsafe.SizeOf<Vertex>());
-    bindingDescriptions[0].inputRate = VkVertexInputRate.Vertex;
-    fixed (VkVertexInputBindingDescription* ptr = bindingDescriptions) {
-      return ptr;
-    }
-  }
-
-  public static uint GetBindingsLength() => 1;
-
-  public unsafe static VkVertexInputAttributeDescription* GetAttribDescsFunc() {
-    var attributeDescriptions = new VkVertexInputAttributeDescription[GetAttribsLength()];
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VkFormat.R32G32B32Sfloat;
-    attributeDescriptions[0].offset = (uint)Marshal.OffsetOf<Vertex>("Position");
-
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VkFormat.R32G32B32Sfloat;
-    attributeDescriptions[1].offset = (uint)Marshal.OffsetOf<Vertex>("Color");
-
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VkFormat.R32G32B32Sfloat;
-    attributeDescriptions[2].offset = (uint)Marshal.OffsetOf<Vertex>("Normal");
-
-    attributeDescriptions[3].binding = 0;
-    attributeDescriptions[3].location = 3;
-    attributeDescriptions[3].format = VkFormat.R32G32Sfloat;
-    attributeDescriptions[3].offset = (uint)Marshal.OffsetOf<Vertex>("Uv");
-
-    fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions) {
-      return ptr;
-    }
-  }
-  public static uint GetAttribsLength() => 4;
   public int MeshsesCount => _meshesCount;
   public bool UsesTexture => _usesTexture;
   public Guid GetTextureIdReference(int index = 0) {

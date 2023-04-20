@@ -23,4 +23,8 @@ public class ComponentManager {
   public void RemoveComponent<T>() where T : Component {
     _components.Remove(typeof(T));
   }
+
+  public Dictionary<Type, Component> GetAllComponents() {
+    return _components;
+  }
 }

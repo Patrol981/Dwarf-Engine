@@ -246,7 +246,7 @@ public static unsafe class GLFW {
   public delegate void glfwGetWindowSize_t(GLFWwindow* window, out int width, out int height);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-  private delegate byte** glfwGetRequiredInstanceExtensions_t(out int count);
+  private delegate nint glfwGetRequiredInstanceExtensions_t(out int count);
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate int glfwGetKey_t(GLFWwindow* window, int key);
@@ -417,14 +417,18 @@ public static unsafe class GLFW {
   public static void glfwPollEvents() => s_glfwPollEvents();
   public static void glfwWaitEvents() => s_glfwWaitEvents();
 
-  public static byte** glfwGetRequiredInstanceExtensions(out int count) => s_glfwGetRequiredInstanceExtensions(out count);
+  public static nint glfwGetRequiredInstanceExtensions(out int count) => s_glfwGetRequiredInstanceExtensions(out count);
 
   public static string[] glfwGetRequiredInstanceExtensions() {
-    var ptr = s_glfwGetRequiredInstanceExtensions(out int count);
+    nint ptr = s_glfwGetRequiredInstanceExtensions(out int count);
 
-    var array = new string[count];
-    for (var i = 0; i < count; i++) {
-      array[i] = Interop.GetString(ptr[i]);
+    string[] array = new string[count];
+    if (count > 0 && ptr != 0) {
+      var offset = 0;
+      for (int i = 0; i < count; i++, offset += IntPtr.Size) {
+        IntPtr p = Marshal.ReadIntPtr(ptr, offset);
+        array[i] = Marshal.PtrToStringAnsi(p)!;
+      }
     }
 
     return array;

@@ -1,0 +1,22 @@
+// name of an asset
+[AssetName] = Example Asset Name
+
+// array of components needs to be loaded into entity
+[AssetDependecies] = [Transform, Material, Sprite]
+
+// component config (not everything will be saved into asset file. just stuff that is mentioned above/used by entity)
+
+[Sprite] = {
+  [LocalTexture] = false
+  [TexturePath] = "./Resources/gigachad.png"
+}
+
+[Transform] = {
+  [Position] = -0.5,0,0
+  [Scale] = 1,1,1
+  [Rotation] = 0,0,0
+}
+
+[Material] = {
+  [Color] = 1,1,1
+}

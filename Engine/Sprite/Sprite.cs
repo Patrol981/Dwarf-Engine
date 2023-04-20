@@ -12,6 +12,8 @@ using Vortice.Vulkan;
 using Dwarf.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using StbImageSharp;
+using System.Drawing;
 
 namespace Dwarf.Engine;
 public class Sprite : Component, IDisposable {
@@ -92,6 +94,12 @@ public class Sprite : Component, IDisposable {
 
     if (_textureIdRef != Guid.Empty) {
       _usesTexture = true;
+      if (useLocalPath) {
+        SetupProportions($"./Textures/{texturePath}");
+      } else {
+        SetupProportions(texturePath);
+      }
+
     } else {
       Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
     }
@@ -138,6 +146,112 @@ public class Sprite : Component, IDisposable {
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
     };
+  }
+
+  private void AddPositionsToVertices(Vector2 size, float aspect) {
+    var len = MathF.Round(aspect);
+    var side = false;
+
+    if (size.X > size.Y) {
+      for (uint i = 0; i < len; i++) {
+        if (i == (uint)len - 1 && i + 1 % 2 != 0) {
+          var leftAdd = new Vector3(0.25f, 0, 0);
+          var rightAdd = new Vector3(-0.25f, 0, 0);
+          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, leftAdd);
+          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, leftAdd);
+
+          _spriteMesh.Vertices[2].Position = Vector3.Add(_spriteMesh.Vertices[2].Position, rightAdd);
+          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, rightAdd);
+
+          break;
+        }
+        if (!side) {
+          var newVec = Vector3.Add(_spriteMesh.Vertices[0].Position, new Vector3(0.75f, 0, 0));
+          _spriteMesh.Vertices[0].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0.75f, 0, 0));
+          _spriteMesh.Vertices[1].Position = newVec;
+          side = true;
+        } else {
+          var newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(-0.75f, 0, 0));
+          _spriteMesh.Vertices[2].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(-0.75f, 0, 0));
+          _spriteMesh.Vertices[3].Position = newVec;
+          side = false;
+        }
+      }
+    } else {
+      for (uint i = 0; i < len; i++) {
+        if (i == (uint)len - 1 && i + 1 % 2 != 0) {
+          var bottomAdd = new Vector3(0f, 0.25f, 0);
+          var topAdd = new Vector3(0f, -0.25f, 0);
+          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, bottomAdd);
+          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, bottomAdd);
+
+          _spriteMesh.Vertices[2].Position = Vector3.Add(_spriteMesh.Vertices[2].Position, topAdd);
+          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, topAdd);
+
+          break;
+        }
+        if (!side) {
+          var newVec = Vector3.Add(_spriteMesh.Vertices[0].Position, new Vector3(0, 0.75f, 0));
+          _spriteMesh.Vertices[0].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0, 0.75f, 0));
+          _spriteMesh.Vertices[1].Position = newVec;
+          side = true;
+        } else {
+          var newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(0, -0.75f, 0));
+          _spriteMesh.Vertices[2].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(0, -0.75f, 0));
+          _spriteMesh.Vertices[3].Position = newVec;
+          side = false;
+        }
+      }
+    }
+  }
+
+  private void CreatePixelPerfectVertices(ref ImageResult image) {
+    _spriteMesh = new();
+
+    for (uint y = 0; y < image.Height; y++) {
+      for (uint x = 0; x < image.Width; x++) {
+
+      }
+    }
+  }
+
+  private void CreateStandardVertices(ref ImageResult image) {
+    var size = new Vector2(image.Width, image.Height);
+    var aspect = MathF.Round(image.Width / image.Height);
+    if (aspect < 1) aspect = MathF.Round(image.Height / image.Width);
+
+    Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
+
+    if (aspect != 1) {
+      AddPositionsToVertices(size, aspect);
+    }
+
+    for (uint i = 0; i < _spriteMesh.Vertices.Length; i++) {
+      Logger.Info(_spriteMesh.Vertices[i].Position.ToString());
+    }
+  }
+
+  private void SetupProportions(string texturePath, bool pixelPerfect = false) {
+    using var stream = File.OpenRead(texturePath);
+    var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+
+    if (pixelPerfect) {
+      CreatePixelPerfectVertices(ref image);
+    } else {
+      CreateStandardVertices(ref image);
+    }
+
+    vkDeviceWaitIdle(_device.LogicalDevice);
+    Dispose();
+
+    CreateVertexBuffer(_spriteMesh.Vertices);
+    CreateIndexBuffer(_spriteMesh.Indices);
+
+    stream.Dispose();
   }
 
   private unsafe void CreateVertexBuffer(Vertex[] vertices) {

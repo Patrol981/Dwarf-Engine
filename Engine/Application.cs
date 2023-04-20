@@ -109,7 +109,6 @@ public class Application {
     }
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
-
     _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
     _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.GetRenderUISystem()?.SetupUIData(1000, (int)_renderer.Extent2D.width, (int)_renderer.Extent2D.height);

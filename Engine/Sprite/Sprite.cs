@@ -101,7 +101,7 @@ public class Sprite : Component, IDisposable {
       }
 
     } else {
-      Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
+      Logger.Warn($"Could not bind texture to sprite ({texturePath}) - no such texture in manager");
     }
   }
 

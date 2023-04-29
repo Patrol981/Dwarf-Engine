@@ -1,41 +1,28 @@
 #version 450
 
-layout (location = 0) in vec2 vsin_position;
-layout (location = 1) in vec2 vsin_texCoord;
-layout (location = 2) in vec4 vsin_color;
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 color;
+layout (location = 2) in vec3 normal;
+layout (location = 3) in vec2 uv;
 
-layout (binding = 0) uniform Projection
-{
-    mat4 projection;
-};
+layout (location = 0) out vec4 fragColor;
+layout (location = 1) out vec2 texCoord;
 
-layout (location = 0) out vec4 vsout_color;
-layout (location = 1) out vec2 vsout_texCoord;
+layout (set = 0, binding = 0) uniform GlobalUbo {
+  mat4 view;
+  mat4 projection;
+  vec3 lightPosition;
+  vec4 lightColor;
+  vec4 ambientLightColor;
+} globalUBO;
 
-layout (constant_id = 0) const bool IsClipSpaceYInverted = true;
-layout (constant_id = 1) const bool UseLegacyColorSpaceHandling = false;
 
-out gl_PerVertex 
-{
-    vec4 gl_Position;
-};
+layout (set = 1, binding = 0) uniform UiUBO {
+	vec3 uiColor;
+} uiUBO;
 
-vec3 SrgbToLinear(vec3 srgb)
-{
-    return srgb * (srgb * (srgb * 0.305306011 + 0.682171111) + 0.012522878);
-}
-
-void main() 
-{
-    gl_Position = projection * vec4(vsin_position, 0, 1);
-    vsout_color = vsin_color;
-    if (!UseLegacyColorSpaceHandling)
-    {
-        vsout_color.rgb = SrgbToLinear(vsin_color.rgb);
-    }
-    vsout_texCoord = vsin_texCoord;
-    if (IsClipSpaceYInverted)
-    {
-        gl_Position.y = -gl_Position.y;
-    }
+void main() {
+	gl_Position = globalUBO.projection * vec4(position.xy, 0.0, 1.0);
+	texCoord = uv;
+	fragColor = vec4(color.xyz, 1.0);
 }

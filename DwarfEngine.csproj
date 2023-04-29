@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -45,6 +45,10 @@
 	<None Update="Mappings/**">
 	 <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</None>
+
+  <None Update="Fonts/**">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,8 @@
 ﻿using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Vulkan;
 
+using DwarfEngine.Engine.Rendering.UI;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
@@ -16,7 +18,7 @@ public class SystemCollection : IDisposable {
   public void UpdateSystems(ReadOnlySpan<Entity> entities, FrameInfo frameInfo) {
     _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-    _renderUISystem?.DrawUI();
+    _renderUISystem?.DrawUI(frameInfo, Entity.Distinct<TextField>(entities).ToArray());
   }
 
   public void ValidateSystems(
@@ -69,7 +71,7 @@ public class SystemCollection : IDisposable {
 
     if (_renderUISystem != null) {
       _renderUISystem.Dispose();
-      _renderUISystem = new RenderUISystem(device, renderer.GetSwapchainRenderPass());
+      _renderUISystem = new RenderUISystem(device, renderer, globalLayout, pipelineConfigInfo);
     }
 
     SetupRenderDatas(entities, ref textureManager, renderer);
@@ -85,7 +87,7 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      _renderUISystem.SetupUIData(1000, (int)renderer.Extent2D.width, (int)renderer.Extent2D.height);
+      _renderUISystem.SetupUIData(Entity.Distinct<TextField>(entities).ToArray(), ref textureManager);
     }
   }
 

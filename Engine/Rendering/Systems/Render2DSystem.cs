@@ -51,8 +51,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-    .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-    .Build();
+      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+      .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
       globalSetLayout,

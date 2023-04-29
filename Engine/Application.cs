@@ -8,10 +8,13 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Rendering;
+using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
+using DwarfEngine.Engine.Rendering.UI;
 
 using OpenTK.Mathematics;
 
@@ -58,7 +61,9 @@ public class Application {
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = new();
   private DescriptorPool _globalPool = null!;
+
   private List<Entity> _entities = new();
+  private List<FontFile> _loadedFonts = new();
   private Entity _camera = new();
 
   private Scene _currentScene = null!;
@@ -111,7 +116,7 @@ public class Application {
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
     _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
     _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.GetRenderUISystem()?.SetupUIData(1000, (int)_renderer.Extent2D.width, (int)_renderer.Extent2D.height);
+    _systems.GetRenderUISystem()?.SetupUIData(Entity.Distinct<TextField>(_entities).ToArray(), ref _textureManager);
 
     _onLoad?.Invoke();
 
@@ -251,9 +256,11 @@ public class Application {
 
     await LoadTextures();
     await LoadEntities();
+    await LoadFonts();
 
     Logger.Info($"Loaded entities: {_entities.Count}");
     Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
+    Logger.Info($"Loaded fonts: {_loadedFonts.Count}");
   }
 
   public void MultiThreadedTextureLoad(List<List<string>> paths) {
@@ -297,6 +304,12 @@ public class Application {
     return Task.CompletedTask;
   }
 
+  private Task LoadFonts() {
+    _currentScene.LoadFonts();
+    _loadedFonts.AddRange(_currentScene.GetFonts());
+    return Task.CompletedTask;
+  }
+
   private void Cleanup() {
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
@@ -326,4 +339,5 @@ public class Application {
   public Device Device => _device;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;
+  public List<FontFile> LoadedFonts => _loadedFonts;
 }

@@ -227,8 +227,12 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void glfwSetInputMode_t(GLFWwindow* window, int mode, int value);
+
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private unsafe delegate void glfwSetWindowIcon_t(GLFWwindow* window, int count, GLFWImage* images);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private unsafe delegate void glfwSetWindowTitle_t(GLFWwindow* window, byte* title);
 
   #endregion
 
@@ -333,6 +337,7 @@ public static unsafe class GLFW {
 
   private static readonly glfwCreateCursor_t s_glfwCreateCursor;
   private static readonly glfwSetCursor_t s_glfwSetCursor;
+  private static readonly glfwSetWindowTitle_t s_glfwSetWindowTitle;
   private static readonly glfwDestroyCursor_t s_glfwDestroyCursor;
   private static readonly glfwMaximizeWindow_t s_glfwMaximizeWindow;
   private static readonly glfwInitHint_t s_glfwWindowHint;
@@ -376,6 +381,16 @@ public static unsafe class GLFW {
   public static void glfwWindowHint(WindowHintBool hint, bool value) => s_glfwWindowHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
   public static void glfwSetInputMode(GLFWwindow* window, int mode, int value) => s_glfwSetInputMode(window, mode, value);
   public static void glfwSetWindowIcon(GLFWwindow* window, int count, GLFWImage* images) => s_glfwSetWindowIcon(window, count, images);
+
+  public static void glfwSetWindowTitle(GLFWwindow* window, string title) {
+    var ptr = Marshal.StringToHGlobalAnsi(title);
+
+    try {
+      s_glfwSetWindowTitle(window, (byte*)ptr);
+    } finally {
+      Marshal.FreeHGlobal(ptr);
+    }
+  }
 
   public static GLFWwindow* glfwCreateWindow(int width, int height, string title, GLFWmonitor* monitor, GLFWwindow* share) {
     var ptr = Marshal.StringToHGlobalAnsi(title);
@@ -464,6 +479,7 @@ public static unsafe class GLFW {
     s_glfwWaitEvents = LoadFunction<glfwWaitEvents_t>(nameof(glfwWaitEvents));
 
     s_glfwSetWindowIcon = LoadFunction<glfwSetWindowIcon_t>(nameof(glfwSetWindowIcon));
+    s_glfwSetWindowTitle = LoadFunction<glfwSetWindowTitle_t>(nameof(glfwSetWindowTitle));
     s_glfwSetWindowPos = LoadFunction<glfwSetWindowPos_t>(nameof(glfwSetWindowPos));
     s_glfwGetVideoMode = LoadFunction<glfwGetVideoMode_t>(nameof(glfwGetVideoMode));
     s_glfwSetInputMode = LoadFunction<glfwSetInputMode_t>(nameof(glfwSetInputMode));

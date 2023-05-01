@@ -315,6 +315,7 @@ public class Application {
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Model>()?.Dispose();
       entities[i].GetComponent<Sprite>()?.Dispose();
+      entities[i].GetComponent<TextField>()?.Dispose();
     }
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
@@ -337,6 +338,7 @@ public class Application {
   }
 
   public Device Device => _device;
+  public Window Window => _window;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;
   public List<FontFile> LoadedFonts => _loadedFonts;

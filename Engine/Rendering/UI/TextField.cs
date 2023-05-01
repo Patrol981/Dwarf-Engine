@@ -102,6 +102,34 @@ public class TextField : Component, IDisposable {
       //pos.X += (float)(targetCharacterData.XAdvance >> 6) * scale.X;
     }
 
+    /*
+    _textMesh.Vertices = new Vertex[4];
+    _textMesh.Vertices[0] = new Vertex {
+      Position = new Vector3(0.5f, 0.5f, 0.0f),
+      Uv = new Vector2(0.0f, 0.0f),
+      Color = new Vector3(1, 1, 1),
+      Normal = new Vector3(1, 1, 1)
+    };
+    _textMesh.Vertices[1] = new Vertex {
+      Position = new Vector3(0.5f, -0.5f, 0.0f),
+      Uv = new Vector2(0.0f, 1.0f),
+      Color = new Vector3(1, 1, 1),
+      Normal = new Vector3(1, 1, 1)
+    };
+    _textMesh.Vertices[2] = new Vertex {
+      Position = new Vector3(-0.5f, -0.5f, 0.0f),
+      Uv = new Vector2(1.0f, 1.0f),
+      Color = new Vector3(1, 1, 1),
+      Normal = new Vector3(1, 1, 1)
+    };
+    _textMesh.Vertices[3] = new Vertex {
+      Position = new Vector3(-0.5f, 0.5f, 0.0f),
+      Uv = new Vector2(1.0f, 0.0f),
+      Color = new Vector3(1, 1, 1),
+      Normal = new Vector3(1, 1, 1)
+    };
+    */
+
     CheckBuffers(_textMesh.Vertices);
   }
 

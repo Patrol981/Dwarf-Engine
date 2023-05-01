@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
+using Dwarf.Engine.Global;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
 // using GLFW;
@@ -15,6 +16,7 @@ using StbImageSharp;
 
 using Vortice.Vulkan;
 
+using static System.Net.Mime.MediaTypeNames;
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -37,6 +39,14 @@ public unsafe class Window : IDisposable {
     InitWindow(windowName);
     LoadIcons();
     LoadGamePadInput();
+  }
+
+  public void ResetWindowResizedFlag() {
+    _frambufferWindowResized = false;
+  }
+
+  public unsafe void SetWindowName(string name) {
+    glfwSetWindowTitle(_window, name);
   }
 
   protected void Clear() {
@@ -124,10 +134,6 @@ public unsafe class Window : IDisposable {
     // glfwDestroyWindow(_window);
     glfwDestroyCursor((void*)_cursor);
     glfwTerminate();
-  }
-
-  public void ResetWindowResizedFlag() {
-    _frambufferWindowResized = false;
   }
 
   public bool WasWindowResized() => _frambufferWindowResized;

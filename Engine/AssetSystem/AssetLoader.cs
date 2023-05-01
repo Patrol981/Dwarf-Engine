@@ -78,7 +78,6 @@ public class AssetLoader {
     string[] wordsArray = words.Split(",").Select(w => w.Trim()).ToArray();
     foreach (var word in wordsArray) {
       var targetString = word.Contains(".") ? word : $"{dwarfEnginePrefix}.{word}";
-      Logger.Info(targetString);
       Type componentType = Type.GetType(targetString)!;
       if (componentType == null || !componentType.IsSubclassOf(typeof(Component)))
         throw new Exception("Unknown Entity Component Type.");
@@ -96,8 +95,6 @@ public class AssetLoader {
     if (!match.Success) Logger.Warn("Pattern not found");
 
     HandleComponentData(app, componentType, entity, match.Value);
-
-    Logger.Info(match.ToString());
   }
 
   private static object[] GetTransformData(string data) {

@@ -142,6 +142,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
 
     for (int i = 0; i < entities.Length; i++) {
       var uiUBO = new UIUniformObject();
+      uiUBO.UIMatrix = entities[i].GetComponent<Transform>().Matrix4;
       uiUBO.UIColor = new Vector3(1, 1, 1);
 
       _uiBuffer[i].Map((ulong)Unsafe.SizeOf<UIUniformObject>());
@@ -163,6 +164,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
 
       var uiComponent = entities[i].GetComponent<TextField>();
       uiComponent.RenderText();
+      uiComponent.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
       uiComponent.Bind(frameInfo.CommandBuffer);
       uiComponent.Draw(frameInfo.CommandBuffer);
     }

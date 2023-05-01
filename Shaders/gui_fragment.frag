@@ -15,6 +15,7 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
 
 layout (set = 1, binding = 0) uniform UiUBO {
 	vec3 uiColor;
+  mat4 uiMatrix;
 } uiUBO;
 
 layout(set = 2, binding = 0) uniform sampler2D textureAtlas; // 1 0

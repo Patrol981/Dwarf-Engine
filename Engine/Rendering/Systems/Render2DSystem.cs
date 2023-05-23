@@ -150,17 +150,39 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
+      if (!entities[i].Active) continue;
+
       var spriteUBO = new SpriteUniformBufferObject();
       spriteUBO.SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4;
       spriteUBO.SpriteColor = entities[i].GetComponent<Material>().GetColor();
       spriteUBO.UseTexture = entities[i].GetComponent<Sprite>().UsesTexture;
 
-      _spriteBuffer[i].Map((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      _spriteBuffer[i].WriteToBuffer((IntPtr)(&spriteUBO), (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      _spriteBuffer[i].Unmap();
+      // here is performing bad
+      // [TODO] restore push constants maybe?
+
+      var pushConstantData = new SpriteUniformBufferObject();
+      pushConstantData.SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      pushConstantData.SpriteColor = entities[i].GetComponent<Material>().GetColor();
+      pushConstantData.UseTexture = true;
+
+      //_spriteBuffer[i].Map((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
+      //_spriteBuffer[i].WriteToBuffer((IntPtr)(&spriteUBO), (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
+      //_spriteBuffer[i].Unmap();
+
+
 
       // Console.WriteLine(spriteUBO.SpriteMatrix);
 
+      vkCmdPushConstants(
+        frameInfo.CommandBuffer,
+        _pipelineLayout,
+        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+        0,
+        (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+        &pushConstantData
+      );
+
+      /*
       fixed (VkDescriptorSet* ptr = &_descriptorSets[i]) {
         vkCmdBindDescriptorSets(
           frameInfo.CommandBuffer,
@@ -173,9 +195,10 @@ public class Render2DSystem : SystemBase, IRenderSystem {
           null
         );
       }
+      */
 
       var sprite = entities[i].GetComponent<Sprite>();
-      if (!sprite.Owner!.CanBeDisposed) {
+      if (!sprite.Owner!.CanBeDisposed && sprite.Owner!.Active) {
         if (sprite.UsesTexture)
           sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipelineLayout);
         sprite.Bind(frameInfo.CommandBuffer);
@@ -200,14 +223,19 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   }
 
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
+    VkPushConstantRange pushConstantRange = new();
+    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = (uint)Unsafe.SizeOf<SpriteUniformBufferObject>();
+
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
     }
-    pipelineInfo.pushConstantRangeCount = 0;
-    pipelineInfo.pPushConstantRanges = null;
+    pipelineInfo.pushConstantRangeCount = 1;
+    pipelineInfo.pPushConstantRanges = &pushConstantRange;
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 

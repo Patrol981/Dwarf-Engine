@@ -4,15 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Dwarf.Extensions.Logging;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI.FontReader;
 
 public enum MetaFilePadding {
-  Top,
-  Left,
-  Bottom,
-  Right
+  Top = 0,
+  Left = 1,
+  Bottom = 2,
+  Right = 3
 }
 
 public class FontFile {
@@ -27,9 +29,9 @@ public class FontFile {
   private int _paddingWidth;
   private int _paddingHeight;
 
-  private double _verticalPerPixelSize;
-  private double _horizontalPerPixelSize;
-  private double _spaceWidth;
+  private float _verticalPerPixelSize;
+  private float _horizontalPerPixelSize;
+  private float _spaceWidth;
 
   private float _aspect;
   private FileStream _file = null!;
@@ -65,27 +67,28 @@ public class FontFile {
       _spaceWidth = (GetValueOfVariable("xadvance") - _paddingWidth) * _horizontalPerPixelSize;
       return null!;
     }
-    double xTex =
-      ((double)GetValueOfVariable("x") +
+    float xTex =
+      ((float)GetValueOfVariable("x") +
       (_padding[(int)MetaFilePadding.Left] - (int)DesiredPadding))
       / imgSize;
-    double yTex =
-      ((double)GetValueOfVariable("y") +
+    float yTex =
+      ((float)GetValueOfVariable("y") +
       (_padding[(int)MetaFilePadding.Top] - (int)DesiredPadding))
       / imgSize;
     int width = GetValueOfVariable("width") - (_paddingWidth - (2 * (int)DesiredPadding));
     int height = GetValueOfVariable("height") - (_paddingHeight - (2 * (int)DesiredPadding));
-    double quadWidth = width * _horizontalPerPixelSize;
-    double quadHeight = height * _verticalPerPixelSize;
-    double xTexSize = (double)width / imgSize;
-    double yTexSize = (double)height / imgSize;
-    double xOffset =
+    float quadWidth = width * _horizontalPerPixelSize;
+    float quadHeight = height * _verticalPerPixelSize;
+    float xTexSize = (float)width / imgSize;
+    float yTexSize = (float)height / imgSize;
+    float xOffset =
       (GetValueOfVariable("xoffset") + _padding[(int)MetaFilePadding.Left] - (int)DesiredPadding)
       * _horizontalPerPixelSize;
-    double yOffset =
+    float yOffset =
       (GetValueOfVariable("yoffset") + _padding[(int)MetaFilePadding.Top] - (int)DesiredPadding)
       * _verticalPerPixelSize;
-    double xAdvance = (GetValueOfVariable("xadvance") - _paddingWidth) * _horizontalPerPixelSize;
+    float xAdvance = (GetValueOfVariable("xadvance") - _paddingWidth) * _horizontalPerPixelSize;
+
     return new Character(id, xTex, yTex, xTexSize, yTexSize, xOffset, yOffset, quadWidth, quadHeight, xAdvance);
   }
 
@@ -140,7 +143,7 @@ public class FontFile {
     _reader.Dispose();
   }
 
-  public double SpaceWidth => _spaceWidth;
+  public float SpaceWidth => _spaceWidth;
   public Character GetCharacter(int ascii) {
     return _metaData[ascii];
   }

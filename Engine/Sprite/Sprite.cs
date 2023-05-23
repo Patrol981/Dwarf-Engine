@@ -29,6 +29,8 @@ public class Sprite : Component, IDisposable {
   private ulong _indexCount = 0;
 
   private Mesh _spriteMesh = null!;
+  private Vector3 _lastKnownScale = Vector3.Zero;
+  private Vector2 _cachedSize = Vector2.Zero;
 
   private float[] _vertices = {
     0.5f,  0.5f, 0.0f,  1.0f, 1.0f, // top right
@@ -224,14 +226,10 @@ public class Sprite : Component, IDisposable {
     var aspect = MathF.Round(image.Width / image.Height);
     if (aspect < 1) aspect = MathF.Round(image.Height / image.Width);
 
-    Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
+    // Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
 
     if (aspect != 1) {
       AddPositionsToVertices(size, aspect);
-    }
-
-    for (uint i = 0; i < _spriteMesh.Vertices.Length; i++) {
-      Logger.Info(_spriteMesh.Vertices[i].Position.ToString());
     }
   }
 
@@ -313,6 +311,43 @@ public class Sprite : Component, IDisposable {
     stagingBuffer.Dispose();
   }
 
+  private Vector2 GetSize() {
+    var scale = Owner!.GetComponent<Transform>().Scale;
+    if (_lastKnownScale == scale) return _cachedSize;
+
+    float minX, minY, maxX, maxY;
+
+    maxX = _spriteMesh.Vertices[0].Position.X;
+    maxY = _spriteMesh.Vertices[0].Position.Y;
+    minX = _spriteMesh.Vertices[0].Position.X;
+    minY = _spriteMesh.Vertices[0].Position.Y;
+
+    for (int i = 0; i < _spriteMesh.Vertices.Length; i++) {
+      if (minX > _spriteMesh.Vertices[i].Position.X) minX = _spriteMesh.Vertices[i].Position.X;
+      if (maxX < _spriteMesh.Vertices[i].Position.X) maxX = _spriteMesh.Vertices[i].Position.X;
+
+      if (minY > _spriteMesh.Vertices[i].Position.Y) minY = _spriteMesh.Vertices[i].Position.Y;
+      if (maxY < _spriteMesh.Vertices[i].Position.Y) maxY = _spriteMesh.Vertices[i].Position.Y;
+    }
+
+    _lastKnownScale = scale;
+
+
+    _cachedSize = new Vector2(
+      MathF.Abs(minX - maxX) * scale.X,
+      MathF.Abs(minY - maxY) * scale.Y
+    );
+
+    /*
+    _cachedSize = new Vector2(
+      (MathF.Abs(minX) + MathF.Abs(maxX)) * scale.X,
+      (MathF.Abs(minY) + MathF.Abs(maxY)) * scale.Y
+    );
+    */
+
+    return _cachedSize;
+  }
+
   public void Dispose() {
     _vertexBuffer?.Dispose();
     if (_hasIndexBuffer) {
@@ -323,4 +358,5 @@ public class Sprite : Component, IDisposable {
   public Guid GetTextureIdReference() {
     return _textureIdRef;
   }
+  public Vector2 Size => GetSize();
 }

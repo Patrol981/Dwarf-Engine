@@ -6,6 +6,7 @@ public class Entity {
   private ComponentManager _componentManager;
   private string _name = "Entity";
   private Guid _guid = Guid.NewGuid();
+  private bool _isActive = true;
 
   public Entity() {
     _componentManager = new ComponentManager();
@@ -46,6 +47,11 @@ public class Entity {
       if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
     }
     return returnEntities.ToArray();
+  }
+
+  public bool Active {
+    get { return _isActive; }
+    set { _isActive = value; }
   }
 
   public string Name {

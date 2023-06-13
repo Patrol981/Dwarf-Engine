@@ -16,12 +16,6 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 ambientLightColor;
 } globalUBO;
 
-
-layout (set = 1, binding = 0) uniform UiUBO {
-	vec3 uiColor;
-  mat4 uiMatrix;
-} uiUBO;
-
 void main() {
 	gl_Position = globalUBO.projection * vec4(position.xy, 0.0, 1.0);
 	texCoord = uv;

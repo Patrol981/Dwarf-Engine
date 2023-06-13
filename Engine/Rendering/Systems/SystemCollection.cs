@@ -48,6 +48,16 @@ public class SystemCollection : IDisposable {
         Reload2DRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
       }
     }
+
+    if (_renderUISystem != null) {
+      var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
+      var sizes = _renderUISystem.CheckSizes(uiEntities);
+      var textures = _renderUISystem.CheckTextures(uiEntities);
+      if (!sizes || !textures || ReloadUISystem) {
+        ReloadUISystem = false;
+        ReloadUIRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
+      }
+    }
   }
 
   public void ReloadSystems(
@@ -125,6 +135,24 @@ public class SystemCollection : IDisposable {
       pipelineConfig
     ));
     _render2DSystem?.Setup(Entity.Distinct<Sprite>(entities).ToArray(), ref textureManager);
+  }
+
+  public void ReloadUIRenderer(
+    Device device,
+    Renderer renderer,
+    VkDescriptorSetLayout globalLayout,
+    ref TextureManager textureManager,
+    PipelineConfigInfo pipelineConfig,
+    ReadOnlySpan<Entity> entities
+  ) {
+    _renderUISystem?.Dispose();
+    SetRenderUISystem((RenderUISystem)new RenderUISystem().Create(
+      device,
+      renderer,
+      globalLayout,
+      pipelineConfig
+    ));
+    _renderUISystem?.SetupUIData(Entity.Distinct<TextField>(entities).ToArray(), ref textureManager);
   }
 
   public void SetRender3DSystem(Render3DSystem render3DSystem) {

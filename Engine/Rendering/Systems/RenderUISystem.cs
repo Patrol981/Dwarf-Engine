@@ -141,33 +141,32 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
-      var uiUBO = new UIUniformObject();
-      uiUBO.UIMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      uiUBO.UIColor = new Vector3(1, 1, 1);
-
-      _uiBuffer[i].Map((ulong)Unsafe.SizeOf<UIUniformObject>());
-      _uiBuffer[i].WriteToBuffer((IntPtr)(&uiUBO), (ulong)Unsafe.SizeOf<UIUniformObject>());
-      _uiBuffer[i].Unmap();
-
-      fixed (VkDescriptorSet* ptr = &_uiDescriptorSets[i]) {
-        vkCmdBindDescriptorSets(
-          frameInfo.CommandBuffer,
-          VkPipelineBindPoint.Graphics,
-          _pipelineLayout,
-          1,
-          1,
-          ptr,
-          0,
-          null
-        );
-      }
-
       var uiComponent = entities[i].GetComponent<TextField>();
-      uiComponent.RenderText();
+      uiComponent.Update();
       uiComponent.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
       uiComponent.Bind(frameInfo.CommandBuffer);
       uiComponent.Draw(frameInfo.CommandBuffer);
     }
+  }
+
+  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+    if (entities.Length > _uiBuffer.Length) {
+      return false;
+    } else if (entities.Length < _uiBuffer.Length) {
+      return true;
+    }
+
+    return true;
+  }
+
+  public bool CheckTextures(ReadOnlySpan<Entity> entities) {
+    var len = entities.Length;
+    var sets = _uiTextureDescriptorSets.Size;
+    if (len != sets) {
+      return false;
+    }
+
+    return true;
   }
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Drawing;
+using System.Runtime.CompilerServices;
 
 using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
@@ -32,43 +33,52 @@ public class TextField : Component, IDisposable {
   private bool _isCentered = false;
   private List<Line> _lines = new();
 
+  // debug
+  private int _numOfRows = 11;
+  private int _numOfColumns = 11;
+  private Dictionary<char, Vector2> _charactersOnAtlas = new();
+
+  private Vector2 _startPos = Vector2.Zero;
+  private Vector2 _startPosUpdated = Vector2.Zero;
+
+  float _cursorX = 96.0f; // size of an glyph
+  float _cursorY = 96.0f; // size of an glyph
+
+  float _glyphOffset;
+
   public TextField() { }
 
   public TextField(Application app, string text) {
     _app = app;
     _text = text;
     _device = _app.Device;
-  }
 
-  public void RenderText() {
-    UpdatePosition();
+    _glyphOffset = _cursorX / 1024;
   }
 
   public void Init(FontFile fontFile) {
     _textMesh = new();
-    // var arial = _app.LoadedFonts.First();
     var arial = fontFile;
     _lines = new List<Line>();
-    var currentWord = new Word(_fontSize);
-    var currentLine = new Line(arial.SpaceWidth, _fontSize, _maxLineSize);
 
-    for (int i = 0; i < _text.Length; i++) {
-      if (_text[i] == 32) {
-        var isAdded = currentLine.TryAddWord(currentWord);
-        if (!isAdded) {
-          _lines.Add(currentLine);
-          currentLine = new Line(arial.SpaceWidth, _fontSize, _maxLineSize);
-          currentLine.TryAddWord(currentWord);
-        }
-        currentWord = new Word(_fontSize);
-        continue;
+    // setup chars mappings
+    int currX = 0;
+    int currY = 0;
+    for (char c = (char)32; c < 128; c++) {
+      _charactersOnAtlas.Add(c, new Vector2(currX, currY));
+      currX++;
+      if (currX > _numOfRows - 1) {
+        currX = 0;
+        currY++;
       }
-
-      var character = arial.GetCharacter(_text[i]);
-      currentWord.AddCharacter(character);
     }
-    CompleteStructure(arial, currentLine, currentWord);
+
+    DrawText(_text);
     if (_textMesh.Indices.Length > 0) _hasIndexBuffer = true;
+
+
+    _startPos = Owner!.GetComponent<Transform>().Position.Xy;
+    _startPosUpdated = _startPos;
   }
 
   public void Draw(VkCommandBuffer commandBuffer) {
@@ -79,261 +89,64 @@ public class TextField : Component, IDisposable {
     }
   }
 
-  private void CompleteStructure(FontFile fontFile, Line currentLine, Word currentWord) {
-    var isAdded = currentLine.TryAddWord(currentWord);
-    if (!isAdded) {
-      _lines.Add(currentLine);
-      currentLine = new Line(fontFile.SpaceWidth, _fontSize, _maxLineSize);
-      currentLine.TryAddWord(currentWord);
-    }
-    _lines.Add(currentLine);
-    CreateQuads();
-    // CreateQuadsPrimitive();
-    // MockQuads();
+  public void DrawText(string text) {
+    CreateQuads(text);
+    RecreateBuffers(text);
+    _text = text;
   }
 
-  private void CreateQuads() {
-    Logger.Info("Expected Values:");
-
-    CreateQuadsPrimitive();
-
-    Logger.Info("Incomming Values:");
-
-    _textMesh = new();
-    _numberOfLines = _lines.Count;
-    var cursorX = 0f;
-    var cursorY = 0f;
-
-    for (int i = 0; i < _lines.Count; i++) {
-      if (_isCentered) {
-        cursorX = (_lines[i].MaxLength - _lines[i].LineLength) / 2;
-      }
-      for (int j = 0; j < _lines[i].Words.Count; j++) {
-        foreach (var character in _lines[i].Words[j].Characters) {
-          var tempMesh = new Mesh();
-          AddCharacterVertices(
-            ref tempMesh,
-            new Vector2(cursorX, cursorY),
-            character,
-            new Vector2(character.XTextureCoord, -character.YTextureCoord),
-            new Vector2(character.XMaxTextureCoord, -character.YMaxTextureCoord)
-          );
-          var tmpMaster = _textMesh.Vertices.ToList();
-          tempMesh.Vertices[0].Position = new Vector3(-1.0f, -0.5f, 0.0f);
-          tempMesh.Vertices[1].Position = new Vector3(-1.0f, 0.5f, 0.0f);
-          tempMesh.Vertices[2].Position = new Vector3(-0f, 0.5f, 0.0f);
-          tempMesh.Vertices[3].Position = new Vector3(-0f, 0.5f, 0.0f);
-          tempMesh.Vertices[4].Position = new Vector3(-0f, -0.5f, 0.0f);
-          tempMesh.Vertices[5].Position = new Vector3(-1f, -0.5f, 0.0f);
-          tmpMaster.AddRange(tempMesh.Vertices);
-          _textMesh.Vertices = tmpMaster.ToArray();
-
-          Logger.Info("[VectorBlock Begin]");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[0].Position}");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[1].Position}");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[2].Position}");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[3].Position}");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[4].Position}");
-          Logger.Info($"[VectorData] {tempMesh.Vertices[5].Position}");
-          Logger.Info($"[UV] {tempMesh.Vertices[0].Uv}");
-          Logger.Info($"[UV] {tempMesh.Vertices[1].Uv}");
-          Logger.Info($"[UV] {tempMesh.Vertices[2].Uv}");
-          Logger.Info($"[UV] {tempMesh.Vertices[3].Uv}");
-          Logger.Info($"[UV] {tempMesh.Vertices[4].Uv}");
-          Logger.Info($"[UV] {tempMesh.Vertices[5].Uv}");
-          Logger.Info("[VectorBlock End]");
-        }
-      }
-    }
-  }
-
-  private void CreateQuadsPrimitive() {
-    _textMesh = new();
-    AddVertices(
-      ref _textMesh,
-      new Vector2(-1.0f, -0.5f),
-      new Vector2(-0.0f, 0.5f),
-      new Vector2(0.0f, -0.0f),
-      new Vector2(0.15234375f, -0.15625f)
-    );
-
-    var tmpMesh = new Mesh();
-    AddVertices(
-      ref tmpMesh,
-      new Vector2(0.0f, -0.5f),
-      new Vector2(1.0f, 0.5f),
-      new Vector2(0.95f, -0.65f),
-      new Vector2(0.85f, -0.75f)
-    );
-
-    var tmpVert = _textMesh.Vertices.ToList();
-    tmpVert.AddRange(tmpMesh.Vertices);
-    _textMesh.Vertices = tmpVert.ToArray();
-
-    Logger.Info(_textMesh.Vertices[0].Position.ToString());
-    Logger.Info(_textMesh.Vertices[1].Position.ToString());
-    Logger.Info(_textMesh.Vertices[2].Position.ToString());
-    Logger.Info(_textMesh.Vertices[3].Position.ToString());
-    Logger.Info(_textMesh.Vertices[4].Position.ToString());
-    Logger.Info(_textMesh.Vertices[5].Position.ToString());
-
-    Logger.Info(_textMesh.Vertices[0].Uv.ToString());
-    Logger.Info(_textMesh.Vertices[1].Uv.ToString());
-    Logger.Info(_textMesh.Vertices[2].Uv.ToString());
-    Logger.Info(_textMesh.Vertices[3].Uv.ToString());
-    Logger.Info(_textMesh.Vertices[4].Uv.ToString());
-    Logger.Info(_textMesh.Vertices[5].Uv.ToString());
-
-  }
-
-  private void MockQuads() {
-    _textMesh = new();
-    _textMesh.Vertices = new Vertex[6];
-
-    var pos = new Vector2(-0.5f, -0.5f);
-    var maxPos = new Vector2(0.5f, 0.5f);
-
-    _textMesh.Vertices[0] = new Vertex {
-      Position = new Vector3(pos.X, pos.Y, 0),
-      Uv = new Vector2(-0.8496094f, -0.6542969f),
-      Color = new Vector3(1, 1, 1)
-    };
-
-    _textMesh.Vertices[1] = new Vertex {
-      Position = new Vector3(pos.X, maxPos.Y, 0),
-      Uv = new Vector2(-0.8496094f, 0.09765625f),
-      Color = new Vector3(1, 1, 1)
-    };
-
-    _textMesh.Vertices[2] = new Vertex {
-      Position = new Vector3(maxPos.X, maxPos.Y, 0),
-      Uv = new Vector2(0.080078125f, 0.09765625f),
-      Color = new Vector3(1, 1, 1)
-    };
-
-    _textMesh.Vertices[3] = new Vertex {
-      Position = new Vector3(maxPos.X, maxPos.Y, 0),
-      Uv = new Vector2(0.080078125f, 0.09765625f),
-      Color = new Vector3(1, 1, 1)
-    };
-
-    _textMesh.Vertices[4] = new Vertex {
-      Position = new Vector3(maxPos.X, pos.Y, 0),
-      Uv = new Vector2(0.080078125f, 0.6542969f),
-      Color = new Vector3(1, 1, 1)
-    };
-
-    _textMesh.Vertices[5] = new Vertex {
-      Position = new Vector3(pos.X, pos.Y, 0),
-      Uv = new Vector2(0.8496094f, 0.6542969f),
-      Color = new Vector3(1, 1, 1)
-    };
-  }
-
-  private void UpdatePosition() {
+  internal void Update() {
     CheckBuffers(_textMesh.Vertices);
   }
 
-  private void UpdatePosition_BC() {
+  private void CreateQuads(string text) {
     _textMesh = new();
-    var arial = _app.LoadedFonts[0];
+
     var pos = Owner!.GetComponent<Transform>().Position;
-    var scale = Owner!.GetComponent<Transform>().Scale;
+    float offsetMeshX = pos.X;
+    float offsetMeshY = pos.Y;
 
-    for (int i = 0; i < _text.Length; i++) {
-      if (_text[i] == 32) continue;
-      var targetCharacterData = arial.GetCharacter(_text[i]);
-      float xPos = pos.X + ((float)targetCharacterData.XOffset * scale.X);
-      float yPos = pos.Y - (float)(targetCharacterData.SizeY - targetCharacterData.YOffset) * scale.Y;
-      float w = (float)targetCharacterData.SizeX * scale.X;
-      float h = (float)targetCharacterData.SizeY * scale.Y;
+    for (int i = 0; i < text.Length; i++) {
+      var tempMesh = new Mesh();
+      var targetChar = _charactersOnAtlas[text[i]];
+      tempMesh.Vertices = new Vertex[6];
 
-      var tempVert = new Mesh();
-      //AddVertices(ref tempVert, xPos, yPos)
+      var uX = ((targetChar.X * 96.0f) / 1024.0f);
+      var uY = 1.0f - ((targetChar.Y * 96.0f) / 1024.0f);
 
-      /*
-      tempVert.Vertices = new Vertex[6];
-      tempVert.Vertices[0] = new Vertex {
-        // Position = new Vector3(xPos, yPos + h, 0),
-        Position = new Vector3(pos.X - 0.5f, pos.Y + 0.5f, pos.Z),
-        Uv = new Vector2(1.0f, 0.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
-      tempVert.Vertices[1] = new Vertex {
-        // Position = new Vector3(xPos, yPos, 0),
-        Position = new Vector3(pos.X + 0.5f, pos.Y + 0.5f, pos.Z),
-        Uv = new Vector2(0.0f, 0.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
-      tempVert.Vertices[2] = new Vertex {
-        // Position = new Vector3(xPos + w, yPos, 0),
-        Position = new Vector3(pos.X + 0.5f, pos.Y - 0.5f, pos.Z),
-        Uv = new Vector2(0.0f, 1.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
+      var uMX = (((targetChar.X * 96.0f) + 96.0f) / 1024.0f);
+      var uMY = 1.0f - (((targetChar.Y * 96.0f) + 96.0f) / 1024.0f);
 
-      tempVert.Vertices[3] = new Vertex {
-        // Position = new Vector3(xPos, yPos + h, 0),
-        Position = new Vector3(pos.X + 0.5f, pos.Y - 0.5f, pos.Z),
-        Uv = new Vector2(0.0f, 1.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
-      tempVert.Vertices[4] = new Vertex {
-        // Position = new Vector3(xPos + w, yPos, 0),
-        Position = new Vector3(pos.X - 0.5f, pos.Y - 0.5f, pos.Z),
-        Uv = new Vector2(1.0f, 1.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
-      tempVert.Vertices[5] = new Vertex {
-        // Position = new Vector3(xPos + w, yPos + h, 0),
-        Position = new Vector3(pos.X - 0.5f, pos.Y + 0.5f, pos.Z),
-        Uv = new Vector2(1.0f, 0.0f),
-        Color = new Vector3(1, 1, 1),
-        // Normal = new Vector3(1, 1, 1)
-      };
-      */
+      var tmpMaster = _textMesh.Vertices.ToList();
 
-      var current = _textMesh.Vertices.ToList();
-      current.AddRange(tempVert.Vertices);
-      _textMesh.Vertices = current.ToArray();
+      tempMesh.Vertices[0].Position = new Vector3(0.0f - offsetMeshX, 0.0f + offsetMeshY, 0.0f);
+      tempMesh.Vertices[1].Position = new Vector3(0.0f - offsetMeshX, _glyphOffset + offsetMeshY, 0.0f);
+      tempMesh.Vertices[2].Position = new Vector3(_glyphOffset - offsetMeshX, 0.0f + offsetMeshY, 0.0f);
 
-      //var shift = 
-      //pos.X += (float)(targetCharacterData.XAdvance >> 6) * scale.X;
+      tempMesh.Vertices[3].Position = new Vector3(_glyphOffset - offsetMeshX, 0.0f + offsetMeshY, 0.0f);
+      tempMesh.Vertices[4].Position = new Vector3(0f - offsetMeshX, _glyphOffset + offsetMeshY, 0.0f);
+      tempMesh.Vertices[5].Position = new Vector3(_glyphOffset - offsetMeshX, _glyphOffset + offsetMeshY, 0.0f);
+
+      tempMesh.Vertices[0].Uv = new Vector2(uMX, uY);
+      tempMesh.Vertices[1].Uv = new Vector2(uMX, uMY);
+      tempMesh.Vertices[2].Uv = new Vector2(uX, uY);
+
+      tempMesh.Vertices[3].Uv = new Vector2(uX, uY);
+      tempMesh.Vertices[4].Uv = new Vector2(uMX, uMY);
+      tempMesh.Vertices[5].Uv = new Vector2(uX, uMY);
+
+      tempMesh.Vertices[0].Color = new Vector3(1, 1, 1);
+      tempMesh.Vertices[1].Color = new Vector3(1, 1, 1);
+      tempMesh.Vertices[2].Color = new Vector3(1, 1, 1);
+      tempMesh.Vertices[3].Color = new Vector3(1, 1, 1);
+      tempMesh.Vertices[4].Color = new Vector3(1, 1, 1);
+      tempMesh.Vertices[5].Color = new Vector3(1, 1, 1);
+
+      tmpMaster.AddRange(tempMesh.Vertices);
+      _textMesh.Vertices = tmpMaster.ToArray();
+
+      offsetMeshX += _glyphOffset;
     }
-    /*
-    _textMesh.Vertices = new Vertex[4];
-    _textMesh.Vertices[0] = new Vertex {
-      Position = new Vector3(0.5f, 0.5f, 0.0f),
-      Uv = new Vector2(0.0f, 0.0f),
-      Color = new Vector3(1, 1, 1),
-      Normal = new Vector3(1, 1, 1)
-    };
-    _textMesh.Vertices[1] = new Vertex {
-      Position = new Vector3(0.5f, -0.5f, 0.0f),
-      Uv = new Vector2(0.0f, 1.0f),
-      Color = new Vector3(1, 1, 1),
-      Normal = new Vector3(1, 1, 1)
-    };
-    _textMesh.Vertices[2] = new Vertex {
-      Position = new Vector3(-0.5f, -0.5f, 0.0f),
-      Uv = new Vector2(1.0f, 1.0f),
-      Color = new Vector3(1, 1, 1),
-      Normal = new Vector3(1, 1, 1)
-    };
-    _textMesh.Vertices[3] = new Vertex {
-      Position = new Vector3(-0.5f, 0.5f, 0.0f),
-      Uv = new Vector2(1.0f, 0.0f),
-      Color = new Vector3(1, 1, 1),
-      Normal = new Vector3(1, 1, 1)
-    };
-    */
-
-    CheckBuffers(_textMesh.Vertices);
   }
 
   private void CheckBuffers(Vertex[] vertices) {
@@ -344,23 +157,11 @@ public class TextField : Component, IDisposable {
     CreateVertexBuffer(vertices);
   }
 
-  private void AddCharacterVertices(ref Mesh mesh, Vector2 cursor, Character character, Vector2 uvPos, Vector2 uvMaxPos) {
-    var x = cursor.X + (character.XOffset * _fontSize);
-    var y = cursor.Y + (character.YOffset * _fontSize);
-    var maxX = x + (character.XOffset + _fontSize);
-    var maxY = y + (character.YOffset + _fontSize);
-    var properX = (2 * x) - 1;
-    var properY = (-2 * y) + 1;
-    var properMaxX = (2 * maxX) - 1;
-    var properMaxY = (-2 * maxY) + 1;
-
-    AddVertices(
-      ref mesh,
-      new Vector2(properX, properY),
-      new Vector2(properMaxX, properMaxY),
-      uvPos,
-      uvMaxPos
-    );
+  private void RecreateBuffers(string text) {
+    if (text == _text) return;
+    vkDeviceWaitIdle(_device.LogicalDevice);
+    Dispose();
+    CreateVertexBuffer(_textMesh.Vertices);
   }
 
   private void AddVertices(ref Mesh mesh, Vector2 pos, Vector2 maxPos, Vector2 uvPos, Vector2 uvMaxPos) {
@@ -506,6 +307,8 @@ public class TextField : Component, IDisposable {
   public void SetText(string text) {
     _text = text;
   }
+
+  public string Text => _text;
 
   public Guid GetTextureIdReference() {
     return _textAtlasId;

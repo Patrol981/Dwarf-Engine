@@ -89,7 +89,7 @@ public class Swapchain : IDisposable {
     }
 
     var createInfo = new VkSwapchainCreateInfoKHR();
-    createInfo.sType = VkStructureType.SwapchainCreateInfoKHR;
+    // createInfo.sType = VkStructureType.SwapchainCreateInfoKHR;
     createInfo.surface = _device.Surface;
 
     createInfo.minImageCount = imageCount;
@@ -134,7 +134,7 @@ public class Swapchain : IDisposable {
     var result = vkCreateSwapchainKHR(_device.LogicalDevice, &createInfo, null, out _handle);
     if (result != VkResult.Success) throw new Exception("Error while creating swapchain!");
 
-    int c = (int)imageCount;
+    uint c = imageCount;
     vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle, &c, null);
 
     VkImage[] imgs = new VkImage[c];
@@ -229,7 +229,7 @@ public class Swapchain : IDisposable {
     attachments[0] = colorAttachment;
     attachments[1] = depthAttachment;
     VkRenderPassCreateInfo renderPassInfo = new();
-    renderPassInfo.sType = VkStructureType.RenderPassCreateInfo;
+    // renderPassInfo.sType = VkStructureType.RenderPassCreateInfo;
     renderPassInfo.attachmentCount = 2;
     fixed (VkAttachmentDescription* ptr = attachments) {
       renderPassInfo.pAttachments = ptr;
@@ -255,7 +255,7 @@ public class Swapchain : IDisposable {
 
     for (int i = 0; i < _depthImages.Length; i++) {
       VkImageCreateInfo imageInfo = new();
-      imageInfo.sType = VkStructureType.ImageCreateInfo;
+      // imageInfo.sType = VkStructureType.ImageCreateInfo;
       imageInfo.imageType = VkImageType.Image2D;
       imageInfo.extent.width = _swapchainExtent.width;
       imageInfo.extent.height = _swapchainExtent.height;
@@ -273,7 +273,7 @@ public class Swapchain : IDisposable {
       _device.CreateImageWithInfo(imageInfo, VkMemoryPropertyFlags.DeviceLocal, out _depthImages[i], out _depthImagesMemories[i]);
 
       VkImageViewCreateInfo viewInfo = new();
-      viewInfo.sType = VkStructureType.ImageViewCreateInfo;
+      // viewInfo.sType = VkStructureType.ImageViewCreateInfo;
       viewInfo.image = _depthImages[i];
       viewInfo.viewType = VkImageViewType.Image2D;
       viewInfo.format = depthFormat;
@@ -298,7 +298,7 @@ public class Swapchain : IDisposable {
 
       fixed (VkImageView* ptr = attachmetns) {
         VkFramebufferCreateInfo framebufferInfo = new();
-        framebufferInfo.sType = VkStructureType.FramebufferCreateInfo;
+        // framebufferInfo.sType = VkStructureType.FramebufferCreateInfo;
         framebufferInfo.renderPass = _renderPass;
         framebufferInfo.attachmentCount = 2;
         framebufferInfo.pAttachments = ptr;
@@ -320,10 +320,10 @@ public class Swapchain : IDisposable {
     Array.Fill(_imagesInFlight, VkFence.Null);
 
     VkSemaphoreCreateInfo semaphoreInfo = new();
-    semaphoreInfo.sType = VkStructureType.SemaphoreCreateInfo;
+    // semaphoreInfo.sType = VkStructureType.SemaphoreCreateInfo;
 
     VkFenceCreateInfo fenceInfo = new();
-    fenceInfo.sType = VkStructureType.FenceCreateInfo;
+    // fenceInfo.sType = VkStructureType.FenceCreateInfo;
     fenceInfo.flags = VkFenceCreateFlags.Signaled;
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -335,7 +335,7 @@ public class Swapchain : IDisposable {
 
   public unsafe VkResult AcquireNextImage(out uint imageIndex) {
     fixed (VkFence* fencePtr = _inFlightFences) {
-      vkWaitForFences(_device.LogicalDevice, _inFlightFences.Length, fencePtr, true, ulong.MaxValue);
+      vkWaitForFences(_device.LogicalDevice, (uint)_inFlightFences.Length, fencePtr, true, ulong.MaxValue);
     }
 
     VkResult result = vkAcquireNextImageKHR(
@@ -357,7 +357,7 @@ public class Swapchain : IDisposable {
     _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
     VkSubmitInfo submitInfo = new();
-    submitInfo.sType = VkStructureType.SubmitInfo;
+    // submitInfo.sType = VkStructureType.SubmitInfo;
 
     VkSemaphore[] waitSemaphores = new VkSemaphore[1];
     waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
@@ -385,7 +385,7 @@ public class Swapchain : IDisposable {
       vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
 
       VkPresentInfoKHR presentInfo = new();
-      presentInfo.sType = VkStructureType.PresentInfoKHR;
+      // presentInfo.sType = VkStructureType.PresentInfoKHR;
 
       presentInfo.waitSemaphoreCount = 1;
       presentInfo.pWaitSemaphores = signalPtr;

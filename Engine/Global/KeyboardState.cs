@@ -2,6 +2,7 @@ using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
+using Dwarf.Engine.Testing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
 
@@ -21,6 +22,7 @@ public sealed class KeyboardState {
         if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_GRAVE_ACCENT) ChangeWireframeMode();
         break;
     }
+    PerformanceTester.KeyHandler(action, key);
   }
 
   static void ChangeWireframeMode() {

@@ -17,6 +17,7 @@ using static Vortice.Vulkan.Vulkan;
 using DwarfEngine.Engine;
 using Assimp;
 using DwarfEngine.Engine.Rendering.UI;
+using Dwarf.Engine.Rendering.UI;
 
 namespace Dwarf.Engine.Rendering;
 
@@ -116,7 +117,8 @@ public class RenderUISystem : SystemBase, IRenderSystem {
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
 
-      var targetUI = entities[i].GetComponent<TextField>();
+      // var targetUI = entities[i].GetComponent<TextField>();
+      var targetUI = entities[i].GetDrawable<IUIElement>();
       BindDescriptorTexture(targetUI.Owner!, ref textureManager, i);
 
       var bufferInfo = _uiBuffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<UIUniformObject>());
@@ -141,8 +143,10 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
-      var uiComponent = entities[i].GetComponent<TextField>();
-      uiComponent.Update();
+      // var uiComponent = entities[i].GetComponent<TextField>();
+      // var test = Entity.DistinctInterface<IUIElement>(entities);
+      var uiComponent = entities[0].GetDrawable<IUIElement>() as IUIElement;
+      uiComponent!.Update();
       uiComponent.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
       uiComponent.Bind(frameInfo.CommandBuffer);
       uiComponent.Draw(frameInfo.CommandBuffer);
@@ -170,8 +174,10 @@ public class RenderUISystem : SystemBase, IRenderSystem {
   }
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
-    var id = entity.GetComponent<TextField>().GetTextureIdReference();
-    var texture = textureManager.GetTexture(id);
+    // var id = entity.GetComponent<TextField>().GetTextureIdReference();
+    var id = entity.GetDrawable<IUIElement>() as IUIElement;
+
+    var texture = textureManager.GetTexture(id!.GetTextureIdReference());
     VkDescriptorImageInfo imageInfo = new();
     imageInfo.sampler = texture.GetSampler();
     imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -196,7 +202,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
 
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
+    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;

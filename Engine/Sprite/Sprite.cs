@@ -97,9 +97,9 @@ public class Sprite : Component, IDisposable {
 
   public void Draw(VkCommandBuffer commandBuffer) {
     if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (int)_indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
-      vkCmdDraw(commandBuffer, (int)_vertexCount, 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     }
   }
 
@@ -174,25 +174,26 @@ public class Sprite : Component, IDisposable {
         if (i == (uint)len - 1 && i + 1 % 2 != 0) {
           var bottomAdd = new Vector3(0f, 0.25f, 0);
           var topAdd = new Vector3(0f, -0.25f, 0);
-          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, bottomAdd);
-          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, bottomAdd);
 
+          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, bottomAdd);
+          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, topAdd);
+
+          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, bottomAdd);
           _spriteMesh.Vertices[2].Position = Vector3.Add(_spriteMesh.Vertices[2].Position, topAdd);
-          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, topAdd);
 
           break;
         }
         if (!side) {
           var newVec = Vector3.Add(_spriteMesh.Vertices[0].Position, new Vector3(0, 0.75f, 0));
           _spriteMesh.Vertices[0].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0, 0.75f, 0));
-          _spriteMesh.Vertices[1].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(0, 0.75f, 0));
+          _spriteMesh.Vertices[3].Position = newVec;
           side = true;
         } else {
-          var newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(0, -0.75f, 0));
+          var newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0, -0.75f, 0));
+          _spriteMesh.Vertices[1].Position = newVec;
+          newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(0, -0.75f, 0));
           _spriteMesh.Vertices[2].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(0, -0.75f, 0));
-          _spriteMesh.Vertices[3].Position = newVec;
           side = false;
         }
       }
@@ -214,7 +215,7 @@ public class Sprite : Component, IDisposable {
     var aspect = MathF.Round(image.Width / image.Height);
     if (aspect < 1) aspect = MathF.Round(image.Height / image.Width);
 
-    // Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
+    Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
 
     if (aspect != 1) {
       AddPositionsToVertices(size, aspect);

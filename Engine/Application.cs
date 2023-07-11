@@ -8,6 +8,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Rendering;
+using Dwarf.Engine.Rendering.UI;
 using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
@@ -116,7 +117,7 @@ public class Application {
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
     _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
     _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.GetRenderUISystem()?.SetupUIData(Entity.Distinct<TextField>(_entities).ToArray(), ref _textureManager);
+    _systems.GetRenderUISystem()?.SetupUIData(Entity.DistinctInterface<IUIElement>(_entities).ToArray(), ref _textureManager);
 
     _onLoad?.Invoke();
 
@@ -145,7 +146,6 @@ public class Application {
           default:
             break;
         }
-
       }
 
       var commandBuffer = _renderer.BeginFrame();
@@ -249,6 +249,8 @@ public class Application {
   }
 
   public async void Init() {
+    Console.WriteLine(DateTime.UtcNow.ToString());
+
     _globalPool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
@@ -258,12 +260,14 @@ public class Application {
     await LoadEntities();
     await LoadFonts();
 
+    Console.WriteLine(DateTime.UtcNow.ToString());
     Logger.Info($"Loaded entities: {_entities.Count}");
     Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
     Logger.Info($"Loaded fonts: {_loadedFonts.Count}");
   }
 
   public void MultiThreadedTextureLoad(List<List<string>> paths) {
+    var startTime = DateTime.UtcNow;
     List<Thread> threads = new();
     List<TextureThread> textureThreads = new();
     List<List<Texture>> textures = new();
@@ -284,6 +288,8 @@ public class Application {
     for (int i = 0; i < paths.Count; i++) {
       _textureManager.AddRange(textures[i].ToArray());
     }
+    var endTime = DateTime.Now;
+    // Logger.Warn($"[CREATE TEXTURE TIME]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   private async Task<Task> LoadTextures() {
@@ -292,7 +298,7 @@ public class Application {
     return Task.CompletedTask;
   }
 
-  private Task LoadTexturesAsSeparateThreads(List<List<string>> paths) {
+  public Task LoadTexturesAsSeparateThreads(List<List<string>> paths) {
     MultiThreadedTextureLoad(paths);
     Logger.Info("Done Loading Textures");
     return Task.CompletedTask;
@@ -315,7 +321,8 @@ public class Application {
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Model>()?.Dispose();
       entities[i].GetComponent<Sprite>()?.Dispose();
-      entities[i].GetComponent<TextField>()?.Dispose();
+      var e = entities[i].GetDrawable<IUIElement>() as IUIElement;
+      e?.Dispose();
     }
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
@@ -329,7 +336,7 @@ public class Application {
   private void Collect() {
     // Colect Models
     var models = Entity.Distinct<Model>(_entities);
-    for (int i = 0; i < models.Count; i++) {
+    for (int i = 0; i < models.Length; i++) {
       if (models[i].CanBeDisposed) {
         models[i].GetComponent<Model>().Dispose();
         ApplicationState.Instance.RemoveEntity(models[i].EntityID);

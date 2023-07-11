@@ -1,11 +1,109 @@
+using System;
+using System.Xml.Linq;
+
 using Assimp;
+
 using Dwarf.Engine;
+using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine.Loaders;
 
 public class GenericLoader {
+  private Task<List<Mesh>> ProcessChildNode(Assimp.Scene scene, Assimp.Node childNode) {
+    List<Mesh> meshes = new();
+    // for (int index = 0; index < childNode.Count; index++) {
+    foreach (int index in childNode.MeshIndices) {
+      var aMesh = scene.Meshes[index];
+      var vertexArray = new List<Vertex>();
+      var indices = new List<uint>();
+
+      bool hasColors = aMesh.HasVertexColors(0);
+      bool hasTexCoords = aMesh.HasTextureCoords(0);
+
+      for (int i = 0; i < aMesh.Faces.Count; i++) {
+        var face = aMesh.Faces[i];
+
+        for (int j = 0; j < face.IndexCount; j++) {
+          uint indice = (uint)face.Indices[j];
+          indices.Add(indice);
+
+          var vertex = new Vertex();
+
+          if (hasColors) {
+            Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
+            vertex.Color = new Vector3(vertColor.R, vertColor.G, vertColor.B);
+          } else {
+            vertex.Color = new Vector3(0.99f, 0.99f, 0.99f);
+          }
+
+          if (aMesh.HasNormals) {
+            Vector3 normal = FromVector(aMesh.Normals[(int)indice]);
+            vertex.Normal = normal;
+          }
+
+          if (hasTexCoords) {
+            Vector3 uvw = FromVector(aMesh.TextureCoordinateChannels[0][(int)indice]);
+            uvw.Y = 1.0f - uvw.Y;
+            vertex.Uv = uvw.Xy;
+          }
+
+          vertex.Position = FromVector(aMesh.Vertices[(int)indice]);
+          vertexArray.Add(vertex);
+        }
+
+      }
+      var mesh = new Mesh();
+      mesh.Vertices = vertexArray.ToArray();
+      mesh.Indices = indices.ToArray();
+      meshes.Add(mesh);
+    }
+
+    // return meshes;
+    return Task.FromResult(meshes);
+  }
+
+  public async Task<Model> LoadModelOptimized(Device device, string path) {
+    var processingStart = DateTime.Now;
+    var assimpContext = new AssimpContext();
+
+    var scene = assimpContext.ImportFile(path,
+        PostProcessSteps.Triangulate |
+        PostProcessSteps.GenerateSmoothNormals |
+        PostProcessSteps.FlipUVs |
+        PostProcessSteps.CalculateTangentSpace
+    );
+
+    var processingEnd = DateTime.Now;
+
+    var node = scene.RootNode;
+    var meshes = new List<Mesh>();
+
+    var tasks = new List<Task<List<Mesh>>>();
+
+
+
+    foreach (var child in node.Children) {
+      // var result = await ProcessChildNode(scene, child);
+      // meshes.AddRange(result);
+      tasks.Add(ProcessChildNode(scene, child));
+    }
+
+
+
+    // Logger.Info($"[PROCESS MESH TIME]: {(processingEnd - processingStart).TotalMilliseconds}");
+
+    await Task.WhenAll(tasks);
+    for (int i = 0; i < tasks.Count; i++) {
+      meshes.AddRange(tasks[i].Result);
+    }
+
+    assimpContext.Dispose();
+    return new Model(device, meshes.ToArray());
+  }
+
   public Model LoadModel(Device device, string path) {
     var assimpContext = new AssimpContext();
 
@@ -13,7 +111,8 @@ public class GenericLoader {
       PostProcessSteps.Triangulate |
       PostProcessSteps.GenerateSmoothNormals |
       PostProcessSteps.FlipUVs |
-      PostProcessSteps.CalculateTangentSpace
+      PostProcessSteps.CalculateTangentSpace |
+      PostProcessSteps.OptimizeMeshes
     );
 
     var node = scene.RootNode;

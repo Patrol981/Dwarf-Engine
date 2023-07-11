@@ -1,5 +1,7 @@
 using System.Linq;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -51,7 +53,7 @@ public class DescriptorSetLayout {
     }
 
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo = new();
-    descriptorSetLayoutInfo.sType = VkStructureType.DescriptorSetLayoutCreateInfo;
+    // descriptorSetLayoutInfo.sType = VkStructureType.DescriptorSetLayoutCreateInfo;
     descriptorSetLayoutInfo.bindingCount = (uint)setLayoutBindings.Length;
     fixed (VkDescriptorSetLayoutBinding* ptr = setLayoutBindings) {
       descriptorSetLayoutInfo.pBindings = ptr;

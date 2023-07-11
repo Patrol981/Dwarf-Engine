@@ -1,9 +1,13 @@
 using System.Net.Mime;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using StbImageSharp;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
@@ -30,7 +34,7 @@ public class Texture : IDisposable {
   public static Texture[] InitTextures(ref Device device, ReadOnlySpan<string> texturePaths) {
     var textures = new Texture[texturePaths.Length];
     for (int i = 0; i < textures.Length; i++) {
-      textures[i] = new(device, texturePaths[i]);
+      textures[i] = new(device, texturePaths[i], false);
     }
 
     return textures;
@@ -45,6 +49,7 @@ public class Texture : IDisposable {
     out VkSampler sampler,
     int flip = 1
   ) {
+    var startTime = DateTime.Now;
     // Console.WriteLine("Start");
     StbImage.stbi_set_flip_vertically_on_load(flip);
 
@@ -111,6 +116,8 @@ public class Texture : IDisposable {
     CreateSampler(device, out sampler);
 
     // _textureBuffer.Dispose();
+    var endTime = DateTime.Now;
+    Logger.Warn($"[CREATE TEXTURE TIME]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   private unsafe static void CreateImage(
@@ -125,7 +132,7 @@ public class Texture : IDisposable {
     out VkDeviceMemory textureImageMemory
   ) {
     VkImageCreateInfo imageInfo = new();
-    imageInfo.sType = VkStructureType.ImageCreateInfo;
+    // imageInfo.sType = VkStructureType.ImageCreateInfo;
     imageInfo.imageType = VkImageType.Image2D;
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
@@ -147,7 +154,7 @@ public class Texture : IDisposable {
     vkGetImageMemoryRequirements(device.LogicalDevice, textureImage, out memRequirements);
 
     VkMemoryAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.MemoryAllocateInfo;
+    // allocInfo.sType = VkStructureType.MemoryAllocateInfo;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, memoryPropertyFlags);
 
@@ -185,7 +192,7 @@ public class Texture : IDisposable {
     VkCommandBuffer commandBuffer = device.BeginSingleTimeCommands();
 
     VkImageMemoryBarrier barrier = new();
-    barrier.sType = VkStructureType.ImageMemoryBarrier;
+    // barrier.sType = VkStructureType.ImageMemoryBarrier;
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -237,7 +244,7 @@ public class Texture : IDisposable {
 
   private unsafe static VkImageView CreateImageView(Device device, VkFormat format, VkImage textureImage) {
     VkImageViewCreateInfo viewInfo = new();
-    viewInfo.sType = VkStructureType.ImageViewCreateInfo;
+    // viewInfo.sType = VkStructureType.ImageViewCreateInfo;
     viewInfo.image = textureImage;
     viewInfo.viewType = VkImageViewType.Image2D;
     viewInfo.format = format;
@@ -257,7 +264,7 @@ public class Texture : IDisposable {
     vkGetPhysicalDeviceProperties(device.PhysicalDevice, &properties);
 
     VkSamplerCreateInfo samplerInfo = new();
-    samplerInfo.sType = VkStructureType.SamplerCreateInfo;
+    // samplerInfo.sType = VkStructureType.SamplerCreateInfo;
     samplerInfo.magFilter = VkFilter.Linear;
     samplerInfo.minFilter = VkFilter.Linear;
     samplerInfo.addressModeU = VkSamplerAddressMode.Repeat;

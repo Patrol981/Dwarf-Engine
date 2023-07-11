@@ -15,9 +15,14 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 ambientLightColor;
 } ubo;
 
-layout (set = 1, binding = 0) uniform ModelUBO {
-  mat4 modelMatrix;
+layout (push_constant) uniform Push {
+  mat4 transform;
   mat4 normalMatrix;
+} push;
+
+layout (set = 1, binding = 0) uniform ModelUBO {
+  // mat4 modelMatrix;
+  // mat4 normalMatrix;
   vec3 material;
   bool useTexture;
   bool useLight;

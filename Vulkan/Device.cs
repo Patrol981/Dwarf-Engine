@@ -1,11 +1,14 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using Vortice.Vulkan;
+
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -46,7 +49,7 @@ public class Device : IDisposable {
     out VkDeviceMemory bufferMemory
   ) {
     VkBufferCreateInfo bufferInfo = new();
-    bufferInfo.sType = VkStructureType.BufferCreateInfo;
+    // bufferInfo.sType = VkStructureType.BufferCreateInfo;
     bufferInfo.size = size;
     bufferInfo.usage = uFlags;
     bufferInfo.sharingMode = VkSharingMode.Exclusive;
@@ -57,7 +60,7 @@ public class Device : IDisposable {
     vkGetBufferMemoryRequirements(_logicalDevice, buffer, out memRequirements);
 
     VkMemoryAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.MemoryAllocateInfo;
+    // allocInfo.sType = VkStructureType.MemoryAllocateInfo;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags);
 
@@ -65,16 +68,29 @@ public class Device : IDisposable {
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
   }
 
-  public unsafe void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
+  public unsafe Task CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
+    var startTime = DateTime.Now;
+
     VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
     VkBufferCopy copyRegion = new();
     copyRegion.srcOffset = 0;  // Optional
     copyRegion.dstOffset = 0;  // Optional
     copyRegion.size = size;
+    // vkDeviceWaitIdle(_logicalDevice);
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     EndSingleTimeCommands(commandBuffer);
+
+    var endTime = DateTime.Now;
+
+    // Logger.Warn($"[Copy Buffer Copy Time]: {(endTime - startTime).TotalMilliseconds}");
+
+    return Task.CompletedTask;
+  }
+
+  public void CopyBufferThreaded(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
+
   }
 
   public VkFormat FindSupportedFormat(List<VkFormat> candidates, VkImageTiling tilling, VkFormatFeatureFlags features) {
@@ -104,7 +120,7 @@ public class Device : IDisposable {
     vkGetImageMemoryRequirements(_logicalDevice, image, out memRequirements);
 
     VkMemoryAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.MemoryAllocateInfo;
+    // allocInfo.sType = VkStructureType.MemoryAllocateInfo;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
 
@@ -133,7 +149,7 @@ public class Device : IDisposable {
 
   public unsafe VkCommandBuffer BeginSingleTimeCommands() {
     VkCommandBufferAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
+    // allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
     allocInfo.level = VkCommandBufferLevel.Primary;
     allocInfo.commandPool = _commandPool;
     allocInfo.commandBufferCount = 1;
@@ -143,7 +159,7 @@ public class Device : IDisposable {
     vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = new();
-    beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
+    // beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
     beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
@@ -156,7 +172,7 @@ public class Device : IDisposable {
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = new();
-    submitInfo.sType = VkStructureType.SubmitInfo;
+    // submitInfo.sType = VkStructureType.SubmitInfo;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
@@ -172,7 +188,7 @@ public class Device : IDisposable {
     HashSet<string> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
 
     var appInfo = new VkApplicationInfo();
-    appInfo.sType = VkStructureType.ApplicationInfo;
+    // appInfo.sType = VkStructureType.ApplicationInfo;
     appInfo.pApplicationName = new VkString("Dwarf App");
     appInfo.applicationVersion = new(1, 0, 0);
     appInfo.pEngineName = new VkString("No Engine");
@@ -180,7 +196,7 @@ public class Device : IDisposable {
     appInfo.apiVersion = VkVersion.Version_1_3;
 
     var createInfo = new VkInstanceCreateInfo();
-    createInfo.sType = VkStructureType.InstanceCreateInfo;
+    // createInfo.sType = VkStructureType.InstanceCreateInfo;
     createInfo.pApplicationInfo = &appInfo;
 
     List<string> instanceExtensions = new();
@@ -231,7 +247,7 @@ public class Device : IDisposable {
   private unsafe VkDebugUtilsMessengerCreateInfoEXT SetupDebugCallbacks() {
     Logger.Info("Creating Debug Callbacks...");
     var createInfo = new VkDebugUtilsMessengerCreateInfoEXT();
-    createInfo.sType = VkStructureType.DebugUtilsMessengerCreateInfoEXT;
+    // createInfo.sType = VkStructureType.DebugUtilsMessengerCreateInfoEXT;
     createInfo.messageSeverity =
       VkDebugUtilsMessageSeverityFlagsEXT.Error |
       VkDebugUtilsMessageSeverityFlagsEXT.Warning;
@@ -299,7 +315,7 @@ public class Device : IDisposable {
 
     foreach (uint queueFamily in uniqueQueueFamilies) {
       VkDeviceQueueCreateInfo queueCreateInfo = new();
-      queueCreateInfo.sType = VkStructureType.DeviceQueueCreateInfo;
+      // queueCreateInfo.sType = VkStructureType.DeviceQueueCreateInfo;
       queueCreateInfo.queueFamilyIndex = queueFamily;
       queueCreateInfo.queueCount = 1;
       queueCreateInfo.pQueuePriorities = &priority;
@@ -314,7 +330,7 @@ public class Device : IDisposable {
     deviceFeatures.sampleRateShading = true;
 
     VkDeviceCreateInfo createInfo = new();
-    createInfo.sType = VkStructureType.DeviceCreateInfo;
+    // createInfo.sType = VkStructureType.DeviceCreateInfo;
 
     createInfo.queueCreateInfoCount = queueCount;
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
@@ -344,7 +360,7 @@ public class Device : IDisposable {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
-      sType = VkStructureType.CommandPoolCreateInfo,
+      // sType = VkStructureType.CommandPoolCreateInfo,
       queueFamilyIndex = queueFamilies.graphicsFamily,
       flags = VkCommandPoolCreateFlags.Transient | VkCommandPoolCreateFlags.ResetCommandBuffer
     };

@@ -19,19 +19,28 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 ambientLightColor;
 } ubo;
 
-layout (set = 1, binding = 0) uniform ModelUBO {
-  mat4 modelMatrix;
+layout (push_constant) uniform Push {
+  mat4 transform;
   mat4 normalMatrix;
+} push;
+
+// 500 FPS on avg
+// TODO: optimize set, so its reusable across all models?
+layout (set = 1, binding = 0) uniform ModelUBO {
+  // mat4 modelMatrix;
+  // mat4 normalMatrix;
   vec3 material;
   bool useTexture;
   bool useLight;
 } modelUBO;
 
 void main() {
-  vec4 positionWorld = modelUBO.modelMatrix * vec4(position, 1.0);
+  // vec4 positionWorld = modelUBO.modelMatrix * vec4(position, 1.0);
+  vec4 positionWorld =  push.transform * vec4(position, 1.0);
   gl_Position = ubo.projection * ubo.view * positionWorld;
 
-  fragNormalWorld = normalize(mat3(modelUBO.normalMatrix) * normal);
+  // fragNormalWorld = normalize(mat3(modelUBO.normalMatrix) * normal);
+  fragNormalWorld = normalize(mat3(push.normalMatrix) * normal);
   fragPositionWorld = positionWorld.xyz;
   fragColor = color;
   texCoord = uv;

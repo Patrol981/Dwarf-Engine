@@ -54,7 +54,7 @@ public unsafe class Renderer : IDisposable {
     var commandBuffer = GetCurrentCommandBuffer();
 
     VkCommandBufferBeginInfo beginInfo = new();
-    beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
+    // beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo).CheckResult();
 
@@ -93,7 +93,7 @@ public unsafe class Renderer : IDisposable {
     }
 
     VkRenderPassBeginInfo renderPassInfo = new();
-    renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
+    // renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
     renderPassInfo.renderPass = _swapchain.RenderPass;
     renderPassInfo.framebuffer = _swapchain.GetFramebuffer((int)_imageIndex);
 
@@ -178,7 +178,7 @@ public unsafe class Renderer : IDisposable {
     _commandBuffers = new VkCommandBuffer[len];
 
     VkCommandBufferAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
+    // allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
     allocInfo.level = VkCommandBufferLevel.Primary;
     allocInfo.commandPool = _device.CommandPool;
     allocInfo.commandBufferCount = (uint)_commandBuffers.Length;
@@ -219,4 +219,5 @@ public unsafe class Renderer : IDisposable {
   public VkExtent2D Extent2D => _swapchain.Extent2D;
   public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
   public bool IsFrameStarted => _isFrameStarted;
+  public Swapchain Swapchain => _swapchain;
 }

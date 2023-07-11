@@ -1,4 +1,5 @@
 ﻿using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
 using DwarfEngine.Engine.Rendering.UI;
@@ -18,7 +19,7 @@ public class SystemCollection : IDisposable {
   public void UpdateSystems(ReadOnlySpan<Entity> entities, FrameInfo frameInfo) {
     _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-    _renderUISystem?.DrawUI(frameInfo, Entity.Distinct<TextField>(entities).ToArray());
+    _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
   }
 
   public void ValidateSystems(
@@ -50,7 +51,8 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
+      // var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
+      var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var sizes = _renderUISystem.CheckSizes(uiEntities);
       var textures = _renderUISystem.CheckTextures(uiEntities);
       if (!sizes || !textures || ReloadUISystem) {
@@ -97,7 +99,7 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      _renderUISystem.SetupUIData(Entity.Distinct<TextField>(entities).ToArray(), ref textureManager);
+      _renderUISystem.SetupUIData(Entity.DistinctInterface<IUIElement>(entities).ToArray(), ref textureManager);
     }
   }
 
@@ -152,7 +154,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     ));
-    _renderUISystem?.SetupUIData(Entity.Distinct<TextField>(entities).ToArray(), ref textureManager);
+    _renderUISystem?.SetupUIData(Entity.DistinctInterface<IUIElement>(entities).ToArray(), ref textureManager);
   }
 
   public void SetRender3DSystem(Render3DSystem render3DSystem) {

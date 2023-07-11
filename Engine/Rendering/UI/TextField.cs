@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering.UI;
 using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -14,7 +15,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace DwarfEngine.Engine.Rendering.UI;
-public class TextField : Component, IDisposable {
+public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
   private readonly Device _device;
@@ -56,9 +57,8 @@ public class TextField : Component, IDisposable {
     _glyphOffset = _cursorX / 1024;
   }
 
-  public void Init(FontFile fontFile) {
+  public void Init() {
     _textMesh = new();
-    var arial = fontFile;
     _lines = new List<Line>();
 
     // setup chars mappings
@@ -83,9 +83,9 @@ public class TextField : Component, IDisposable {
 
   public void Draw(VkCommandBuffer commandBuffer) {
     if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (int)_indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
-      vkCmdDraw(commandBuffer, (int)_vertexCount, 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     }
   }
 
@@ -95,7 +95,7 @@ public class TextField : Component, IDisposable {
     _text = text;
   }
 
-  internal void Update() {
+  public void Update() {
     CheckBuffers(_textMesh.Vertices);
   }
 

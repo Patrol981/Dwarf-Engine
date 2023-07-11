@@ -66,7 +66,8 @@ public class Pipeline : IDisposable {
     VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
 
     //vertex
-    shaderStages[0].sType = VkStructureType.PipelineShaderStageCreateInfo;
+    // shaderStages[0].sType = VkStructureType.PipelineShaderStageCreateInfo;
+    shaderStages[0] = new();
     shaderStages[0].stage = VkShaderStageFlags.Vertex;
     shaderStages[0].module = _vertexShaderModule;
     shaderStages[0].pName = entryPoint;
@@ -74,7 +75,8 @@ public class Pipeline : IDisposable {
     shaderStages[0].pNext = null;
 
     //fragment
-    shaderStages[1].sType = VkStructureType.PipelineShaderStageCreateInfo;
+    // shaderStages[1].sType = VkStructureType.PipelineShaderStageCreateInfo;
+    shaderStages[1] = new();
     shaderStages[1].stage = VkShaderStageFlags.Fragment;
     shaderStages[1].module = _fragmentShaderModule;
     shaderStages[1].pName = entryPoint;
@@ -85,14 +87,14 @@ public class Pipeline : IDisposable {
     var attributeDescriptions = _pipelineProvider.GetAttribDescsFunc();
 
     var vertexInputInfo = new VkPipelineVertexInputStateCreateInfo();
-    vertexInputInfo.sType = VkStructureType.PipelineVertexInputStateCreateInfo;
+    // vertexInputInfo.sType = VkStructureType.PipelineVertexInputStateCreateInfo;
     vertexInputInfo.vertexAttributeDescriptionCount = _pipelineProvider.GetAttribsLength();
     vertexInputInfo.vertexBindingDescriptionCount = _pipelineProvider.GetBindingsLength();
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
     vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions;
 
     var pipelineInfo = new VkGraphicsPipelineCreateInfo();
-    pipelineInfo.sType = VkStructureType.GraphicsPipelineCreateInfo;
+    // pipelineInfo.sType = VkStructureType.GraphicsPipelineCreateInfo;
     pipelineInfo.stageCount = 2;
     fixed (VkPipelineShaderStageCreateInfo* ptr = shaderStages) {
       pipelineInfo.pStages = ptr;

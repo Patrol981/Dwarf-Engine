@@ -62,7 +62,7 @@ public class DescriptorPool : IDisposable {
     _device = device;
 
     VkDescriptorPoolCreateInfo descriptorPoolInfo = new();
-    descriptorPoolInfo.sType = VkStructureType.DescriptorPoolCreateInfo;
+    // descriptorPoolInfo.sType = VkStructureType.DescriptorPoolCreateInfo;
     descriptorPoolInfo.poolSizeCount = (uint)poolSizes.Length;
     fixed (VkDescriptorPoolSize* ptr = poolSizes) {
       descriptorPoolInfo.pPoolSizes = ptr;
@@ -75,7 +75,7 @@ public class DescriptorPool : IDisposable {
 
   public unsafe bool AllocateDescriptor(VkDescriptorSetLayout descriptorSetLayout, out VkDescriptorSet descriptorSet) {
     VkDescriptorSetAllocateInfo allocInfo = new();
-    allocInfo.sType = VkStructureType.DescriptorSetAllocateInfo;
+    // allocInfo.sType = VkStructureType.DescriptorSetAllocateInfo;
     allocInfo.descriptorPool = _descriptorPool;
     allocInfo.pSetLayouts = &descriptorSetLayout;
     allocInfo.descriptorSetCount = 1;
@@ -91,20 +91,20 @@ public class DescriptorPool : IDisposable {
 
   public unsafe void FreeDescriptors(VkDescriptorSet[] descriptorSets) {
     fixed (VkDescriptorSet* ptr = descriptorSets) {
-      vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, descriptorSets.Length, ptr).CheckResult();
+      vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, (uint)descriptorSets.Length, ptr).CheckResult();
     }
   }
 
   public unsafe void FreeDescriptors(PublicList<VkDescriptorSet> descriptorSets) {
     fixed (VkDescriptorSet* ptr = descriptorSets.GetData()) {
-      vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, descriptorSets.Size, ptr).CheckResult();
+      vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, (uint)descriptorSets.Size, ptr).CheckResult();
     }
   }
 
   public unsafe void FreeDescriptors(PublicList<PublicList<VkDescriptorSet>> descriptorSets) {
     for (int i = 0; i < descriptorSets.Size; i++) {
       fixed (VkDescriptorSet* ptr = descriptorSets.GetAt(i).GetData()) {
-        vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, descriptorSets.GetAt(i).Size, ptr).CheckResult();
+        vkFreeDescriptorSets(_device.LogicalDevice, _descriptorPool, (uint)descriptorSets.GetAt(i).Size, ptr).CheckResult();
       }
     }
   }

@@ -14,6 +14,46 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class Model : Component, IDisposable {
+  internal class ModelLoader {
+    private readonly Model _model;
+    private readonly int _index;
+    private readonly Mesh _mesh;
+
+    public ModelLoader(Model model, int index, Mesh mesh) {
+      _model = model;
+      _index = index;
+      _mesh = mesh;
+    }
+
+    public async void Proceed() {
+      _model._device._mutex.WaitOne();
+      vkQueueWaitIdle(_model._device.GraphicsQueue);
+      vkDeviceWaitIdle(_model._device.LogicalDevice);
+      var tasks = new List<Task>() {
+        CreateVertexBuffer(),
+        CreateIndexBuffer(),
+      };
+
+      await Task.WhenAll(tasks);
+      _model._device._mutex.ReleaseMutex();
+    }
+
+    public Task CreateVertexBuffer() {
+      // vkQueueWaitIdle(_model._device.GraphicsQueue);
+      // vkDeviceWaitIdle(_model._device.LogicalDevice);
+      _model.CreateVertexBuffer(_mesh.Vertices, (uint)_index);
+      return Task.CompletedTask;
+    }
+
+    public Task CreateIndexBuffer() {
+      // vkQueueWaitIdle(_model._device.GraphicsQueue);
+      // vkDeviceWaitIdle(_model._device.LogicalDevice);
+      _model.CreateIndexBuffer(_mesh.Indices, (uint)_index);
+      return Task.CompletedTask;
+    }
+  }
+
+
   public bool UsesLight = true;
 
   private readonly Device _device = null!;
@@ -27,6 +67,8 @@ public class Model : Component, IDisposable {
   private bool _usesTexture = false;
   private Guid[] _textureIdRefs = new Guid[0];
 
+  private bool _finishedInitialization = false;
+
   public Model() { }
 
   public Model(Device device, Mesh[] meshes) {
@@ -39,12 +81,32 @@ public class Model : Component, IDisposable {
     _vertexCount = new ulong[_meshesCount];
     _hasIndexBuffer = new bool[_meshesCount];
     _textureIdRefs = new Guid[_meshesCount];
-    for (uint i = 0; i < meshes.Length; i++) {
+
+    // List<Thread> threads = new();
+    // List<ModelLoader> loaders = new();
+
+    List<Task> createTasks = new();
+
+    for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
       _textureIdRefs[i] = Guid.Empty;
-      CreateVertexBuffer(meshes[i].Vertices, i);
-      CreateIndexBuffer(meshes[i].Indices, i);
+      // loaders.Add(new ModelLoader(this, i, meshes[i]));
+      // threads.Add(new(new ThreadStart(loaders[i].CreateVertexBuffer)));
+      // threads.Add(new(new ThreadStart(loaders[i].CreateIndexBuffer)));
+      // threads.Add(new(new ThreadStart(loaders[i].Proceed)));
+      createTasks.Add(CreateVertexBuffer(meshes[i].Vertices, (uint)i));
+      createTasks.Add(CreateIndexBuffer(meshes[i].Indices, (uint)i));
     }
+
+    Init(createTasks);
+  }
+
+  private async void Init(List<Task> createTasks) {
+    var startTime = DateTime.Now;
+    await Task.WhenAll(createTasks);
+    _finishedInitialization = true;
+    var endTime = DateTime.Now;
+    // Logger.Warn($"[Load time]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
@@ -104,13 +166,13 @@ public class Model : Component, IDisposable {
 
   public void Draw(VkCommandBuffer commandBuffer, uint index) {
     if (_hasIndexBuffer[index]) {
-      vkCmdDrawIndexed(commandBuffer, (int)_indexCount[index], 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
     } else {
-      vkCmdDraw(commandBuffer, (int)_vertexCount[index], 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
     }
   }
 
-  private unsafe void CreateVertexBuffer(Vertex[] vertices, uint index) {
+  protected unsafe Task CreateVertexBuffer(Vertex[] vertices, uint index) {
     _vertexCount[index] = (ulong)vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount[index];
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
@@ -123,8 +185,14 @@ public class Model : Component, IDisposable {
       VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
     );
 
+    // stagingBuffer.Map(bufferSize);
+    // stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+
+    // _device._mutex.WaitOne();
+    // vkDeviceWaitIdle(_device.LogicalDevice);
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+    // _device._mutex.ReleaseMutex();
 
     _vertexBuffers[index] = new Vulkan.Buffer(
       _device,
@@ -136,11 +204,12 @@ public class Model : Component, IDisposable {
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffers[index].GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
+    return Task.CompletedTask;
   }
 
-  private unsafe void CreateIndexBuffer(uint[] indices, uint index) {
+  protected unsafe Task CreateIndexBuffer(uint[] indices, uint index) {
     _indexCount[index] = (ulong)indices.Length;
-    if (!_hasIndexBuffer[index]) return;
+    if (!_hasIndexBuffer[index]) return Task.CompletedTask;
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount[index];
     ulong indexSize = (ulong)sizeof(uint);
 
@@ -152,6 +221,7 @@ public class Model : Component, IDisposable {
       VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
     );
 
+    // vkDeviceWaitIdle(_device.LogicalDevice);
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
@@ -166,6 +236,7 @@ public class Model : Component, IDisposable {
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffers[index].GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
+    return Task.CompletedTask;
   }
 
   public unsafe void Dispose() {
@@ -181,4 +252,5 @@ public class Model : Component, IDisposable {
   public Guid GetTextureIdReference(int index = 0) {
     return _textureIdRefs[index];
   }
+  public bool FinishedInitialization => _finishedInitialization;
 }

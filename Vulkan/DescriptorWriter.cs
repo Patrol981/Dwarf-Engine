@@ -1,5 +1,7 @@
 using Dwarf.Extensions.Logging;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -17,7 +19,7 @@ public class DescriptorWriter {
     var bindingDescription = _setLayout.Bindings[binding];
 
     VkWriteDescriptorSet write = new();
-    write.sType = VkStructureType.WriteDescriptorSet;
+    // write.sType = VkStructureType.WriteDescriptorSet;
     write.descriptorType = bindingDescription.descriptorType;
     write.dstBinding = binding;
     write.pBufferInfo = bufferInfo;
@@ -33,7 +35,7 @@ public class DescriptorWriter {
     var bindingDescription = _setLayout.Bindings[binding];
 
     VkWriteDescriptorSet write = new();
-    write.sType = VkStructureType.WriteDescriptorSet;
+    // write.sType = VkStructureType.WriteDescriptorSet;
     write.descriptorType = bindingDescription.descriptorType;
     write.dstBinding = binding;
     write.pImageInfo = imageInfo;

@@ -102,6 +102,10 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   private void BindDescriptorTexture(Entity entity, ref TextureManager textures, int index, int modelPart = 0) {
     var id = entity.GetComponent<Model>().GetTextureIdReference(modelPart);
     var texture = textures.GetTexture(id);
+    if (texture == null) {
+      var nid = textures.GetTextureId("./Textures/base/no_texture.png");
+      texture = textures.GetTexture(nid);
+    }
     VkDescriptorImageInfo imageInfo = new();
     imageInfo.sampler = texture.GetSampler();
     imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -116,12 +120,19 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void SetupRenderData(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+    var startTime = DateTime.Now;
+    // TODO: Reuse data from diffrent renders?
+
     if (entities.Length < 1) {
       Logger.Warn("Entities that are capable of using 3D renderer are less than 1, thus 3D Render System won't be recreated");
       return;
     }
 
     Logger.Info("Recreating Renderer 3D");
+
+    var lastFrameModels = _modelBuffer;
+    var lastFrameSets = _descriptorSets;
+    var lastFrameTextures = _textureSets;
 
     _pool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)entities.Length)
@@ -142,6 +153,10 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     // _textureSets = new VkDescriptorSet[_texturesCount];
     _textureSets = new();
 
+    // for(int x =0; x<lastFrameTextures.Size; x++) {
+    // _textureSets.SetAt(lastFrameTextures.GetAt(x), x) = lastFrameTextures[x];
+    // }
+
     for (int x = 0; x < entities.Length; x++) {
       var en = entities[x].GetComponent<Model>();
       // en.SetupTextureData();
@@ -152,7 +167,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
       }
     }
 
-    for (int i = 0; i < entities.Length; i++) {
+    for (int i = 0; i < lastFrameModels.Length; i++) {
+      _modelBuffer[i] = lastFrameModels[i];
+    }
+
+    for (int i = lastFrameModels.Length; i < entities.Length; i++) {
       _modelBuffer[i] = new Vulkan.Buffer(
         _device,
         (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
@@ -178,6 +197,9 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
+
+    var endTime = DateTime.Now;
+    Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
@@ -216,8 +238,8 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
     for (int i = 0; i < entities.Length; i++) {
       var modelUBO = new ModelUniformBufferObject();
-      modelUBO.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
+      // modelUBO.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      // modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
       modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
       modelUBO.UseLight = entities[i].GetComponent<Model>().UsesLight;
@@ -225,6 +247,19 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
       _modelBuffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       _modelBuffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       _modelBuffer[i].Unmap();
+
+      var pushConstantData = new SimplePushConstantData();
+      pushConstantData.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
+
+      vkCmdPushConstants(
+        frameInfo.CommandBuffer,
+        _pipelineLayout,
+        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+        0,
+        (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+        &pushConstantData
+      );
 
       fixed (VkDescriptorSet* ptr = &_descriptorSets[i]) {
         vkCmdBindDescriptorSets(
@@ -243,8 +278,10 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
       if (!entity.Owner!.CanBeDisposed) {
         for (uint x = 0; x < entity.MeshsesCount; x++) {
-          if (entity.UsesTexture)
+          if (!entity.FinishedInitialization) continue;
+          if (entity.UsesTexture) {
             entity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+          }
           // entity.BindDescriptorSet(_textureSets[i][(int)x], frameInfo, ref _pipelineLayout);
           entity.Bind(frameInfo.CommandBuffer, x);
           entity.Draw(frameInfo.CommandBuffer, x);
@@ -254,21 +291,21 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    // VkPushConstantRange pushConstantRange = new();
-    // pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
-    // pushConstantRange.offset = 0;
-    // pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
+    VkPushConstantRange pushConstantRange = new();
+    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
 
     // VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] { globalSetLayout };
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
+    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
     }
-    pipelineInfo.pushConstantRangeCount = 0;
-    pipelineInfo.pPushConstantRanges = null;
+    pipelineInfo.pushConstantRangeCount = 1;
+    pipelineInfo.pPushConstantRanges = &pushConstantRange;
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 

@@ -229,7 +229,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     pushConstantRange.size = (uint)Unsafe.SizeOf<SpriteUniformBufferObject>();
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
+    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;

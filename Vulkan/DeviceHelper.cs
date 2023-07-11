@@ -1,6 +1,8 @@
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
+
 using Vortice.Vulkan;
+
 using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
@@ -9,7 +11,7 @@ public unsafe static class DeviceHelper {
   public static VkPhysicalDevice GetPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     VkPhysicalDevice returnDevice = VkPhysicalDevice.Null;
 
-    int count = 0;
+    uint count = 0;
     vkEnumeratePhysicalDevices(instance, &count, null).CheckResult();
     if (count == 0) {
       Logger.Error("Failed to find any Vulkan capable GPU");
@@ -65,7 +67,7 @@ public unsafe static class DeviceHelper {
       return Array.Empty<string>();
     }
 
-    int count = 0;
+    uint count = 0;
     VkResult result = vkEnumerateInstanceLayerProperties(&count, null);
     if (result != VkResult.Success) {
       return Array.Empty<string>();
@@ -172,7 +174,7 @@ public unsafe static class DeviceHelper {
   }
 
   public static string[] GetInstanceExtensions() {
-    int count = 0;
+    uint count = 0;
     VkResult result = vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, null);
     if (result != VkResult.Success) {
       return Array.Empty<string>();

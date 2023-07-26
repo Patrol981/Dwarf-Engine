@@ -14,16 +14,11 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec3 cameraPosition;
 } globalUBO;
 
-layout (push_constant) uniform Push {
-  mat4 transform;
-} push;
-
 layout(set = 2, binding = 0) uniform sampler2D textureAtlas; // 1 0
 // layout(set = 0, binding = 2) uniform sampler FontSampler; // 0 1
 
 void main() {
   // vec4 sampled = vec4(1.0, 1.0, texture(textureAtlas, texCoord).r);
 	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(textureAtlas, texCoord).r);
-	// outColor = vec4(color.xyz, 1.0) * sampled;
-  outColor = vec4(color.xyz, 1.0) * texture(textureAtlas, texCoord);
+	outColor = vec4(color.xyz, 1.0) * sampled;
 }

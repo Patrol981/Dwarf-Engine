@@ -14,7 +14,9 @@ public enum SystemCreationFlags {
   None = 0b0000,
   Renderer3D = 0b0001,
   Renderer2D = 0b0010,
-  RendererUI = 0b0100
+  RendererUI = 0b0100,
+
+  Physics3D = 0b1111
 }
 
 public class SystemCreator {
@@ -34,6 +36,10 @@ public class SystemCreator {
     }
     if (flags.HasFlag(SystemCreationFlags.Renderer2D)) {
       systemCollection.SetRender2DSystem((Render2DSystem)new Render2DSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
+    }
+
+    if (flags.HasFlag(SystemCreationFlags.Physics3D)) {
+      systemCollection.SetPhysicsSystem(new Physics.PhysicsSystem());
     }
   }
 }

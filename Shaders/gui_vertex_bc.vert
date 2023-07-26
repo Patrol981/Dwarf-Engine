@@ -17,14 +17,9 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec3 cameraPosition;
 } globalUBO;
 
-layout (push_constant) uniform Push {
-  mat4 transform;
-} push;
-
 void main() {
-  // vec4 positionWorld = vec4(position.x, position.y, 0.0, 1.0);
-  vec4 positionWorld = push.transform * vec4(position, 1.0);
-	gl_Position = globalUBO.projection * globalUBO.view * positionWorld;
+  vec4 positionWorld = vec4(position.x, position.y, 0.0, 1.0);
+	gl_Position = globalUBO.projection * positionWorld;
 	texCoord = uv;
 	fragColor = vec4(color.xyz, 1.0);
 }

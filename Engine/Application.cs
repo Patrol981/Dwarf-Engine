@@ -15,6 +15,7 @@ using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
+using DwarfEngine.Engine.Rendering;
 using DwarfEngine.Engine.Rendering.UI;
 
 using OpenTK.Mathematics;
@@ -118,6 +119,7 @@ public class Application {
     _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
     _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.GetRenderUISystem()?.SetupUIData(Entity.DistinctInterface<IUIElement>(_entities).ToArray(), ref _textureManager);
+    _systems.GetPhysicsSystem()?.Init(_entities.ToArray());
 
     _onLoad?.Invoke();
 
@@ -159,10 +161,11 @@ public class Application {
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
 
-        ubo.LightPosition = new Vector3(0, -10, 0);
-        // ubo.LightPosition = _camera.GetComponent<Transform>().Position;
-        ubo.LightColor = new Vector4(1, 1, 1, 1);
+        // ubo.LightPosition = new Vector3(-1, -1, 0);
+        ubo.LightPosition = _camera.GetComponent<Transform>().Position;
+        ubo.LightColor = new Vector4(1f, 1f, 1f, 1f);
         ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 1f);
+        ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
 
         uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
 
@@ -289,7 +292,6 @@ public class Application {
       _textureManager.AddRange(textures[i].ToArray());
     }
     var endTime = DateTime.Now;
-    // Logger.Warn($"[CREATE TEXTURE TIME]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   private async Task<Task> LoadTextures() {

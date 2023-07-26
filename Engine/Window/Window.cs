@@ -150,7 +150,6 @@ public unsafe class Window : IDisposable {
     get { return _extent; }
     set { _extent = value; }
   }
-
   public Vector2I Size => _windowSize;
   public GLFWwindow* GLFWwindow => _window;
 }

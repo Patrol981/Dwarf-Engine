@@ -1,3 +1,5 @@
+using System.Collections;
+
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
 
@@ -56,14 +58,6 @@ public class Entity {
 
   public static ReadOnlySpan<Entity> Distinct<T>(List<Entity> entities) where T : Component {
     return entities.Where(e => e.HasComponent<T>()).ToArray();
-
-    /*
-    var returnEntities = new List<Entity>();
-    for (int i = 0; i < entities.Count; i++) {
-      if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
-    }
-    return returnEntities;
-    */
   }
 
   public static ReadOnlySpan<Entity> Distinct<T>(ReadOnlySpan<Entity> entities) where T : Component {
@@ -74,18 +68,17 @@ public class Entity {
     return returnEntities.ToArray();
   }
 
-  public static List<Entity> DistinctList<T>(List<Entity> entities) where T : Component {
-    return entities.Where(e => e.HasComponent<T>()).ToList();
+  public static Span<Entity> DistinctList<T>(List<Entity> entities) where T : Component {
+    return entities.Where(e => e.HasComponent<T>()).ToArray();
   }
 
-  public static ReadOnlySpan<Entity> DistinctInterface<T>(List<Entity> entities) where T : IDrawable {
+  public static Span<Entity> DistinctInterface<T>(List<Entity> entities) where T : IDrawable {
     return entities.Where(e => e.IsDrawable<T>()).ToArray();
   }
 
   public static ReadOnlySpan<Entity> DistinctInterface<T>(ReadOnlySpan<Entity> entities) where T : IDrawable {
     var returnEntities = new List<Entity>();
     for (int i = 0; i < entities.Length; i++) {
-      // if (entities[i] is IUIElement) returnEntities.Add(entities[i]);
       if (entities[i].IsDrawable<T>()) returnEntities.Add(entities[i]);
     }
     return returnEntities.ToArray();
@@ -104,5 +97,16 @@ public class Entity {
   public Guid EntityID {
     get { return _guid; }
     set { _guid = value; }
+  }
+
+  internal class Comparer : IComparer<Entity> {
+    public int Compare(Entity? x, Entity? y) {
+      if (x?.EntityID < y?.EntityID)
+        return -1;
+      else if (x?.EntityID > y?.EntityID)
+        return 1;
+      else
+        return 0;
+    }
   }
 }

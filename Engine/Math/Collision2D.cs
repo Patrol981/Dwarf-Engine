@@ -24,14 +24,12 @@ public class Collision2D {
     return false;
   }
 
-  public static ReadOnlySpan<Sprite> CollidesWithAABB(List<Entity> colls2D, Entity target) {
+  public static ReadOnlySpan<Sprite> CollidesWithAABB(Entity[] colls2D, Entity target) {
     List<Sprite> colliders = new List<Sprite>();
     ReadOnlySpan<Entity> withoutTarget = colls2D
                                           .Where(x => x.EntityID != target.EntityID)
                                           .ToArray();
-
     var targetSprite = target.GetComponent<Sprite>();
-
     for (int i = 0; i < withoutTarget.Length; i++) {
       var iSprite = withoutTarget[i].GetComponent<Sprite>();
       if (CheckCollisionAABB(targetSprite, iSprite)) {

@@ -110,7 +110,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     for (int i = 0; i < entities.Length; i++) {
       _uiBuffer[i] = new Vulkan.Buffer(
         _device,
-        (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+        (ulong)Unsafe.SizeOf<UIUniformObject>(),
         1,
         VkBufferUsageFlags.UniformBuffer,
         VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
@@ -143,13 +143,26 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
+      var uiPushConstant = new UIUniformObject();
+      // uiPushConstant.UIColor = (Vector3)(entities[i].GetComponent<Material>()?.GetColor());
+      uiPushConstant.UIMatrix = entities[i].GetComponent<Transform>().Matrix4;
+
+      vkCmdPushConstants(
+        frameInfo.CommandBuffer,
+        _pipelineLayout,
+        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+        0,
+        (uint)Unsafe.SizeOf<UIUniformObject>(),
+        &uiPushConstant
+      );
+
       // var uiComponent = entities[i].GetComponent<TextField>();
       // var test = Entity.DistinctInterface<IUIElement>(entities);
       var uiComponent = entities[0].GetDrawable<IUIElement>() as IUIElement;
-      uiComponent!.Update();
-      uiComponent.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
-      uiComponent.Bind(frameInfo.CommandBuffer);
-      uiComponent.Draw(frameInfo.CommandBuffer);
+      uiComponent?.Update();
+      uiComponent?.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
+      uiComponent?.Bind(frameInfo.CommandBuffer);
+      uiComponent?.Draw(frameInfo.CommandBuffer);
     }
   }
 
@@ -201,14 +214,19 @@ public class RenderUISystem : SystemBase, IRenderSystem {
   }
 
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
+    VkPushConstantRange pushConstantRange = new();
+    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = (uint)Unsafe.SizeOf<UIUniformObject>();
+
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
     }
-    pipelineInfo.pushConstantRangeCount = 0;
-    pipelineInfo.pPushConstantRanges = null;
+    pipelineInfo.pushConstantRangeCount = 1;
+    pipelineInfo.pPushConstantRanges = &pushConstantRange;
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 

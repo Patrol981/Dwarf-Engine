@@ -1,4 +1,5 @@
 ﻿using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
@@ -8,9 +9,13 @@ using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 public class SystemCollection : IDisposable {
+  // Render Systems
   private Render3DSystem? _render3DSystem;
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
+
+  // Calculation Systems
+  private PhysicsSystem? _physicsSystem;
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
@@ -20,6 +25,8 @@ public class SystemCollection : IDisposable {
     _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
     _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
+
+    _physicsSystem?.Tick(entities);
   }
 
   public void ValidateSystems(
@@ -169,6 +176,10 @@ public class SystemCollection : IDisposable {
     _renderUISystem = renderUISystem;
   }
 
+  public void SetPhysicsSystem(PhysicsSystem physicsSystem) {
+    _physicsSystem = physicsSystem;
+  }
+
   public Render3DSystem GetRender3DSystem() {
     return _render3DSystem ?? null!;
   }
@@ -181,9 +192,14 @@ public class SystemCollection : IDisposable {
     return _renderUISystem ?? null!;
   }
 
+  public PhysicsSystem GetPhysicsSystem() {
+    return _physicsSystem ?? null!;
+  }
+
   public void Dispose() {
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
     _renderUISystem?.Dispose();
+    _physicsSystem?.Dispose();
   }
 }

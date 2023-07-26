@@ -1,8 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using OpenTK.Mathematics;
 
-namespace Dwarf.Engine;
+namespace Dwarf.Engine.Rendering;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct GlobalUniformBufferObject {
@@ -11,4 +12,5 @@ public struct GlobalUniformBufferObject {
   [FieldOffset(128)] public Vector3 LightPosition;
   [FieldOffset(140)] public Vector4 LightColor;
   [FieldOffset(156)] public Vector4 AmientLightColor;
+  [FieldOffset(172)] public Vector3 CameraPosition;
 }

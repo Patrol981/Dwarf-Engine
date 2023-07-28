@@ -129,6 +129,7 @@ public class Camera : Component {
 
   public void UpdateControls() {
     Owner!.GetComponent<FreeCameraController>()?.Update();
+    Owner!.GetComponent<ThirdPersonCamera>()?.Update();
   }
 
   public float Aspect {

@@ -124,6 +124,7 @@ public class Application {
     _onLoad?.Invoke();
 
     while (!_window.ShouldClose) {
+      MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
       Time.Tick();
 

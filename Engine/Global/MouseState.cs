@@ -1,4 +1,6 @@
 using Dwarf.Extensions.GLFW;
+using Dwarf.Extensions.Logging;
+
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine.Globals;
@@ -7,12 +9,32 @@ public sealed class MouseState {
   private static MouseState s_instance = null!;
 
   private Vector2d _lastMousePositionFromCallback = new(0, 0);
+  // private Vector2d _scrollDelta = new(0, 0);
+  private double _previousScrollY = 0.0;
+  private double _scrollDelta = 0.0;
 
   public unsafe static void MouseCallback(GLFWwindow* window, double xpos, double ypos) {
     MouseState.GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
   }
 
+  public unsafe static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    double currentScrollY = yoffset;
+    // MouseState.GetInstance()._scrollDelta = currentScrollY - MouseState.GetInstance()._previousScrollY;
+    MouseState.GetInstance()._scrollDelta = currentScrollY += yoffset;
+    MouseState.GetInstance()._previousScrollY = currentScrollY;
+    // Logger.Info($"[SCROLL CHANGE] {MouseState.GetInstance()._scrollDelta}");
+  }
+
+  public unsafe static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    // Logger.Info($"[Button Action] {button} {action} {mods}");
+  }
+
   public Vector2d MousePosition => _lastMousePositionFromCallback;
+  public double ScrollDelta {
+    get { return _scrollDelta; }
+    set { _scrollDelta = value; }
+  }
+  public double PreviousScroll => _previousScrollY;
 
   public static MouseState GetInstance() {
     if (s_instance == null) {

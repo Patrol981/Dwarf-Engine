@@ -4,7 +4,7 @@ using Dwarf.Extensions.GLFW;
 using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.Extensions.Logging;
 
-using static Dwarf.Extensions.GLFW.GLFW;
+using Dwarf.Engine.Physics;
 
 namespace Dwarf.Engine;
 
@@ -178,21 +178,6 @@ public class FreeCameraController : Component {
       }
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_SPACE) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
-      }
-
-      // DEBUG remove later
-
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_RIGHT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(-1, 0, 0) * Time.DeltaTime);
-      }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(1, 0, 0) * Time.DeltaTime);
-      }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_DOWN) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, -1) * Time.DeltaTime);
-      }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_UP) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
-        ApplicationState.Instance.GetEntities()[0].GetComponent<Transform>().IncreasePosition(new OpenTK.Mathematics.Vector3(0, 0, 1) * Time.DeltaTime);
       }
 
       //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {

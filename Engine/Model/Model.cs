@@ -67,6 +67,8 @@ public class Model : Component, IDisposable {
   private bool _usesTexture = false;
   private Guid[] _textureIdRefs = new Guid[0];
 
+  private Mesh[] _meshes;
+
   private bool _finishedInitialization = false;
 
   public Model() { }
@@ -86,6 +88,8 @@ public class Model : Component, IDisposable {
     // List<ModelLoader> loaders = new();
 
     List<Task> createTasks = new();
+
+    _meshes = meshes;
 
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
@@ -248,6 +252,7 @@ public class Model : Component, IDisposable {
     }
   }
   public int MeshsesCount => _meshesCount;
+  public Mesh[] Meshes => _meshes;
   public bool UsesTexture => _usesTexture;
   public Guid GetTextureIdReference(int index = 0) {
     return _textureIdRefs[index];

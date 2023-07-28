@@ -199,6 +199,12 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   public unsafe delegate void glfwJoystickCallback(int jid, int j_event);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  public unsafe delegate void glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  public unsafe delegate void glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
   #endregion
 
   #region callbacks setters
@@ -216,6 +222,12 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate glfwJoystickCallback glfwSetJoystickCallback_t(glfwJoystickCallback callback);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate glfwScrollCallback glfwSetScrollCallback_t(GLFWwindow* window, glfwScrollCallback callback);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate glfwMouseButtonCallback glfwSetMouseButtonCallback_t(GLFWwindow* window, glfwMouseButtonCallback callback);
   #endregion
 
   #region setters
@@ -254,6 +266,10 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate int glfwGetKey_t(GLFWwindow* window, int key);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate int glfwGetMouseButton_t(GLFWwindow* window, int button);
+
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate GLFWvidmode* glfwGetVideoMode_t(GLFWmonitor* monitor);
   #endregion
@@ -333,7 +349,10 @@ public static unsafe class GLFW {
   private static readonly glfwSetFramebufferSizeCallback_t s_glfwSetFramebufferSizeCallback;
   private static readonly glfwSetCursorPosCallback_t s_glfwSetCursorPosCallback;
   private static readonly glfwSetKeyCallback_t s_glfwSetKeyCallback;
+  private static readonly glfwSetScrollCallback_t s_glfwSetScrollCallback;
+  private static readonly glfwSetMouseButtonCallback_t s_glfwSetMouseButtonCallback;
   private static readonly glfwGetKey_t s_glfwGetKey;
+  private static readonly glfwGetMouseButton_t s_glfwGetMouseButton;
 
   private static readonly glfwCreateCursor_t s_glfwCreateCursor;
   private static readonly glfwSetCursor_t s_glfwSetCursor;
@@ -374,6 +393,8 @@ public static unsafe class GLFW {
   public static glfwCursorPosCallback glfwSetCursorPosCallback(GLFWwindow* window, glfwCursorPosCallback callback) => s_glfwSetCursorPosCallback(window, callback);
   public static glfwKeyCallback glfwSetKeyCallback(GLFWwindow* window, glfwKeyCallback callback) => s_glfwSetKeyCallback(window, callback);
   public static glfwJoystickCallback glfwSetJoystickCallback(glfwJoystickCallback callback) => s_glfwSetJoystickCallback(callback);
+  public static glfwScrollCallback glfwSetScrollCallback(GLFWwindow* window, glfwScrollCallback callback) => s_glfwSetScrollCallback(window, callback);
+  public static glfwMouseButtonCallback glfwSetMouseButtonCallback(GLFWwindow* window, glfwMouseButtonCallback callback) => s_glfwSetMouseButtonCallback(window, callback);
 
   public static void glfwInitHint(InitHintBool hint, bool value) => s_glfwInitHint((int)hint, value ? GLFW_TRUE : GLFW_FALSE);
   public static void glfwMaximizeWindow(GLFWwindow* window) => s_glfwMaximizeWindow(window);
@@ -415,6 +436,7 @@ public static unsafe class GLFW {
   public static void* glfwGetWindowUserPointer(GLFWwindow* window) => s_glfwGetWindowUserPointer(window);
   public static void glfwSetWindowUserPointer(GLFWwindow* window, void* pointer) => s_glfwSetWindowUserPointer(window, pointer);
   public static int glfwGetKey(GLFWwindow* window, int key) => s_glfwGetKey(window, key);
+  public static int glfwGetMouseButton(GLFWwindow* window, int button) => s_glfwGetMouseButton(window, button);
 
   // gamepad support
   public static int glfwUpdateGamepadMappings(char* data) => s_glfwUpdateGamepadMappings(data);
@@ -465,8 +487,11 @@ public static unsafe class GLFW {
     s_glfwSetErrorCallback = LoadFunction<glfwSetErrorCallback_t>(nameof(glfwSetErrorCallback));
     s_glfwSetFramebufferSizeCallback = LoadFunction<glfwSetFramebufferSizeCallback_t>(nameof(glfwSetFramebufferSizeCallback));
     s_glfwSetCursorPosCallback = LoadFunction<glfwSetCursorPosCallback_t>(nameof(glfwSetCursorPosCallback));
+    s_glfwSetScrollCallback = LoadFunction<glfwSetScrollCallback_t>(nameof(glfwSetScrollCallback));
+    s_glfwSetMouseButtonCallback = LoadFunction<glfwSetMouseButtonCallback_t>(nameof(glfwSetMouseButtonCallback));
     s_glfwSetKeyCallback = LoadFunction<glfwSetKeyCallback_t>(nameof(glfwSetKeyCallback));
     s_glfwGetKey = LoadFunction<glfwGetKey_t>(nameof(glfwGetKey));
+    s_glfwGetMouseButton = LoadFunction<glfwGetMouseButton_t>(nameof(glfwGetMouseButton));
 
     s_glfwWindowHint = LoadFunction<glfwInitHint_t>(nameof(glfwWindowHint));
     s_glfwCreateWindow = LoadFunction<glfwCreateWindow_t>(nameof(glfwCreateWindow));

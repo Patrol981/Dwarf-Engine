@@ -14,7 +14,7 @@ using static Dwarf.Engine.Physics.JoltConfig;
 namespace Dwarf.Engine.Physics;
 public class PhysicsSystem : IDisposable {
   // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
-  public const float DeltaTime = 1.0f / 6000.0f;
+  public const float DeltaTime = 1.0f / 60.0f;
   public const int CollisionSteps = 1;
 
   private readonly TempAllocator _tempAllocator;
@@ -89,6 +89,9 @@ public class PhysicsSystem : IDisposable {
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
     _physicsSystem.OptimizeBroadPhase();
     _physicsSystem.Gravity *= -1;
+    // _physicsSystem.BodyInterface.SetGravityFactor(0.01);
+    // _physicsSystem.Gravity /= 25;
+    Logger.Info($"[GRAVITY] {_physicsSystem.Gravity}");
   }
 
   public void Init(Span<Entity> entities) {
@@ -99,7 +102,7 @@ public class PhysicsSystem : IDisposable {
 
   public void Tick(ReadOnlySpan<Entity> entities) {
     for (short i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Rigidbody>()?.Update(_physicsSystem.BodyInterface);
+      entities[i].GetComponent<Rigidbody>()?.Update();
     }
     _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
   }

@@ -67,6 +67,8 @@ public unsafe class Window : IDisposable {
     WindowState.s_Window = this;
     glfwSetFramebufferSizeCallback(_window, FrambufferResizedCallback);
     glfwSetCursorPosCallback(_window, MouseState.MouseCallback);
+    glfwSetScrollCallback(_window, MouseState.ScrollCallback);
+    glfwSetMouseButtonCallback(_window, MouseState.MouseButtonCallback);
     glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
 
     WindowState.CenterWindow();

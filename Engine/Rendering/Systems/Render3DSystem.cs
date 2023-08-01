@@ -85,8 +85,14 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
     int count = 0;
     for (int i = 0; i < entities.Length; i++) {
-      var targetModel = entities[i].GetComponent<Model>();
-      count += targetModel.MeshsesCount;
+      // var targetModel = entities[i].GetComponent<Model>();
+      // count += targetModel.MeshsesCount;
+      var targetItems = entities[i].GetDrawables<IRender3DElement>();
+      for (int j = 0; j < targetItems.Length; j++) {
+        var t = targetItems[j] as IRender3DElement;
+        count += t!.MeshsesCount;
+      }
+
     }
     return count;
   }
@@ -237,12 +243,18 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
+      var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+
       var modelUBO = new ModelUniformBufferObject();
       // modelUBO.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
       // modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
+      // modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
+      // modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
+      // modelUBO.UseLight = entities[i].GetComponent<Model>().UsesLight;
+
+      modelUBO.UseLight = targetEntity!.UsesLight;
+      modelUBO.UseTexture = targetEntity!.UsesTexture;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
-      modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
-      modelUBO.UseLight = entities[i].GetComponent<Model>().UsesLight;
 
       _modelBuffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
       _modelBuffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
@@ -257,7 +269,7 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
         _pipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
-        (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+        (uint)Unsafe.SizeOf<SimplePushConstantData>(),
         &pushConstantData
       );
 
@@ -274,17 +286,14 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
         );
       }
 
-      var entity = entities[i].GetComponent<Model>();
-
-      if (!entity.Owner!.CanBeDisposed) {
-        for (uint x = 0; x < entity.MeshsesCount; x++) {
-          if (!entity.FinishedInitialization) continue;
-          if (entity.UsesTexture) {
-            entity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+      if (!entities[i].CanBeDisposed) {
+        for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
+          if (!targetEntity.FinishedInitialization) continue;
+          if (targetEntity.UsesTexture) {
+            targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
           }
-          // entity.BindDescriptorSet(_textureSets[i][(int)x], frameInfo, ref _pipelineLayout);
-          entity.Bind(frameInfo.CommandBuffer, x);
-          entity.Draw(frameInfo.CommandBuffer, x);
+          targetEntity.Bind(frameInfo.CommandBuffer, x);
+          targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }
     }

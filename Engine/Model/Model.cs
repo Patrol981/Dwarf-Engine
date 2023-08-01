@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -13,7 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
-public class Model : Component, IDisposable {
+public class Model : Component, IRender3DElement {
   internal class ModelLoader {
     private readonly Model _model;
     private readonly int _index;
@@ -53,9 +54,6 @@ public class Model : Component, IDisposable {
     }
   }
 
-
-  public bool UsesLight = true;
-
   private readonly Device _device = null!;
 
   private Dwarf.Vulkan.Buffer[] _vertexBuffers = new Vulkan.Buffer[0];
@@ -70,6 +68,7 @@ public class Model : Component, IDisposable {
   private Mesh[] _meshes;
 
   private bool _finishedInitialization = false;
+  private bool _usesLight = true;
 
   public Model() { }
 
@@ -253,7 +252,18 @@ public class Model : Component, IDisposable {
   }
   public int MeshsesCount => _meshesCount;
   public Mesh[] Meshes => _meshes;
+  public float CalculateHeightOfAnModel() {
+    var height = 0.0f;
+    foreach (var m in _meshes) {
+      height += m.Height;
+    }
+    return height;
+  }
   public bool UsesTexture => _usesTexture;
+  public bool UsesLight {
+    get { return _usesLight; }
+    set { _usesLight = value; }
+  }
   public Guid GetTextureIdReference(int index = 0) {
     return _textureIdRefs[index];
   }

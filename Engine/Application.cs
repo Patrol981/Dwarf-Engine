@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Loaders;
+using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Engine.Rendering.UI.FontReader;
@@ -116,7 +117,7 @@ public class Application {
     }
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
-    _systems.GetRender3DSystem()?.SetupRenderData(Entity.Distinct<Model>(_entities).ToArray(), ref _textureManager);
+    _systems.GetRender3DSystem()?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(_entities).ToArray(), ref _textureManager);
     _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.GetRenderUISystem()?.SetupUIData(Entity.DistinctInterface<IUIElement>(_entities).ToArray(), ref _textureManager);
     _systems.GetPhysicsSystem()?.Init(_entities.ToArray());
@@ -322,10 +323,30 @@ public class Application {
   private void Cleanup() {
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Model>()?.Dispose();
+      // entities[i].GetComponent<Model>()?.Dispose();
       entities[i].GetComponent<Sprite>()?.Dispose();
-      var e = entities[i].GetDrawable<IUIElement>() as IUIElement;
-      e?.Dispose();
+      // var u = entities[i].GetDrawable<IUIElement>() as IUIElement;
+      // u?.Dispose();
+
+      var u = entities[i].GetDrawables<IDrawable>();
+      foreach (var e in u) {
+        var t = e as IDrawable;
+        t?.Dispose();
+      }
+
+      /*
+      var e3Ds = entities[i].GetDrawables<IRender3DElement>();
+      foreach (var e3D in e3Ds) {
+        var t = e3D as IRender3DElement;
+        t?.Dispose();
+      }
+
+      var d3Ds = entities[i].GetDrawables<IDebugRender3DObject>();
+      foreach (var d3D in d3Ds) {
+        var t = d3D as IDebugRender3DObject;
+        t?.Dispose();
+      }
+      */
     }
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
@@ -338,6 +359,18 @@ public class Application {
 
   private void Collect() {
     // Colect Models
+
+    for (short i = 0; i < _entities.Count; i++) {
+      if (_entities[i].CanBeDisposed) {
+        var drawables = _entities[i].GetDrawables<IDrawable>();
+        foreach (var drawable in drawables) {
+          var target = drawable as IDrawable;
+          target?.Dispose();
+        }
+        ApplicationState.Instance.RemoveEntity(_entities[i].EntityID);
+      }
+    }
+    /*
     var models = Entity.Distinct<Model>(_entities);
     for (int i = 0; i < models.Length; i++) {
       if (models[i].CanBeDisposed) {
@@ -345,6 +378,7 @@ public class Application {
         ApplicationState.Instance.RemoveEntity(models[i].EntityID);
       }
     }
+    */
   }
 
   public Device Device => _device;

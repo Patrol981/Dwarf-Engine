@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
@@ -41,5 +42,8 @@ public class SystemCreator {
     if (flags.HasFlag(SystemCreationFlags.Physics3D)) {
       systemCollection.SetPhysicsSystem(new Physics.PhysicsSystem());
     }
+
+    var debugConfig = new VertexDebugPipeline();
+    systemCollection.SetRenderDebugSystem((RenderDebugSystem)new RenderDebugSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), debugConfig));
   }
 }

@@ -1,5 +1,6 @@
 ﻿using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
+using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
@@ -13,6 +14,7 @@ public class SystemCollection : IDisposable {
   private Render3DSystem? _render3DSystem;
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
+  private RenderDebugSystem? _renderDebugSystem;
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
@@ -27,6 +29,8 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
 
     _physicsSystem?.Tick(entities);
+
+    _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
   }
 
   public void ValidateSystems(
@@ -38,7 +42,7 @@ public class SystemCollection : IDisposable {
     ref TextureManager textureManager
   ) {
     if (_render3DSystem != null) {
-      var modelEntities = Entity.Distinct<Model>(entities).ToArray();
+      var modelEntities = Entity.DistinctInterface<IRender3DElement>(entities).ToArray();
       var sizes = _render3DSystem.CheckSizes(modelEntities);
       var textures = _render3DSystem.CheckTextures(modelEntities);
       if (!sizes || !textures || Reload3DRenderSystem) {
@@ -98,7 +102,7 @@ public class SystemCollection : IDisposable {
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, ref TextureManager textureManager, Renderer renderer) {
     if (_render3DSystem != null) {
-      _render3DSystem.SetupRenderData(Entity.Distinct<Model>(entities).ToArray(), ref textureManager);
+      _render3DSystem.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
     }
 
     if (_render2DSystem != null) {
@@ -125,7 +129,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     ));
-    _render3DSystem?.SetupRenderData(Entity.Distinct<Model>(entities).ToArray(), ref textureManager);
+    _render3DSystem?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
   }
 
   public void Reload2DRenderer(
@@ -180,6 +184,10 @@ public class SystemCollection : IDisposable {
     _physicsSystem = physicsSystem;
   }
 
+  public void SetRenderDebugSystem(RenderDebugSystem debugSystem) {
+    _renderDebugSystem = debugSystem;
+  }
+
   public Render3DSystem GetRender3DSystem() {
     return _render3DSystem ?? null!;
   }
@@ -196,10 +204,15 @@ public class SystemCollection : IDisposable {
     return _physicsSystem ?? null!;
   }
 
+  public RenderDebugSystem GetRenderDebugSystem() {
+    return _renderDebugSystem ?? null!;
+  }
+
   public void Dispose() {
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
+    _renderDebugSystem?.Dispose();
   }
 }

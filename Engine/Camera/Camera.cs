@@ -19,6 +19,7 @@ public class Camera : Component {
   private Matrix4 _viewMatrix = Matrix4.Identity;
 
   protected Vector3 _front = -Vector3.UnitZ;
+  protected Vector3 _forward = -Vector3.UnitZ;
   protected Vector3 _up = -Vector3.UnitY;
   protected Vector3 _right = Vector3.UnitX;
 
@@ -121,6 +122,10 @@ public class Camera : Component {
     _front.Y = MathF.Sin(_pitch);
     _front.Z = MathF.Cos(_pitch) * MathF.Sin(_yaw);
 
+    _forward.X = MathF.Cos(_yaw);
+    _forward.Z = MathF.Sin(_yaw);
+
+    _forward = Vector3.Normalize(_forward);
     _front = Vector3.Normalize(_front);
 
     _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
@@ -138,6 +143,7 @@ public class Camera : Component {
   }
 
   public Vector3 Front => _front;
+  public Vector3 Forward => _forward;
   public Vector3 Right => _right;
   public Vector3 Up => _up;
   public CameraType CameraType => _cameraType;

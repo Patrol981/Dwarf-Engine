@@ -81,7 +81,7 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public void Draw(VkCommandBuffer commandBuffer) {
+  public void Draw(VkCommandBuffer commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -288,7 +288,7 @@ public class TextField : Component, IUIElement {
    );
   }
 
-  public unsafe void Bind(VkCommandBuffer commandBuffer) {
+  public unsafe void Bind(VkCommandBuffer commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)

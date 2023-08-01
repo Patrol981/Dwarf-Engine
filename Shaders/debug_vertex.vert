@@ -5,8 +5,8 @@ layout (location = 1) in vec3 color;
 layout (location = 2) in vec3 normal;
 layout (location = 3) in vec2 uv;
 
-layout (location = 0) out vec4 fragColor;
-layout (location = 1) out vec2 texCoord;
+layout (location = 0) out vec3 fragColor;
+layout (location = 1) out vec3 fragPositionWorld;
 
 layout (set = 0, binding = 0) uniform GlobalUbo {
   mat4 view;
@@ -15,17 +15,16 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 lightColor;
   vec4 ambientLightColor;
   vec3 cameraPosition;
-} globalUBO;
+} ubo;
 
 layout (push_constant) uniform Push {
   mat4 transform;
 } push;
 
 void main() {
-  // vec4 positionWorld = vec4(position.x, position.y, 0.0, 1.0);
-  vec4 initPosition = vec4(position, 1.0);
-  vec4 positionWorld = push.transform * initPosition;
-	gl_Position = globalUBO.projection * globalUBO.view * positionWorld;
-	texCoord = uv;
-	fragColor = vec4(color.xyz, 1.0);
+  vec4 positionWorld =  push.transform * vec4(position, 1.0);
+  gl_Position = ubo.projection * ubo.view * positionWorld;
+
+  fragPositionWorld = positionWorld.xyz;
+  fragColor = color;
 }

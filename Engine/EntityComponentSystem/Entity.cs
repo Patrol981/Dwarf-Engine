@@ -39,6 +39,22 @@ public class Entity {
     return null!;
   }
 
+  public Component[] GetDrawables<T>() where T : IDrawable {
+    var components = _componentManager.GetAllComponents();
+
+    var list = new List<Component>();
+
+    foreach (var component in components) {
+      var t = typeof(T).IsAssignableFrom(component.Key);
+      if (t) {
+        var value = component.Value;
+        list.Add(value);
+      }
+    }
+
+    return list.ToArray();
+  }
+
   public bool HasComponent<T>() where T : Component {
     return _componentManager.GetComponent<T>() != null;
   }

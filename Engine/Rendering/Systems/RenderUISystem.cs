@@ -158,7 +158,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
 
       // var uiComponent = entities[i].GetComponent<TextField>();
       // var test = Entity.DistinctInterface<IUIElement>(entities);
-      var uiComponent = entities[0].GetDrawable<IUIElement>() as IUIElement;
+      var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
       uiComponent?.BindDescriptorSet(_uiTextureDescriptorSets.GetAt(i), frameInfo, ref _pipelineLayout);
       uiComponent?.Bind(frameInfo.CommandBuffer);

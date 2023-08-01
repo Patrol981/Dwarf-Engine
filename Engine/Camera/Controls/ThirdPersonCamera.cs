@@ -80,12 +80,6 @@ public class ThirdPersonCamera : Component {
 
       if (WindowState.s_MouseCursorState != InputValue.GLFW_CURSOR_DISABLED) return;
 
-      // if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.))
-      var window = WindowState.s_Window.GLFWwindow;
-      if (glfwGetMouseButton(window, (int)MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_LEFT) == (int)MouseButtonMap.Action.GLFW_PRESS) {
-        Logger.Info("PRESS");
-      }
-
       CalculateZoom();
       CalculateAngle(deltaX);
       CalculatePitch(deltaY);

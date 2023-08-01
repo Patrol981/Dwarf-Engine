@@ -65,7 +65,7 @@ public class PhysicsSystem : IDisposable {
     // Create the settings for the collision volume (the shape). 
     // Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
     BoxShapeSettings floorShapeSettings = new(new System.Numerics.Vector3(100.0f, 1.0f, 100.0f));
-    BodyCreationSettings floorSettings = new(floorShapeSettings, new Double3(0.0f, -1.0f, 0.0f), Translator.OpenTKToSystemNumericsQuaternion(Quaternion.Identity), MotionType.Static, Layers.NonMoving);
+    BodyCreationSettings floorSettings = new(floorShapeSettings, new Double3(0.0f, 2.0f, 0.0f), Translator.OpenTKToSystemNumericsQuaternion(Quaternion.Identity), MotionType.Static, Layers.NonMoving);
 
     var floor = bodyInterface.CreateBody(floorSettings);
     bodyInterface.AddBody(floor, Activation.DontActivate);
@@ -77,7 +77,7 @@ public class PhysicsSystem : IDisposable {
     // (note that if we had used CreateBody then we could have set the velocity straight on the body before adding it to the physics system)
     // var vec3 = new Vector3(0.0f, -5.0f, 0.0f);
     // bodyInterface.SetLinearVelocity(sphereID, Translator.OpenTKToSystemNumericsVector(vec3));
-    JoltProgram.StackTest(bodyInterface);
+    // JoltProgram.StackTest(bodyInterface);
 
     // MeshShapeSettings meshShape = JoltProgram.CreateTorusMesh(3.0f, 1.0f);
     // BodyCreationSettings settings = new(meshShape, new Double3(0, 10, 0), OpenTKToSystemNumericsQuaternion(Quaternion.Identity), MotionType.Dynamic, Layers.Moving);
@@ -87,7 +87,7 @@ public class PhysicsSystem : IDisposable {
     // Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
     // You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
-    _physicsSystem.OptimizeBroadPhase();
+    // _physicsSystem.OptimizeBroadPhase();
     _physicsSystem.Gravity *= -1;
     // _physicsSystem.BodyInterface.SetGravityFactor(0.01);
     // _physicsSystem.Gravity /= 25;

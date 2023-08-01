@@ -40,7 +40,7 @@ public class GuiTexture : Component, IUIElement {
     CreateIndexBuffer(_mesh.Indices);
   }
 
-  public unsafe void Bind(VkCommandBuffer commandBuffer) {
+  public unsafe void Bind(VkCommandBuffer commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -73,7 +73,7 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public void Draw(VkCommandBuffer commandBuffer) {
+  public void Draw(VkCommandBuffer commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {

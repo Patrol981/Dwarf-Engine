@@ -9,7 +9,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 using Vortice.Vulkan;
 

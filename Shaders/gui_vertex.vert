@@ -21,11 +21,27 @@ layout (push_constant) uniform Push {
   mat4 transform;
 } push;
 
+vec2 positions[3] = vec2[](
+  vec2(0.0, -0.5),
+  vec2(0.5, 0.5),
+  vec2(-0.5, 0.5)
+);
+
 void main() {
   // vec4 positionWorld = vec4(position.x, position.y, 0.0, 1.0);
-  vec4 initPosition = vec4(position, 1.0);
+  vec4 initPosition = vec4(position.x, position.y, 0.0, 1.0);
   vec4 positionWorld = push.transform * initPosition;
-	gl_Position = globalUBO.projection * globalUBO.view * positionWorld;
+	// gl_Position = globalUBO.projection * globalUBO.view * positionWorld;
+  // gl_Position = globalUBO.projection * vec4(position.x, position.y, 0.0, 1.0);
+  // gl_Position = globalUBO.projection * push.transform * vec4(position.x, position.y, 0.0, 1.0);
+
+  // git gud
+  // gl_Position = globalUBO.projection * vec4(positions[gl_VertexIndex], -1.0, 1.0);
+  gl_Position = globalUBO.projection * push.transform * vec4(position.x, -position.y, -1.0, 1.0);
+
+  // gl_Position = push.transform * vec4(position, 1.0);
+  // gl_Position.y = -gl_Position.y;
+  // gl_Position = vec4(position.x, position.y, 0.0, 1.0);
 	texCoord = uv;
 	fragColor = vec4(color.xyz, 1.0);
 }

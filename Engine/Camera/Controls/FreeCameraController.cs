@@ -54,7 +54,7 @@ public class FreeCameraController : Component {
         Owner!.GetComponent<Camera>().Pitch += axes[3] * CameraState.GetSensitivity();
       }
 
-
+      /*
       if (axes[0] > 0.1) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
@@ -67,6 +67,7 @@ public class FreeCameraController : Component {
       if (axes[1] < -0.1) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
+      */
 
       // Logger.Info($"{buttonsCount}");
 
@@ -160,6 +161,7 @@ public class FreeCameraController : Component {
 
       // Console.WriteLine(Owner!.GetComponent<Camera>().Yaw);
 
+      /*
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
@@ -179,6 +181,7 @@ public class FreeCameraController : Component {
       if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_SPACE) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
+      */
 
       //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
       //WindowState.FocusOnWindow();

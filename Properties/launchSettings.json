@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Dwarf": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

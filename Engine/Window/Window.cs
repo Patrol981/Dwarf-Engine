@@ -154,4 +154,5 @@ public unsafe class Window : IDisposable {
   }
   public Vector2I Size => _windowSize;
   public GLFWwindow* GLFWwindow => _window;
+  public nint CursorHandle => _cursor;
 }

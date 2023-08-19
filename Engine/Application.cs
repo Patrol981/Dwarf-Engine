@@ -19,7 +19,7 @@ using Dwarf.Vulkan;
 using DwarfEngine.Engine.Rendering;
 using DwarfEngine.Engine.Rendering.UI;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 using Vortice.Vulkan;
 
@@ -124,9 +124,13 @@ public class Application {
 
     _onLoad?.Invoke();
 
+    ImGuiRenderer imgui = new(_device, this);
+    imgui.Init();
+
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
+      imgui.Update();
       Time.Tick();
 
       _systems.ValidateSystems(
@@ -194,6 +198,8 @@ public class Application {
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
+
+    imgui.Dispose();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
@@ -362,11 +368,15 @@ public class Application {
 
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
+        _entities[i].DisposeEverything();
+        /*
         var drawables = _entities[i].GetDrawables<IDrawable>();
         foreach (var drawable in drawables) {
           var target = drawable as IDrawable;
           target?.Dispose();
         }
+        */
+        //  _entities[i].GetComponent<Rigidbody>()?.Dispose();
         ApplicationState.Instance.RemoveEntity(_entities[i].EntityID);
       }
     }

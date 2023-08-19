@@ -55,6 +55,29 @@ public class Entity {
     return list.ToArray();
   }
 
+  public void DisposeEverything() {
+    var components = GetDisposables();
+    foreach (var comp in components) {
+      var target = comp as IDisposable;
+      target?.Dispose();
+    }
+  }
+
+  public Component[] GetDisposables() {
+    var components = _componentManager.GetAllComponents();
+    var list = new List<Component>();
+
+    foreach (var component in components) {
+      var t = typeof(IDisposable).IsAssignableFrom(component.Key);
+      if (t) {
+        var value = component.Value;
+        list.Add(value);
+      }
+    }
+
+    return list.ToArray();
+  }
+
   public bool HasComponent<T>() where T : Component {
     return _componentManager.GetComponent<T>() != null;
   }

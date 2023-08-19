@@ -41,6 +41,8 @@ public class Swapchain : IDisposable {
 
   private int _currentFrame = 0;
 
+  private UploadContext _uploadContext;
+
   public Swapchain(Device device, VkExtent2D extent) {
     _device = device;
     _extent = extent;
@@ -348,6 +350,10 @@ public class Swapchain : IDisposable {
     );
 
     return result;
+  }
+
+  public unsafe void ImmediateSubmit(VkCommandBuffer commandBuffer) {
+    throw new NotImplementedException();
   }
 
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {

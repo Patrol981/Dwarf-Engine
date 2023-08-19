@@ -61,7 +61,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       var targetEntity = entities[i].GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
 
       var pushConstant = new ColliderMeshPushConstant();
-      pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,

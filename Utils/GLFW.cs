@@ -272,6 +272,12 @@ public static unsafe class GLFW {
 
   [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
   private delegate GLFWvidmode* glfwGetVideoMode_t(GLFWmonitor* monitor);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate nint glfwGetWin32Window_t(GLFWwindow* window);
+
+  [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+  private delegate void glfwGetFramebufferSize_t(GLFWwindow* window, out int width, out int height);
   #endregion
 
   #region gamepad support
@@ -353,6 +359,9 @@ public static unsafe class GLFW {
   private static readonly glfwSetMouseButtonCallback_t s_glfwSetMouseButtonCallback;
   private static readonly glfwGetKey_t s_glfwGetKey;
   private static readonly glfwGetMouseButton_t s_glfwGetMouseButton;
+  private static readonly glfwGetFramebufferSize_t s_glfwGetFramebufferSize;
+
+  private static readonly glfwGetWin32Window_t s_glfwGetWin32Window;
 
   private static readonly glfwCreateCursor_t s_glfwCreateCursor;
   private static readonly glfwSetCursor_t s_glfwSetCursor;
@@ -437,6 +446,7 @@ public static unsafe class GLFW {
   public static void glfwSetWindowUserPointer(GLFWwindow* window, void* pointer) => s_glfwSetWindowUserPointer(window, pointer);
   public static int glfwGetKey(GLFWwindow* window, int key) => s_glfwGetKey(window, key);
   public static int glfwGetMouseButton(GLFWwindow* window, int button) => s_glfwGetMouseButton(window, button);
+  public static void glfwGetFramebufferSize(GLFWwindow* window, out int width, out int height) => s_glfwGetFramebufferSize(window, out width, out height);
 
   // gamepad support
   public static int glfwUpdateGamepadMappings(char* data) => s_glfwUpdateGamepadMappings(data);
@@ -447,6 +457,7 @@ public static unsafe class GLFW {
   public static float* glfwGetJoystickAxes(int jid, int* count) => s_glfwGetJoystickAxes(jid, count);
   public static char* glfwGetJoystickButtons(int jid, int* count) => s_glfwGetJoystickButtons(jid, count);
 
+  public static nint glfwGetWin32Window(GLFWwindow* window) => s_glfwGetWin32Window(window);
   public static GLFWmonitor* glfwGetPrimaryMonitor() => s_glfwGetPrimaryMonitor();
   public static GLFWvidmode* glfwGetVideoMode(GLFWmonitor* monitor) => s_glfwGetVideoMode(monitor);
   public static void glfwSetWindowPos(GLFWwindow* window, int xpos, int ypos) => s_glfwSetWindowPos(window, xpos, ypos);
@@ -499,6 +510,9 @@ public static unsafe class GLFW {
     s_glfwWindowShouldClose = LoadFunction<glfwWindowShouldClose_t>(nameof(glfwWindowShouldClose));
     s_glfwGetWindowSize = LoadFunction<glfwGetWindowSize_t>(nameof(glfwGetWindowSize));
     s_glfwShowWindow = LoadFunction<glfwShowWindow_t>(nameof(glfwShowWindow));
+    s_glfwGetFramebufferSize = LoadFunction<glfwGetFramebufferSize_t>(nameof(glfwGetFramebufferSize));
+
+    s_glfwGetWin32Window = LoadFunction<glfwGetWin32Window_t>(nameof(glfwGetWin32Window));
 
     s_glfwPollEvents = LoadFunction<glfwPollEvents_t>(nameof(glfwPollEvents));
     s_glfwWaitEvents = LoadFunction<glfwWaitEvents_t>(nameof(glfwWaitEvents));

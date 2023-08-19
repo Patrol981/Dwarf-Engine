@@ -1,9 +1,10 @@
-﻿using OpenTK.Mathematics;
+﻿using System.Numerics;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Loaders;
 using Dwarf.Extensions.GLFW;
 using static Vortice.Vulkan.Vulkan;
 using Dwarf.Extensions.Logging;
+using Dwarf.Engine.Physics;
 
 namespace Dwarf.Engine.Testing;
 public class PerformanceTester {
@@ -112,6 +113,9 @@ public class PerformanceTester {
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     en.GetComponent<Model>().UsesLight = false;
+    en.AddComponent(new Rigidbody(app.Device, PrimitiveType.Cylinder));
+    var bodyInterface = ApplicationState.Instance.GetSystems().GetPhysicsSystem().BodyInterface;
+    en.GetComponent<Rigidbody>().Init(bodyInterface);
     en.Name = "ComplexTest";
     app.AddEntity(en);
 

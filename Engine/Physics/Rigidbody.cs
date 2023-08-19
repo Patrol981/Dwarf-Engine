@@ -12,7 +12,7 @@ using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 using static Dwarf.Engine.Physics.JoltConfig;
 
@@ -23,7 +23,7 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private MotionQuality _motionQuality = MotionQuality.LinearCast;
+  private MotionQuality _motionQuality = MotionQuality.Discrete;
   private PrimitiveType _primitiveType = PrimitiveType.None;
 
   public Rigidbody() { }
@@ -39,7 +39,8 @@ public class Rigidbody : Component, IDisposable {
 
     _bodyInterface = bodyInterface;
 
-    var pos = Translator.OpenTKToSystemNumericsVector(Owner!.GetComponent<Transform>().Position);
+    // var pos = Translator.OpenTKToSystemNumericsVector(Owner!.GetComponent<Transform>().Position);
+    var pos = Owner!.GetComponent<Transform>().Position;
 
     var height = Owner!.GetComponent<Model>().CalculateHeightOfAnModel();
     Mesh mesh;
@@ -73,31 +74,39 @@ public class Rigidbody : Component, IDisposable {
 
   public void Update() {
 
-    var pos = _bodyInterface.GetCenterOfMassPosition(_bodyId);
+    // var pos = _bodyInterface.GetCenterOfMassPosition(_bodyId);
+    var pos = _bodyInterface.GetPosition(_bodyId);
+    var rot = _bodyInterface.GetRotation(_bodyId);
+
     var vec3 = new OpenTK.Mathematics.Vector3((float)pos.X, (float)pos.Y, (float)pos.Z);
-    Owner!.GetComponent<Transform>().Position = vec3;
+    var rotVec = Converter.QuaternionToEulerAngles(rot);
+
+    Owner!.GetComponent<Transform>().Position = pos;
+
+    // freeze rigidbody to X an Z axis
+    _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
+
+    // Logger.Info($"Quat {rot.ToString()}");
+    // Owner!.GetComponent<Transform>().Rotation = rotVec;
     // bodyInterface.MoveKinematic(_bodyId, )
     // Owner.GetComponent<Transform>().Position = _bodyId.
     // Logger.Info($"[ACTIVE] {_bodyInterface.IsActive(_bodyId)}");
     // _bodyInterface.ActivateBody(_bodyId);
   }
 
-  public void AddForce(OpenTK.Mathematics.Vector3 vec3) {
-    _bodyInterface.AddForce(_bodyId, Translator.OpenTKToSystemNumericsVector(vec3));
-    _bodyInterface.ActivateBody(_bodyId);
+  public void AddForce(Vector3 vec3) {
+    _bodyInterface.AddForce(_bodyId, vec3);
   }
 
-  public void AddVelocity(OpenTK.Mathematics.Vector3 vec3) {
-    _bodyInterface.AddLinearVelocity(_bodyId, Translator.OpenTKToSystemNumericsVector(vec3));
-    _bodyInterface.ActivateBody(_bodyId);
+  public void AddVelocity(Vector3 vec3) {
+    _bodyInterface.AddLinearVelocity(_bodyId, vec3);
   }
 
-  public void AddImpulse(OpenTK.Mathematics.Vector3 vec3) {
-    _bodyInterface.AddImpulse(_bodyId, Translator.OpenTKToSystemNumericsVector(vec3));
-    _bodyInterface.ActivateBody(_bodyId);
+  public void AddImpulse(Vector3 vec3) {
+    _bodyInterface.AddImpulse(_bodyId, vec3);
   }
 
-  public void Translate(OpenTK.Mathematics.Vector3 vec3) {
+  public void Translate(Vector3 vec3) {
     var pos = _bodyInterface.GetPosition(_bodyId);
     pos.X += vec3.X;
     pos.Y += vec3.Y;
@@ -111,6 +120,7 @@ public class Rigidbody : Component, IDisposable {
 
   public void Dispose() {
     _bodyInterface.DeactivateBody(_bodyId);
+    _bodyInterface.RemoveBody(_bodyId);
     _bodyInterface.DestroyBody(_bodyId);
   }
 }

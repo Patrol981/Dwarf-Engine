@@ -54,7 +54,7 @@ public unsafe static class DeviceHelper {
       if (result != VkResult.Success)
         return false;
       VkVersion version = vkEnumerateInstanceVersion();
-      if (version < VkVersion.Version_1_1)
+      if (version < VkVersion.Version_1_3)
         return false;
       return true;
     } catch {

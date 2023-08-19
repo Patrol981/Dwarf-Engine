@@ -1,10 +1,9 @@
 using System.Security.Cryptography;
 
-using Assimp;
-
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Math;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 namespace Dwarf.Engine;
 
@@ -15,8 +14,8 @@ public enum CameraType {
 }
 
 public class Camera : Component {
-  private Matrix4 _projectionMatrix = Matrix4.Identity;
-  private Matrix4 _viewMatrix = Matrix4.Identity;
+  private System.Numerics.Matrix4x4 _projectionMatrix = System.Numerics.Matrix4x4.Identity;
+  private System.Numerics.Matrix4x4 _viewMatrix = System.Numerics.Matrix4x4.Identity;
 
   protected Vector3 _front = -Vector3.UnitZ;
   protected Vector3 _forward = -Vector3.UnitZ;
@@ -26,8 +25,8 @@ public class Camera : Component {
   protected CameraType _cameraType = CameraType.None;
 
   internal float _pitch = 0f;
-  internal float _yaw = -MathHelper.PiOver2; // Without this, you would be started rotated 90 degrees right.
-  internal float _fov = MathHelper.PiOver2;
+  internal float _yaw = -MathF.PI; // Without this, you would be started rotated 90 degrees right.
+  internal float _fov = -MathF.PI;
   internal float _aspect = 1;
 
   public Camera() { }
@@ -44,6 +43,7 @@ public class Camera : Component {
   }
   */
 
+  /*
   public void SetOrthograpicProjection(float near, float far) {
     float scale = 3f;
     _projectionMatrix = Matrix4.CreateOrthographicOffCenter(
@@ -56,13 +56,14 @@ public class Camera : Component {
     );
     _cameraType = CameraType.Orthographic;
   }
+  */
 
   public void SetOrthograpicProjection() {
     SetOrthograpicProjection(_aspect, -_aspect, -1, 1, 0.1f, 100f);
   }
 
   public void SetOrthograpicProjection(float left, float right, float top, float bottom, float near, float far) {
-    _projectionMatrix = Matrix4.Identity;
+    _projectionMatrix = System.Numerics.Matrix4x4.Identity;
     _projectionMatrix[0, 0] = 2.0f / (right - left);
     _projectionMatrix[1, 1] = 2.0f / (bottom - top);
     _projectionMatrix[2, 2] = 1.0f / (far - near);
@@ -74,46 +75,87 @@ public class Camera : Component {
   }
 
   public void SetPerspectiveProjection(float near, float far) {
-    _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), _aspect, near, far);
+    // _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(MathHelper.DegreesToRadians(_fov), _aspect, near, far);
+    _projectionMatrix = System.Numerics.Matrix4x4.CreatePerspectiveFieldOfView(
+      Converter.DegreesToRadians(_fov),
+      _aspect,
+      near,
+      far
+    );
+
+    // _projectionMatrix[1, 1] = -_projectionMatrix[1, 1];
+
+    /*
+    float tanHalfFovy = MathF.Tan(MathHelper.DegreesToRadians(_fov) / 2.0f);
+    _projectionMatrix = Matrix4.Zero;
+    _projectionMatrix[0, 0] = 1.0f / (_aspect * tanHalfFovy);
+    _projectionMatrix[1, 1] = 1.0f / (tanHalfFovy);
+    _projectionMatrix[2, 2] = far / (far - near);
+    _projectionMatrix[2, 2] = 1.0f;
+    _projectionMatrix[3, 2] = -(far * near) / (far - near);
+    */
+
     _cameraType = CameraType.Perspective;
   }
 
-  public Matrix4 GetProjectionMatrix() {
+  public System.Numerics.Matrix4x4 GetProjectionMatrix() {
     return _projectionMatrix;
   }
 
-  public Matrix4 GetViewMatrix() {
+  public Matrix4x4 GetProjectionMatrix2D() {
+    float tanHalfFovy = (float)MathF.Tan(_fov / 2.0f);
+    var projectionMatrix = new Matrix4x4();
+    projectionMatrix[0, 0] = 1.0f / (_aspect * tanHalfFovy);
+    projectionMatrix[1, 1] = 1.0f / (tanHalfFovy);
+    projectionMatrix[2, 2] = 100.0f / (100.0f - 0.01f);
+    projectionMatrix[2, 3] = 1.0f;
+    projectionMatrix[3, 2] = -(100.0f * 0.01f) / (100.0f - 0.01f);
+    return projectionMatrix;
+  }
+
+  public System.Numerics.Matrix4x4 GetViewMatrix() {
     Vector3 position = Owner!.GetComponent<Transform>().Position;
-    _viewMatrix = Matrix4.Identity;
-    _viewMatrix = Matrix4.LookAt(position, position + _front, _up);
+    // var pos = Translator.OpenTKToSystemNumericsVector(position);
+    // var front = Translator.OpenTKToSystemNumericsVector(_front);
+    // var up = Translator.OpenTKToSystemNumericsVector(_up);
+
+    // _viewMatrix = Matrix4.LookAt(position, position + _front, _up);
+    _viewMatrix = System.Numerics.Matrix4x4.CreateLookAt(position, position + _front, _up);
+
+    // float g = 1.0f / tan(fovy_rads * 0.5);
+    // float k = far / (far - near);
+    // _viewMatrix = Matrix4.Zero;
+    // _viewMatrix.Row0 = new();
     return _viewMatrix;
   }
 
+  /*
   public Matrix4 GetMVP(Matrix4 modelMatrix) {
     return modelMatrix * GetViewMatrix() * GetProjectionMatrix();
   }
+  */
 
   public float Pitch {
-    get => MathHelper.RadiansToDegrees(_pitch);
+    get => Converter.RadiansToDegrees(_pitch);
     set {
-      var angle = MathHelper.Clamp(value, -89f, 89f);
-      _pitch = MathHelper.DegreesToRadians(angle);
+      var angle = System.Math.Clamp(value, -89f, 89f);
+      _pitch = Converter.DegreesToRadians(angle);
       UpdateVectors();
     }
   }
 
   public float Yaw {
-    get => MathHelper.RadiansToDegrees(_yaw);
+    get => Converter.RadiansToDegrees(_yaw);
     set {
-      _yaw = MathHelper.DegreesToRadians(value);
+      _yaw = Converter.DegreesToRadians(value);
       UpdateVectors();
     }
   }
   public float Fov {
-    get => MathHelper.RadiansToDegrees(_fov);
+    get => Converter.RadiansToDegrees(_fov);
     set {
-      var angle = MathHelper.Clamp(value, 1f, 45f);
-      _fov = MathHelper.DegreesToRadians(angle);
+      var angle = System.Math.Clamp(value, 1f, 45f);
+      _fov = Converter.DegreesToRadians(angle);
     }
   }
 

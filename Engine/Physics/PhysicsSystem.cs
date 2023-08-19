@@ -102,6 +102,7 @@ public class PhysicsSystem : IDisposable {
 
   public void Tick(ReadOnlySpan<Entity> entities) {
     for (short i = 0; i < entities.Length; i++) {
+      if (entities[i].CanBeDisposed) continue;
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
     _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);

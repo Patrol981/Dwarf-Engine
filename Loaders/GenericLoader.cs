@@ -7,7 +7,7 @@ using Dwarf.Engine;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 namespace Dwarf.Engine.Loaders;
 
@@ -33,7 +33,7 @@ public class GenericLoader {
           var vertex = new Vertex();
 
           if (hasColors) {
-            Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
+            OpenTK.Mathematics.Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
             vertex.Color = new Vector3(vertColor.R, vertColor.G, vertColor.B);
           } else {
             vertex.Color = new Vector3(0.99f, 0.99f, 0.99f);
@@ -47,7 +47,8 @@ public class GenericLoader {
           if (hasTexCoords) {
             Vector3 uvw = FromVector(aMesh.TextureCoordinateChannels[0][(int)indice]);
             uvw.Y = 1.0f - uvw.Y;
-            vertex.Uv = uvw.Xy;
+            vertex.Uv = new(uvw.X, uvw.Y);
+            // vertex.Uv = uvw.Xy;
           }
 
           vertex.Position = FromVector(aMesh.Vertices[(int)indice]);
@@ -137,7 +138,7 @@ public class GenericLoader {
             bool hasTexCoords = aMesh.HasTextureCoords(0);
 
             if (hasColors) {
-              Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
+              OpenTK.Mathematics.Color4 vertColor = FromColor(aMesh.VertexColorChannels[0][(int)indice]);
               vertex.Color = new Vector3(vertColor.R, vertColor.G, vertColor.B);
             } else {
               vertex.Color = new Vector3(0.99f, 0.99f, 0.99f);
@@ -151,7 +152,8 @@ public class GenericLoader {
             if (hasTexCoords) {
               Vector3 uvw = FromVector(aMesh.TextureCoordinateChannels[0][(int)indice]);
               uvw.Y = 1.0f - uvw.Y;
-              vertex.Uv = uvw.Xy;
+              vertex.Uv = new(uvw.X, uvw.Y);
+              // vertex.Uv = uvw.Xy;
             }
             Vector3 pos = FromVector(aMesh.Vertices[(int)indice]);
             vertex.Position = pos;
@@ -217,8 +219,8 @@ public class GenericLoader {
     return v;
   }
 
-  private Color4 FromColor(Color4D color) {
-    Color4 c;
+  private OpenTK.Mathematics.Color4 FromColor(Color4D color) {
+    OpenTK.Mathematics.Color4 c;
     c.R = color.R;
     c.G = color.G;
     c.B = color.B;

@@ -8,7 +8,7 @@ using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 using Vortice.Vulkan;
 
@@ -77,7 +77,8 @@ public class TextField : Component, IUIElement {
     if (_textMesh.Indices.Length > 0) _hasIndexBuffer = true;
 
 
-    _startPos = Owner!.GetComponent<Transform>().Position.Xy;
+    var pos = Owner!.GetComponent<Transform>().Position;
+    _startPos = new(pos.X, pos.Y);
     _startPosUpdated = _startPos;
   }
 

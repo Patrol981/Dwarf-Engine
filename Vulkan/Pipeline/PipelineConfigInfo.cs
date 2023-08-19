@@ -89,7 +89,7 @@ public class PipelineConfigInfo {
     configInfo.DepthStencilInfo.depthWriteEnable = true;
     configInfo.DepthStencilInfo.depthCompareOp = VkCompareOp.Less;
     configInfo.DepthStencilInfo.depthBoundsTestEnable = false;
-    configInfo.DepthStencilInfo.minDepthBounds = 0.0f;  // Optional
+    configInfo.DepthStencilInfo.minDepthBounds = -1.0f;  // Optional
     configInfo.DepthStencilInfo.maxDepthBounds = 1.0f;  // Optional
     configInfo.DepthStencilInfo.stencilTestEnable = false;
     configInfo.DepthStencilInfo.front = new();  // Optional

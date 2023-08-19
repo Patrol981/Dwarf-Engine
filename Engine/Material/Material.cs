@@ -1,5 +1,6 @@
 using Dwarf.Engine.EntityComponentSystem;
-using OpenTK.Mathematics;
+
+using System.Numerics;
 
 namespace Dwarf.Engine;
 

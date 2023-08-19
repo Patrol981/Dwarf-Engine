@@ -13,7 +13,7 @@ using Dwarf.Engine.Loaders;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-using OpenTK.Mathematics;
+using System.Numerics;
 
 namespace DwarfEngine.AssetSystem;
 public class AssetLoader {

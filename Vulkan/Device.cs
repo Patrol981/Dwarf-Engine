@@ -191,7 +191,7 @@ public class Device : IDisposable {
     // appInfo.sType = VkStructureType.ApplicationInfo;
     appInfo.pApplicationName = new VkString("Dwarf App");
     appInfo.applicationVersion = new(1, 0, 0);
-    appInfo.pEngineName = new VkString("No Engine");
+    appInfo.pEngineName = new VkString("Dwarf Engine");
     appInfo.engineVersion = new(1, 0, 0);
     appInfo.apiVersion = VkVersion.Version_1_3;
 
@@ -212,6 +212,7 @@ public class Device : IDisposable {
         instanceExtensions.Add(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
       }
     }
+    // instanceExtensions.Add(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
 
     if (s_EnableValidationLayers) {
       DeviceHelper.GetOptimalValidationLayers(availableInstanceLayers, instanceLayers);
@@ -381,4 +382,5 @@ public class Device : IDisposable {
   public VkPhysicalDevice PhysicalDevice => _physicalDevice;
   public VkSurfaceKHR Surface => _surface;
   public VkCommandPool CommandPool => _commandPool;
+  public VkInstance VkInstance => _vkInstance;
 }

@@ -6,5 +6,5 @@ namespace Dwarf.Engine;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct UIUniformObject {
-  [FieldOffset(0)] public Matrix4 UIMatrix;
+  [FieldOffset(0)] public System.Numerics.Matrix4x4 UIMatrix;
 }

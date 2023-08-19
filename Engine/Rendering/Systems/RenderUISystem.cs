@@ -146,6 +146,10 @@ public class RenderUISystem : SystemBase, IRenderSystem {
       var uiPushConstant = new UIUniformObject();
       // uiPushConstant.UIColor = (Vector3)(entities[i].GetComponent<Material>()?.GetColor());
       uiPushConstant.UIMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      var proj = CameraState.GetCamera().GetProjectionMatrix2D();
+      var transform = entities[i].GetComponent<Transform>().GetMatrix2D();
+      var proj3D = CameraState.GetCamera().GetProjectionMatrix();
+      // uiPushConstant.UIMatrix = proj * transform;
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,

@@ -113,11 +113,11 @@ public unsafe class Buffer : IDisposable {
 
   public void WriteToBuffer(IntPtr data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     if (size == VK_WHOLE_SIZE) {
-      Utils.MemCopy((IntPtr)_mapped, data, (int)_bufferSize);
+      VkUtils.MemCopy((IntPtr)_mapped, data, (int)_bufferSize);
     } else {
       char* memOffset = (char*)_mapped;
       memOffset += offset;
-      Utils.MemCopy((IntPtr)memOffset, data, (int)size);
+      VkUtils.MemCopy((IntPtr)memOffset, data, (int)size);
     }
   }
 

@@ -33,7 +33,7 @@ public sealed class KeyboardState {
     }
     ApplicationState.Instance.GetSystems().Reload3DRenderSystem = true;
     ApplicationState.Instance.GetSystems().Reload2DRenderSystem = true;
-    ApplicationState.Instance.GetSystems().ReloadUISystem = true;
+    // ApplicationState.Instance.GetSystems().ReloadUISystem = true;
   }
 
   public KeyboardState GetInstance() {

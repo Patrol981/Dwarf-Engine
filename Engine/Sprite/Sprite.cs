@@ -256,7 +256,7 @@ public class Sprite : Component, IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new Vulkan.Buffer(
       _device,
@@ -285,7 +285,7 @@ public class Sprite : Component, IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffer = new Vulkan.Buffer(

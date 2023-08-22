@@ -69,7 +69,7 @@ public class Texture : IDisposable {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(img.Data), (ulong)size);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(img.Data), (ulong)size);
     stagingBuffer.Unmap();
 
     /*

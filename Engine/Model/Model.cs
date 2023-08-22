@@ -194,7 +194,7 @@ public class Model : Component, IRender3DElement {
     // _device._mutex.WaitOne();
     // vkDeviceWaitIdle(_device.LogicalDevice);
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
     // _device._mutex.ReleaseMutex();
 
     _vertexBuffers[index] = new Vulkan.Buffer(
@@ -226,7 +226,7 @@ public class Model : Component, IRender3DElement {
 
     // vkDeviceWaitIdle(_device.LogicalDevice);
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffers[index] = new Vulkan.Buffer(

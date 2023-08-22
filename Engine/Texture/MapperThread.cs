@@ -1,4 +1,5 @@
 using Dwarf.Vulkan;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine;
@@ -26,7 +27,7 @@ public class MapperThread {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(_data), (ulong)size);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(_data), (ulong)size);
     stagingBuffer.Unmap();
   }
 }

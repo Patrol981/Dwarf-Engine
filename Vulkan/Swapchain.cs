@@ -78,7 +78,7 @@ public class Swapchain : IDisposable {
   }
 
   private unsafe void CreateSwapChain() {
-    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
 
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
@@ -155,7 +155,7 @@ public class Swapchain : IDisposable {
     ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
     _swapChainImageViews = new VkImageView[swapChainImages.Length];
 
-    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
     var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
@@ -174,7 +174,7 @@ public class Swapchain : IDisposable {
   }
 
   private unsafe void CreateRenderPass() {
-    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
 
@@ -507,7 +507,7 @@ public class Swapchain : IDisposable {
   }
 
   private uint GetImageCount() {
-    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
     uint imageCount = swapChainSupport.Capabilities.minImageCount + 1;
     if (swapChainSupport.Capabilities.maxImageCount > 0 &&
         imageCount > swapChainSupport.Capabilities.maxImageCount) {

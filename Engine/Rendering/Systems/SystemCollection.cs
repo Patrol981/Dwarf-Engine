@@ -26,11 +26,11 @@ public class SystemCollection : IDisposable {
   public void UpdateSystems(ReadOnlySpan<Entity> entities, FrameInfo frameInfo) {
     _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-    _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
+    _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
 
     _physicsSystem?.Tick(entities);
 
-    _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+    _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
   }
 
   public void ValidateSystems(

@@ -14,6 +14,7 @@ using System.Numerics;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
+using StbImageSharp;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
@@ -27,6 +28,8 @@ public class GuiTexture : Component, IUIElement {
   private ulong _indexCount = 0;
   private Guid _textureIdRef = Guid.Empty;
   private bool _usesTexture = false;
+
+  private Vector2 _baseTextureSize = Vector2.Zero;
 
   public GuiTexture() { }
 
@@ -103,10 +106,24 @@ public class GuiTexture : Component, IUIElement {
 
     if (_textureIdRef != Guid.Empty) {
       _usesTexture = true;
+      if (useLocalPath) {
+        GetTextureSize($"./Textures/{texturePath}");
+      } else {
+        GetTextureSize(texturePath);
+      }
 
     } else {
       Logger.Warn($"Could not bind texture to GuiTexture ({texturePath}) - no such texture in manager");
     }
+  }
+
+  private void GetTextureSize(string texturePath) {
+    using var stream = File.OpenRead(texturePath);
+    var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+
+    _baseTextureSize = new(image.Width, image.Height);
+
+    stream.Dispose();
   }
 
   private void RecreateBuffers() {
@@ -163,7 +180,7 @@ public class GuiTexture : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new Vulkan.Buffer(
       _device,
@@ -192,7 +209,7 @@ public class GuiTexture : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffer = new Vulkan.Buffer(

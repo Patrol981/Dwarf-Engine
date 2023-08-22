@@ -220,7 +220,7 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new Dwarf.Vulkan.Buffer(
       _device,
@@ -250,7 +250,7 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(Utils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
     _indexBuffer = new Dwarf.Vulkan.Buffer(

@@ -1,3 +1,6 @@
+using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering;
+
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine.Math;
@@ -11,6 +14,13 @@ public static class Converter {
   public static float RadiansToDegrees(float rad) {
     float deg = (180 / MathF.PI) * rad;
     return deg;
+  }
+
+  public static Vector2 GetScreenSpaceCoords(Entity entity) {
+    var transform = entity.GetComponent<Transform>();
+    var mat = transform.Matrix4;
+    return new Vector2(0, 0);
+    // return transform.Matrix4;
   }
 
   public static OpenTK.Mathematics.Vector3 QuaternionToEulerAngles(System.Numerics.Quaternion quat) {

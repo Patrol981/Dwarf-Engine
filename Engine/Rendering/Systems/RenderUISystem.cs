@@ -146,9 +146,9 @@ public class RenderUISystem : SystemBase, IRenderSystem {
       var uiPushConstant = new UIUniformObject();
       // uiPushConstant.UIColor = (Vector3)(entities[i].GetComponent<Material>()?.GetColor());
       uiPushConstant.UIMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      var proj = CameraState.GetCamera().GetProjectionMatrix2D();
-      var transform = entities[i].GetComponent<Transform>().GetMatrix2D();
-      var proj3D = CameraState.GetCamera().GetProjectionMatrix();
+      // var proj = CameraState.GetCamera().GetProjectionMatrix2D();
+      // var transform = entities[i].GetComponent<Transform>().GetMatrix2D();
+      // var proj3D = CameraState.GetCamera().GetProjectionMatrix();
       // uiPushConstant.UIMatrix = proj * transform;
 
       vkCmdPushConstants(
@@ -209,7 +209,8 @@ public class RenderUISystem : SystemBase, IRenderSystem {
   private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
     if (_configInfo == null) {
-      _configInfo = new PipelineConfigInfo();
+      _configInfo = new UIPipeline();
+      Logger.Info("CONFIG CONFIGURED");
     }
     var pipelineConfig = _configInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;

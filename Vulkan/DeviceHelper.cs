@@ -169,7 +169,7 @@ public unsafe static class DeviceHelper {
     if (checkQueueFamilies.presentFamily == VK_QUEUE_FAMILY_IGNORED)
       return false;
 
-    SwapChainSupportDetails swapChainSupport = Utils.QuerySwapChainSupport(physicalDevice, surface);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(physicalDevice, surface);
     return !swapChainSupport.Formats.IsEmpty && !swapChainSupport.PresentModes.IsEmpty;
   }
 

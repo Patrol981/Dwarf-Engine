@@ -10,7 +10,7 @@ public ref struct SwapChainSupportDetails {
   public ReadOnlySpan<VkSurfaceFormatKHR> Formats;
   public ReadOnlySpan<VkPresentModeKHR> PresentModes;
 }
-public static class Utils {
+public static class VkUtils {
   public static unsafe void MemCopy(nint destination, nint source, int byteCount) =>
     Unsafe.CopyBlockUnaligned((void*)destination, (void*)source, (uint)byteCount);
 

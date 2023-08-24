@@ -16,6 +16,9 @@ public class SystemCollection : IDisposable {
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
 
+  // TODO : More canvases in the future?
+  private Canvas? _canvas = null;
+
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
 
@@ -30,7 +33,7 @@ public class SystemCollection : IDisposable {
 
     _physicsSystem?.Tick(entities);
 
-    _renderUISystem?.DrawUI(frameInfo, Entity.DistinctInterface<IUIElement>(entities).ToArray());
+    _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
   }
 
   public void ValidateSystems(
@@ -63,12 +66,13 @@ public class SystemCollection : IDisposable {
 
     if (_renderUISystem != null) {
       // var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
-      var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
-      var sizes = _renderUISystem.CheckSizes(uiEntities);
-      var textures = _renderUISystem.CheckTextures(uiEntities);
+      // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
+      var canvasEntities = _canvas!.GetUI();
+      var sizes = _renderUISystem.CheckSizes(canvasEntities);
+      var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {
         ReloadUISystem = false;
-        ReloadUIRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
+        ReloadUIRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo);
       }
     }
   }
@@ -79,6 +83,7 @@ public class SystemCollection : IDisposable {
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
     ReadOnlySpan<Entity> entities,
+    Canvas canvas,
     ref TextureManager textureManager
   ) {
 
@@ -97,10 +102,10 @@ public class SystemCollection : IDisposable {
       _renderUISystem = new RenderUISystem(device, renderer, globalLayout, pipelineConfigInfo);
     }
 
-    SetupRenderDatas(entities, ref textureManager, renderer);
+    SetupRenderDatas(entities, canvas, ref textureManager, renderer);
   }
 
-  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, ref TextureManager textureManager, Renderer renderer) {
+  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
     if (_render3DSystem != null) {
       _render3DSystem.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
     }
@@ -110,7 +115,7 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      _renderUISystem.SetupUIData(Entity.DistinctInterface<IUIElement>(entities).ToArray(), ref textureManager);
+      _renderUISystem.SetupUIData(canvas, ref textureManager);
     }
   }
 
@@ -123,12 +128,12 @@ public class SystemCollection : IDisposable {
     ReadOnlySpan<Entity> entities
   ) {
     _render3DSystem?.Dispose();
-    SetRender3DSystem((Render3DSystem)new Render3DSystem().Create(
+    _render3DSystem = new Render3DSystem(
       device,
       renderer,
       globalLayout,
       pipelineConfig
-    ));
+    );
     _render3DSystem?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
   }
 
@@ -141,12 +146,12 @@ public class SystemCollection : IDisposable {
     ReadOnlySpan<Entity> entities
   ) {
     _render2DSystem?.Dispose();
-    SetRender2DSystem((Render2DSystem)new Render2DSystem().Create(
+    _render2DSystem = new Render2DSystem(
       device,
       renderer,
       globalLayout,
       pipelineConfig
-    ));
+    );
     _render2DSystem?.Setup(Entity.Distinct<Sprite>(entities).ToArray(), ref textureManager);
   }
 
@@ -155,62 +160,52 @@ public class SystemCollection : IDisposable {
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
-    PipelineConfigInfo pipelineConfig,
-    ReadOnlySpan<Entity> entities
+    PipelineConfigInfo pipelineConfig
   ) {
     _renderUISystem?.Dispose();
-    SetRenderUISystem((RenderUISystem)new RenderUISystem().Create(
+    _renderUISystem = new RenderUISystem(
       device,
       renderer,
       globalLayout,
       pipelineConfig
-    ));
-    _renderUISystem?.SetupUIData(Entity.DistinctInterface<IUIElement>(entities).ToArray(), ref textureManager);
+    );
+    _renderUISystem?.SetupUIData(_canvas ?? throw new Exception("Canvas cannot be null"), ref textureManager);
   }
 
-  public void SetRender3DSystem(Render3DSystem render3DSystem) {
-    _render3DSystem = render3DSystem;
+  public Render3DSystem Render3DSystem {
+    get { return _render3DSystem ?? null!; }
+    set { _render3DSystem = value; }
   }
 
-  public void SetRender2DSystem(Render2DSystem render2DSystem) {
-    _render2DSystem = render2DSystem;
+  public Render2DSystem Render2DSystem {
+    get { return _render2DSystem ?? null!; }
+    set { _render2DSystem = value; }
   }
 
-  public void SetRenderUISystem(RenderUISystem renderUISystem) {
-    _renderUISystem = renderUISystem;
+  public RenderUISystem RenderUISystem {
+    get { return _renderUISystem ?? null!; }
+    set { _renderUISystem = value; }
   }
 
-  public void SetPhysicsSystem(PhysicsSystem physicsSystem) {
-    _physicsSystem = physicsSystem;
+  public PhysicsSystem PhysicsSystem {
+    get { return _physicsSystem ?? null!; }
+    set { _physicsSystem = value; }
   }
 
-  public void SetRenderDebugSystem(RenderDebugSystem debugSystem) {
-    _renderDebugSystem = debugSystem;
+  public RenderDebugSystem RenderDebugSystem {
+    get { return _renderDebugSystem ?? null!; }
+    set { _renderDebugSystem = value; }
   }
 
-  public Render3DSystem GetRender3DSystem() {
-    return _render3DSystem ?? null!;
-  }
-
-  public Render2DSystem GetRender2DSystem() {
-    return _render2DSystem ?? null!;
-  }
-
-  public RenderUISystem GetRenderUISystem() {
-    return _renderUISystem ?? null!;
-  }
-
-  public PhysicsSystem GetPhysicsSystem() {
-    return _physicsSystem ?? null!;
-  }
-
-  public RenderDebugSystem GetRenderDebugSystem() {
-    return _renderDebugSystem ?? null!;
+  public Canvas Canvas {
+    get { return _canvas ?? null!; }
+    set { _canvas = value; }
   }
 
   public void Dispose() {
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
+    _canvas?.Dispose();
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();

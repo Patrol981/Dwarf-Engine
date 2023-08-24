@@ -23,6 +23,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   private bool _finishedInitialization = false;
   private bool _hasIndexBuffer = false;
 
+  private bool _enabled = true;
+
   public ColliderMesh() { }
 
   public ColliderMesh(Device device, Mesh mesh) {
@@ -147,4 +149,12 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   public bool FinishedInitialization => _finishedInitialization;
 
   public Mesh Mesh => _mesh;
+
+  public bool Enabled => _enabled;
+  public void Enable() {
+    _enabled = true;
+  }
+  public void Disable() {
+    _enabled = false;
+  }
 }

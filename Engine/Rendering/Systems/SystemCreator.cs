@@ -30,20 +30,20 @@ public class SystemCreator {
     PipelineConfigInfo configInfo = null!
   ) {
     if (flags.HasFlag(SystemCreationFlags.RendererUI)) {
-      systemCollection.SetRenderUISystem((RenderUISystem)new RenderUISystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
+      systemCollection.RenderUISystem = new RenderUISystem(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
     }
     if (flags.HasFlag(SystemCreationFlags.Renderer3D)) {
-      systemCollection.SetRender3DSystem((Render3DSystem)new Render3DSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
+      systemCollection.Render3DSystem = new Render3DSystem(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
     }
     if (flags.HasFlag(SystemCreationFlags.Renderer2D)) {
-      systemCollection.SetRender2DSystem((Render2DSystem)new Render2DSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo));
+      systemCollection.Render2DSystem = new Render2DSystem(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
     }
 
     if (flags.HasFlag(SystemCreationFlags.Physics3D)) {
-      systemCollection.SetPhysicsSystem(new Physics.PhysicsSystem());
+      systemCollection.PhysicsSystem = (new Physics.PhysicsSystem());
     }
 
     var debugConfig = new VertexDebugPipeline();
-    systemCollection.SetRenderDebugSystem((RenderDebugSystem)new RenderDebugSystem().Create(device, renderer, globalSetLayout.GetDescriptorSetLayout(), debugConfig));
+    systemCollection.RenderDebugSystem = new RenderDebugSystem(device, renderer, globalSetLayout.GetDescriptorSetLayout(), debugConfig);
   }
 }

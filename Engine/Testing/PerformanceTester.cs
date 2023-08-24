@@ -114,7 +114,7 @@ public class PerformanceTester {
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     en.GetComponent<Model>().UsesLight = false;
     en.AddComponent(new Rigidbody(app.Device, PrimitiveType.Cylinder));
-    var bodyInterface = ApplicationState.Instance.GetSystems().GetPhysicsSystem().BodyInterface;
+    var bodyInterface = ApplicationState.Instance.GetSystems().PhysicsSystem.BodyInterface;
     en.GetComponent<Rigidbody>().Init(bodyInterface);
     en.Name = "ComplexTest";
     app.AddEntity(en);

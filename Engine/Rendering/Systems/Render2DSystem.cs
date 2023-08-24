@@ -18,34 +18,14 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 public class Render2DSystem : SystemBase, IRenderSystem {
-  private readonly Device _device = null!;
-  private readonly Renderer _renderer = null!;
-  private PipelineConfigInfo _configInfo = null!;
-  private Pipeline _pipeline = null!;
-  private VkPipelineLayout _pipelineLayout;
-
-  private Vulkan.Buffer[] _spriteBuffer = new Vulkan.Buffer[0];
-  private DescriptorPool _pool = null!;
-  private DescriptorPool _texturePool = null!;
-  private DescriptorSetLayout _setLayout = null!;
-  private DescriptorSetLayout _textureSetLayout = null!;
-  private VkDescriptorSet[] _descriptorSets = new VkDescriptorSet[0];
   private PublicList<VkDescriptorSet> _textureSets = new();
-
-  private int _texturesCount = 0;
-
-  public Render2DSystem() { }
 
   public Render2DSystem(
     Device device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) {
-    _device = device;
-    _renderer = renderer;
-    _configInfo = configInfo;
-
+  ) : base(device, renderer, globalSetLayout, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -71,7 +51,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
     Logger.Info("Recreating Renderer 2D");
 
-    _pool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -85,7 +65,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _spriteBuffer = new Vulkan.Buffer[entities.Length];
+    _buffer = new Vulkan.Buffer[entities.Length];
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
@@ -94,7 +74,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     }
 
     for (int i = 0; i < entities.Length; i++) {
-      _spriteBuffer[i] = new Vulkan.Buffer(
+      _buffer[i] = new Vulkan.Buffer(
         _device,
         (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
         1,
@@ -108,17 +88,17 @@ public class Render2DSystem : SystemBase, IRenderSystem {
         BindDescriptorTexture(targetSprite.Owner!, ref textures, i);
       }
 
-      var bufferInfo = _spriteBuffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      var writer = new DescriptorWriter(_setLayout, _pool)
+      var bufferInfo = _buffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
+      var writer = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > _spriteBuffer.Length) {
+    if (entities.Length > _buffer.Length) {
       return false;
-    } else if (entities.Length < _spriteBuffer.Length) {
+    } else if (entities.Length < _buffer.Length) {
       return true;
     }
 
@@ -157,21 +137,10 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       spriteUBO.SpriteColor = entities[i].GetComponent<Material>().GetColor();
       spriteUBO.UseTexture = entities[i].GetComponent<Sprite>().UsesTexture;
 
-      // here is performing bad
-      // [TODO] restore push constants maybe?
-
       var pushConstantData = new SpriteUniformBufferObject();
       pushConstantData.SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4;
       pushConstantData.SpriteColor = entities[i].GetComponent<Material>().GetColor();
       pushConstantData.UseTexture = true;
-
-      //_spriteBuffer[i].Map((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      //_spriteBuffer[i].WriteToBuffer((IntPtr)(&spriteUBO), (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      //_spriteBuffer[i].Unmap();
-
-
-
-      // Console.WriteLine(spriteUBO.SpriteMatrix);
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
@@ -181,21 +150,6 @@ public class Render2DSystem : SystemBase, IRenderSystem {
         (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
         &pushConstantData
       );
-
-      /*
-      fixed (VkDescriptorSet* ptr = &_descriptorSets[i]) {
-        vkCmdBindDescriptorSets(
-          frameInfo.CommandBuffer,
-          VkPipelineBindPoint.Graphics,
-          _pipelineLayout,
-          1,
-          1,
-          ptr,
-          0,
-          null
-        );
-      }
-      */
 
       var sprite = entities[i].GetComponent<Sprite>();
       if (!sprite.Owner!.CanBeDisposed && sprite.Owner!.Active) {
@@ -229,7 +183,6 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     pushConstantRange.size = (uint)Unsafe.SizeOf<SpriteUniformBufferObject>();
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
@@ -241,32 +194,24 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
   private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    if (_configInfo == null) {
-      _configInfo = new PipelineConfigInfo();
+    if (_pipelineConfigInfo == null) {
+      _pipelineConfigInfo = new PipelineConfigInfo();
     }
-    var pipelineConfig = _configInfo.GetConfigInfo();
+    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
     _pipeline = new Pipeline(_device, "sprite_vertex", "sprite_fragment", pipelineConfig, new PipelineSpriteProvider());
-  }
-
-  public override IRenderSystem Create(Device device,
-    Renderer renderer,
-    VkDescriptorSetLayout globalSet,
-    PipelineConfigInfo configInfo = null!
-  ) {
-    return new Render2DSystem(device, renderer, globalSet, configInfo);
   }
 
   public unsafe void Dispose() {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
-    for (int i = 0; i < _spriteBuffer.Length; i++) {
-      _spriteBuffer[i]?.Dispose();
+    for (int i = 0; i < _buffer.Length; i++) {
+      _buffer[i]?.Dispose();
     }
-    _pool?.FreeDescriptors(_descriptorSets);
-    _pool?.Dispose();
+    _descriptorPool?.FreeDescriptors(_descriptorSets);
+    _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
     _texturePool?.Dispose();
     _pipeline?.Dispose();

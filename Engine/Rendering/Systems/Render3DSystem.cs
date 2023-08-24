@@ -17,36 +17,14 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 
 public unsafe class Render3DSystem : SystemBase, IRenderSystem {
-  private readonly Device _device = null!;
-  private readonly Renderer _renderer = null!;
-  private PipelineConfigInfo _configInfo = null!;
-  private Pipeline _pipeline = null!;
-  private VkPipelineLayout _pipelineLayout;
-
-  // Uniforms
-  private Vulkan.Buffer[] _modelBuffer = new Vulkan.Buffer[0];
-  private DescriptorPool _pool = null!;
-  private DescriptorPool _texturePool = null!;
-  private DescriptorSetLayout _setLayout = null!;
-  private DescriptorSetLayout _textureSetLayout = null!;
-  private VkDescriptorSet[] _descriptorSets = new VkDescriptorSet[0];
-  // private VkDescriptorSet[] _textureSets = new VkDescriptorSet[0];
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
-
-  private int _texturesCount = 0;
-
-  public Render3DSystem() { }
 
   public Render3DSystem(
     Device device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) {
-    _device = device;
-    _renderer = renderer;
-    _configInfo = configInfo;
-
+  ) : base(device, renderer, globalSetLayout, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -64,14 +42,6 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     CreatePipeline(renderer.GetSwapchainRenderPass());
   }
 
-  public override IRenderSystem Create(Device device,
-    Renderer renderer,
-    VkDescriptorSetLayout globalSet,
-    PipelineConfigInfo configInfo = null!
-  ) {
-    return new Render3DSystem(device, renderer, globalSet, configInfo);
-  }
-
   private int GetLengthOfTexturedEntites(ReadOnlySpan<Entity> entities) {
     int count = 0;
     for (int i = 0; i < entities.Length; i++) {
@@ -85,8 +55,6 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
     int count = 0;
     for (int i = 0; i < entities.Length; i++) {
-      // var targetModel = entities[i].GetComponent<Model>();
-      // count += targetModel.MeshsesCount;
       var targetItems = entities[i].GetDrawables<IRender3DElement>();
       for (int j = 0; j < targetItems.Length; j++) {
         var t = targetItems[j] as IRender3DElement;
@@ -121,7 +89,6 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
       .WriteImage(0, &imageInfo)
       .Build(out set);
 
-    // _textureSets[index][modelPart] = set;
     _textureSets.GetAt(index).SetAt(set, modelPart);
   }
 
@@ -136,11 +103,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
     Logger.Info("Recreating Renderer 3D");
 
-    var lastFrameModels = _modelBuffer;
+    var lastFrameModels = _buffer;
     var lastFrameSets = _descriptorSets;
     var lastFrameTextures = _textureSets;
 
-    _pool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -154,31 +121,24 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _modelBuffer = new Vulkan.Buffer[entities.Length];
+    _buffer = new Vulkan.Buffer[entities.Length];
     _descriptorSets = new VkDescriptorSet[entities.Length];
-    // _textureSets = new VkDescriptorSet[_texturesCount];
     _textureSets = new();
-
-    // for(int x =0; x<lastFrameTextures.Size; x++) {
-    // _textureSets.SetAt(lastFrameTextures.GetAt(x), x) = lastFrameTextures[x];
-    // }
 
     for (int x = 0; x < entities.Length; x++) {
       var en = entities[x].GetComponent<Model>();
-      // en.SetupTextureData();
       _textureSets.Add(new());
       for (int y = 0; y < en.MeshsesCount; y++) {
-        // _textureSets[x].Add(new());
         _textureSets.GetAt(x).Add(new());
       }
     }
 
     for (int i = 0; i < lastFrameModels.Length; i++) {
-      _modelBuffer[i] = lastFrameModels[i];
+      _buffer[i] = lastFrameModels[i];
     }
 
     for (int i = lastFrameModels.Length; i < entities.Length; i++) {
-      _modelBuffer[i] = new Vulkan.Buffer(
+      _buffer[i] = new Vulkan.Buffer(
         _device,
         (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
         1,
@@ -189,17 +149,15 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
       var targetModel = entities[i].GetComponent<Model>();
       if (targetModel.MeshsesCount > 1 && targetModel.UsesTexture) {
-        // targetModel.BindModelDescriptors(ref textures, ref _textureSetLayout, ref _texturePool);
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
           BindDescriptorTexture(targetModel.Owner!, ref textures, i, x);
         }
       } else {
-        // targetModel.BindDescriptorTexture(0, ref textures, ref _textureSetLayout, ref _texturePool);
         BindDescriptorTexture(targetModel.Owner!, ref textures, i, 0);
       }
 
-      var bufferInfo = _modelBuffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      var writer = new DescriptorWriter(_setLayout, _pool)
+      var bufferInfo = _buffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
+      var writer = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
@@ -209,9 +167,9 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > _modelBuffer.Length) {
+    if (entities.Length > _buffer.Length) {
       return false;
-    } else if (entities.Length < _modelBuffer.Length) {
+    } else if (entities.Length < _buffer.Length) {
       return true;
     }
 
@@ -246,19 +204,14 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
       var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
 
       var modelUBO = new ModelUniformBufferObject();
-      // modelUBO.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      // modelUBO.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
-      // modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
-      // modelUBO.UseTexture = entities[i].GetComponent<Model>().UsesTexture;
-      // modelUBO.UseLight = entities[i].GetComponent<Model>().UsesLight;
 
       modelUBO.UseLight = targetEntity!.UsesLight;
       modelUBO.UseTexture = targetEntity!.UsesTexture;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
 
-      _modelBuffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      _modelBuffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      _modelBuffer[i].Unmap();
+      _buffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
+      _buffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
+      _buffer[i].Unmap();
 
       var pushConstantData = new SimplePushConstantData();
       pushConstantData.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
@@ -305,10 +258,7 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     pushConstantRange.offset = 0;
     pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
 
-    // VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] { globalSetLayout };
-
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
@@ -320,11 +270,10 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
   private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    // PipelineConfigInfo configInfo = new();
-    if (_configInfo == null) {
-      _configInfo = new PipelineConfigInfo();
+    if (_pipelineConfigInfo == null) {
+      _pipelineConfigInfo = new PipelineConfigInfo();
     }
-    var pipelineConfig = _configInfo.GetConfigInfo();
+    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
     _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig, new PipelineModelProvider());
@@ -334,11 +283,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
-    for (int i = 0; i < _modelBuffer.Length; i++) {
-      _modelBuffer[i]?.Dispose();
+    for (int i = 0; i < _buffer.Length; i++) {
+      _buffer[i]?.Dispose();
     }
-    _pool?.FreeDescriptors(_descriptorSets);
-    _pool?.Dispose();
+    _descriptorPool?.FreeDescriptors(_descriptorSets);
+    _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
     _texturePool?.Dispose();
     _pipeline?.Dispose();

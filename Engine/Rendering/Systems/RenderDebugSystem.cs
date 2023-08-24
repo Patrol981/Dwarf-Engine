@@ -17,23 +17,12 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
-  private readonly Device _device;
-  private readonly Renderer _renderer = null!;
-  private PipelineConfigInfo _configInfo = null!;
-  private Pipeline _pipeline = null!;
-  private VkPipelineLayout _pipelineLayout;
-
-  public RenderDebugSystem() { }
-
   public RenderDebugSystem(
     Device device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) {
-    _device = device;
-    _renderer = renderer;
-    _configInfo = configInfo;
+  ) : base(device, renderer, globalSetLayout, configInfo) {
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
       globalSetLayout,
@@ -59,6 +48,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
 
     for (int i = 0; i < entities.Length; i++) {
       var targetEntity = entities[i].GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
+      if (targetEntity == null) continue;
+      if (!targetEntity.Enabled) continue;
 
       var pushConstant = new ColliderMeshPushConstant();
       pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
@@ -100,17 +91,13 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
 
   private unsafe void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    if (_configInfo == null) {
-      _configInfo = new PipelineConfigInfo();
+    if (_pipelineConfigInfo == null) {
+      _pipelineConfigInfo = new PipelineConfigInfo();
     }
-    var pipelineConfig = _configInfo.GetConfigInfo();
+    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
     _pipeline = new Pipeline(_device, "debug_vertex", "debug_fragment", pipelineConfig, new PipelineModelProvider());
-  }
-
-  public override IRenderSystem Create(Device device, Renderer renderer, VkDescriptorSetLayout globalSet, PipelineConfigInfo configInfo = null) {
-    return new RenderDebugSystem(device, renderer, globalSet, configInfo);
   }
 
   public unsafe void Dispose() {

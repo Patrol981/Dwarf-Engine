@@ -62,7 +62,7 @@ public class Application {
   private Device _device = null!;
   private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
-  private SystemCollection _systems = new();
+  private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
 
   private List<Entity> _entities = new();
@@ -79,6 +79,7 @@ public class Application {
     _window = new Window(1200, 900, appName);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
+    _systems = new SystemCollection();
 
     ApplicationState.Instance = this;
     _textureManager = new(_device);
@@ -117,20 +118,20 @@ public class Application {
     }
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
-    _systems.GetRender3DSystem()?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(_entities).ToArray(), ref _textureManager);
-    _systems.GetRender2DSystem()?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.GetRenderUISystem()?.SetupUIData(Entity.DistinctInterface<IUIElement>(_entities).ToArray(), ref _textureManager);
-    _systems.GetPhysicsSystem()?.Init(_entities.ToArray());
+    _systems.Render3DSystem?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(_entities).ToArray(), ref _textureManager);
+    _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
+    _systems.RenderUISystem?.SetupUIData(_systems.Canvas, ref _textureManager);
+    _systems.PhysicsSystem?.Init(_entities.ToArray());
 
     _onLoad?.Invoke();
 
-    ImGuiRenderer imgui = new(_device, this);
-    imgui.Init();
+    // ImGuiRenderer imgui = new(_device, this);
+    // imgui.Init();
 
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
-      imgui.Update();
+      // imgui.Update();
       Time.Tick();
 
       _systems.ValidateSystems(
@@ -199,7 +200,7 @@ public class Application {
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
-    imgui.Dispose();
+    // imgui.Dispose();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
@@ -317,6 +318,12 @@ public class Application {
   private Task LoadEntities() {
     _currentScene.LoadEntities();
     _entities.AddRange(_currentScene.GetEntities());
+
+    var targetCnv = Entity.Distinct<Canvas>(_entities);
+    if (targetCnv.Length > 0) {
+      _systems.Canvas = targetCnv[0].GetComponent<Canvas>();
+    }
+
     return Task.CompletedTask;
   }
 
@@ -329,30 +336,13 @@ public class Application {
   private void Cleanup() {
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
-      // entities[i].GetComponent<Model>()?.Dispose();
       entities[i].GetComponent<Sprite>()?.Dispose();
-      // var u = entities[i].GetDrawable<IUIElement>() as IUIElement;
-      // u?.Dispose();
 
       var u = entities[i].GetDrawables<IDrawable>();
       foreach (var e in u) {
         var t = e as IDrawable;
         t?.Dispose();
       }
-
-      /*
-      var e3Ds = entities[i].GetDrawables<IRender3DElement>();
-      foreach (var e3D in e3Ds) {
-        var t = e3D as IRender3DElement;
-        t?.Dispose();
-      }
-
-      var d3Ds = entities[i].GetDrawables<IDebugRender3DObject>();
-      foreach (var d3D in d3Ds) {
-        var t = d3D as IDebugRender3DObject;
-        t?.Dispose();
-      }
-      */
     }
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();

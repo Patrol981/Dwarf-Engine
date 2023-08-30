@@ -178,7 +178,6 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     _pipeline?.Dispose();
     if (_pipelineConfigInfo == null) {
       _pipelineConfigInfo = new UIPipeline();
-      Logger.Info("CONFIG CONFIGURED");
     }
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
@@ -193,7 +192,6 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     pushConstantRange.size = (uint)Unsafe.SizeOf<UIUniformObject>();
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
-    // pipelineInfo.sType = VkStructureType.PipelineLayoutCreateInfo;
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
     fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;

@@ -77,7 +77,7 @@ public class TextField : Component, IUIElement {
     if (_textMesh.Indices.Length > 0) _hasIndexBuffer = true;
 
 
-    var pos = Owner!.GetComponent<Transform>().Position;
+    var pos = Owner!.GetComponent<RectTransform>().Position;
     _startPos = new(pos.X, pos.Y);
     _startPosUpdated = _startPos;
   }
@@ -103,7 +103,7 @@ public class TextField : Component, IUIElement {
   private void CreateQuads(string text) {
     _textMesh = new();
 
-    var pos = Owner!.GetComponent<Transform>().Position;
+    var pos = Owner!.GetComponent<RectTransform>().Position;
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 

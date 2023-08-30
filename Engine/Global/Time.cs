@@ -14,10 +14,5 @@ public static class Time {
     double currentFrame = glfwGetTime();
     s_DeltaTime = currentFrame - s_LastFrame;
     s_LastFrame = currentFrame;
-
-    // var scrollDelta = MouseState.GetInstance().ScrollDelta;
-    // scrollDelta.Y = MathF.Floor((float)scrollDelta.Y / 2.0f);
-    // Logger.Info($"[SCROLL DELTA] {scrollDelta}");
-    // MouseState.GetInstance().ScrollDelta = 0.0f;
   }
 }

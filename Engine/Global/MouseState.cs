@@ -8,6 +8,8 @@ namespace Dwarf.Engine.Globals;
 public sealed class MouseState {
   private static MouseState s_instance = null!;
 
+  public event EventHandler ClickEvent;
+
   private Vector2d _lastMousePositionFromCallback = new(0, 0);
   // private Vector2d _scrollDelta = new(0, 0);
   private double _previousScrollY = 0.0;
@@ -27,6 +29,14 @@ public sealed class MouseState {
 
   public unsafe static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     // Logger.Info($"[Button Action] {button} {action} {mods}");
+    if (action == 1) {
+      MouseState.GetInstance().OnClicked(null!);
+    }
+  }
+
+  private void OnClicked(EventArgs e) {
+    ClickEvent?.Invoke(this, e);
+    Logger.Info("CLICK");
   }
 
   public Vector2d MousePosition => _lastMousePositionFromCallback;

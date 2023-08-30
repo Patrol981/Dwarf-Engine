@@ -223,4 +223,6 @@ public class GuiTexture : Component, IUIElement {
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
   }
+
+  public Mesh Mesh => _mesh;
 }

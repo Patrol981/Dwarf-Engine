@@ -14,9 +14,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using StbImageSharp;
 using System.Drawing;
+using Dwarf.Engine.Math;
+using Dwarf.Engine.Rendering.UI;
 
 namespace Dwarf.Engine;
-public class Sprite : Component, IDisposable {
+public class Sprite : Component, IDisposable, I2DCollision {
   private readonly Device _device = null!;
 
   private Dwarf.Vulkan.Buffer _vertexBuffer = null!;
@@ -31,6 +33,7 @@ public class Sprite : Component, IDisposable {
   private Mesh _spriteMesh = null!;
   private Vector3 _lastKnownScale = Vector3.Zero;
   private Vector2 _cachedSize = Vector2.Zero;
+  private Bounds2D _cachedBounds = Bounds2D.Zero;
 
   public Sprite() { }
 
@@ -300,6 +303,17 @@ public class Sprite : Component, IDisposable {
     stagingBuffer.Dispose();
   }
 
+  private Bounds2D GetBounds() {
+    var pos = Owner!.GetComponent<Transform>().Position;
+    var size = GetSize();
+
+    _cachedBounds = new();
+    _cachedBounds.Min = new Vector2(pos.X, pos.Y);
+    _cachedBounds.Max = new Vector2(pos.X + size.X, pos.Y + size.Y);
+
+    return _cachedBounds;
+  }
+
   private Vector2 GetSize() {
     var scale = Owner!.GetComponent<Transform>().Scale;
     if (_lastKnownScale == scale) return _cachedSize;
@@ -348,4 +362,7 @@ public class Sprite : Component, IDisposable {
     return _textureIdRef;
   }
   public Vector2 Size => GetSize();
+  public Bounds2D Bounds => GetBounds();
+
+  public bool IsUI => false;
 }

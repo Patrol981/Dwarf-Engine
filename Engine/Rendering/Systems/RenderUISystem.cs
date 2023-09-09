@@ -23,6 +23,7 @@ namespace Dwarf.Engine.Rendering;
 
 public class RenderUISystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new PublicList<VkDescriptorSet>();
+  private Vulkan.Buffer _uiBuffer = null!;
 
   public RenderUISystem(
     Device device,
@@ -72,7 +73,14 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _buffer = new Vulkan.Buffer[entities.Length];
+    _uiBuffer = new Vulkan.Buffer(
+        _device,
+        (ulong)Unsafe.SizeOf<UIUniformObject>(),
+        (uint)entities.Length,
+        VkBufferUsageFlags.UniformBuffer,
+        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+        _device.Properties.limits.minUniformBufferOffsetAlignment
+      );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
@@ -81,20 +89,11 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     }
 
     for (int i = 0; i < entities.Length; i++) {
-      _buffer[i] = new Vulkan.Buffer(
-        _device,
-        (ulong)Unsafe.SizeOf<UIUniformObject>(),
-        1,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
-      );
-
       // var targetUI = entities[i].GetComponent<TextField>();
       var targetUI = entities[i].GetDrawable<IUIElement>();
       BindDescriptorTexture(targetUI.Owner!, ref textureManager, i);
 
-      var bufferInfo = _buffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<UIUniformObject>());
+      var bufferInfo = _uiBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<UIUniformObject>());
       var writer = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
@@ -133,15 +132,15 @@ public class RenderUISystem : SystemBase, IRenderSystem {
       var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
       uiComponent?.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipelineLayout);
-      uiComponent?.Bind(frameInfo.CommandBuffer);
-      uiComponent?.Draw(frameInfo.CommandBuffer);
+      uiComponent?.Bind(frameInfo.CommandBuffer, 0);
+      uiComponent?.Draw(frameInfo.CommandBuffer, 0);
     }
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > _buffer.Length) {
+    if (entities.Length > (uint)_uiBuffer.GetInstanceCount()) {
       return false;
-    } else if (entities.Length < _buffer.Length) {
+    } else if (entities.Length < (uint)_uiBuffer.GetInstanceCount()) {
       return true;
     }
 
@@ -206,9 +205,7 @@ public class RenderUISystem : SystemBase, IRenderSystem {
     _textureSetLayout?.Dispose();
     _setLayout?.Dispose();
 
-    for (int i = 0; i < _buffer.Length; i++) {
-      _buffer[i]?.Dispose();
-    }
+    _uiBuffer?.Dispose();
 
     _descriptorPool?.FreeDescriptors(_descriptorSets);
     _descriptorPool?.Dispose();

@@ -82,12 +82,13 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public void Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
       vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     }
+    return Task.CompletedTask;
   }
 
   public void DrawText(string text) {
@@ -289,13 +290,18 @@ public class TextField : Component, IUIElement {
    );
   }
 
-  public unsafe void Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public void Bind(VkCommandBuffer commandBuffer) {
+    throw new NotImplementedException();
+  }
+
+  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
     fixed (ulong* offsetsPtr = offsets) {
       vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
     }
+    return Task.CompletedTask;
   }
 
   public void Dispose() {

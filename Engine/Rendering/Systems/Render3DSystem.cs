@@ -12,12 +12,17 @@ using OpenTK.Mathematics;
 
 using Vortice.Vulkan;
 
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 
-public unsafe class Render3DSystem : SystemBase, IRenderSystem {
+public class Render3DSystem : SystemBase, IRenderSystem {
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
+  private Vulkan.Buffer _modelBuffer;
+
+  private VkDescriptorSet _dynamicSet;
+  private DescriptorWriter _dynamicWriter;
 
   public Render3DSystem(
     Device device,
@@ -26,7 +31,7 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     PipelineConfigInfo configInfo = null!
   ) : base(device, renderer, globalSetLayout, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, VkDescriptorType.UniformBufferDynamic, VkShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
@@ -34,9 +39,9 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
+      _textureSetLayout.GetDescriptorSetLayout(),
       globalSetLayout,
-      _setLayout.GetDescriptorSetLayout(),
-      _textureSetLayout.GetDescriptorSetLayout()
+      _setLayout.GetDescriptorSetLayout()
     };
     CreatePipelineLayout(descriptorSetLayouts);
     CreatePipeline(renderer.GetSwapchainRenderPass());
@@ -85,9 +90,11 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
     imageInfo.imageView = texture.GetImageView();
     VkDescriptorSet set;
-    var texWriter = new DescriptorWriter(_textureSetLayout, _texturePool)
+    unsafe {
+      var texWriter = new DescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
+    }
 
     _textureSets.GetAt(index).SetAt(set, modelPart);
   }
@@ -103,26 +110,21 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
     Logger.Info("Recreating Renderer 3D");
 
-    var lastFrameModels = _buffer;
-    var lastFrameSets = _descriptorSets;
-    var lastFrameTextures = _textureSets;
-
     _descriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets((uint)entities.Length)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
+      .SetMaxSets(1000)
+      .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);
 
     _texturePool = new DescriptorPool.Builder(_device)
-    .SetMaxSets((uint)_texturesCount)
-    .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
-    .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
-    .Build();
+      .SetMaxSets((uint)_texturesCount)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .Build();
 
-    _buffer = new Vulkan.Buffer[entities.Length];
-    _descriptorSets = new VkDescriptorSet[entities.Length];
+    // _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
     for (int x = 0; x < entities.Length; x++) {
@@ -133,20 +135,16 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
       }
     }
 
-    for (int i = 0; i < lastFrameModels.Length; i++) {
-      _buffer[i] = lastFrameModels[i];
-    }
+    _modelBuffer = new(
+      _device,
+      (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
+      (ulong)entities.Length,
+      VkBufferUsageFlags.UniformBuffer,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+      _device.Properties.limits.minUniformBufferOffsetAlignment
+    );
 
-    for (int i = lastFrameModels.Length; i < entities.Length; i++) {
-      _buffer[i] = new Vulkan.Buffer(
-        _device,
-        (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
-        1,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
-      );
-
+    for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetComponent<Model>();
       if (targetModel.MeshsesCount > 1 && targetModel.UsesTexture) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
@@ -156,10 +154,24 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
         BindDescriptorTexture(targetModel.Owner!, ref textures, i, 0);
       }
 
-      var bufferInfo = _buffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      var writer = new DescriptorWriter(_setLayout, _descriptorPool)
+      /*
+      // var bufferInfo = _modelBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
+      var bufferInfo = _modelBuffer.GetVkDescriptorBufferInfoForIndex(i);
+      unsafe {
+        var writer = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
+      }
+      */
+    }
+
+    var range = _modelBuffer.GetDescriptorBufferInfo(_modelBuffer.GetAlignmentSize());
+    range.range = _modelBuffer.GetAlignmentSize();
+    unsafe {
+      _dynamicWriter = new DescriptorWriter(_setLayout, _descriptorPool);
+      _dynamicWriter.WriteBuffer(0, &range);
+      _dynamicWriter.Build(out _dynamicSet);
+
     }
 
     var endTime = DateTime.Now;
@@ -167,9 +179,9 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > _buffer.Length) {
+    if (entities.Length > (int)_modelBuffer.GetInstanceCount()) {
       return false;
-    } else if (entities.Length < _buffer.Length) {
+    } else if (entities.Length < (int)_modelBuffer.GetInstanceCount()) {
       return true;
     }
 
@@ -186,70 +198,106 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     return true;
   }
 
-  public void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
+  public async void RenderEntities(FrameInfo frameInfo, Entity[] entities) {
     _pipeline.Bind(frameInfo.CommandBuffer);
+    unsafe {
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelineLayout,
+        1,
+        1,
+        &frameInfo.GlobalDescriptorSet,
+        0,
+        null
+      );
+    }
 
-    vkCmdBindDescriptorSets(
-      frameInfo.CommandBuffer,
-      VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
-      0,
-      1,
-      &frameInfo.GlobalDescriptorSet,
-      0,
-      null
-    );
+    List<Task> _tasks = new List<Task>();
+
+    _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
+    // _modelBuffer.Flush();
+
+    // Logger.Info($"Allignment Size: {_modelBuffer.GetAlignmentSize()}");
+    // Logger.Info($"Instance Size: {_modelBuffer.GetInstanceCount()}");
+    // Logger.Info($"Entities Length: {entities.Length}");
+    // Logger.Info($"Buff Size: {_modelBuffer.GetBufferSize()}");
+
+    // TODO : WHY chr_knight is not being colored corectly?
+    // TODO : edit: it seems that uniforms being bound like this: 1, 3, 5, 7
+    // TODO : it skips one and then places uniform of not bounded
+    // TODO : (1 is always ok, 2 is black, 3 has color of 2)
+    // TODO : edit: It seems allrgiht, need to stress test
 
     for (int i = 0; i < entities.Length; i++) {
-      var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-
+      //var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+      var targetEntity = entities[i].GetComponent<Model>();
       var modelUBO = new ModelUniformBufferObject();
-
-      modelUBO.UseLight = targetEntity!.UsesLight;
-      modelUBO.UseTexture = targetEntity!.UsesTexture;
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
+      uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
-      _buffer[i].Map((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      _buffer[i].WriteToBuffer((IntPtr)(&modelUBO), (ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      _buffer[i].Unmap();
+      unsafe {
+        var map = _modelBuffer.GetMappedMemory();
+        char* memOffset = (char*)map;
+        if (i != 0) {
+          var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
+          memOffset += fixedSize * (ulong)(i);
+        }
+        VkUtils.MemCopy(
+          (IntPtr)memOffset,
+          (IntPtr)(&modelUBO),
+          (int)_modelBuffer.GetInstanceSize()
+        );
+      }
 
       var pushConstantData = new SimplePushConstantData();
       pushConstantData.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
       pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
 
-      vkCmdPushConstants(
-        frameInfo.CommandBuffer,
-        _pipelineLayout,
-        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-        0,
-        (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-        &pushConstantData
-      );
-
-      fixed (VkDescriptorSet* ptr = &_descriptorSets[i]) {
-        vkCmdBindDescriptorSets(
+      unsafe {
+        vkCmdPushConstants(
           frameInfo.CommandBuffer,
-          VkPipelineBindPoint.Graphics,
           _pipelineLayout,
-          1,
-          1,
-          ptr,
+          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
           0,
-          null
+          (uint)Unsafe.SizeOf<SimplePushConstantData>(),
+          &pushConstantData
         );
+
+        unsafe {
+          fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
+            vkCmdBindDescriptorSets(
+              frameInfo.CommandBuffer,
+              VkPipelineBindPoint.Graphics,
+              _pipelineLayout,
+              2,
+              1,
+              descPtr,
+              1,
+              &dynamicOffset
+            );
+          }
+        }
       }
 
-      if (!entities[i].CanBeDisposed) {
+      if (!entities[i].CanBeDisposed && entities[i].Active) {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
           if (targetEntity.UsesTexture) {
-            targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+            // await targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+            _tasks.Add(targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout));
           }
-          targetEntity.Bind(frameInfo.CommandBuffer, x);
-          targetEntity.Draw(frameInfo.CommandBuffer, x);
+          // await targetEntity.Bind(frameInfo.CommandBuffer, x);
+          // await targetEntity.Draw(frameInfo.CommandBuffer, x);
+          _tasks.Add(targetEntity.Bind(frameInfo.CommandBuffer, x));
+          _tasks.Add(targetEntity.Draw(frameInfo.CommandBuffer, x));
         }
       }
     }
+
+    // Parallel.Invoke(_tasks.ToArray());
+    await Task.WhenAll(_tasks);
+    _modelBuffer.Unmap();
   }
 
   private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
@@ -260,12 +308,14 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
-    fixed (VkDescriptorSetLayout* ptr = layouts) {
-      pipelineInfo.pSetLayouts = ptr;
+    unsafe {
+      fixed (VkDescriptorSetLayout* ptr = layouts) {
+        pipelineInfo.pSetLayouts = ptr;
+      }
+      pipelineInfo.pushConstantRangeCount = 1;
+      pipelineInfo.pPushConstantRanges = &pushConstantRange;
+      vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
     }
-    pipelineInfo.pushConstantRangeCount = 1;
-    pipelineInfo.pPushConstantRanges = &pushConstantRange;
-    vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 
   private void CreatePipeline(VkRenderPass renderPass) {
@@ -283,9 +333,8 @@ public unsafe class Render3DSystem : SystemBase, IRenderSystem {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
-    for (int i = 0; i < _buffer.Length; i++) {
-      _buffer[i]?.Dispose();
-    }
+    _modelBuffer?.Dispose();
+    _descriptorPool?.FreeDescriptors(new VkDescriptorSet[] { _dynamicSet });
     _descriptorPool?.FreeDescriptors(_descriptorSets);
     _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);

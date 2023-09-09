@@ -13,6 +13,8 @@ public class Entity {
   private Guid _guid = Guid.NewGuid();
   private bool _isActive = true;
 
+  private readonly object _componentLock = new object();
+
   public Entity() {
     _componentManager = new ComponentManager();
   }
@@ -23,7 +25,9 @@ public class Entity {
   }
 
   public T GetComponent<T>() where T : Component, new() {
-    return _componentManager.GetComponent<T>();
+    lock (_componentLock) {
+      return _componentManager.GetComponent<T>();
+    }
   }
 
   public Component GetDrawable<T>() where T : IDrawable {

@@ -66,6 +66,8 @@ public class Application {
   private DescriptorPool _globalPool = null!;
 
   private List<Entity> _entities = new();
+  private readonly object _entitiesLock = new object();
+
   private List<FontFile> _loadedFonts = new();
   private Entity _camera = new();
 
@@ -127,8 +129,11 @@ public class Application {
 
     // ImGuiRenderer imgui = new(_device, this);
     // imgui.Init();
+    // _systems.PhysicsThread?.Start(this);
 
     while (!_window.ShouldClose) {
+      // 
+
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
       // imgui.Update();
@@ -197,8 +202,12 @@ public class Application {
       _onUpdate?.Invoke();
       _onGUI?.Invoke();
 
+      // _systems.PhysicsThread.Join();
+
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
+
+    _systems.PhysicsThread?.Join();
 
     // imgui.Dispose();
 
@@ -232,32 +241,46 @@ public class Application {
   }
 
   public void AddEntity(Entity entity) {
-    _entities.Add(entity);
+    lock (_entitiesLock) {
+      _entities.Add(entity);
+    }
   }
 
   public List<Entity> GetEntities() {
-    return _entities;
+    lock (_entitiesLock) {
+      return _entities;
+    }
   }
 
   public void RemoveEntityAt(int index) {
-    _entities.RemoveAt(index);
+    lock (_entitiesLock) {
+      _entities.RemoveAt(index);
+    }
   }
 
   public void RemoveEntity(Entity entity) {
-    _entities.Remove(entity);
+    lock (_entitiesLock) {
+      _entities.Remove(entity);
+    }
   }
 
   public void RemoveEntity(Guid id) {
-    var target = _entities.Where((x) => x.EntityID == id).First();
-    _entities.Remove(target);
+    lock (_entitiesLock) {
+      var target = _entities.Where((x) => x.EntityID == id).First();
+      _entities.Remove(target);
+    }
   }
 
   public void DestroyEntity(Entity entity) {
-    entity.CanBeDisposed = true;
+    lock (_entitiesLock) {
+      entity.CanBeDisposed = true;
+    }
   }
 
   public void RemoveEntityRange(int index, int count) {
-    _entities.RemoveRange(index, count);
+    lock (_entitiesLock) {
+      _entities.RemoveRange(index, count);
+    }
   }
 
   public async void Init() {

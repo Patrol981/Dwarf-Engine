@@ -21,7 +21,7 @@ public abstract class SystemBase {
   protected VkPipelineLayout _pipelineLayout;
   protected Pipeline _pipeline = null!;
 
-  protected Vulkan.Buffer[] _buffer = new Vulkan.Buffer[0];
+  // protected Vulkan.Buffer[] _buffer = new Vulkan.Buffer[0];
   protected DescriptorPool _descriptorPool = null!;
   protected DescriptorPool _texturePool = null!;
   protected DescriptorSetLayout _setLayout = null!;

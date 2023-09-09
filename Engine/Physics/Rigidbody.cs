@@ -73,25 +73,13 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void Update() {
-
     // var pos = _bodyInterface.GetCenterOfMassPosition(_bodyId);
     var pos = _bodyInterface.GetPosition(_bodyId);
     var rot = _bodyInterface.GetRotation(_bodyId);
-
-    var vec3 = new OpenTK.Mathematics.Vector3((float)pos.X, (float)pos.Y, (float)pos.Z);
-    var rotVec = Converter.QuaternionToEulerAngles(rot);
-
     Owner!.GetComponent<Transform>().Position = pos;
 
     // freeze rigidbody to X an Z axis
     _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
-
-    // Logger.Info($"Quat {rot.ToString()}");
-    // Owner!.GetComponent<Transform>().Rotation = rotVec;
-    // bodyInterface.MoveKinematic(_bodyId, )
-    // Owner.GetComponent<Transform>().Position = _bodyId.
-    // Logger.Info($"[ACTIVE] {_bodyInterface.IsActive(_bodyId)}");
-    // _bodyInterface.ActivateBody(_bodyId);
   }
 
   public void AddForce(Vector3 vec3) {

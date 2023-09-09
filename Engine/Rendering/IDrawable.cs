@@ -8,6 +8,7 @@ using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 public interface IDrawable : IDisposable {
-  public void Bind(VkCommandBuffer commandBuffer, uint index = 0);
-  public void Draw(VkCommandBuffer commandBuffer, uint index = 0);
+  public Task Bind(VkCommandBuffer commandBuffer, uint index);
+  // public void Bind(VkCommandBuffer commandBuffer);
+  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0);
 }

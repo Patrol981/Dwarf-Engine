@@ -21,19 +21,24 @@ public class SystemCollection : IDisposable {
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
+  private Thread? _physicsThread;
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
   public bool ReloadUISystem = false;
 
-  public void UpdateSystems(ReadOnlySpan<Entity> entities, FrameInfo frameInfo) {
+  public async void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
+    await _physicsSystem!.Tick(entities);
+    // _physicsSystem?.StoreEntities(Entity.Distinct<Rigidbody>(entities).ToArray());
+    // Thread t = new Thread(new ThreadStart(_physicsSystem!.Tick));
+    // t.Start();
+
     _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
     _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
-
-    _physicsSystem?.Tick(entities);
-
     _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
+
+    // t.Join();
   }
 
   public void ValidateSystems(
@@ -189,7 +194,14 @@ public class SystemCollection : IDisposable {
 
   public PhysicsSystem PhysicsSystem {
     get { return _physicsSystem ?? null!; }
-    set { _physicsSystem = value; }
+    set {
+      _physicsSystem = value;
+      // _physicsThread = new Thread(new ParameterizedThreadStart(PhysicsSystem.Calculate!));
+    }
+  }
+
+  public Thread PhysicsThread {
+    get { return _physicsThread ?? null!; }
   }
 
   public RenderDebugSystem RenderDebugSystem {

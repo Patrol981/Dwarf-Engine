@@ -12,5 +12,6 @@ public interface IRender3DElement : IDrawable {
   public bool UsesLight { get; set; }
   public int MeshsesCount { get; }
   public bool FinishedInitialization { get; }
-  public void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
+  public void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
+  public Task BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
 }

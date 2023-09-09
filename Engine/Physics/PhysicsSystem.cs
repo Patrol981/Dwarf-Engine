@@ -9,9 +9,14 @@ using JoltPhysicsSharp;
 
 using OpenTK.Mathematics;
 
+using Vortice.Vulkan;
+
 using static Dwarf.Engine.Physics.JoltConfig;
 
 namespace Dwarf.Engine.Physics;
+
+public delegate void PhysicsSystemCallback();
+
 public class PhysicsSystem : IDisposable {
   // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
   public const float DeltaTime = 1.0f / 60.0f;
@@ -24,6 +29,8 @@ public class PhysicsSystem : IDisposable {
   private readonly ObjectLayerPairFilterImpl _objectVsObjectLayerFilter;
 
   private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
+
+  private List<Entity> _entities;
   public PhysicsSystem() {
     if (!Foundation.Init(true)) {
       return;
@@ -100,12 +107,38 @@ public class PhysicsSystem : IDisposable {
     }
   }
 
-  public void Tick(ReadOnlySpan<Entity> entities) {
+  public void StoreEntities(Span<Entity> entities) {
+    _entities = entities.ToArray().ToList();
+  }
+
+  public Task Tick(ReadOnlySpan<Entity> entities) {
     for (short i = 0; i < entities.Length; i++) {
       if (entities[i].CanBeDisposed) continue;
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
     _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
+    return Task.CompletedTask;
+  }
+
+  public Task Tick() {
+    for (short i = 0; i < _entities.Count; i++) {
+      if (_entities[i].CanBeDisposed) continue;
+      _entities[i].GetComponent<Rigidbody>()?.Update();
+    }
+    _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
+    return Task.CompletedTask;
+  }
+
+  public static void Calculate(object application) {
+    var app = (Application)application;
+    var systems = app.GetSystems();
+    var entities = Entity.Distinct<Rigidbody>(app.GetEntities());
+    // var system = (PhysicsSystem)physicsSystem;
+
+    while (!app.Window.ShouldClose) {
+      systems.PhysicsSystem.Tick(entities);
+      // Thread.Sleep(50);
+    }
   }
 
   public void Dispose() {

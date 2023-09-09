@@ -19,6 +19,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 public class Render2DSystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new();
+  private Vulkan.Buffer _spriteBuffer = null!;
 
   public Render2DSystem(
     Device device,
@@ -65,7 +66,14 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _buffer = new Vulkan.Buffer[entities.Length];
+    _spriteBuffer = new Vulkan.Buffer(
+        _device,
+        (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+        (uint)entities.Length,
+        VkBufferUsageFlags.UniformBuffer,
+        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+        _device.Properties.limits.minUniformBufferOffsetAlignment
+      );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
@@ -74,21 +82,12 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     }
 
     for (int i = 0; i < entities.Length; i++) {
-      _buffer[i] = new Vulkan.Buffer(
-        _device,
-        (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
-        1,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
-      );
-
       var targetSprite = entities[i].GetComponent<Sprite>();
       if (targetSprite.UsesTexture) {
         BindDescriptorTexture(targetSprite.Owner!, ref textures, i);
       }
 
-      var bufferInfo = _buffer[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
+      var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
       var writer = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
@@ -96,9 +95,9 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > _buffer.Length) {
+    if (entities.Length > (uint)_spriteBuffer.GetInstanceCount()) {
       return false;
-    } else if (entities.Length < _buffer.Length) {
+    } else if (entities.Length < (uint)_spriteBuffer.GetInstanceCount()) {
       return true;
     }
 
@@ -207,9 +206,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
-    for (int i = 0; i < _buffer.Length; i++) {
-      _buffer[i]?.Dispose();
-    }
+    _spriteBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(_descriptorSets);
     _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);

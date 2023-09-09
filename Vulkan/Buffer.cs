@@ -61,6 +61,7 @@ public unsafe class Buffer : IDisposable {
     _instanceCount = instanceCount;
     _usageFlags = usageFlags;
     _memoryPropertyFlags = propertyFlags;
+
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
@@ -107,7 +108,7 @@ public unsafe class Buffer : IDisposable {
     if (_mapped != IntPtr.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
       _mapped = IntPtr.Zero;
-      GC.Collect();
+      // GC.Collect();
     }
   }
 
@@ -155,8 +156,8 @@ public unsafe class Buffer : IDisposable {
     return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
   }
 
-  public void WrtieToIndex(void* data, int index) {
-    WriteToBuffer((IntPtr)data, _instanceSize, (ulong)index * _alignmentSize);
+  public void WrtieToIndex(IntPtr data, int index) {
+    WriteToBuffer(data, _instanceSize, (ulong)index * _alignmentSize);
   }
 
   public VkResult FlushIndex(int index) {
@@ -210,6 +211,7 @@ public unsafe class Buffer : IDisposable {
   private static ulong GetAlignment(ulong instanceSize, ulong minOffsetAlignment) {
     if (minOffsetAlignment > 0) {
       return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
+      // return (instanceSize + minOffsetAlignment - 1) / minOffsetAlignment * minOffsetAlignment;
     }
     return instanceSize;
   }
@@ -226,20 +228,5 @@ public unsafe class Buffer : IDisposable {
     Unmap();
     DestoryBuffer();
     FreeMemory();
-  }
-
-  public void ResetTime() {
-    // Console.WriteLine(LastTimeUsed);
-    LastTimeUsed = 0.0f;
-  }
-
-  public void UpdateTime() {
-    LastTimeUsed += Dwarf.Engine.Globals.Time.DeltaTime;
-  }
-
-  public void RemoveUnused() {
-    if (LastTimeUsed > 5.0f) {
-      Dispose();
-    }
   }
 }

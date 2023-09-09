@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -97,6 +98,7 @@ public class Model : Component, IRender3DElement {
       // threads.Add(new(new ThreadStart(loaders[i].CreateVertexBuffer)));
       // threads.Add(new(new ThreadStart(loaders[i].CreateIndexBuffer)));
       // threads.Add(new(new ThreadStart(loaders[i].Proceed)));
+
       createTasks.Add(CreateVertexBuffer(meshes[i].Vertices, (uint)i));
       createTasks.Add(CreateIndexBuffer(meshes[i].Indices, (uint)i));
     }
@@ -112,31 +114,73 @@ public class Model : Component, IRender3DElement {
     // Logger.Warn($"[Load time]: {(endTime - startTime).TotalMilliseconds}");
   }
 
-  public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
+  public unsafe void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
     vkCmdBindDescriptorSets(
-     frameInfo.CommandBuffer,
-     VkPipelineBindPoint.Graphics,
-     pipelineLayout,
-     2,
-     1,
-     &textureSet,
-     0,
-     null
-   );
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        pipelineLayout,
+        0,
+        descriptorSets
+      );
   }
 
-  public unsafe void Bind(VkCommandBuffer commandBuffer, uint index) {
+  public unsafe Task BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
+    vkCmdBindDescriptorSets(
+      frameInfo.CommandBuffer,
+      VkPipelineBindPoint.Graphics,
+      pipelineLayout,
+      0,
+      1,
+      &textureSet,
+      0,
+      null
+    );
+    return Task.CompletedTask;
+  }
+
+  public unsafe void Bind(VkCommandBuffer commandBuffer) {
+    Span<VkBuffer> vertexBuffers = stackalloc VkBuffer[_meshesCount];
+    Span<ulong> offsets = stackalloc ulong[_meshesCount];
+    for (short i = 0; i < vertexBuffers.Length; i++) {
+      vertexBuffers[i] = _vertexBuffers[i].GetBuffer();
+      offsets[i] = 0;
+
+      if (_hasIndexBuffer[i]) {
+        vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[i].GetBuffer(), 0, VkIndexType.Uint32);
+      }
+    }
+    vkCmdBindVertexBuffers(commandBuffer, 0, vertexBuffers, offsets);
+    vertexBuffers.Clear();
+    offsets.Clear();
+  }
+
+  public Task Bind(VkCommandBuffer commandBuffer, uint index) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffers[index].GetBuffer() };
     ulong[] offsets = { 0 };
-    fixed (VkBuffer* buffersPtr = buffers)
-    fixed (ulong* offsetsPtr = offsets) {
-      vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
+    unsafe {
+      fixed (VkBuffer* buffersPtr = buffers)
+      fixed (ulong* offsetsPtr = offsets) {
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
+      }
     }
 
     if (_hasIndexBuffer[index]) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
+
+    return Task.CompletedTask;
   }
+
+  public Task Draw(VkCommandBuffer commandBuffer, uint index) {
+    if (_hasIndexBuffer[index]) {
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
+    } else {
+      vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
+    }
+    // vkCmdDrawIndirect(commandBuffer, );
+    return Task.CompletedTask;
+  }
+
 
   public void BindToTexture(
     TextureManager textureManager,
@@ -164,14 +208,6 @@ public class Model : Component, IRender3DElement {
   ) {
     for (int i = 0; i < paths.Length; i++) {
       BindToTexture(textureManager, paths[i], useLocalPath, i);
-    }
-  }
-
-  public void Draw(VkCommandBuffer commandBuffer, uint index) {
-    if (_hasIndexBuffer[index]) {
-      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
-    } else {
-      vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
     }
   }
 

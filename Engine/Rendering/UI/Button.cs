@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
+using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 
 using DwarfEngine.Engine.Math;
@@ -37,23 +38,10 @@ public class Button : Component, I2DCollision, IUIElement {
   public void CheckCollision(object sender, EventArgs e) {
     var camera = CameraState.GetCamera();
     var size = WindowState.s_Window.Extent;
-    Logger.Warn("Coll test");
     var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.width, size.height));
     if (collResult) {
       Logger.Info("COLL DETECTED");
     }
-  }
-
-  public static void CheckColl(object sender, EventArgs e) {
-    var cnvSender = (Entity)sender;
-    var camera = CameraState.GetCamera();
-    var size = WindowState.s_Window.Extent;
-    Collision2D.MouseClickedCollision(cnvSender.GetComponent<Button>(), camera, new(size.width, size.height));
-  }
-
-  protected virtual void OnClicked(EventArgs e) {
-    Clicked?.Invoke(this, e);
-    Logger.Info("CLICK");
   }
 
   private Bounds2D GetBounds() {
@@ -96,8 +84,13 @@ public class Button : Component, I2DCollision, IUIElement {
     return _cachedSize;
   }
 
-  public void Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public void Bind(VkCommandBuffer commandBuffer) {
+    throw new NotImplementedException();
+  }
+
+  public Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
     _guiTexture.Bind(commandBuffer, index);
+    return Task.CompletedTask;
   }
 
   public void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
@@ -108,8 +101,9 @@ public class Button : Component, I2DCollision, IUIElement {
     _guiTexture.Dispose();
   }
 
-  public void Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
     _guiTexture.Draw(commandBuffer, index);
+    return Task.CompletedTask;
   }
 
   public void DrawText(string text) {

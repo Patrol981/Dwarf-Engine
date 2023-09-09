@@ -43,7 +43,11 @@ public class GuiTexture : Component, IUIElement {
     CreateIndexBuffer(_mesh.Indices);
   }
 
-  public unsafe void Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public void Bind(VkCommandBuffer commandBuffer) {
+    throw new NotImplementedException();
+  }
+
+  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -54,6 +58,7 @@ public class GuiTexture : Component, IUIElement {
     if (_hasIndexBuffer) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.GetBuffer(), 0, VkIndexType.Uint32);
     }
+    return Task.CompletedTask;
   }
 
   public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
@@ -76,12 +81,13 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public void Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
       vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     }
+    return Task.CompletedTask;
   }
 
   public void DrawText(string text) {

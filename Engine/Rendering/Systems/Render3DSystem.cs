@@ -264,19 +264,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           &pushConstantData
         );
 
-        unsafe {
-          fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
-            vkCmdBindDescriptorSets(
-              frameInfo.CommandBuffer,
-              VkPipelineBindPoint.Graphics,
-              _pipelineLayout,
-              2,
-              1,
-              descPtr,
-              1,
-              &dynamicOffset
-            );
-          }
+        fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
+          vkCmdBindDescriptorSets(
+            frameInfo.CommandBuffer,
+            VkPipelineBindPoint.Graphics,
+            _pipelineLayout,
+            2,
+            1,
+            descPtr,
+            1,
+            &dynamicOffset
+          );
         }
       }
 
@@ -335,7 +333,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _textureSetLayout?.Dispose();
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(new VkDescriptorSet[] { _dynamicSet });
-    _descriptorPool?.FreeDescriptors(_descriptorSets);
     _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
     _texturePool?.Dispose();

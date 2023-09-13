@@ -1,3 +1,5 @@
+using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Math;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 
@@ -36,7 +38,18 @@ public sealed class MouseState {
 
   private void OnClicked(EventArgs e) {
     ClickEvent?.Invoke(this, e);
-    Logger.Info("CLICK");
+
+    var entities = ApplicationState.Instance.GetEntities();
+    var models = Entity.Distinct<Model>(entities);
+
+    foreach (var model in models) {
+      var result = Ray.OBBIntersection(model, 5);
+      if (result) {
+        model.GetComponent<Material>().SetColor(new(0, 1, 1));
+      }
+    }
+
+    // Logger.Info("CLICK");
   }
 
   public Vector2d MousePosition => _lastMousePositionFromCallback;

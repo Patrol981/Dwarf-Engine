@@ -20,6 +20,10 @@ public enum PrimitiveType {
 public static class Primitives {
   static Vector3 Color = new Vector3(0.19f, 0.65f, 0.32f);
 
+  public static Mesh CreateConvex(Mesh inputMesh) {
+    return inputMesh;
+  }
+
   public static Mesh CreateCylinderPrimitive(float radius = 0.5f, float height = 1.0f, int segments = 20) {
     // height = height * -1;
     float cylinderStep = (MathF.PI * 2) / segments;

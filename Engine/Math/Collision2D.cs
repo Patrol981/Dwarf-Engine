@@ -17,11 +17,13 @@ public class Collision2D {
     var component = (Component)coll;
     var position = component!.Owner!.GetComponent<RectTransform>().Position;
 
+    /*
     Logger.Info($"[RAY] {mouseRay}");
     Logger.Info($"[POS] {position}");
     Logger.Info($"[SIZE] {coll.Size}");
     Logger.Info($"[MIN] {coll.Bounds.Min}");
     Logger.Info($"[MAX] {coll.Bounds.Max}");
+    */
 
     var bounds = coll.Bounds;
 

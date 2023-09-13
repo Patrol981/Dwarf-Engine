@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Math;
+using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -15,7 +17,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
-public class Model : Component, IRender3DElement {
+public class Model : Component, IRender3DElement, ICollision {
   internal class ModelLoader {
     private readonly Model _model;
     private readonly int _index;
@@ -67,6 +69,8 @@ public class Model : Component, IRender3DElement {
   private Guid[] _textureIdRefs = new Guid[0];
 
   private Mesh[] _meshes;
+  private AABB[] _aabbes;
+  private AABB _mergedAABB = new();
 
   private bool _finishedInitialization = false;
   private bool _usesLight = true;
@@ -90,6 +94,7 @@ public class Model : Component, IRender3DElement {
     List<Task> createTasks = new();
 
     _meshes = meshes;
+    _aabbes = new AABB[_meshesCount];
 
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
@@ -101,7 +106,12 @@ public class Model : Component, IRender3DElement {
 
       createTasks.Add(CreateVertexBuffer(meshes[i].Vertices, (uint)i));
       createTasks.Add(CreateIndexBuffer(meshes[i].Indices, (uint)i));
+
+      _aabbes[i] = new();
+      _aabbes[i].Update(meshes[i]);
     }
+
+    _mergedAABB.Update(_aabbes);
 
     Init(createTasks);
   }
@@ -304,4 +314,16 @@ public class Model : Component, IRender3DElement {
     return _textureIdRefs[index];
   }
   public bool FinishedInitialization => _finishedInitialization;
+
+  public AABB[] AABBArray {
+    get {
+      return _aabbes;
+    }
+  }
+
+  public AABB AABB {
+    get {
+      return _mergedAABB;
+    }
+  }
 }

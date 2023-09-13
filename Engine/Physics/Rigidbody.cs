@@ -51,6 +51,10 @@ public class Rigidbody : Component, IDisposable {
         mesh = Primitives.CreateCylinderPrimitive(0.25f, height, 20);
         shapeSettings = new CylinderShapeSettings(height / 2, 0.25f);
         break;
+      case PrimitiveType.Convex:
+        mesh = Primitives.CreateConvex(Owner!.GetComponent<Model>().Meshes[0]);
+        shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
+        break;
       default:
         mesh = new();
         shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));

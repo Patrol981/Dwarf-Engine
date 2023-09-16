@@ -4,12 +4,13 @@ using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
-using DwarfEngine.Engine.Rendering.UI;
+using Dwarf.Engine.Rendering.UI;
 
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
-public class SystemCollection : IDisposable {
+public class SystemCollection : IDisposable
+{
   // Render Systems
   private Render3DSystem? _render3DSystem;
   private Render2DSystem? _render2DSystem;
@@ -27,7 +28,8 @@ public class SystemCollection : IDisposable {
   public bool Reload2DRenderSystem = false;
   public bool ReloadUISystem = false;
 
-  public async void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
+  public async void UpdateSystems(Entity[] entities, FrameInfo frameInfo)
+  {
     await _physicsSystem!.Tick(entities);
     // _physicsSystem?.StoreEntities(Entity.Distinct<Rigidbody>(entities).ToArray());
     // Thread t = new Thread(new ThreadStart(_physicsSystem!.Tick));
@@ -48,34 +50,41 @@ public class SystemCollection : IDisposable {
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
     ref TextureManager textureManager
-  ) {
-    if (_render3DSystem != null) {
+  )
+  {
+    if (_render3DSystem != null)
+    {
       var modelEntities = Entity.DistinctInterface<IRender3DElement>(entities).ToArray();
       var sizes = _render3DSystem.CheckSizes(modelEntities);
       var textures = _render3DSystem.CheckTextures(modelEntities);
-      if (!sizes || !textures || Reload3DRenderSystem) {
+      if (!sizes || !textures || Reload3DRenderSystem)
+      {
         Reload3DRenderSystem = false;
         Reload3DRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
-    if (_render2DSystem != null) {
+    if (_render2DSystem != null)
+    {
       var spriteEntities = Entity.Distinct<Sprite>(entities).ToArray();
       var sizes = _render2DSystem.CheckSizes(spriteEntities);
       var textures = _render2DSystem.CheckTextures(spriteEntities);
-      if (!sizes || !textures || Reload2DRenderSystem) {
+      if (!sizes || !textures || Reload2DRenderSystem)
+      {
         Reload2DRenderSystem = false;
         Reload2DRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
-    if (_renderUISystem != null) {
+    if (_renderUISystem != null)
+    {
       // var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
       // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var canvasEntities = _canvas!.GetUI();
       var sizes = _renderUISystem.CheckSizes(canvasEntities);
       var textures = _renderUISystem.CheckTextures(canvasEntities);
-      if (!sizes || !textures || ReloadUISystem) {
+      if (!sizes || !textures || ReloadUISystem)
+      {
         ReloadUISystem = false;
         ReloadUIRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo);
       }
@@ -90,19 +99,23 @@ public class SystemCollection : IDisposable {
     ReadOnlySpan<Entity> entities,
     Canvas canvas,
     ref TextureManager textureManager
-  ) {
+  )
+  {
 
-    if (_render3DSystem != null) {
+    if (_render3DSystem != null)
+    {
       _render3DSystem.Dispose();
       _render3DSystem = new Render3DSystem(device, renderer, globalLayout, pipelineConfigInfo);
     }
 
-    if (_render2DSystem != null) {
+    if (_render2DSystem != null)
+    {
       _render2DSystem.Dispose();
       _render2DSystem = new Render2DSystem(device, renderer, globalLayout, pipelineConfigInfo);
     }
 
-    if (_renderUISystem != null) {
+    if (_renderUISystem != null)
+    {
       _renderUISystem.Dispose();
       _renderUISystem = new RenderUISystem(device, renderer, globalLayout, pipelineConfigInfo);
     }
@@ -110,16 +123,20 @@ public class SystemCollection : IDisposable {
     SetupRenderDatas(entities, canvas, ref textureManager, renderer);
   }
 
-  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
-    if (_render3DSystem != null) {
+  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer)
+  {
+    if (_render3DSystem != null)
+    {
       _render3DSystem.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
     }
 
-    if (_render2DSystem != null) {
+    if (_render2DSystem != null)
+    {
       _render2DSystem.Setup(Entity.Distinct<Sprite>(entities).ToArray(), ref textureManager);
     }
 
-    if (_renderUISystem != null) {
+    if (_renderUISystem != null)
+    {
       _renderUISystem.SetupUIData(canvas, ref textureManager);
     }
   }
@@ -131,7 +148,8 @@ public class SystemCollection : IDisposable {
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
     ReadOnlySpan<Entity> entities
-  ) {
+  )
+  {
     _render3DSystem?.Dispose();
     _render3DSystem = new Render3DSystem(
       device,
@@ -149,7 +167,8 @@ public class SystemCollection : IDisposable {
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
     ReadOnlySpan<Entity> entities
-  ) {
+  )
+  {
     _render2DSystem?.Dispose();
     _render2DSystem = new Render2DSystem(
       device,
@@ -166,7 +185,8 @@ public class SystemCollection : IDisposable {
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig
-  ) {
+  )
+  {
     _renderUISystem?.Dispose();
     _renderUISystem = new RenderUISystem(
       device,
@@ -177,44 +197,53 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.SetupUIData(_canvas ?? throw new Exception("Canvas cannot be null"), ref textureManager);
   }
 
-  public Render3DSystem Render3DSystem {
+  public Render3DSystem Render3DSystem
+  {
     get { return _render3DSystem ?? null!; }
     set { _render3DSystem = value; }
   }
 
-  public Render2DSystem Render2DSystem {
+  public Render2DSystem Render2DSystem
+  {
     get { return _render2DSystem ?? null!; }
     set { _render2DSystem = value; }
   }
 
-  public RenderUISystem RenderUISystem {
+  public RenderUISystem RenderUISystem
+  {
     get { return _renderUISystem ?? null!; }
     set { _renderUISystem = value; }
   }
 
-  public PhysicsSystem PhysicsSystem {
+  public PhysicsSystem PhysicsSystem
+  {
     get { return _physicsSystem ?? null!; }
-    set {
+    set
+    {
       _physicsSystem = value;
       // _physicsThread = new Thread(new ParameterizedThreadStart(PhysicsSystem.Calculate!));
     }
   }
 
-  public Thread PhysicsThread {
+  public Thread PhysicsThread
+  {
     get { return _physicsThread ?? null!; }
   }
 
-  public RenderDebugSystem RenderDebugSystem {
+  public RenderDebugSystem RenderDebugSystem
+  {
     get { return _renderDebugSystem ?? null!; }
     set { _renderDebugSystem = value; }
   }
 
-  public Canvas Canvas {
+  public Canvas Canvas
+  {
     get { return _canvas ?? null!; }
     set { _canvas = value; }
   }
 
-  public void Dispose() {
+  public void Dispose()
+  {
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
     _canvas?.Dispose();

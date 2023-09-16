@@ -19,27 +19,15 @@ public class TextureManager : IDisposable {
     }
   }
 
-  public Task AddTexture(string texturePath) {
+  public async Task<Task> AddTexture(string texturePath) {
     foreach (var tex in _loadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    _loadedTextures.Add(Guid.NewGuid(), new Texture(_device, texturePath));
-    return Task.CompletedTask;
-  }
-
-  public Task AddTextureFromLocal(string textureName) {
-    var basePath = "./Textures/";
-    var finalPath = Path.Combine(basePath, textureName);
-    foreach (var tex in _loadedTextures) {
-      if (tex.Value.TextureName == finalPath) {
-        Logger.Warn($"Texture [{finalPath}] is already loaded. Skipping current add call.");
-        return Task.CompletedTask;
-      }
-    }
-    _loadedTextures.Add(Guid.NewGuid(), new Texture(_device, finalPath, true));
+    var imgResult = await Texture.LoadFromPath(texturePath);
+    _loadedTextures.Add(Guid.NewGuid(), new Texture(_device, imgResult.Width, imgResult.Height, texturePath));
     return Task.CompletedTask;
   }
 
@@ -59,6 +47,16 @@ public class TextureManager : IDisposable {
       }
     }
     return Guid.Empty;
+  }
+
+  public static async Task<Texture[]> InitTexturesStatic(Device device, string[] paths) {
+    var textures = new Texture[paths.Length];
+    for (int i = 0; i < textures.Length; i++) {
+      var imgData = await Texture.LoadFromPath(paths[i]);
+      textures[i] = new Texture(device, imgData.Width, imgData.Height, paths[i]);
+      textures[i].SetTextureData(imgData.Data);
+    }
+    return textures;
   }
 
   public Dictionary<Guid, Texture> LoadedTextures => _loadedTextures;

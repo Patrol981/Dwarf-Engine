@@ -1,5 +1,4 @@
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Vulkan;
 
 namespace Dwarf.Engine;
@@ -7,7 +6,6 @@ namespace Dwarf.Engine;
 public abstract class Scene {
   protected readonly Application _app;
   private List<Entity> _entities = new();
-  private List<FontFile> _fonts = new();
   private List<List<string>> _texturePaths = new();
 
   public Scene(Application app) {
@@ -50,13 +48,5 @@ public abstract class Scene {
 
   public List<List<string>> GetTexturePaths() {
     return _texturePaths;
-  }
-
-  public void AddFont(FontFile fontData) {
-    _fonts.Add(fontData);
-  }
-
-  public List<FontFile> GetFonts() {
-    return _fonts;
   }
 }

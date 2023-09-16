@@ -9,7 +9,8 @@ using Dwarf.Engine.EntityComponentSystem;
 
 using Vortice.Vulkan;
 
-namespace DwarfEngine.Engine;
-public interface IRenderSystem : IDisposable {
+namespace Dwarf.Engine;
+public interface IRenderSystem : IDisposable
+{
 
 }

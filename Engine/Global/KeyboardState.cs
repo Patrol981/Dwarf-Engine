@@ -17,7 +17,6 @@ public sealed class KeyboardState {
   private static bool s_debug = true;
 
   public static unsafe void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    // Console.WriteLine(key);
     switch (action) {
       case (int)GLFWKeyMap.KeyAction.GLFW_PRESS:
         if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_F) WindowState.FocusOnWindow();

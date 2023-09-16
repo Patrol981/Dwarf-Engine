@@ -35,7 +35,6 @@ public class ThirdPersonCamera : Component {
   }
   private void CalculateZoom() {
     float zoomWheel = (float)MouseState.GetInstance().ScrollDelta * 0.1f;
-    // float zoomWheel = WindowGlobalState.GetMouseState().ScrollDelta.Y * 0.1f;
     _distanceFromTarget -= zoomWheel;
   }
 

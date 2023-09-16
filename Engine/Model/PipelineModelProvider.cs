@@ -12,19 +12,23 @@ using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace DwarfEngine.Engine;
-public class PipelineModelProvider : PipelineProvider {
-  public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
+namespace Dwarf.Engine;
+public class PipelineModelProvider : PipelineProvider
+{
+  public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc()
+  {
     var bindingDescriptions = new VkVertexInputBindingDescription[1];
     bindingDescriptions[0].binding = 0;
     bindingDescriptions[0].stride = ((uint)Unsafe.SizeOf<Vertex>());
     bindingDescriptions[0].inputRate = VkVertexInputRate.Vertex;
-    fixed (VkVertexInputBindingDescription* ptr = bindingDescriptions) {
+    fixed (VkVertexInputBindingDescription* ptr = bindingDescriptions)
+    {
       return ptr;
     }
   }
 
-  public override unsafe VkVertexInputAttributeDescription* GetAttribDescsFunc() {
+  public override unsafe VkVertexInputAttributeDescription* GetAttribDescsFunc()
+  {
     var attributeDescriptions = new VkVertexInputAttributeDescription[GetAttribsLength()];
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
@@ -46,16 +50,19 @@ public class PipelineModelProvider : PipelineProvider {
     attributeDescriptions[3].format = VkFormat.R32G32Sfloat;
     attributeDescriptions[3].offset = (uint)Marshal.OffsetOf<Vertex>("Uv");
 
-    fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions) {
+    fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions)
+    {
       return ptr;
     }
   }
 
-  public override uint GetAttribsLength() {
+  public override uint GetAttribsLength()
+  {
     return 4;
   }
 
-  public override uint GetBindingsLength() {
+  public override uint GetBindingsLength()
+  {
     return 1;
   }
 }

@@ -1,8 +1,11 @@
+using System.Drawing;
 using System.Net.Mime;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
+using OpenTK.Compute.OpenCL;
 
 using StbImageSharp;
 
@@ -15,113 +18,100 @@ namespace Dwarf.Engine;
 public class Texture : IDisposable {
   public readonly string TextureName;
   private readonly Device _device = null!;
+
   internal VkImage _textureImage = VkImage.Null;
   internal VkDeviceMemory _textureImageMemory = VkDeviceMemory.Null;
-  // private Vulkan.Buffer _textureBuffer = null!;
   internal VkImageView _imageView = VkImageView.Null;
   internal VkSampler _imageSampler = VkSampler.Null;
 
-  private Mutex _mutex = new();
+  private int _width = 0;
+  private int _height = 0;
+  private int _size = 0;
 
-  public Texture(Device device, string texturePath, bool createOnStart = false) {
-    TextureName = texturePath;
+  public Texture(Device device, int width, int height, string textureName = "") {
     _device = device;
-    if (createOnStart) {
-      CreateTexture(_device, texturePath, out _textureImage, out _textureImageMemory, out _imageView, out _imageSampler);
-    }
+    _width = width;
+    _height = height;
+    TextureName = textureName;
+
+    _size = _width * _height * 4;
   }
 
-  public static Texture[] InitTextures(ref Device device, ReadOnlySpan<string> texturePaths) {
-    var textures = new Texture[texturePaths.Length];
-    for (int i = 0; i < textures.Length; i++) {
-      textures[i] = new(device, texturePaths[i], false);
-    }
-
-    return textures;
-  }
-
-  public unsafe static void CreateTexture(
-    Device device,
-    string texturePath,
-    out VkImage textureImage,
-    out VkDeviceMemory textureMemory,
-    out VkImageView imageView,
-    out VkSampler sampler,
-    int flip = 1
-  ) {
-    var startTime = DateTime.Now;
-    // Console.WriteLine("Start");
-    StbImage.stbi_set_flip_vertically_on_load(flip);
-
-    using var stream = File.OpenRead($"{texturePath}");
-    var img = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-    stream.Dispose();
-
-    // Console.WriteLine("Map");
-
-    // This takes the longest
-    var size = img.Width * img.Height * 4;
+  public void SetTextureData(byte[] data) {
     var stagingBuffer = new Vulkan.Buffer(
-      device,
-      (ulong)(size),
+      _device,
+      (ulong)(_size),
       VkBufferUsageFlags.TransferSrc,
       VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(img.Data), (ulong)size);
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
-    /*
-    _textureBuffer = new Vulkan.Buffer(
-      _device,
-      (ulong)size,
-      VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
-    );
-    */
+    unsafe {
+      if (_textureImage.IsNotNull) {
+        vkDeviceWaitIdle(_device.LogicalDevice);
+        vkDestroyImage(_device.LogicalDevice, _textureImage);
+      }
 
-    // _device.CopyBuffer(buffer.GetBuffer(), _textureBuffer.GetBuffer(), (ulong)size);
-    // buffer.Dispose();
+      if (_textureImageMemory.IsNotNull) {
+        vkDeviceWaitIdle(_device.LogicalDevice);
+        vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+      }
+    }
 
-    // Console.WriteLine("Create Image");
     CreateImage(
-      ref device,
-      (uint)img.Width,
-      (uint)img.Height,
+      _device,
+      (uint)_width,
+      (uint)_height,
       VkFormat.R8G8B8A8Srgb,
       VkImageTiling.Optimal,
       VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
       VkMemoryPropertyFlags.DeviceLocal,
-      out textureImage,
-      out textureMemory
+      out _textureImage,
+      out _textureImageMemory
     );
 
-    // Console.WriteLine("Create Transitions");
-    CreateImageTransitions(device, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, textureImage);
-    CopyBufferToImage(device, stagingBuffer.GetBuffer(), textureImage, img.Width, img.Height);
-    CreateImageTransitions(device, VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal, textureImage);
+    CreateImageTransitions(
+      _device,
+      VkImageLayout.Undefined,
+      VkImageLayout.TransferDstOptimal,
+      _textureImage
+    );
 
-    //transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    //copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    //transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    CopyBufferToImage(
+      _device,
+      stagingBuffer.GetBuffer(),
+      _textureImage,
+      _width,
+      _height
+    );
+
+    CreateImageTransitions(
+      _device,
+      VkImageLayout.TransferDstOptimal,
+      VkImageLayout.ShaderReadOnlyOptimal,
+      _textureImage
+    );
 
     stagingBuffer.Dispose();
 
-    //vkDestroyBuffer(device, stagingBuffer, nullptr);
-    //vkFreeMemory(device, stagingBufferMemory, nullptr);
-    // Console.WriteLine("Creating View");
-    CreateTextureImageView(device, textureImage, out imageView);
-    // Console.WriteLine("Create Sampler");
-    CreateSampler(device, out sampler);
+    CreateTextureImageView(_device, _textureImage, out _imageView);
+    CreateSampler(_device, out _imageSampler);
+  }
 
-    // _textureBuffer.Dispose();
-    var endTime = DateTime.Now;
-    Logger.Warn($"[CREATE TEXTURE TIME]: {(endTime - startTime).TotalMilliseconds}");
+  public static async Task<ImageResult> LoadFromPath(string path, int flip = 1) {
+    StbImage.stbi_set_flip_vertically_on_load(flip);
+
+    using var stream = File.OpenRead(path);
+    var img = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+    await stream.DisposeAsync();
+    return img;
   }
 
   private unsafe static void CreateImage(
-    ref Device device,
+    Device device,
     uint width,
     uint height,
     VkFormat format,
@@ -132,7 +122,6 @@ public class Texture : IDisposable {
     out VkDeviceMemory textureImageMemory
   ) {
     VkImageCreateInfo imageInfo = new();
-    // imageInfo.sType = VkStructureType.ImageCreateInfo;
     imageInfo.imageType = VkImageType.Image2D;
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
@@ -192,7 +181,6 @@ public class Texture : IDisposable {
     VkCommandBuffer commandBuffer = device.BeginSingleTimeCommands();
 
     VkImageMemoryBarrier barrier = new();
-    // barrier.sType = VkStructureType.ImageMemoryBarrier;
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -244,7 +232,6 @@ public class Texture : IDisposable {
 
   private unsafe static VkImageView CreateImageView(Device device, VkFormat format, VkImage textureImage) {
     VkImageViewCreateInfo viewInfo = new();
-    // viewInfo.sType = VkStructureType.ImageViewCreateInfo;
     viewInfo.image = textureImage;
     viewInfo.viewType = VkImageViewType.Image2D;
     viewInfo.format = format;
@@ -264,7 +251,6 @@ public class Texture : IDisposable {
     vkGetPhysicalDeviceProperties(device.PhysicalDevice, &properties);
 
     VkSamplerCreateInfo samplerInfo = new();
-    // samplerInfo.sType = VkStructureType.SamplerCreateInfo;
     samplerInfo.magFilter = VkFilter.Linear;
     samplerInfo.minFilter = VkFilter.Linear;
     samplerInfo.addressModeU = VkSamplerAddressMode.Repeat;
@@ -286,11 +272,12 @@ public class Texture : IDisposable {
     vkDestroyImage(_device.LogicalDevice, _textureImage);
     vkDestroyImageView(_device.LogicalDevice, _imageView);
     vkDestroySampler(_device.LogicalDevice, _imageSampler);
-    // _textureBuffer.Dispose();
   }
 
-  // public Vulkan.Buffer GetBuffer() => _textureBuffer;
   public VkSampler GetSampler() => _imageSampler;
   public VkImageView GetImageView() => _imageView;
   public VkImage GetTextureImage() => _textureImage;
+  public int Width => _width;
+  public int Height => _height;
+  public int Size => _size;
 }

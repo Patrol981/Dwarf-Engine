@@ -10,15 +10,10 @@ using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Engine.Rendering;
-using DwarfEngine.Engine.Rendering.UI;
-
 using System.Numerics;
 
 using Vortice.Vulkan;
@@ -68,7 +63,6 @@ public class Application {
   private List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
 
-  private List<FontFile> _loadedFonts = new();
   private Entity _camera = new();
 
   private Scene _currentScene = null!;
@@ -127,16 +121,9 @@ public class Application {
 
     _onLoad?.Invoke();
 
-    // ImGuiRenderer imgui = new(_device, this);
-    // imgui.Init();
-    // _systems.PhysicsThread?.Start(this);
-
     while (!_window.ShouldClose) {
-      // 
-
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
-      // imgui.Update();
       Time.Tick();
 
       _systems.ValidateSystems(
@@ -167,13 +154,10 @@ public class Application {
         int frameIndex = _renderer.GetFrameIndex();
         FrameInfo frameInfo = new();
 
-        // update
         GlobalUniformBufferObject ubo = new();
-        // ubo.LightDirection = new Vector3(1, -3, -1).Normalized();
         ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
         ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
 
-        // ubo.LightPosition = new Vector3(-1, -1, 0);
         ubo.LightPosition = _camera.GetComponent<Transform>().Position;
         ubo.LightColor = new Vector4(1f, 1f, 1f, 1f);
         ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 1f);
@@ -194,7 +178,6 @@ public class Application {
         _renderer.EndSwapchainRenderPass(commandBuffer);
         _renderer.EndFrame();
 
-        // cleanup
         Collect();
       }
 
@@ -202,14 +185,10 @@ public class Application {
       _onUpdate?.Invoke();
       _onGUI?.Invoke();
 
-      // _systems.PhysicsThread.Join();
-
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
     _systems.PhysicsThread?.Join();
-
-    // imgui.Dispose();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
@@ -284,8 +263,6 @@ public class Application {
   }
 
   public async void Init() {
-    Console.WriteLine(DateTime.UtcNow.ToString());
-
     _globalPool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
@@ -293,37 +270,29 @@ public class Application {
 
     await LoadTextures();
     await LoadEntities();
-    await LoadFonts();
 
-    Console.WriteLine(DateTime.UtcNow.ToString());
     Logger.Info($"Loaded entities: {_entities.Count}");
     Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
-    Logger.Info($"Loaded fonts: {_loadedFonts.Count}");
   }
 
-  public void MultiThreadedTextureLoad(List<List<string>> paths) {
+  public async Task<Task> MultiThreadedTextureLoad(List<List<string>> paths) {
     var startTime = DateTime.UtcNow;
-    List<Thread> threads = new();
-    List<TextureThread> textureThreads = new();
+    List<Task> tasks = new();
+
     List<List<Texture>> textures = new();
     for (int i = 0; i < paths.Count; i++) {
-      textures.Add(Texture.InitTextures(ref _device, paths[i].ToArray()).ToList());
-      textureThreads.Add(new TextureThread(ref _device, textures[i].ToArray(), paths[i].ToArray()));
-      threads.Add(new(new ThreadStart(textureThreads[i].Process)));
-    }
-
-    for (int i = 0; i < paths.Count; i++) {
-      threads[i].Start();
-    }
-
-    for (int i = 0; i < paths.Count; i++) {
-      threads[i].Join();
+      var t = await TextureManager.InitTexturesStatic(_device, paths[i].ToArray());
+      textures.Add(t.ToList());
     }
 
     for (int i = 0; i < paths.Count; i++) {
       _textureManager.AddRange(textures[i].ToArray());
     }
+
     var endTime = DateTime.Now;
+    Logger.Info($"[TEXTURE] Load Time {endTime - startTime}");
+
+    return Task.CompletedTask;
   }
 
   private async Task<Task> LoadTextures() {
@@ -332,13 +301,14 @@ public class Application {
     return Task.CompletedTask;
   }
 
-  public Task LoadTexturesAsSeparateThreads(List<List<string>> paths) {
-    MultiThreadedTextureLoad(paths);
+  public async Task<Task> LoadTexturesAsSeparateThreads(List<List<string>> paths) {
+    await MultiThreadedTextureLoad(paths);
     Logger.Info("Done Loading Textures");
     return Task.CompletedTask;
   }
 
   private Task LoadEntities() {
+    var startTime = DateTime.UtcNow;
     _currentScene.LoadEntities();
     _entities.AddRange(_currentScene.GetEntities());
 
@@ -347,12 +317,8 @@ public class Application {
       _systems.Canvas = targetCnv[0].GetComponent<Canvas>();
     }
 
-    return Task.CompletedTask;
-  }
-
-  private Task LoadFonts() {
-    _currentScene.LoadFonts();
-    _loadedFonts.AddRange(_currentScene.GetFonts());
+    var endTime = DateTime.Now;
+    Logger.Info($"[Entities] Load Time {endTime - startTime}");
     return Task.CompletedTask;
   }
 
@@ -377,36 +343,16 @@ public class Application {
   }
 
   private void Collect() {
-    // Colect Models
-
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
         _entities[i].DisposeEverything();
-        /*
-        var drawables = _entities[i].GetDrawables<IDrawable>();
-        foreach (var drawable in drawables) {
-          var target = drawable as IDrawable;
-          target?.Dispose();
-        }
-        */
-        //  _entities[i].GetComponent<Rigidbody>()?.Dispose();
         ApplicationState.Instance.RemoveEntity(_entities[i].EntityID);
       }
     }
-    /*
-    var models = Entity.Distinct<Model>(_entities);
-    for (int i = 0; i < models.Length; i++) {
-      if (models[i].CanBeDisposed) {
-        models[i].GetComponent<Model>().Dispose();
-        ApplicationState.Instance.RemoveEntity(models[i].EntityID);
-      }
-    }
-    */
   }
 
   public Device Device => _device;
   public Window Window => _window;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;
-  public List<FontFile> LoadedFonts => _loadedFonts;
 }

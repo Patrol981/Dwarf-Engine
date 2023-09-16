@@ -13,7 +13,6 @@ public sealed class MouseState {
   public event EventHandler ClickEvent;
 
   private Vector2d _lastMousePositionFromCallback = new(0, 0);
-  // private Vector2d _scrollDelta = new(0, 0);
   private double _previousScrollY = 0.0;
   private double _scrollDelta = 0.0;
 
@@ -23,14 +22,11 @@ public sealed class MouseState {
 
   public unsafe static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     double currentScrollY = yoffset;
-    // MouseState.GetInstance()._scrollDelta = currentScrollY - MouseState.GetInstance()._previousScrollY;
     MouseState.GetInstance()._scrollDelta = currentScrollY += yoffset;
     MouseState.GetInstance()._previousScrollY = currentScrollY;
-    // Logger.Info($"[SCROLL CHANGE] {MouseState.GetInstance()._scrollDelta}");
   }
 
   public unsafe static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    // Logger.Info($"[Button Action] {button} {action} {mods}");
     if (action == 1) {
       MouseState.GetInstance().OnClicked(null!);
     }
@@ -48,8 +44,6 @@ public sealed class MouseState {
         model.GetComponent<Material>().SetColor(new(0, 1, 1));
       }
     }
-
-    // Logger.Info("CLICK");
   }
 
   public Vector2d MousePosition => _lastMousePositionFromCallback;

@@ -8,11 +8,14 @@ using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace DwarfEngine.Engine;
-public class SystemHelper {
-  public static void CreatePipeline(ref Device device, VkRenderPass renderPass, VkPipelineLayout layout, ref Pipeline pipeline, ref PipelineConfigInfo configInfo) {
+namespace Dwarf.Engine;
+public class SystemHelper
+{
+  public static void CreatePipeline(ref Device device, VkRenderPass renderPass, VkPipelineLayout layout, ref Pipeline pipeline, ref PipelineConfigInfo configInfo)
+  {
     pipeline?.Dispose();
-    if (configInfo != null) {
+    if (configInfo != null)
+    {
       configInfo = new PipelineConfigInfo();
     }
     var pipelineConfig = configInfo!.GetConfigInfo();

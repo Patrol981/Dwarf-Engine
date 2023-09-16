@@ -8,12 +8,13 @@ using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Lists;
 using Dwarf.Vulkan;
 
-using DwarfEngine.Engine;
+using Dwarf.Engine;
 
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine;
-public abstract class SystemBase {
+public abstract class SystemBase
+{
   protected readonly Device _device = null!;
   protected readonly Renderer _renderer = null!;
   protected VkDescriptorSetLayout _globalDescriptorSetLayout;
@@ -35,7 +36,8 @@ public abstract class SystemBase {
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) {
+  )
+  {
     _device = device;
     _renderer = renderer;
     _globalDescriptorSetLayout = globalSetLayout;

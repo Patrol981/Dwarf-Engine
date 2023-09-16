@@ -11,12 +11,13 @@ using Dwarf.Engine.Math;
 using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 
-using DwarfEngine.Engine.Math;
+using Dwarf.Engine.Math;
 
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI;
-public class Button : Component, I2DCollision, IUIElement {
+public class Button : Component, I2DCollision, IUIElement
+{
   public event EventHandler Clicked;
 
   private readonly Application _application;
@@ -26,25 +27,30 @@ public class Button : Component, I2DCollision, IUIElement {
   private Vector2 _cachedSize = Vector2.Zero;
   private Bounds2D _cachedBounds = Bounds2D.Zero;
 
-  public Button() {
+  public Button()
+  {
     throw new Exception("Cannot create button without needed params");
   }
-  public Button(Application application, string texturePath) {
+  public Button(Application application, string texturePath)
+  {
     _application = application;
     _guiTexture = new GuiTexture(application.Device);
     _guiTexture.BindToTexture(_application.TextureManager, texturePath, false);
   }
 
-  public void CheckCollision(object sender, EventArgs e) {
+  public void CheckCollision(object sender, EventArgs e)
+  {
     var camera = CameraState.GetCamera();
     var size = WindowState.s_Window.Extent;
     var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.width, size.height));
-    if (collResult) {
+    if (collResult)
+    {
       Logger.Info("COLL DETECTED");
     }
   }
 
-  private Bounds2D GetBounds() {
+  private Bounds2D GetBounds()
+  {
     var pos = Owner!.GetComponent<RectTransform>().Position;
     var size = GetSize();
 
@@ -55,7 +61,8 @@ public class Button : Component, I2DCollision, IUIElement {
     return _cachedBounds;
   }
 
-  private Vector2 GetSize() {
+  private Vector2 GetSize()
+  {
     var scale = Owner!.GetComponent<RectTransform>().Scale;
     if (_lastKnownScale == scale) return _cachedSize;
 
@@ -66,7 +73,8 @@ public class Button : Component, I2DCollision, IUIElement {
     minX = _guiTexture.Mesh.Vertices[0].Position.X;
     minY = _guiTexture.Mesh.Vertices[0].Position.Y;
 
-    for (int i = 0; i < _guiTexture.Mesh.Vertices.Length; i++) {
+    for (int i = 0; i < _guiTexture.Mesh.Vertices.Length; i++)
+    {
       if (minX > _guiTexture.Mesh.Vertices[i].Position.X) minX = _guiTexture.Mesh.Vertices[i].Position.X;
       if (maxX < _guiTexture.Mesh.Vertices[i].Position.X) maxX = _guiTexture.Mesh.Vertices[i].Position.X;
 
@@ -84,37 +92,45 @@ public class Button : Component, I2DCollision, IUIElement {
     return _cachedSize;
   }
 
-  public void Bind(VkCommandBuffer commandBuffer) {
+  public void Bind(VkCommandBuffer commandBuffer)
+  {
     throw new NotImplementedException();
   }
 
-  public Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Bind(VkCommandBuffer commandBuffer, uint index = 0)
+  {
     _guiTexture.Bind(commandBuffer, index);
     return Task.CompletedTask;
   }
 
-  public void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
+  public void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout)
+  {
     _guiTexture.BindDescriptorSet(textureSet, frameInfo, ref pipelineLayout);
   }
 
-  public void Dispose() {
+  public void Dispose()
+  {
     _guiTexture.Dispose();
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0)
+  {
     _guiTexture.Draw(commandBuffer, index);
     return Task.CompletedTask;
   }
 
-  public void DrawText(string text) {
+  public void DrawText(string text)
+  {
     throw new NotImplementedException();
   }
 
-  public Guid GetTextureIdReference() {
+  public Guid GetTextureIdReference()
+  {
     return _guiTexture.GetTextureIdReference();
   }
 
-  public void Update() {
+  public void Update()
+  {
     _guiTexture.Update();
   }
 

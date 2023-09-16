@@ -9,20 +9,22 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Vulkan;
 
-using DwarfEngine.Engine;
+using Dwarf.Engine;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.Systems;
-public class RenderDebugSystem : SystemBase, IRenderSystem {
+public class RenderDebugSystem : SystemBase, IRenderSystem
+{
   public RenderDebugSystem(
     Device device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, globalSetLayout, configInfo)
+  {
 
     VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
       globalSetLayout,
@@ -32,7 +34,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     CreatePipeline(renderer.GetSwapchainRenderPass());
   }
 
-  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
+  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities)
+  {
     _pipeline.Bind(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -46,7 +49,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       null
     );
 
-    for (int i = 0; i < entities.Length; i++) {
+    for (int i = 0; i < entities.Length; i++)
+    {
       var targetEntity = entities[i].GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
       if (targetEntity == null) continue;
       if (!targetEntity.Enabled) continue;
@@ -63,8 +67,10 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
         &pushConstant
       );
 
-      if (!entities[i].CanBeDisposed) {
-        for (uint x = 0; x < targetEntity!.MeshsesCount; x++) {
+      if (!entities[i].CanBeDisposed)
+      {
+        for (uint x = 0; x < targetEntity!.MeshsesCount; x++)
+        {
           if (!targetEntity.FinishedInitialization) continue;
           targetEntity.Bind(frameInfo.CommandBuffer, x);
           targetEntity.Draw(frameInfo.CommandBuffer, x);
@@ -73,7 +79,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     }
   }
 
-  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
+  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts)
+  {
     VkPushConstantRange pushConstantRange = new();
     pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
     pushConstantRange.offset = 0;
@@ -81,7 +88,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
-    fixed (VkDescriptorSetLayout* ptr = layouts) {
+    fixed (VkDescriptorSetLayout* ptr = layouts)
+    {
       pipelineInfo.pSetLayouts = ptr;
     }
     pipelineInfo.pushConstantRangeCount = 1;
@@ -89,9 +97,11 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 
-  private unsafe void CreatePipeline(VkRenderPass renderPass) {
+  private unsafe void CreatePipeline(VkRenderPass renderPass)
+  {
     _pipeline?.Dispose();
-    if (_pipelineConfigInfo == null) {
+    if (_pipelineConfigInfo == null)
+    {
       _pipelineConfigInfo = new PipelineConfigInfo();
     }
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
@@ -100,7 +110,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     _pipeline = new Pipeline(_device, "debug_vertex", "debug_fragment", pipelineConfig, new PipelineModelProvider());
   }
 
-  public unsafe void Dispose() {
+  public unsafe void Dispose()
+  {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);

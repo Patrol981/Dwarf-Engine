@@ -16,13 +16,6 @@ public static class Converter {
     return deg;
   }
 
-  public static Vector2 GetScreenSpaceCoords(Entity entity) {
-    var transform = entity.GetComponent<Transform>();
-    var mat = transform.Matrix4;
-    return new Vector2(0, 0);
-    // return transform.Matrix4;
-  }
-
   public static OpenTK.Mathematics.Vector3 QuaternionToEulerAngles(System.Numerics.Quaternion quat) {
     float sqw = quat.W * quat.W;
     float sqx = quat.X * quat.X;

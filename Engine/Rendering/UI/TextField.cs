@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Engine.Rendering.UI.FontReader;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -14,7 +13,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace DwarfEngine.Engine.Rendering.UI;
+namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
@@ -32,7 +31,6 @@ public class TextField : Component, IUIElement {
   private float _maxLineSize = 1;
   private int _numberOfLines = 1;
   private bool _isCentered = false;
-  private List<Line> _lines = new();
 
   // debug
   private int _numOfRows = 11;
@@ -59,7 +57,6 @@ public class TextField : Component, IUIElement {
 
   public void Init() {
     _textMesh = new();
-    _lines = new List<Line>();
 
     // setup chars mappings
     int currX = 0;

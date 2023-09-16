@@ -6,7 +6,7 @@ using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-using DwarfEngine.Engine;
+using Dwarf.Engine;
 
 using OpenTK.Mathematics;
 
@@ -217,17 +217,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     // _modelBuffer.Flush();
-
-    // Logger.Info($"Allignment Size: {_modelBuffer.GetAlignmentSize()}");
-    // Logger.Info($"Instance Size: {_modelBuffer.GetInstanceCount()}");
-    // Logger.Info($"Entities Length: {entities.Length}");
-    // Logger.Info($"Buff Size: {_modelBuffer.GetBufferSize()}");
-
-    // TODO : WHY chr_knight is not being colored corectly?
-    // TODO : edit: it seems that uniforms being bound like this: 1, 3, 5, 7
-    // TODO : it skips one and then places uniform of not bounded
-    // TODO : (1 is always ok, 2 is black, 3 has color of 2)
-    // TODO : edit: It seems allrgiht, need to stress test
 
     for (int i = 0; i < entities.Length; i++) {
       //var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;

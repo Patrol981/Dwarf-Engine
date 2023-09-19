@@ -140,7 +140,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
       (ulong)entities.Length,
       VkBufferUsageFlags.UniformBuffer,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+      VkMemoryPropertyFlags.HostVisible,
+      // VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
       _device.Properties.limits.minUniformBufferOffsetAlignment
     );
 
@@ -216,7 +217,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     List<Task> _tasks = new List<Task>();
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
-    // _modelBuffer.Flush();
+    _modelBuffer.Flush();
 
     for (int i = 0; i < entities.Length; i++) {
       //var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
@@ -226,17 +227,20 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
       unsafe {
-        var map = _modelBuffer.GetMappedMemory();
-        char* memOffset = (char*)map;
-        if (i != 0) {
-          var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
-          memOffset += fixedSize * (ulong)(i);
-        }
+        // var map = _modelBuffer.GetMappedMemory();
+        // char* memOffset = (char*)map;
+        var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
+        // memOffset += fixedSize * (ulong)(i);
+
+        var offset = fixedSize * (ulong)(i);
+        _modelBuffer.WriteToBuffer((IntPtr)(&modelUBO), _modelBuffer.GetInstanceSize(), offset);
+        /*
         VkUtils.MemCopy(
           (IntPtr)memOffset,
           (IntPtr)(&modelUBO),
           (int)_modelBuffer.GetInstanceSize()
         );
+        */
       }
 
       var pushConstantData = new SimplePushConstantData();

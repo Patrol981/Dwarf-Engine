@@ -6,33 +6,6 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class BufferLoader {
-  private readonly Buffer _buffer;
-  private readonly ulong _size;
-  private readonly ulong _offset;
-  private readonly IntPtr _data;
-  public BufferLoader(Buffer buffer, ulong size, ulong offset) {
-    _buffer = buffer;
-    _size = size;
-    _offset = offset;
-  }
-
-  public BufferLoader(Buffer buffer, ulong size, ulong offset, IntPtr data) {
-    _buffer = buffer;
-    _size = size;
-    _offset = offset;
-    _data = data;
-  }
-
-  public void Map() {
-    _buffer.Map(_size, _offset);
-  }
-
-  public void Write() {
-    _buffer.WriteToBuffer(_data, _size, _offset);
-  }
-}
-
 public unsafe class Buffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
@@ -96,14 +69,6 @@ public unsafe class Buffer : IDisposable {
     }
   }
 
-  public void MapThreaded(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    var loader = new BufferLoader(this, size, offset);
-    var thread = new Thread(new ThreadStart(loader.Map));
-
-    thread.Start();
-    // thread.Join();
-  }
-
   public void Unmap() {
     if (_mapped != IntPtr.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
@@ -121,15 +86,6 @@ public unsafe class Buffer : IDisposable {
       VkUtils.MemCopy((IntPtr)memOffset, data, (int)size);
     }
   }
-
-  public void WriteToBufferThreaded(IntPtr data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    var loader = new BufferLoader(this, size, offset, data);
-    var thread = new Thread(new ThreadStart(loader.Write));
-
-    thread.Start();
-    // thread.Join();
-  }
-
   public VkResult Flush(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     VkMappedMemoryRange mappedRange = new();
     // mappedRange.sType = VkStructureType.MappedMemoryRange;

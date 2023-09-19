@@ -323,7 +323,11 @@ public class Model : Component, IRender3DElement, ICollision {
 
   public AABB AABB {
     get {
-      return _mergedAABB;
+      if (Owner!.HasComponent<ColliderMesh>()) {
+        return AABB.CalculateOnFly(Owner!.GetComponent<ColliderMesh>().Mesh);
+      } else {
+        return _mergedAABB;
+      }
     }
   }
 }

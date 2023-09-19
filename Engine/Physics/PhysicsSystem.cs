@@ -29,8 +29,6 @@ public class PhysicsSystem : IDisposable {
   private readonly ObjectLayerPairFilterImpl _objectVsObjectLayerFilter;
 
   private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
-
-  private List<Entity> _entities;
   public PhysicsSystem() {
     if (!Foundation.Init(true)) {
       return;
@@ -102,28 +100,15 @@ public class PhysicsSystem : IDisposable {
   }
 
   public void Init(Span<Entity> entities) {
-    for (short i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Rigidbody>()?.Init(BodyInterface);
+    foreach (var entity in entities) {
+      entity.GetComponent<Rigidbody>()?.Init(BodyInterface);
     }
-  }
-
-  public void StoreEntities(Span<Entity> entities) {
-    _entities = entities.ToArray().ToList();
   }
 
   public Task Tick(ReadOnlySpan<Entity> entities) {
     for (short i = 0; i < entities.Length; i++) {
       if (entities[i].CanBeDisposed) continue;
       entities[i].GetComponent<Rigidbody>()?.Update();
-    }
-    _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
-    return Task.CompletedTask;
-  }
-
-  public Task Tick() {
-    for (short i = 0; i < _entities.Count; i++) {
-      if (_entities[i].CanBeDisposed) continue;
-      _entities[i].GetComponent<Rigidbody>()?.Update();
     }
     _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
     return Task.CompletedTask;

@@ -11,8 +11,30 @@ public class AABB {
   private Vector3 _max;
 
   public AABB() {
-    _min = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
-    _max = new Vector3(float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity);
+    _min = new Vector3(float.PositiveInfinity, float.NegativeInfinity, float.PositiveInfinity);
+    _max = new Vector3(float.NegativeInfinity, float.PositiveInfinity, float.NegativeInfinity);
+  }
+
+  public AABB(Vector3 min, Vector3 max) {
+    _max = max;
+    _min = min;
+  }
+
+  public static AABB CalculateOnFly(Mesh mesh) {
+    Vector3 min = new Vector3(float.PositiveInfinity, float.NegativeInfinity, float.PositiveInfinity);
+    Vector3 max = new Vector3(float.NegativeInfinity, float.PositiveInfinity, float.NegativeInfinity);
+
+    foreach (var item in mesh.Vertices) {
+      min.X = MathF.Min(min.X, item.Position.X);
+      min.Y = MathF.Min(min.Y, item.Position.Y);
+      min.Z = MathF.Min(min.Z, item.Position.Z);
+
+      max.X = MathF.Max(max.X, item.Position.X);
+      max.Y = MathF.Max(max.Y, item.Position.Y);
+      max.Z = MathF.Max(max.Z, item.Position.Z);
+    }
+
+    return new AABB(min, max);
   }
 
   public void Update(Mesh mesh) {

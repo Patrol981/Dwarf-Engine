@@ -24,6 +24,56 @@ public static class Primitives {
     return inputMesh;
   }
 
+  public static Mesh CreateBoxPrimitive(float radius, float height) {
+    // Define the half-extents of the box
+    float halfWidth = radius;
+    float halfDepth = radius;
+
+    // Define the eight vertices of the box
+    Vertex[] vertices = new Vertex[] {
+      new Vertex { Position = new Vector3(-halfWidth, 0, -halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(halfWidth, 0, -halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(halfWidth, 0, halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-halfWidth, 0, halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-halfWidth, -height, -halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(halfWidth, -height, -halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(halfWidth, -height, halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-halfWidth, -height, halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero }
+    };
+
+    // Define the indices to form triangles for each face of the box
+    uint[] indices = new uint[] {
+      // Front face
+      0, 1, 2,
+      2, 3, 0,
+
+      // Back face
+      4, 5, 6,
+      6, 7, 4,
+
+      // Left face
+      0, 4, 7,
+      7, 3, 0,
+
+      // Right face
+      1, 5, 6,
+      6, 2, 1,
+
+      // Top face
+      3, 2, 6,
+      6, 7, 3,
+
+      // Bottom face
+      0, 1, 5,
+      5, 4, 0
+    };
+
+    var mesh = new Mesh();
+    mesh.Indices = indices;
+    mesh.Vertices = vertices;
+    return mesh;
+  }
+
   public static Mesh CreateCylinderPrimitive(float radius = 0.5f, float height = 1.0f, int segments = 20) {
     // height = height * -1;
     float cylinderStep = (MathF.PI * 2) / segments;

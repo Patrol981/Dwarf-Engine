@@ -165,9 +165,9 @@ public class Texture : IDisposable {
     region.imageOffset = new(0, 0, 0);
     region.imageExtent = new(width, height, 1);
 
-    device._mutex.WaitOne();
+    // device._mutex.WaitOne();
     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VkImageLayout.TransferDstOptimal, 1, &region);
-    device._mutex.ReleaseMutex();
+    // device._mutex.ReleaseMutex();
 
     device.EndSingleTimeCommands(commandBuffer);
   }

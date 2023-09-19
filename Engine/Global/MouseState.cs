@@ -16,6 +16,8 @@ public sealed class MouseState {
   private double _previousScrollY = 0.0;
   private double _scrollDelta = 0.0;
 
+  private System.Numerics.Vector3 _selectedColor = new(1, 0, 0);
+
   public unsafe static void MouseCallback(GLFWwindow* window, double xpos, double ypos) {
     MouseState.GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
   }
@@ -39,9 +41,14 @@ public sealed class MouseState {
     var models = Entity.Distinct<Model>(entities);
 
     foreach (var model in models) {
+      model.GetComponent<Material>().SetColor(new(1, 1, 1));
+    }
+
+    foreach (var model in models) {
       var result = Ray.OBBIntersection(model, 5);
       if (result) {
-        model.GetComponent<Material>().SetColor(new(0, 1, 1));
+        model.GetComponent<Material>().SetColor(_selectedColor);
+        break;
       }
     }
   }

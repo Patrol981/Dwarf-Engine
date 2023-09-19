@@ -25,12 +25,14 @@ public class Rigidbody : Component, IDisposable {
   private MotionType _motionType = MotionType.Dynamic;
   private MotionQuality _motionQuality = MotionQuality.Discrete;
   private PrimitiveType _primitiveType = PrimitiveType.None;
+  private float _inputRadius = 0.0f;
 
   public Rigidbody() { }
 
-  public Rigidbody(Device device, PrimitiveType colliderShape) {
+  public Rigidbody(Device device, PrimitiveType colliderShape, float inputRadius) {
     _primitiveType = colliderShape;
     _device = device;
+    _inputRadius = inputRadius;
   }
 
   public unsafe void Init(in BodyInterface bodyInterface) {
@@ -48,15 +50,21 @@ public class Rigidbody : Component, IDisposable {
 
     switch (_primitiveType) {
       case PrimitiveType.Cylinder:
-        mesh = Primitives.CreateCylinderPrimitive(0.25f, height, 20);
-        shapeSettings = new CylinderShapeSettings(height / 2, 0.25f);
+        mesh = Primitives.CreateCylinderPrimitive(_inputRadius, height, 20);
+        // shapeSettings = new CylinderShapeSettings(height / 2, 0.25f);
+        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
         mesh = Primitives.CreateConvex(Owner!.GetComponent<Model>().Meshes[0]);
-        shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
+        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
+        break;
+      case PrimitiveType.Box:
+        mesh = Primitives.CreateBoxPrimitive(_inputRadius, height);
+        // shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
+        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       default:
-        mesh = new();
+        mesh = Primitives.CreateBoxPrimitive(0.25f, height);
         shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
         break;
     }
@@ -74,6 +82,21 @@ public class Rigidbody : Component, IDisposable {
 
     _bodyInterface.SetGravityFactor(_bodyId, 0.025f);
     _bodyInterface.SetMotionQuality(_bodyId, _motionQuality);
+  }
+
+  private ConvexHullShapeSettings ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
+    List<Vector3> vertices = new();
+    var scale = entity.GetComponent<Transform>().Scale;
+    foreach (var m in colliderMesh.Vertices) {
+      Vertex v = new();
+      v.Position.X = m.Position.X * scale.X;
+      v.Position.Y = m.Position.Y * scale.Y;
+      v.Position.Z = m.Position.Z * scale.Z;
+      vertices.Add(v.Position);
+    }
+
+    ConvexHullShapeSettings settings = new(vertices.ToArray());
+    return settings;
   }
 
   public void Update() {

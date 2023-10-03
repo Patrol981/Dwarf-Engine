@@ -16,6 +16,11 @@ public class Ray {
     internal Vector3 RayDirection { get; set; }
   }
 
+  public class RaycastHitResult {
+    internal bool Present { get; set; }
+    internal Vector3 Point { get; set; }
+  }
+
   public static Vector2 MouseToWorld2D(Camera camera, Vector2 screenSize) {
     var mousePos = MouseState.GetInstance().MousePosition;
     float normalizedX = (2.0f * (float)mousePos.X) / screenSize.X - 1.0f;
@@ -90,10 +95,14 @@ public class Ray {
     var result = new RayResult();
     result.RayOrigin = new(rayStartWorld.X, rayStartWorld.Y, rayStartWorld.Z);
     result.RayDirection = Vector3.Normalize(new(rayDirWorld.X, rayDirWorld.Y, rayDirWorld.Z));
+
+    Logger.Warn($"[Ray Origin] {result.RayOrigin}");
+    Logger.Warn($"[Ray Dir NRM] {result.RayDirection}");
+
     return result;
   }
 
-  public static bool OBBIntersection(Entity entity, float maxDistance) {
+  public static RaycastHitResult OBBIntersection(Entity entity, float maxDistance) {
     var camera = CameraState.GetCamera();
     var screenSize = ApplicationState.Instance.Window.Extent;
 
@@ -109,6 +118,11 @@ public class Ray {
     var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);
     var delta = positionWorldspace - rayData.RayOrigin;
 
+    var collisionPoint = Vector3.Zero;
+    var hitResult = new RaycastHitResult();
+    hitResult.Present = false;
+    hitResult.Point = collisionPoint;
+
     {
       var xAxis = new Vector3(modelMatrix[0, 0], modelMatrix[0, 1], modelMatrix[0, 2]);
       float e = Vector3.Dot(xAxis, delta);
@@ -120,15 +134,21 @@ public class Ray {
 
         if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
 
-        if (t2 < tMax)
+        if (t2 < tMax) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t2;
           tMax = t2;
-        if (t1 > tMin)
+        }
+
+        if (t1 > tMin) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t1;
           tMin = t1;
+        }
+
         if (tMax < tMin)
-          return false;
+          return hitResult;
       } else {
         if (-e + model.AABB.Min.X > 0.0f || -e + model.AABB.Max.X < 0.0f) {
-          return false;
+          return hitResult;
         }
       }
     }
@@ -144,15 +164,21 @@ public class Ray {
 
         if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
 
-        if (t2 < tMax)
+        if (t2 < tMax) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t2;
           tMax = t2;
-        if (t1 > tMin)
+        }
+
+        if (t1 > tMin) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t1;
           tMin = t1;
+        }
+
         if (tMin > tMax)
-          return false;
+          return hitResult;
       } else {
         if (-e + model.AABB.Min.Y > 0.0f || -e + model.AABB.Max.Y < 0.0f) {
-          return false;
+          return hitResult;
         }
       }
     }
@@ -167,21 +193,30 @@ public class Ray {
         float t2 = (e + model.AABB.Max.Z) / f;
         if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
 
-        if (t2 < tMax)
+        if (t2 < tMax) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t2;
           tMax = t2;
-        if (t1 > tMin)
+        }
+
+        if (t1 > tMin) {
+          collisionPoint = rayData.RayOrigin + rayData.RayDirection * t1;
           tMin = t1;
+        }
+
         if (tMin > tMax)
-          return false;
+          return hitResult;
       } else {
         if (-e + model.AABB.Min.Z > 0.0f || -e + model.AABB.Max.Z < 0.0f) {
-          return false;
+          return hitResult;
         }
       }
     }
 
     Logger.Info("INTERSECTION");
-    return true;
+    hitResult.Present = true;
+    hitResult.Point = collisionPoint;
+    Logger.Error($"POINT: {hitResult.Point}");
+    return hitResult;
   }
 
   public static Vector3 MouseToWorld3D(float maxDistance) {

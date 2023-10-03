@@ -114,10 +114,11 @@ public class Application {
     }
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
-    _systems.Render3DSystem?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(_entities).ToArray(), ref _textureManager);
+    var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
+    _systems.Render3DSystem?.SetupRenderData(objs3D, ref _textureManager);
     _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.RenderUISystem?.SetupUIData(_systems.Canvas, ref _textureManager);
-    _systems.PhysicsSystem?.Init(_entities.ToArray());
+    _systems.PhysicsSystem?.Init(objs3D);
 
     _onLoad?.Invoke();
 

@@ -7,16 +7,13 @@ using Dwarf.Vulkan;
 
 namespace Dwarf.Engine.EntityComponentSystem;
 public static class EntityCreator {
-  public async static Task<Entity> Create3DModel(
+
+  public static Task<Entity> CreateBase(
     string entityName,
-    string modelPath,
-    string[] texturePaths,
     Vector3? position = null,
     Vector3? rotation = null,
     Vector3? scale = null
   ) {
-    var app = ApplicationState.Instance;
-
     var entity = new Entity();
     entity.Name = entityName;
 
@@ -28,6 +25,21 @@ public static class EntityCreator {
     entity.GetComponent<Transform>().Rotation = rotation.Value;
     entity.GetComponent<Transform>().Scale = scale.Value;
     entity.AddComponent(new Material(new(1.0f, 1.0f, 1.0f)));
+
+    return Task.FromResult(entity);
+  }
+
+  public async static Task<Entity> Create3DModel(
+    string entityName,
+    string modelPath,
+    string[] texturePaths,
+    Vector3? position = null,
+    Vector3? rotation = null,
+    Vector3? scale = null
+  ) {
+    var app = ApplicationState.Instance;
+
+    var entity = await CreateBase(entityName, position, rotation, scale);
     entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, modelPath));
 
     if (texturePaths.Length > 1) {
@@ -35,6 +47,26 @@ public static class EntityCreator {
     } else {
       entity.GetComponent<Model>().BindToTexture(app.TextureManager, texturePaths[0]);
     }
+
+    return entity;
+  }
+
+  public async static Task<Entity> Create3DPrimitive(
+    string entityName,
+    string texturePath,
+    PrimitiveType primitiveType,
+    Vector3? position = null,
+    Vector3? rotation = null,
+    Vector3? scale = null
+  ) {
+    var app = ApplicationState.Instance;
+
+    var entity = await CreateBase(entityName, position, rotation, scale);
+    var mesh = Primitives.CreatePrimitive(primitiveType);
+    var model = new Model(app.Device, new[] { mesh });
+    entity.AddComponent(model);
+
+    entity.GetComponent<Model>().BindToTexture(app.TextureManager, texturePath);
 
     return entity;
   }

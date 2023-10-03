@@ -15,6 +15,7 @@ using JoltPhysicsSharp;
 using System.Numerics;
 
 using static Dwarf.Engine.Physics.JoltConfig;
+using Dwarf.Engine.Rendering;
 
 namespace Dwarf.Engine.Physics;
 public class Rigidbody : Component, IDisposable {
@@ -23,7 +24,7 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private MotionQuality _motionQuality = MotionQuality.Discrete;
+  private MotionQuality _motionQuality = MotionQuality.LinearCast;
   private PrimitiveType _primitiveType = PrimitiveType.None;
   private float _inputRadius = 0.0f;
 
@@ -44,7 +45,9 @@ public class Rigidbody : Component, IDisposable {
     // var pos = Translator.OpenTKToSystemNumericsVector(Owner!.GetComponent<Transform>().Position);
     var pos = Owner!.GetComponent<Transform>().Position;
 
-    var height = Owner!.GetComponent<Model>().CalculateHeightOfAnModel();
+    var target = Owner.GetDrawable<IRender3DElement>() as IRender3DElement;
+    var height = target!.CalculateHeightOfAnModel();
+    // var height = Owner!.GetComponent<Model>().CalculateHeightOfAnModel();
     Mesh mesh;
     ShapeSettings shapeSettings;
 
@@ -55,7 +58,7 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(Owner!.GetComponent<Model>().Meshes[0]);
+        mesh = Primitives.CreateConvex(target.Meshes[0]);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Box:
@@ -100,6 +103,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void Update() {
+    // if(_motionType ==)
     // var pos = _bodyInterface.GetCenterOfMassPosition(_bodyId);
     var pos = _bodyInterface.GetPosition(_bodyId);
     var rot = _bodyInterface.GetRotation(_bodyId);
@@ -129,8 +133,20 @@ public class Rigidbody : Component, IDisposable {
     _bodyInterface.SetPosition(_bodyId, pos, Activation.Activate);
   }
 
-  public void GetMeshData() {
-
+  public bool Kinematic {
+    get {
+      if (_motionType == MotionType.Static) return true;
+      return false;
+    }
+    set {
+      if (value) {
+        _motionType = MotionType.Static;
+        // _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.DontActivate);
+      } else {
+        _motionType = MotionType.Dynamic;
+        // _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
+      }
+    }
   }
 
   public void Dispose() {

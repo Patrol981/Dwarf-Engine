@@ -3,6 +3,9 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+
+using Dwarf.Extensions.Logging;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Extensions.Loaders;
@@ -30,6 +33,34 @@ public static class LibraryLoader {
     throw new ArgumentException("Unsupported architecture.");
   }
 
+  public static string GetNativeAssemblyPath(string libraryName) {
+    string osPlatform = GetOSPlatform();
+    string architecture = GetArchitecture();
+
+    string assemblyLocation = Assembly.GetExecutingAssembly() != null ? Assembly.GetExecutingAssembly().Location : typeof(LibraryLoader).Assembly.Location;
+
+    if (string.IsNullOrEmpty(assemblyLocation)) {
+      assemblyLocation = AppContext.BaseDirectory;
+    }
+
+    assemblyLocation = Path.GetDirectoryName(assemblyLocation)!;
+
+    string[] paths = new[] {
+      Path.Combine(assemblyLocation, libraryName),
+      Path.Combine(assemblyLocation, "runtimes", osPlatform, "native", libraryName),
+      Path.Combine(assemblyLocation, "runtimes", $"{osPlatform}-{architecture}", "native", libraryName),
+      Path.Combine(assemblyLocation, "native", $"{osPlatform}-{architecture}", libraryName),
+    };
+
+    foreach (string path in paths) {
+      if (File.Exists(path)) {
+        return path;
+      }
+    }
+
+    return libraryName;
+  }
+
   public static IntPtr LoadLibrary(string libraryName) {
     string libraryPath = GetNativeAssemblyPath(libraryName);
 
@@ -38,30 +69,6 @@ public static class LibraryLoader {
       throw new DllNotFoundException($"Unable to load library '{libraryName}'.");
 
     return handle;
-
-    static string GetNativeAssemblyPath(string libraryName) {
-      string osPlatform = GetOSPlatform();
-      string architecture = GetArchitecture();
-
-      string assemblyLocation = Assembly.GetExecutingAssembly() != null ? Assembly.GetExecutingAssembly().Location : typeof(LibraryLoader).Assembly.Location;
-      assemblyLocation = Path.GetDirectoryName(assemblyLocation)!;
-
-      string[] paths = new[]
-      {
-                Path.Combine(assemblyLocation, libraryName),
-                Path.Combine(assemblyLocation, "runtimes", osPlatform, "native", libraryName),
-                Path.Combine(assemblyLocation, "runtimes", $"{osPlatform}-{architecture}", "native", libraryName),
-                Path.Combine(assemblyLocation, "native", $"{osPlatform}-{architecture}", libraryName),
-            };
-
-      foreach (string path in paths) {
-        if (File.Exists(path)) {
-          return path;
-        }
-      }
-
-      return libraryName;
-    }
   }
 
   public static T LoadFunction<T>(IntPtr library, string name) {

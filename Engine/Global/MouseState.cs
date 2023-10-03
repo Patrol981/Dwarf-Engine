@@ -46,7 +46,7 @@ public sealed class MouseState {
 
     foreach (var model in models) {
       var result = Ray.OBBIntersection(model, 5);
-      if (result) {
+      if (result.Present) {
         model.GetComponent<Material>().SetColor(_selectedColor);
         break;
       }

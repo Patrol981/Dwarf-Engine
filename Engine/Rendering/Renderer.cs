@@ -80,8 +80,8 @@ public unsafe class Renderer : IDisposable {
 
     _isFrameStarted = false;
     // PREV
-    // _frameIndex = (_frameIndex + 1) % _swapchain.GetMaxFramesInFlight();
-    _frameIndex = (_frameIndex) % _swapchain.GetMaxFramesInFlight();
+    _frameIndex = (_frameIndex + 1) % _swapchain.GetMaxFramesInFlight();
+    // _frameIndex = (_frameIndex) % _swapchain.GetMaxFramesInFlight();
   }
 
   public void BeginSwapchainRenderPass(VkCommandBuffer commandBuffer) {

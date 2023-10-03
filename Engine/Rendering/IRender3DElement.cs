@@ -8,10 +8,11 @@ using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 public interface IRender3DElement : IDrawable {
-  public bool UsesTexture { get; }
-  public bool UsesLight { get; set; }
   public int MeshsesCount { get; }
+  public Mesh[] Meshes { get; }
   public bool FinishedInitialization { get; }
   public void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
   public Task BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
+  public Guid GetTextureIdReference(int index = 0);
+  public float CalculateHeightOfAnModel();
 }

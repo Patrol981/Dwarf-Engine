@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 using System.Numerics;
+using Assimp;
+using OpenTK.Graphics.ES11;
 
 namespace Dwarf.Engine;
 
@@ -19,6 +21,23 @@ public enum PrimitiveType {
 
 public static class Primitives {
   static Vector3 Color = new Vector3(0.19f, 0.65f, 0.32f);
+
+  public static Mesh CreatePrimitive(PrimitiveType primitiveType) {
+    var mesh = new Mesh();
+
+    switch (primitiveType) {
+      case PrimitiveType.Cylinder:
+        mesh = CreateCylinderPrimitive(2, 2, 20);
+        break;
+      case PrimitiveType.Box:
+        mesh = CreateBoxPrimitive(2, 2);
+        break;
+      default:
+        break;
+    }
+
+    return mesh;
+  }
 
   public static Mesh CreateConvex(Mesh inputMesh) {
     return inputMesh;
@@ -128,15 +147,13 @@ public static class Primitives {
       indices.Add(bottom1);
       indices.Add(top2);
 
-
       indices.Add(bottom2);
       indices.Add(bottom1);
       indices.Add(top2);
 
       indices.Add((uint)vertices.Count() - 1);
-      indices.Add(top1);
       indices.Add(top2);
-
+      indices.Add(top1);
 
       indices.Add((uint)vertices.Count() - 2);
       indices.Add(bottom1);

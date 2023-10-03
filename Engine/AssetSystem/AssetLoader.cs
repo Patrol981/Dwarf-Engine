@@ -210,7 +210,6 @@ public class AssetLoader {
         var modelData = GetModelData(componentData);
         entity.AddComponent(new GenericLoader().LoadModel(app.Device, (string)modelData[2]));
         entity.GetComponent<Model>().BindToTexture(app.TextureManager, (string)modelData[1], (bool)modelData[0]);
-        entity.GetComponent<Model>().UsesLight = (bool)modelData[3];
         break;
       default:
         break;

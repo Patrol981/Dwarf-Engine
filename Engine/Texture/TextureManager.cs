@@ -19,6 +19,10 @@ public class TextureManager : IDisposable {
     }
   }
 
+  public void Add(Texture texture) {
+    _loadedTextures.Add(Guid.NewGuid(), texture);
+  }
+
   public async Task<Task> AddTexture(string texturePath) {
     foreach (var tex in _loadedTextures) {
       if (tex.Value.TextureName == texturePath) {

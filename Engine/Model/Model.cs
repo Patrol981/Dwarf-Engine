@@ -18,45 +18,6 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class Model : Component, IRender3DElement, ICollision {
-  internal class ModelLoader {
-    private readonly Model _model;
-    private readonly int _index;
-    private readonly Mesh _mesh;
-
-    public ModelLoader(Model model, int index, Mesh mesh) {
-      _model = model;
-      _index = index;
-      _mesh = mesh;
-    }
-
-    public async void Proceed() {
-      _model._device._mutex.WaitOne();
-      vkQueueWaitIdle(_model._device.GraphicsQueue);
-      vkDeviceWaitIdle(_model._device.LogicalDevice);
-      var tasks = new List<Task>() {
-        CreateVertexBuffer(),
-        CreateIndexBuffer(),
-      };
-
-      await Task.WhenAll(tasks);
-      _model._device._mutex.ReleaseMutex();
-    }
-
-    public Task CreateVertexBuffer() {
-      // vkQueueWaitIdle(_model._device.GraphicsQueue);
-      // vkDeviceWaitIdle(_model._device.LogicalDevice);
-      _model.CreateVertexBuffer(_mesh.Vertices, (uint)_index);
-      return Task.CompletedTask;
-    }
-
-    public Task CreateIndexBuffer() {
-      // vkQueueWaitIdle(_model._device.GraphicsQueue);
-      // vkDeviceWaitIdle(_model._device.LogicalDevice);
-      _model.CreateIndexBuffer(_mesh.Indices, (uint)_index);
-      return Task.CompletedTask;
-    }
-  }
-
   private readonly Device _device = null!;
 
   private Dwarf.Vulkan.Buffer[] _vertexBuffers = new Vulkan.Buffer[0];
@@ -65,7 +26,6 @@ public class Model : Component, IRender3DElement, ICollision {
   private Dwarf.Vulkan.Buffer[] _indexBuffers = new Vulkan.Buffer[0];
   private ulong[] _indexCount = new ulong[0];
   private int _meshesCount = 0;
-  private bool _usesTexture = false;
   private Guid[] _textureIdRefs = new Guid[0];
 
   private Mesh[] _meshes;
@@ -73,12 +33,19 @@ public class Model : Component, IRender3DElement, ICollision {
   private AABB _mergedAABB = new();
 
   private bool _finishedInitialization = false;
-  private bool _usesLight = true;
 
   public Model() { }
 
+  public Model(Device device) {
+    _device = device;
+  }
+
   public Model(Device device, Mesh[] meshes) {
     _device = device;
+    Init(meshes);
+  }
+
+  protected void Init(Mesh[] meshes) {
     _meshesCount = meshes.Length;
     _indexCount = new ulong[_meshesCount];
     _indexBuffers = new Vulkan.Buffer[_meshesCount];
@@ -88,9 +55,6 @@ public class Model : Component, IRender3DElement, ICollision {
     _hasIndexBuffer = new bool[_meshesCount];
     _textureIdRefs = new Guid[_meshesCount];
 
-    // List<Thread> threads = new();
-    // List<ModelLoader> loaders = new();
-
     List<Task> createTasks = new();
 
     _meshes = meshes;
@@ -99,11 +63,6 @@ public class Model : Component, IRender3DElement, ICollision {
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
       _textureIdRefs[i] = Guid.Empty;
-      // loaders.Add(new ModelLoader(this, i, meshes[i]));
-      // threads.Add(new(new ThreadStart(loaders[i].CreateVertexBuffer)));
-      // threads.Add(new(new ThreadStart(loaders[i].CreateIndexBuffer)));
-      // threads.Add(new(new ThreadStart(loaders[i].Proceed)));
-
       createTasks.Add(CreateVertexBuffer(meshes[i].Vertices, (uint)i));
       createTasks.Add(CreateIndexBuffer(meshes[i].Indices, (uint)i));
 
@@ -113,15 +72,12 @@ public class Model : Component, IRender3DElement, ICollision {
 
     _mergedAABB.Update(_aabbes);
 
-    Init(createTasks);
+    RunTasks(createTasks);
   }
 
-  private async void Init(List<Task> createTasks) {
-    var startTime = DateTime.Now;
+  protected async void RunTasks(List<Task> createTasks) {
     await Task.WhenAll(createTasks);
     _finishedInitialization = true;
-    var endTime = DateTime.Now;
-    // Logger.Warn($"[Load time]: {(endTime - startTime).TotalMilliseconds}");
   }
 
   public unsafe void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
@@ -146,22 +102,6 @@ public class Model : Component, IRender3DElement, ICollision {
       null
     );
     return Task.CompletedTask;
-  }
-
-  public unsafe void Bind(VkCommandBuffer commandBuffer) {
-    Span<VkBuffer> vertexBuffers = stackalloc VkBuffer[_meshesCount];
-    Span<ulong> offsets = stackalloc ulong[_meshesCount];
-    for (short i = 0; i < vertexBuffers.Length; i++) {
-      vertexBuffers[i] = _vertexBuffers[i].GetBuffer();
-      offsets[i] = 0;
-
-      if (_hasIndexBuffer[i]) {
-        vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[i].GetBuffer(), 0, VkIndexType.Uint32);
-      }
-    }
-    vkCmdBindVertexBuffers(commandBuffer, 0, vertexBuffers, offsets);
-    vertexBuffers.Clear();
-    offsets.Clear();
   }
 
   public Task Bind(VkCommandBuffer commandBuffer, uint index) {
@@ -204,9 +144,7 @@ public class Model : Component, IRender3DElement, ICollision {
       _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
     }
 
-    if (_textureIdRefs[modelPart] != Guid.Empty) {
-      _usesTexture = true;
-    } else {
+    if (_textureIdRefs[modelPart] == Guid.Empty) {
       Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
     }
   }
@@ -304,11 +242,6 @@ public class Model : Component, IRender3DElement, ICollision {
       height += m.Height;
     }
     return height;
-  }
-  public bool UsesTexture => _usesTexture;
-  public bool UsesLight {
-    get { return _usesLight; }
-    set { _usesLight = value; }
   }
   public Guid GetTextureIdReference(int index = 0) {
     return _textureIdRefs[index];

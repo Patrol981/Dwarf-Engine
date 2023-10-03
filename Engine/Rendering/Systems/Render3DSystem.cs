@@ -47,16 +47,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     CreatePipeline(renderer.GetSwapchainRenderPass());
   }
 
-  private int GetLengthOfTexturedEntites(ReadOnlySpan<Entity> entities) {
-    int count = 0;
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].GetComponent<Model>().UsesTexture) {
-        count++;
-      }
-    }
-    return count;
-  }
-
   private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
     int count = 0;
     for (int i = 0; i < entities.Length; i++) {
@@ -79,7 +69,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   private void BindDescriptorTexture(Entity entity, ref TextureManager textures, int index, int modelPart = 0) {
-    var id = entity.GetComponent<Model>().GetTextureIdReference(modelPart);
+    // var id = entity.GetComponent<Model>().GetTextureIdReference(modelPart);
+    var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
+    var id = target!.GetTextureIdReference(modelPart);
     var texture = textures.GetTexture(id);
     if (texture == null) {
       var nid = textures.GetTextureId("./Textures/base/no_texture.png");
@@ -128,9 +120,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _textureSets = new();
 
     for (int x = 0; x < entities.Length; x++) {
-      var en = entities[x].GetComponent<Model>();
+      // var en = entities[x].GetComponent<Model>();
+      var en = entities[x].GetDrawable<IRender3DElement>() as IRender3DElement;
       _textureSets.Add(new());
-      for (int y = 0; y < en.MeshsesCount; y++) {
+      for (int y = 0; y < en!.MeshsesCount; y++) {
         _textureSets.GetAt(x).Add(new());
       }
     }
@@ -146,24 +139,15 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
-      var targetModel = entities[i].GetComponent<Model>();
-      if (targetModel.MeshsesCount > 1 && targetModel.UsesTexture) {
+      // var targetModel = entities[i].GetComponent<Model>();
+      var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+      if (targetModel!.MeshsesCount > 1) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
-          BindDescriptorTexture(targetModel.Owner!, ref textures, i, x);
+          BindDescriptorTexture(entities[i], ref textures, i, x);
         }
       } else {
-        BindDescriptorTexture(targetModel.Owner!, ref textures, i, 0);
+        BindDescriptorTexture(entities[i], ref textures, i, 0);
       }
-
-      /*
-      // var bufferInfo = _modelBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<ModelUniformBufferObject>());
-      var bufferInfo = _modelBuffer.GetVkDescriptorBufferInfoForIndex(i);
-      unsafe {
-        var writer = new DescriptorWriter(_setLayout, _descriptorPool)
-          .WriteBuffer(0, &bufferInfo)
-          .Build(out _descriptorSets[i]);
-      }
-      */
     }
 
     var range = _modelBuffer.GetDescriptorBufferInfo(_modelBuffer.GetAlignmentSize());
@@ -220,8 +204,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Flush();
 
     for (int i = 0; i < entities.Length; i++) {
-      //var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-      var targetEntity = entities[i].GetComponent<Model>();
+      var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+      // var targetEntity = entities[i].GetComponent<Model>();
       var modelUBO = new ModelUniformBufferObject();
       modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
@@ -274,10 +258,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (!entities[i].CanBeDisposed && entities[i].Active) {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
-          if (targetEntity.UsesTexture) {
-            // await targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
-            _tasks.Add(targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout));
-          }
+          _tasks.Add(targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout));
           // await targetEntity.Bind(frameInfo.CommandBuffer, x);
           // await targetEntity.Draw(frameInfo.CommandBuffer, x);
           _tasks.Add(targetEntity.Bind(frameInfo.CommandBuffer, x));

@@ -35,7 +35,7 @@ public class SystemCollection : IDisposable {
     // Thread t = new Thread(new ThreadStart(_physicsSystem!.Tick));
     // t.Start();
 
-    _render3DSystem?.RenderEntities(frameInfo, Entity.Distinct<Model>(entities).ToArray());
+    _render3DSystem?.RenderEntities(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
     _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
     _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
     _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));

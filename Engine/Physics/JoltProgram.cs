@@ -128,7 +128,7 @@ public class JoltProgram {
   }
 
   public static ValidateResult OnContactValidate(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, IntPtr collisionResult) {
-    // Console.WriteLine("Contact validate callback");
+    Console.WriteLine("Contact validate callback");
 
     // Allows you to ignore a contact before it is created (using layers to not make objects collide is cheaper!)
     return ValidateResult.AcceptAllContactsForThisBodyPair;

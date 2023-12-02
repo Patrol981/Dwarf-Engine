@@ -5,7 +5,6 @@ using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-using static Dwarf.Extensions.GLFW.GLFWKeyMap;
 
 using ImGuiNET;
 
@@ -17,12 +16,10 @@ using static Vortice.Vulkan.Vulkan;
 using Dwarf.Engine;
 using Assimp;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Engine.Rendering.UI;
 
 namespace Dwarf.Engine.Rendering;
 
-public class RenderUISystem : SystemBase, IRenderSystem
-{
+public class RenderUISystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new PublicList<VkDescriptorSet>();
   private Vulkan.Buffer _uiBuffer = null!;
 
@@ -31,8 +28,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo)
-  {
+  ) : base(device, renderer, globalSetLayout, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -51,12 +47,10 @@ public class RenderUISystem : SystemBase, IRenderSystem
     CreatePipeline(_renderer.GetSwapchainRenderPass());
   }
 
-  public unsafe void SetupUIData(Canvas canvas, ref TextureManager textureManager)
-  {
+  public unsafe void SetupUIData(Canvas canvas, ref TextureManager textureManager) {
     var entities = canvas.GetUI();
 
-    if (entities.Length < 1)
-    {
+    if (entities.Length < 1) {
       Logger.Warn("Entities that are capable of using UI Rendering are less than 1, thus UI Render System won't be recreated");
       return;
     }
@@ -88,13 +82,11 @@ public class RenderUISystem : SystemBase, IRenderSystem
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
-    for (int x = 0; x < entities.Length; x++)
-    {
+    for (int x = 0; x < entities.Length; x++) {
       _textureSets.Add(new());
     }
 
-    for (int i = 0; i < entities.Length; i++)
-    {
+    for (int i = 0; i < entities.Length; i++) {
       // var targetUI = entities[i].GetComponent<TextField>();
       var targetUI = entities[i].GetDrawable<IUIElement>();
       BindDescriptorTexture(targetUI.Owner!, ref textureManager, i);
@@ -106,8 +98,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
     }
   }
 
-  public unsafe void DrawUI(FrameInfo frameInfo, Canvas canvas)
-  {
+  public unsafe void DrawUI(FrameInfo frameInfo, Canvas canvas) {
     _pipeline.Bind(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -123,8 +114,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
 
     var entities = canvas.GetUI();
 
-    for (int i = 0; i < entities.Length; i++)
-    {
+    for (int i = 0; i < entities.Length; i++) {
       var uiPushConstant = new UIUniformObject();
       uiPushConstant.UIMatrix = entities[i].GetComponent<RectTransform>().Matrix4;
 
@@ -145,34 +135,27 @@ public class RenderUISystem : SystemBase, IRenderSystem
     }
   }
 
-  public bool CheckSizes(ReadOnlySpan<Entity> entities)
-  {
-    if (entities.Length > (uint)_uiBuffer.GetInstanceCount())
-    {
+  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+    if (entities.Length > (uint)_uiBuffer.GetInstanceCount()) {
       return false;
-    }
-    else if (entities.Length < (uint)_uiBuffer.GetInstanceCount())
-    {
+    } else if (entities.Length < (uint)_uiBuffer.GetInstanceCount()) {
       return true;
     }
 
     return true;
   }
 
-  public bool CheckTextures(ReadOnlySpan<Entity> entities)
-  {
+  public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
-    if (len != sets)
-    {
+    if (len != sets) {
       return false;
     }
 
     return true;
   }
 
-  private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index)
-  {
+  private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
     // var id = entity.GetComponent<TextField>().GetTextureIdReference();
     var id = entity.GetDrawable<IUIElement>() as IUIElement;
 
@@ -188,11 +171,9 @@ public class RenderUISystem : SystemBase, IRenderSystem
     _textureSets.SetAt(set, index);
   }
 
-  private void CreatePipeline(VkRenderPass renderPass)
-  {
+  private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    if (_pipelineConfigInfo == null)
-    {
+    if (_pipelineConfigInfo == null) {
       _pipelineConfigInfo = new UIPipeline();
     }
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
@@ -201,8 +182,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
     _pipeline = new Pipeline(_device, "gui_vertex", "gui_fragment", pipelineConfig, new PipelineUIProvider());
   }
 
-  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts)
-  {
+  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
     VkPushConstantRange pushConstantRange = new();
     pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
     pushConstantRange.offset = 0;
@@ -210,8 +190,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
 
     VkPipelineLayoutCreateInfo pipelineInfo = new();
     pipelineInfo.setLayoutCount = (uint)layouts.Length;
-    fixed (VkDescriptorSetLayout* ptr = layouts)
-    {
+    fixed (VkDescriptorSetLayout* ptr = layouts) {
       pipelineInfo.pSetLayouts = ptr;
     }
     pipelineInfo.pushConstantRangeCount = 1;
@@ -219,8 +198,7 @@ public class RenderUISystem : SystemBase, IRenderSystem
     vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 
-  public unsafe void Dispose()
-  {
+  public unsafe void Dispose() {
     vkQueueWaitIdle(_device.GraphicsQueue);
     _textureSetLayout?.Dispose();
     _setLayout?.Dispose();

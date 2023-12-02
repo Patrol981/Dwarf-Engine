@@ -56,34 +56,20 @@ public class Transform : Component {
     return worldModel;
   }
 
-  public OpenTK.Mathematics.Matrix4 GetMatrix2D() {
+  private Matrix4x4 GetRotation() {
+    var angleX = Converter.DegreesToRadians(Rotation.X);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
+    var angleZ = Converter.DegreesToRadians(Rotation.Z);
+    return Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
+  }
 
-    var c3 = (float)MathF.Cos(Rotation.Z);
-    var s3 = (float)MathF.Sin(Rotation.Z);
-    var c2 = (float)MathF.Cos(Rotation.X);
-    var s2 = (float)MathF.Sin(Rotation.Y);
-    var c1 = (float)MathF.Cos(Rotation.Y);
-    var s1 = (float)MathF.Sin(Rotation.Y);
+  private Matrix4x4 GetScale() {
+    return Matrix4x4.CreateScale(Scale);
+  }
 
-    var mat = OpenTK.Mathematics.Matrix4.Zero;
-    mat[0, 0] = Scale.X * (c1 * c3 + s1 * s2 * s3);
-    mat[0, 1] = Scale.X * (c2 * s3);
-    mat[0, 2] = Scale.X * (c1 * s2 * s3 - c3 * s1);
-
-    mat[1, 0] = Scale.Y * (c3 * s1 * s2 - c1 * s3);
-    mat[1, 1] = Scale.Y * (c2 * c3);
-    mat[1, 2] = Scale.Y * (c1 * c3 * s2 + s1 * s3);
-
-    mat[2, 0] = Scale.Z * (c2 * s1);
-    mat[2, 1] = Scale.Z * (-s2);
-    mat[2, 2] = Scale.Z * (c1 * c2);
-
-    mat[3, 0] = Position.X;
-    mat[3, 1] = Position.Y;
-    mat[3, 2] = Position.Z;
-    mat[3, 3] = 1.0f;
-
-    return mat;
+  private Matrix4x4 GetPosition() {
+    var modelPos = Position;
+    return Matrix4x4.CreateTranslation(modelPos);
   }
 
   private Matrix4x4 GetMatrixWithoutRotation() {
@@ -101,7 +87,18 @@ public class Transform : Component {
     return rotation;
   }
 
-  public System.Numerics.Matrix4x4 Matrix4 => GetMatrix();
+  private Vector3 GetForward() {
+    var modelMatrix = Matrix4;
+    var forward = new Vector3(modelMatrix[0, 0], modelMatrix[0, 1], modelMatrix[0, 2]);
+    forward = Vector3.Normalize(forward);
+    return forward;
+  }
+
+  public Vector3 Forward => GetForward();
+  public Matrix4x4 Matrix4 => GetMatrix();
+  public Matrix4x4 ScaleMatrix => GetScale();
+  public Matrix4x4 RotationMatrix => GetRotation();
+  public Matrix4x4 PositionMatrix => GetPosition();
   public Matrix4x4 MatrixWithoutRotation => GetMatrixWithoutRotation();
   public Matrix4x4 NormalMatrix => GetNormalMatrix();
 

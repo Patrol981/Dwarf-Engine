@@ -47,6 +47,8 @@ public class Texture : IDisposable {
 
     stagingBuffer.Map();
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
+
+
     stagingBuffer.Unmap();
 
     unsafe {
@@ -108,6 +110,14 @@ public class Texture : IDisposable {
     var img = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
     await stream.DisposeAsync();
     return img;
+  }
+
+  public static async Task<ImageResult> LoadFromBytes(byte[] data, int flip = 1) {
+    StbImage.stbi_set_flip_vertically_on_load(flip);
+
+    using var stream = new MemoryStream(data);
+    var image = ImageResult.FromStream(stream);
+    return image;
   }
 
   private unsafe static void CreateImage(

@@ -120,7 +120,9 @@ public class Application {
     _systems.RenderUISystem?.SetupUIData(_systems.Canvas, ref _textureManager);
     _systems.PhysicsSystem?.Init(objs3D);
 
+    MasterAwake(Entity.GetScripts(_entities));
     _onLoad?.Invoke();
+    MasterStart(Entity.GetScripts(_entities));
 
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
@@ -184,6 +186,7 @@ public class Application {
 
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
+      MasterUpdate(Entity.GetScripts(_entities));
       _onGUI?.Invoke();
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
@@ -206,6 +209,24 @@ public class Application {
     _camera = camera;
   }
 
+  private void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
+    for (short i = 0; i < entities.Length; i++) {
+      entities[i].Awake();
+    }
+  }
+
+  private void MasterStart(ReadOnlySpan<DwarfScript> entities) {
+    for (short i = 0; i < entities.Length; i++) {
+      entities[i].Start();
+    }
+  }
+
+  private void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+    for (short i = 0; i < entities.Length; i++) {
+      entities[i].Update();
+    }
+  }
+
   private void SetupSystems(
     SystemCreationFlags creationFlags,
     Device device,
@@ -223,6 +244,8 @@ public class Application {
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
       _entities.Add(entity);
+      MasterAwake(Entity.GetScripts(new[] { entity }));
+      MasterStart(Entity.GetScripts(new[] { entity }));
     }
   }
 

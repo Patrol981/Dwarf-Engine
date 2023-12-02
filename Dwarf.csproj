@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -19,8 +19,9 @@
   <ItemGroup>
     <PackageReference Include="FontStashSharp" Version="1.2.8" />
     <PackageReference Include="ImGui.NET" Version="1.89.7.1" />
-    <PackageReference Include="JoltPhysicsSharp" Version="1.9.4" />
-    <PackageReference Include="Vortice.Vulkan" Version="1.8.0" />
+    <PackageReference Include="JoltPhysicsSharp" Version="1.9.11" />
+    <PackageReference Include="SharpGLTF.Core" Version="1.0.0-alpha0030" />
+    <PackageReference Include="Vortice.Vulkan" Version="1.8.2" />
     <PackageReference Include="OpenTK" Version="4.7.7" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
 	<PackageReference Include="AssimpNet" Version="5.0.0-beta1" />

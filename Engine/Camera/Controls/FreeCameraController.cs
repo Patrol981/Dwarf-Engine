@@ -4,7 +4,10 @@ using Dwarf.Extensions.GLFW;
 using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.Extensions.Logging;
 
+using static Dwarf.Keys;
+
 using Dwarf.Engine.Physics;
+using Assimp;
 
 namespace Dwarf.Engine;
 
@@ -74,69 +77,69 @@ public class FreeCameraController : Component {
       // buttons 0 = a,b
       // buttons 1 = x,y
       // buttons 2 = bumpers
-      // buttons 3 = 
-      // buttons 4 = 
-      // buttons 5 = 
-      // buttons 6 = 
-      // buttons 7 = 
-      // buttons 8 = 
-      // buttons 9 = 
+      // buttons 3 =
+      // buttons 4 =
+      // buttons 5 =
+      // buttons 6 =
+      // buttons 7 =
+      // buttons 8 =
+      // buttons 9 =
       // buttons 10 =
-      // buttons 11 = 
-      // buttons 12 = 
-      // buttons 13 = 
+      // buttons 11 =
+      // buttons 12 =
+      // buttons 13 =
 
       // Logger.Info($"{(int)buttons[2]}");
 
       // buttons
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[0]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[0]) {
         Logger.Info("A");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[1]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[1]) {
         Logger.Info("X");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[0]) {
+      if ((int)Dwarf.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[0]) {
         Logger.Info("B");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[1]) {
+      if ((int)Dwarf.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[1]) {
         Logger.Info("Y");
       }
 
 
 
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[4]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[4]) {
         Logger.Info("Left Analog");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[4]) {
+      if ((int)Dwarf.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[4]) {
         Logger.Info("Left Analog");
       }
 
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[5]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[5]) {
         Logger.Info("Directional Up");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[6]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[6]) {
         Logger.Info("Directional Down");
       }
 
 
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[2]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[2]) {
         Logger.Info("Left Bumper");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[2]) {
+      if ((int)Dwarf.KeyAction.GLFW_GAMEPAD_MIRROR == (int)buttons[2]) {
         Logger.Info("Right Bumper");
       }
 
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[3]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[3]) {
         Logger.Info("Menu");
       }
 
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[7]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[7]) {
         Logger.Info("????");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[8]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[8]) {
         Logger.Info("??");
       }
-      if ((int)GLFWKeyMap.KeyAction.GLFW_PRESS == (int)buttons[9]) {
+      if ((int)Dwarf.KeyAction.GLFW_PRESS == (int)buttons[9]) {
         Logger.Info("???");
       }
 
@@ -159,29 +162,24 @@ public class FreeCameraController : Component {
         Owner!.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
       }
 
-      // Console.WriteLine(Owner!.GetComponent<Camera>().Yaw);
-
-      /*
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_D) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_D)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_A) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_A)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_S) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_S)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_W) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_W)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT_SHIFT) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_SPACE)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_SPACE) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
+      if (Input.GetKeyDown(GLFW_KEY_LEFT_SHIFT)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      */
 
       //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
       //WindowState.FocusOnWindow();

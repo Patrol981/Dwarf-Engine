@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Numerics;
 using Assimp;
 using OpenTK.Graphics.ES11;
+using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine;
 
@@ -41,6 +42,41 @@ public static class Primitives {
 
   public static Mesh CreateConvex(Mesh inputMesh) {
     return inputMesh;
+  }
+
+  public static Mesh CreateConvex(Mesh[] meshes, bool flip = false) {
+    Logger.Info($"len: {meshes.Length}");
+
+    var outputMesh = new Mesh();
+    var vertices = new List<Vertex>();
+    var indices = new List<uint>();
+
+    uint vertexOffset = 0;
+
+    foreach (var m in meshes) {
+      for (int vertexIndex = 0; vertexIndex < m.Vertices.Length; vertexIndex++) {
+        var vertex = m.Vertices[vertexIndex];
+        Vector3 updatePos = flip ? new(vertex.Position.X, -vertex.Position.Y, vertex.Position.Z) : vertex.Position;
+
+        vertex.Position = updatePos;
+        vertices.Add(vertex);
+      }
+
+      foreach (var index in m.Indices) {
+        indices.Add(index + vertexOffset);
+      }
+
+      vertexOffset += (uint)m.Vertices.Length;
+    }
+
+    outputMesh.Vertices = vertices.ToArray();
+    outputMesh.Indices = indices.ToArray();
+
+    Logger.Info($"vert[0]: {meshes[0].Vertices.Length}");
+    Logger.Info($"out vert: {outputMesh.Vertices.Length}");
+
+    // return meshes[1];
+    return outputMesh;
   }
 
   public static Mesh CreateBoxPrimitive(float radius, float height) {

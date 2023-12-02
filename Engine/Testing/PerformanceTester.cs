@@ -10,14 +10,14 @@ namespace Dwarf.Engine.Testing;
 public class PerformanceTester {
   public static void KeyHandler(int action, int key) {
     switch (action) {
-      case (int)GLFWKeyMap.KeyAction.GLFW_PRESS:
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_P) CreateNewModel(ApplicationState.Instance, false);
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_LEFT_BRACKET) CreateNewModel(ApplicationState.Instance, true);
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_O) RemoveModel(ApplicationState.Instance);
+      case (int)Dwarf.KeyAction.GLFW_PRESS:
+        if (key == (int)Dwarf.Keys.GLFW_KEY_P) CreateNewModel(ApplicationState.Instance, false);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_LEFT_BRACKET) CreateNewModel(ApplicationState.Instance, true);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_O) RemoveModel(ApplicationState.Instance);
 
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_L) CreateNewComlexModel(ApplicationState.Instance, false);
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_K) CreateNewComlexModel(ApplicationState.Instance, true);
-        if (key == (int)GLFWKeyMap.Keys.GLFW_KEY_J) RemoveComplexModel(ApplicationState.Instance);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_L) CreateNewComlexModel(ApplicationState.Instance, false);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_K) CreateNewComlexModel(ApplicationState.Instance, true);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_J) RemoveComplexModel(ApplicationState.Instance);
         break;
     }
   }

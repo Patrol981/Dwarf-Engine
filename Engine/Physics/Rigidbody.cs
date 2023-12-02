@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +11,7 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
+// using static JoltPhysicsSharp.JoltApi;
 
 using System.Numerics;
 
@@ -27,13 +28,18 @@ public class Rigidbody : Component, IDisposable {
   private MotionQuality _motionQuality = MotionQuality.LinearCast;
   private PrimitiveType _primitiveType = PrimitiveType.None;
   private float _inputRadius = 0.0f;
+  private bool _flip = false;
 
   public Rigidbody() { }
 
-  public Rigidbody(Device device, PrimitiveType colliderShape, float inputRadius) {
+  public Rigidbody(Device device, PrimitiveType colliderShape, float inputRadius, bool kinematic = false, bool flip = false) {
     _primitiveType = colliderShape;
     _device = device;
     _inputRadius = inputRadius;
+    _flip = flip;
+    if (kinematic) {
+      _motionType = MotionType.Kinematic;
+    }
   }
 
   public unsafe void Init(in BodyInterface bodyInterface) {
@@ -42,28 +48,24 @@ public class Rigidbody : Component, IDisposable {
 
     _bodyInterface = bodyInterface;
 
-    // var pos = Translator.OpenTKToSystemNumericsVector(Owner!.GetComponent<Transform>().Position);
     var pos = Owner!.GetComponent<Transform>().Position;
 
     var target = Owner.GetDrawable<IRender3DElement>() as IRender3DElement;
     var height = target!.CalculateHeightOfAnModel();
-    // var height = Owner!.GetComponent<Model>().CalculateHeightOfAnModel();
     Mesh mesh;
     ShapeSettings shapeSettings;
 
     switch (_primitiveType) {
       case PrimitiveType.Cylinder:
         mesh = Primitives.CreateCylinderPrimitive(_inputRadius, height, 20);
-        // shapeSettings = new CylinderShapeSettings(height / 2, 0.25f);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(target.Meshes[0]);
+        mesh = Primitives.CreateConvex(target.Meshes, _flip);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Box:
         mesh = Primitives.CreateBoxPrimitive(_inputRadius, height);
-        // shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       default:
@@ -109,6 +111,10 @@ public class Rigidbody : Component, IDisposable {
     var rot = _bodyInterface.GetRotation(_bodyId);
     Owner!.GetComponent<Transform>().Position = pos;
 
+    if (_bodyInterface.GetMotionType(_bodyId) != _motionType) {
+      _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
+    }
+
     // freeze rigidbody to X an Z axis
     _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
   }
@@ -131,6 +137,23 @@ public class Rigidbody : Component, IDisposable {
     pos.Y += vec3.Y;
     pos.Z += vec3.Z;
     _bodyInterface.SetPosition(_bodyId, pos, Activation.Activate);
+  }
+
+  public void Rotate(Vector3 vec3) {
+    var rot = _bodyInterface.GetRotation(_bodyId);
+    rot.X += vec3.X;
+    rot.Y += vec3.Y;
+    rot.Z += vec3.Z;
+    _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
+  }
+
+  public void SetPosition(Vector3 vec3) {
+    _bodyInterface.SetPosition(_bodyId, new(vec3.X, vec3.Y, vec3.Z), Activation.Activate);
+  }
+
+  public void Collide() {
+    RayCastResult ray = new RayCastResult();
+
   }
 
   public bool Kinematic {

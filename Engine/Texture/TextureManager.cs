@@ -53,11 +53,21 @@ public class TextureManager : IDisposable {
     return Guid.Empty;
   }
 
-  public static async Task<Texture[]> InitTexturesStatic(Device device, string[] paths) {
+  public static async Task<Texture[]> InitTexturesStatic(Device device, string[] paths, int flip = 1) {
     var textures = new Texture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {
-      var imgData = await Texture.LoadFromPath(paths[i]);
+      var imgData = await Texture.LoadFromPath(paths[i], flip);
       textures[i] = new Texture(device, imgData.Width, imgData.Height, paths[i]);
+      textures[i].SetTextureData(imgData.Data);
+    }
+    return textures;
+  }
+
+  public static async Task<Texture[]> InitTexturesStatic(Device device, List<byte[]> bytes, string[] nameTags) {
+    var textures = new Texture[bytes.Count];
+    for (int i = 0; i < bytes.Count; i++) {
+      var imgData = await Texture.LoadFromBytes(bytes[i]);
+      textures[i] = new Texture(device, imgData.Width, imgData.Height, nameTags[i]);
       textures[i].SetTextureData(imgData.Data);
     }
     return textures;

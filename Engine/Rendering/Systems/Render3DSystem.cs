@@ -184,6 +184,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public async void RenderEntities(FrameInfo frameInfo, Entity[] entities) {
+    if (entities.Length < 1) return;
+
     _pipeline.Bind(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(

@@ -1,6 +1,7 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 using Dwarf.Engine;
+using Dwarf.Engine.Loader.Providers;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
 using Dwarf.Vulkan;
@@ -35,17 +36,45 @@ public static class EntityCreator {
     string[] texturePaths,
     Vector3? position = null,
     Vector3? rotation = null,
-    Vector3? scale = null
+    Vector3? scale = null,
+    bool sameTexture = false,
+    int flip = 1
   ) {
     var app = ApplicationState.Instance;
 
     var entity = await CreateBase(entityName, position, rotation, scale);
-    entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, modelPath));
+    if (modelPath.Contains("glb")) {
+      var preload = texturePaths != null;
 
-    if (texturePaths.Length > 1) {
-      entity.GetComponent<Model>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
+      entity.AddComponent(await GLTFLoader.Load(app, modelPath, preload, flip));
+
+      if (entity.GetComponent<Model>().MeshsesCount < 1) {
+        throw new Exception("Mesh is empty");
+      }
+
+      if (texturePaths != null) {
+        if (texturePaths.Length > 1) {
+          entity.GetComponent<Model>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
+        } else {
+          if (sameTexture) {
+            entity.GetComponent<Model>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
+          } else {
+            entity.GetComponent<Model>().BindToTexture(app.TextureManager, texturePaths[0]);
+          }
+        }
+      }
     } else {
-      entity.GetComponent<Model>().BindToTexture(app.TextureManager, texturePaths[0]);
+      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, modelPath));
+
+      if (texturePaths.Length > 1) {
+        entity.GetComponent<Model>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
+      } else {
+        if (sameTexture) {
+          entity.GetComponent<Model>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
+        } else {
+          entity.GetComponent<Model>().BindToTexture(app.TextureManager, texturePaths[0]);
+        }
+      }
     }
 
     return entity;
@@ -71,9 +100,9 @@ public static class EntityCreator {
     return entity;
   }
 
-  public static void AddRigdbody(Device device, ref Entity entity, PrimitiveType primitiveType, float radius) {
+  public static void AddRigdbody(Device device, ref Entity entity, PrimitiveType primitiveType, float radius, bool kinematic = false) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, radius));
+    entity.AddComponent(new Rigidbody(device, primitiveType, radius, kinematic));
   }
 }

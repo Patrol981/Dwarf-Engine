@@ -20,8 +20,7 @@ using JoltPhysicsSharp;
 
 namespace Dwarf.Engine.Rendering.UI;
 
-public enum Anchor
-{
+public enum Anchor {
   Right,
   Left,
   Middle,
@@ -35,30 +34,26 @@ public enum Anchor
   MiddleBottom
 }
 
-public enum ResolutionAspect
-{
+public enum ResolutionAspect {
   Aspect4to3,
   Aspect8to5,
   Aspect16to9,
   Aspect21to9
 }
 
-public class Resolution
-{
+public class Resolution {
   public Vector2 Size { get; private set; }
   public ResolutionSize ResolutionSize { get; private set; }
   public ResolutionAspect ResolutionAspect { get; private set; }
 
-  public Resolution(Vector2 size, ResolutionSize resolutionSize, ResolutionAspect resolutionAspect)
-  {
+  public Resolution(Vector2 size, ResolutionSize resolutionSize, ResolutionAspect resolutionAspect) {
     Size = size;
     ResolutionSize = resolutionSize;
     ResolutionAspect = resolutionAspect;
   }
 }
 
-public enum ResolutionSize
-{
+public enum ResolutionSize {
   Screen800x600,
   Screen1024x600,
   Screen1334x750,
@@ -68,8 +63,7 @@ public enum ResolutionSize
   Screen2560x1080
 }
 
-public class Canvas : Component, IDisposable
-{
+public class Canvas : Component, IDisposable {
   private readonly Window _window;
   private readonly Application _application;
 
@@ -88,8 +82,7 @@ public class Canvas : Component, IDisposable
 
   private List<Entity> _entities = new();
 
-  public Canvas()
-  {
+  public Canvas() {
     _window = ApplicationState.Instance.Window;
     _application = ApplicationState.Instance;
 
@@ -98,30 +91,25 @@ public class Canvas : Component, IDisposable
     CheckResolution();
   }
 
-  public async void Update()
-  {
+  public async void Update() {
     await CheckResolution();
 
-    foreach (var entity in _entities)
-    {
+    foreach (var entity in _entities) {
       var rect = entity.GetComponent<RectTransform>();
       await CheckScale(ref rect);
-      await CheckAnchor(ref rect);
+      await CheckAnchor(rect);
     }
   }
 
-  public void AddUI(Entity entity)
-  {
+  public void AddUI(Entity entity) {
     _entities.Add(entity);
   }
 
-  public void RemoveUI(Entity entity)
-  {
+  public void RemoveUI(Entity entity) {
     _entities.Remove(entity);
   }
 
-  public Span<Entity> GetUI()
-  {
+  public Span<Entity> GetUI() {
     return _entities.ToArray();
   }
 
@@ -131,8 +119,7 @@ public class Canvas : Component, IDisposable
     Vector2 offsetFromAnchor = new Vector2(),
     string buttonName = "button",
     float originScale = 1.0f
-  )
-  {
+  ) {
     var button = new Entity();
     button.AddComponent(new RectTransform(new Vector3(0f, 0f, 0f)));
     button.GetComponent<RectTransform>().Scale = new Vector3(_globalScale, _globalScale, 1f);
@@ -153,8 +140,7 @@ public class Canvas : Component, IDisposable
     Vector2 offsetFromAnchor = new Vector2(),
     string imageName = "image",
     float originScale = 1.0f
-  )
-  {
+  ) {
     var image = new Entity();
     image.AddComponent(new RectTransform(new Vector3(0f, 0f, 0f)));
     image.GetComponent<RectTransform>().Scale = new Vector3(_globalScale, _globalScale, 1f);
@@ -175,8 +161,7 @@ public class Canvas : Component, IDisposable
     Vector2 offsetFromAnchor = new Vector2(),
     string textName = "text",
     float originScale = 1.0f
-  )
-  {
+  ) {
     var text = new Entity();
     text.AddComponent(new RectTransform(new Vector3(0f, 0f, 0f)));
     text.GetComponent<RectTransform>().Scale = new Vector3(_globalScale, _globalScale, 1f);
@@ -192,8 +177,7 @@ public class Canvas : Component, IDisposable
     return text;
   }
 
-  private Task CheckScale(ref RectTransform rect)
-  {
+  private Task CheckScale(ref RectTransform rect) {
     if (rect.LastGlobalScale == _globalScale) return Task.CompletedTask;
     rect.LastGlobalScale = _globalScale;
 
@@ -203,9 +187,11 @@ public class Canvas : Component, IDisposable
     return Task.CompletedTask;
   }
 
-  private Task CheckAnchor(ref RectTransform rect)
-  {
-    var extent = _window.Extent;
+  private async Task<Task> CheckAnchor(RectTransform rect) {
+    await Task.Delay(50);
+
+    // var extent = _window.Extent;
+    var extent = _application.Renderer.Extent2D;
     if (rect.LastScreenX == extent.width && rect.LastScreenY == extent.height) return Task.CompletedTask;
 
     rect.LastScreenX = extent.width;
@@ -216,51 +202,53 @@ public class Canvas : Component, IDisposable
     // b = (1 * 1080) / 100
 
     var point = new Vector2(0, 0);
-    switch (rect.Anchor)
-    {
+    var scaledOffset = rect.OffsetFromVector;
+    scaledOffset = scaledOffset + (scaledOffset * rect.LastGlobalScale);
+
+    switch (rect.Anchor) {
       case Anchor.Right:
-        point.X = extent.width - (rect.OffsetFromVector.X);
+        point.X = extent.width - (scaledOffset.X);
         point.Y = extent.height / 2;
         break;
       case Anchor.Left:
-        point.X = 0 + (rect.OffsetFromVector.X);
+        point.X = 0 + (scaledOffset.X);
         point.Y = extent.height / 2;
         break;
       case Anchor.Top:
         point.X = extent.width / 2;
-        point.Y = extent.height + (rect.OffsetFromVector.Y);
+        point.Y = extent.height + (scaledOffset.Y);
         break;
       case Anchor.Bottom:
         point.X = extent.width / 2;
-        point.Y = extent.height - (rect.OffsetFromVector.Y);
+        point.Y = extent.height - (scaledOffset.Y);
         break;
       case Anchor.RightTop:
-        point.X = extent.width - (rect.OffsetFromVector.X);
-        point.Y = 0 - (rect.OffsetFromVector.Y);
+        point.X = extent.width - (scaledOffset.X);
+        point.Y = 0 - (scaledOffset.Y);
         break;
       case Anchor.RightBottom:
-        point.X = extent.width - (rect.OffsetFromVector.X);
-        point.Y = extent.height + (rect.OffsetFromVector.Y);
+        point.X = extent.width - (scaledOffset.X);
+        point.Y = extent.height + (scaledOffset.Y);
         break;
       case Anchor.LeftTop:
-        point.X = 0 + (rect.OffsetFromVector.X);
-        point.Y = 0 - (rect.OffsetFromVector.Y);
+        point.X = 0 + (scaledOffset.X);
+        point.Y = 0 - (scaledOffset.Y);
         break;
       case Anchor.LeftBottom:
-        point.X = 0 + (rect.OffsetFromVector.X);
-        point.Y = extent.height + (rect.OffsetFromVector.Y);
+        point.X = 0 + (scaledOffset.X);
+        point.Y = extent.height + (scaledOffset.Y);
         break;
       case Anchor.Middle:
-        point.X = extent.width / 2 + rect.OffsetFromVector.X;
-        point.Y = extent.height / 2 + rect.OffsetFromVector.Y;
+        point.X = extent.width / 2 + scaledOffset.X;
+        point.Y = extent.height / 2 + scaledOffset.Y;
         break;
       case Anchor.MiddleBottom:
-        point.X = extent.width / 2 + rect.OffsetFromVector.X;
-        point.Y = extent.height + rect.OffsetFromVector.Y;
+        point.X = extent.width / 2 + scaledOffset.X;
+        point.Y = extent.height + scaledOffset.Y;
         break;
       case Anchor.MiddleTop:
-        point.X = extent.width / 2 + rect.OffsetFromVector.X;
-        point.Y = 0 + rect.OffsetFromVector.Y;
+        point.X = extent.width / 2 + scaledOffset.X;
+        point.Y = 0 + scaledOffset.Y;
         break;
       default:
         break;
@@ -273,8 +261,7 @@ public class Canvas : Component, IDisposable
     return Task.CompletedTask;
   }
 
-  private Task CheckResolution()
-  {
+  private Task CheckResolution() {
     if (_maxCanvasSize.X == _window.Extent.width && _maxCanvasSize.Y == _window.Extent.height) return Task.CompletedTask;
 
     _maxCanvasSize = new Vector2(_window.Extent.width, _window.Extent.height);
@@ -282,18 +269,15 @@ public class Canvas : Component, IDisposable
     Resolution closestRes = null!;
 
     // find closest resolution
-    foreach (var res in _resolutions)
-    {
+    foreach (var res in _resolutions) {
       var distance = Vector2.Distance(_maxCanvasSize, res.Size);
-      if (distance < minDistance)
-      {
+      if (distance < minDistance) {
         minDistance = distance;
         closestRes = res;
       }
     }
 
-    switch (closestRes.ResolutionSize)
-    {
+    switch (closestRes.ResolutionSize) {
       case ResolutionSize.Screen800x600:
         _globalScale = 0.05f;
         break;
@@ -321,10 +305,8 @@ public class Canvas : Component, IDisposable
     return Task.CompletedTask;
   }
 
-  public void Dispose()
-  {
-    foreach (var e in _entities)
-    {
+  public void Dispose() {
+    foreach (var e in _entities) {
       e?.DisposeEverything();
     }
   }

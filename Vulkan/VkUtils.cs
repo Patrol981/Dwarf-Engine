@@ -1,6 +1,10 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System;
+
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -11,8 +15,30 @@ public ref struct SwapChainSupportDetails {
   public ReadOnlySpan<VkPresentModeKHR> PresentModes;
 }
 public static class VkUtils {
-  public static unsafe void MemCopy(nint destination, nint source, int byteCount) =>
+  /*
+  public static unsafe void MemCopy(nint destination, nint source, int byteCount) {
     Unsafe.CopyBlockUnaligned((void*)destination, (void*)source, (uint)byteCount);
+  }
+  */
+
+  public static unsafe void MemCopy(nint destination, nint source, int byteCount) {
+    if (byteCount <= 0) {
+      throw new Exception("ByteCount is NULL");
+    }
+
+    if (byteCount > 2130702268) {
+      throw new Exception("ByteCount is too big");
+    }
+
+    System.Buffer.MemoryCopy((void*)source, (void*)destination, byteCount, byteCount);
+    // Unsafe.CopyBlockUnaligned((void*)destination, (void*)source, (uint)byteCount);
+
+    /*
+    byte[] buffer = new byte[byteCount];
+    Marshal.Copy((IntPtr)source, buffer, 0, byteCount);
+    Marshal.Copy(buffer, 0, destination, byteCount);
+    */
+  }
 
   public static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
     SwapChainSupportDetails details = new SwapChainSupportDetails();

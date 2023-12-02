@@ -53,6 +53,7 @@ public class SystemCollection : IDisposable {
   ) {
     if (_render3DSystem != null) {
       var modelEntities = Entity.DistinctInterface<IRender3DElement>(entities).ToArray();
+      if (modelEntities.Length < 1) return;
       var sizes = _render3DSystem.CheckSizes(modelEntities);
       var textures = _render3DSystem.CheckTextures(modelEntities);
       if (!sizes || !textures || Reload3DRenderSystem) {
@@ -63,6 +64,7 @@ public class SystemCollection : IDisposable {
 
     if (_render2DSystem != null) {
       var spriteEntities = Entity.Distinct<Sprite>(entities).ToArray();
+      if (spriteEntities.Length < 1) return;
       var sizes = _render2DSystem.CheckSizes(spriteEntities);
       var textures = _render2DSystem.CheckTextures(spriteEntities);
       if (!sizes || !textures || Reload2DRenderSystem) {
@@ -75,6 +77,7 @@ public class SystemCollection : IDisposable {
       // var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
       // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var canvasEntities = _canvas!.GetUI();
+      if (canvasEntities.Length < 1) return;
       var sizes = _renderUISystem.CheckSizes(canvasEntities);
       var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {

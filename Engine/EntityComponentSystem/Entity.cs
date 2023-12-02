@@ -1,4 +1,5 @@
 using System.Collections;
+using System.ComponentModel;
 
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
@@ -28,6 +29,25 @@ public class Entity {
     lock (_componentLock) {
       return _componentManager.GetComponent<T>();
     }
+  }
+
+  public T GetScript<T>() where T : DwarfScript {
+    return _componentManager.GetComponent<T>();
+  }
+
+  public DwarfScript[] GetScripts() {
+    var components = _componentManager.GetAllComponents();
+    var list = new List<DwarfScript>();
+
+    foreach (var item in components) {
+      var t = typeof(DwarfScript).IsAssignableFrom(item.Key);
+      if (t) {
+        var value = item.Value;
+        list.Add((DwarfScript)value);
+      }
+    }
+
+    return list.ToArray();
   }
 
   public Component GetDrawable<T>() where T : IDrawable {
@@ -97,6 +117,26 @@ public class Entity {
 
   public ComponentManager GetComponentManager() {
     return _componentManager;
+  }
+
+  public static ReadOnlySpan<DwarfScript> GetScripts(List<Entity> entities) {
+    var list = new List<DwarfScript>();
+
+    foreach (var e in entities) {
+      list.AddRange(e.GetScripts());
+    }
+
+    return list.ToArray();
+  }
+
+  public static ReadOnlySpan<DwarfScript> GetScripts(Entity[] entities) {
+    var list = new List<DwarfScript>();
+
+    foreach (var e in entities) {
+      list.AddRange(e.GetScripts());
+    }
+
+    return list.ToArray();
   }
 
   public static ReadOnlySpan<Entity> Distinct<T>(List<Entity> entities) where T : Component {

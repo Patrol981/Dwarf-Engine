@@ -37,7 +37,10 @@ public class Camera : Component {
   }
 
   public void SetOrthograpicProjection() {
-    SetOrthograpicProjection(_aspect, -_aspect, -1, 1, 0.1f, 100f);
+    SetOrthograpicProjection(-_aspect, _aspect, -1, 1, 0.1f, 100f);
+    // _projectionMatrix = GetProjectionMatrix2D();
+    // _projectionMatrix = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-_aspect, _aspect, -1, 1, 0.01f, 100f);
+    _cameraType = CameraType.Orthographic;
   }
 
   public void SetOrthograpicProjection(float left, float right, float top, float bottom, float near, float far) {

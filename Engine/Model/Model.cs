@@ -131,7 +131,6 @@ public class Model : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
-
   public void BindToTexture(
     TextureManager textureManager,
     string texturePath,
@@ -149,12 +148,21 @@ public class Model : Component, IRender3DElement, ICollision {
     }
   }
 
+  public void BindMultipleModelPartsToTexture(
+    TextureManager textureManager,
+    string path
+  ) {
+    for (int i = 0; i < _meshesCount; i++) {
+      BindToTexture(textureManager, path, false, i);
+    }
+  }
+
   public void BindMultipleModelPartsToTextures(
     TextureManager textureManager,
     ReadOnlySpan<string> paths,
     bool useLocalPath = false
   ) {
-    for (int i = 0; i < paths.Length; i++) {
+    for (int i = 0; i < _meshesCount; i++) {
       BindToTexture(textureManager, paths[i], useLocalPath, i);
     }
   }
@@ -257,8 +265,10 @@ public class Model : Component, IRender3DElement, ICollision {
   public AABB AABB {
     get {
       if (Owner!.HasComponent<ColliderMesh>()) {
-        return AABB.CalculateOnFly(Owner!.GetComponent<ColliderMesh>().Mesh);
+        // return AABB.CalculateOnFly(Owner!.GetComponent<ColliderMesh>().Mesh);
+        return AABB.CalculateOnFlyWithMatrix(Owner!.GetComponent<ColliderMesh>().Mesh, Owner!.GetComponent<Transform>());
       } else {
+        // Logger.Warn($"{Owner!.Name} is using merged AABB");
         return _mergedAABB;
       }
     }

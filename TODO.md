@@ -6,6 +6,7 @@
 - [Dwarf Textures] Optimize texture management (the more textured objs on scene,
   more fps drops)
 - Abstract GLFW into separate csproj
+- Remove need of manually copying nessessary folders into client project
 
 # Engine Mesh System
 

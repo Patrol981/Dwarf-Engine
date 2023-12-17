@@ -20,9 +20,9 @@ some cool games with it :)
 Project itself is a library, so you can reference it in your .csproj
 
 NOTE: Keep in mind that this is being under development and things may change
-often. Also some things may be messy (for example you need to copy Mappings and
-Textures folder into your project, because the engine assumes that theese exists
-in client project itself - it is subject to change though -)
+often. Also some things may be messy (for example you need to copy Mappings,
+Fonts and Textures folders into your project, because the engine assumes that
+theese exists in client project itself - it is subject to change though -)
 
 ## Example code
 

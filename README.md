@@ -42,8 +42,8 @@ public class App {
 
 	public  App() {
 		var  systems = SystemCreationFlags.Renderer3D |
-					   SystemCreationFlags.Physics3D  |
-					   SystemCreationFlags.RendererUI;
+					         SystemCreationFlags.Physics3D  |
+					         SystemCreationFlags.RendererUI;
 
 		_application = new Application("Tanks!", systems);
 		var  scene = new DebugScene(_application);
@@ -53,7 +53,7 @@ public class App {
 		_application.Run();
 	}
 
-	public  void  Update() {
+	public void Update() {
 		_frames = Frames.GetFrames();
 		_time += Time.DeltaTime;
 		if (_time > 2) {
@@ -153,7 +153,7 @@ public class TankController : DwarfScript {
 	private Transform? _transform;
 
 	public override void Start() {
-		base.Start();
+	  base.Start();
 		_rigidbody = Owner!.GetComponent<Rigidbody>();
 		_transform = Owner!.GetComponent<Transform>();
 	}

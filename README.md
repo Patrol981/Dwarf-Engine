@@ -7,6 +7,10 @@ The engine itself is not meant by any means for enterprice general use cases; it
 is strictly designed to match my expectations of an game engine so I can create
 some cool games with it :)
 
+## Requirements
+
+- Vulkan SDK
+
 ## Features
 
 - 2D
@@ -17,7 +21,8 @@ some cool games with it :)
 
 ## How to use it
 
-Project itself is a library, so you can reference it in your .csproj
+Project itself is a library, so you can reference it in your .csproj, but
+beforehand you must compile shaders (you can just use compile.bat)
 
 NOTE: Keep in mind that this is being under development and things may change
 often. Also some things may be messy (for example you need to copy Mappings,

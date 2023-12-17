@@ -1,5 +1,3 @@
-using Dwarf.Extensions;
-
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -87,28 +85,29 @@ public unsafe class Buffer : IDisposable {
     }
   }
   public VkResult Flush(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    VkMappedMemoryRange mappedRange = new();
-    // mappedRange.sType = VkStructureType.MappedMemoryRange;
-    mappedRange.memory = _memory;
-    mappedRange.offset = offset;
-    mappedRange.size = size;
+    VkMappedMemoryRange mappedRange = new() {
+      memory = _memory,
+      offset = offset,
+      size = size
+    };
     return vkFlushMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
   }
 
   public VkDescriptorBufferInfo GetDescriptorBufferInfo(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    VkDescriptorBufferInfo bufferInfo = new();
-    bufferInfo.buffer = _buffer;
-    bufferInfo.offset = offset;
-    bufferInfo.range = size;
+    VkDescriptorBufferInfo bufferInfo = new() {
+      buffer = _buffer,
+      offset = offset,
+      range = size
+    };
     return bufferInfo;
   }
 
   public VkResult Invalidate(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    VkMappedMemoryRange mappedRange = new();
-    // mappedRange.sType = VkStructureType.MappedMemoryRange;
-    mappedRange.memory = _memory;
-    mappedRange.offset = offset;
-    mappedRange.size = size;
+    VkMappedMemoryRange mappedRange = new() {
+      memory = _memory,
+      offset = offset,
+      size = size
+    };
     return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
   }
 

@@ -1,11 +1,8 @@
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
@@ -48,19 +45,21 @@ public class Device : IDisposable {
     out VkBuffer buffer,
     out VkDeviceMemory bufferMemory
   ) {
-    VkBufferCreateInfo bufferInfo = new();
-    bufferInfo.size = size;
-    bufferInfo.usage = uFlags;
-    bufferInfo.sharingMode = VkSharingMode.Exclusive;
+    VkBufferCreateInfo bufferInfo = new() {
+      size = size,
+      usage = uFlags,
+      sharingMode = VkSharingMode.Exclusive
+    };
 
     vkCreateBuffer(_logicalDevice, &bufferInfo, null, out buffer).CheckResult();
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_logicalDevice, buffer, out memRequirements);
 
-    VkMemoryAllocateInfo allocInfo = new();
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags);
+    VkMemoryAllocateInfo allocInfo = new() {
+      allocationSize = memRequirements.size,
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags)
+    };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out bufferMemory).CheckResult();
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
@@ -69,10 +68,11 @@ public class Device : IDisposable {
   public unsafe Task CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
     VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
-    VkBufferCopy copyRegion = new();
-    copyRegion.srcOffset = 0;  // Optional
-    copyRegion.dstOffset = 0;  // Optional
-    copyRegion.size = size;
+    VkBufferCopy copyRegion = new() {
+      srcOffset = 0,  // Optional
+      dstOffset = 0,  // Optional
+      size = size
+    };
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
     EndSingleTimeCommands(commandBuffer);
@@ -106,9 +106,10 @@ public class Device : IDisposable {
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(_logicalDevice, image, out memRequirements);
 
-    VkMemoryAllocateInfo allocInfo = new();
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+    VkMemoryAllocateInfo allocInfo = new() {
+      allocationSize = memRequirements.size,
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
+    };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out imageMemory).CheckResult();
     vkBindImageMemory(_logicalDevice, image, imageMemory, 0);
@@ -134,17 +135,19 @@ public class Device : IDisposable {
   }
 
   public unsafe VkCommandBuffer BeginSingleTimeCommands() {
-    VkCommandBufferAllocateInfo allocInfo = new();
-    allocInfo.level = VkCommandBufferLevel.Primary;
-    allocInfo.commandPool = _commandPool;
-    allocInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo allocInfo = new() {
+      level = VkCommandBufferLevel.Primary,
+      commandPool = _commandPool,
+      commandBufferCount = 1
+    };
 
     _mutex.WaitOne();
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = new();
-    beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
+    VkCommandBufferBeginInfo beginInfo = new() {
+      flags = VkCommandBufferUsageFlags.OneTimeSubmit
+    };
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
     _mutex.ReleaseMutex();
@@ -155,9 +158,10 @@ public class Device : IDisposable {
     _mutex.WaitOne();
     vkEndCommandBuffer(commandBuffer);
 
-    VkSubmitInfo submitInfo = new();
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    VkSubmitInfo submitInfo = new() {
+      commandBufferCount = 1,
+      pCommandBuffers = &commandBuffer
+    };
 
     vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VkFence.Null);
     vkQueueWaitIdle(GraphicsQueue);
@@ -170,18 +174,19 @@ public class Device : IDisposable {
     HashSet<string> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
     HashSet<string> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
 
-    var appInfo = new VkApplicationInfo();
-    appInfo.pApplicationName = new VkString("Dwarf App");
-    appInfo.applicationVersion = new(1, 0, 0);
-    appInfo.pEngineName = new VkString("Dwarf Engine");
-    appInfo.engineVersion = new(1, 0, 0);
-    appInfo.apiVersion = VkVersion.Version_1_3;
+    var appInfo = new VkApplicationInfo {
+      pApplicationName = new VkString("Dwarf App"),
+      applicationVersion = new(1, 0, 0),
+      pEngineName = new VkString("Dwarf Engine"),
+      engineVersion = new(1, 0, 0),
+      apiVersion = VkVersion.Version_1_3
+    };
 
-    var createInfo = new VkInstanceCreateInfo();
-    createInfo.pApplicationInfo = &appInfo;
+    var createInfo = new VkInstanceCreateInfo {
+      pApplicationInfo = &appInfo
+    };
 
-    List<string> instanceExtensions = new();
-    instanceExtensions.AddRange(glfwGetRequiredInstanceExtensions());
+    List<string> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
 
     List<string> instanceLayers = new();
     // Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
@@ -227,16 +232,17 @@ public class Device : IDisposable {
 
   private unsafe VkDebugUtilsMessengerCreateInfoEXT SetupDebugCallbacks() {
     Logger.Info("Creating Debug Callbacks...");
-    var createInfo = new VkDebugUtilsMessengerCreateInfoEXT();
-    createInfo.messageSeverity =
-      VkDebugUtilsMessageSeverityFlagsEXT.Error |
-      VkDebugUtilsMessageSeverityFlagsEXT.Warning;
-    createInfo.messageType =
-      VkDebugUtilsMessageTypeFlagsEXT.General |
-      VkDebugUtilsMessageTypeFlagsEXT.Validation |
-      VkDebugUtilsMessageTypeFlagsEXT.Performance;
-    createInfo.pfnUserCallback = &DebugMessengerCallback;
-    createInfo.pUserData = null;
+    var createInfo = new VkDebugUtilsMessengerCreateInfoEXT {
+      messageSeverity =
+        VkDebugUtilsMessageSeverityFlagsEXT.Error |
+        VkDebugUtilsMessageSeverityFlagsEXT.Warning,
+      messageType =
+        VkDebugUtilsMessageTypeFlagsEXT.General |
+        VkDebugUtilsMessageTypeFlagsEXT.Validation |
+        VkDebugUtilsMessageTypeFlagsEXT.Performance,
+      pfnUserCallback = &DebugMessengerCallback,
+      pUserData = null
+    };
 
     return createInfo;
   }
@@ -284,33 +290,32 @@ public class Device : IDisposable {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
     var availableDeviceExtensions = vkEnumerateDeviceExtensionProperties(_physicalDevice);
 
-    HashSet<uint> uniqueQueueFamilies = new();
-    uniqueQueueFamilies.Add(queueFamilies.graphicsFamily);
-    uniqueQueueFamilies.Add(queueFamilies.presentFamily);
+    HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily, queueFamilies.presentFamily];
 
     float priority = 1.0f;
     uint queueCount = 0;
-    // VkDeviceQueueCreateInfo* queueCreateInfos = stackalloc VkDeviceQueueCreateInfo[2];
     VkDeviceQueueCreateInfo[] queueCreateInfos = new VkDeviceQueueCreateInfo[2];
 
     foreach (uint queueFamily in uniqueQueueFamilies) {
-      VkDeviceQueueCreateInfo queueCreateInfo = new();
-      queueCreateInfo.queueFamilyIndex = queueFamily;
-      queueCreateInfo.queueCount = 1;
-      queueCreateInfo.pQueuePriorities = &priority;
+      VkDeviceQueueCreateInfo queueCreateInfo = new() {
+        queueFamilyIndex = queueFamily,
+        queueCount = 1,
+        pQueuePriorities = &priority
+      };
 
       queueCreateInfos[queueCount++] = queueCreateInfo;
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures = new();
-    deviceFeatures.samplerAnisotropy = true;
-    deviceFeatures.fillModeNonSolid = true;
-    deviceFeatures.alphaToOne = true;
-    deviceFeatures.sampleRateShading = true;
+    VkPhysicalDeviceFeatures deviceFeatures = new() {
+      samplerAnisotropy = true,
+      fillModeNonSolid = true,
+      alphaToOne = true,
+      sampleRateShading = true
+    };
 
-    VkDeviceCreateInfo createInfo = new();
-
-    createInfo.queueCreateInfoCount = queueCount;
+    VkDeviceCreateInfo createInfo = new() {
+      queueCreateInfoCount = queueCount
+    };
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;
     }

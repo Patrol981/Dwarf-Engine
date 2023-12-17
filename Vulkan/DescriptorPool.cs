@@ -1,5 +1,3 @@
-using System.Reflection;
-
 using Dwarf.Extensions.Lists;
 
 using Vortice.Vulkan;
@@ -13,7 +11,7 @@ public class DescriptorPool : IDisposable {
   private VkDescriptorPool _descriptorPool;
   public class Builder {
     private readonly Device _device;
-    private VkDescriptorPoolSize[] _poolSizes = new VkDescriptorPoolSize[0];
+    private VkDescriptorPoolSize[] _poolSizes = [];
     private uint _maxSets = 1000;
     private VkDescriptorPoolCreateFlags _poolFlags = 0;
 
@@ -29,9 +27,10 @@ public class DescriptorPool : IDisposable {
     }
 
     public Builder AddPoolSize(VkDescriptorType descriptorType, uint count) {
-      VkDescriptorPoolSize poolSize = new();
-      poolSize.descriptorCount = count;
-      poolSize.type = descriptorType;
+      VkDescriptorPoolSize poolSize = new() {
+        descriptorCount = count,
+        type = descriptorType
+      };
       var tmpList = _poolSizes.ToList();
       tmpList.Add(poolSize);
       _poolSizes = tmpList.ToArray();
@@ -62,7 +61,6 @@ public class DescriptorPool : IDisposable {
     _device = device;
 
     VkDescriptorPoolCreateInfo descriptorPoolInfo = new();
-    // descriptorPoolInfo.sType = VkStructureType.DescriptorPoolCreateInfo;
     descriptorPoolInfo.poolSizeCount = (uint)poolSizes.Length;
     fixed (VkDescriptorPoolSize* ptr = poolSizes) {
       descriptorPoolInfo.pPoolSizes = ptr;
@@ -74,11 +72,11 @@ public class DescriptorPool : IDisposable {
   }
 
   public unsafe bool AllocateDescriptor(VkDescriptorSetLayout descriptorSetLayout, out VkDescriptorSet descriptorSet) {
-    VkDescriptorSetAllocateInfo allocInfo = new();
-    // allocInfo.sType = VkStructureType.DescriptorSetAllocateInfo;
-    allocInfo.descriptorPool = _descriptorPool;
-    allocInfo.pSetLayouts = &descriptorSetLayout;
-    allocInfo.descriptorSetCount = 1;
+    VkDescriptorSetAllocateInfo allocInfo = new() {
+      descriptorPool = _descriptorPool,
+      pSetLayouts = &descriptorSetLayout,
+      descriptorSetCount = 1
+    };
 
     fixed (VkDescriptorSet* ptr = &descriptorSet) {
       var result = vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, ptr);

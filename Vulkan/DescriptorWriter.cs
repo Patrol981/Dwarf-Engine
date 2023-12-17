@@ -1,5 +1,3 @@
-using Dwarf.Extensions.Logging;
-
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -9,7 +7,7 @@ namespace Dwarf.Vulkan;
 public class DescriptorWriter {
   private readonly DescriptorSetLayout _setLayout;
   private readonly DescriptorPool _pool;
-  private VkWriteDescriptorSet[] _writes = new VkWriteDescriptorSet[0];
+  private VkWriteDescriptorSet[] _writes = [];
   public DescriptorWriter(DescriptorSetLayout setLayout, DescriptorPool pool) {
     _setLayout = setLayout;
     _pool = pool;
@@ -18,12 +16,12 @@ public class DescriptorWriter {
   public unsafe DescriptorWriter WriteBuffer(uint binding, VkDescriptorBufferInfo* bufferInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
 
-    VkWriteDescriptorSet write = new();
-    // write.sType = VkStructureType.WriteDescriptorSet;
-    write.descriptorType = bindingDescription.descriptorType;
-    write.dstBinding = binding;
-    write.pBufferInfo = bufferInfo;
-    write.descriptorCount = 1;
+    VkWriteDescriptorSet write = new() {
+      descriptorType = bindingDescription.descriptorType,
+      dstBinding = binding,
+      pBufferInfo = bufferInfo,
+      descriptorCount = 1
+    };
 
     var tmp = _writes.ToList();
     tmp.Add(write);
@@ -34,12 +32,12 @@ public class DescriptorWriter {
   public unsafe DescriptorWriter WriteImage(uint binding, VkDescriptorImageInfo* imageInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
 
-    VkWriteDescriptorSet write = new();
-    // write.sType = VkStructureType.WriteDescriptorSet;
-    write.descriptorType = bindingDescription.descriptorType;
-    write.dstBinding = binding;
-    write.pImageInfo = imageInfo;
-    write.descriptorCount = 1;
+    VkWriteDescriptorSet write = new() {
+      descriptorType = bindingDescription.descriptorType,
+      dstBinding = binding,
+      pImageInfo = imageInfo,
+      descriptorCount = 1
+    };
 
     var tmp = _writes.ToList();
     tmp.Add(write);
@@ -62,9 +60,6 @@ public class DescriptorWriter {
       _writes[i].dstSet = set;
     }
     vkUpdateDescriptorSets(_pool.Device.LogicalDevice, _writes);
-    //fixed (VkWriteDescriptorSet* ptr = _writes) {
-    //vkUpdateDescriptorSets(_pool.Device.LogicalDevice, _writes.Length, ptr, 0, null);
-    //}
   }
 
   public void Free() {

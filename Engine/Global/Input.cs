@@ -4,14 +4,14 @@ using static Dwarf.Extensions.GLFW.GLFW;
 
 namespace Dwarf.Engine.Globals;
 public static class Input {
-  public unsafe static bool GetKey(Dwarf.Keys key) {
-    if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)Dwarf.KeyAction.GLFW_PRESS) {
+  public unsafe static bool GetKey(Keys key) {
+    if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)KeyAction.GLFW_PRESS) {
       return true;
     }
     return false;
   }
 
-  public unsafe static bool GetKeyDown(Dwarf.Keys key) {
+  public unsafe static bool GetKeyDown(Keys key) {
     var keyboardState = KeyboardState.Instance;
 
     bool keyPressed = keyboardState.KeyStates[(int)key].KeyPressed;

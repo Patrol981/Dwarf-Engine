@@ -174,7 +174,7 @@ public class AssetLoader {
     if (!texturePathMatch.Success) Logger.Warn("Texture Path Pattern not found");
 
     var modelPathMatch = Regex.Match(data, modelPathPattern, RegexOptions.Singleline | RegexOptions.Multiline);
-    if (!modelPathMatch.Success) Logger.Warn("Model Path Pattern not found");
+    if (!modelPathMatch.Success) Logger.Warn("MeshRenderer Path Pattern not found");
 
     var usesLightMatch = Regex.Match(data, usesLightPattern, RegexOptions.Singleline | RegexOptions.Multiline);
     if (!usesLightMatch.Success) Logger.Warn("Use Light Pattern not found");
@@ -206,10 +206,10 @@ public class AssetLoader {
         var spriteData = GetSpriteData(componentData);
         entity.GetComponent<Sprite>().BindToTexture(app.TextureManager, (string)spriteData[1], (bool)spriteData[0]);
         break;
-      case Model:
+      case MeshRenderer:
         var modelData = GetModelData(componentData);
         entity.AddComponent(new GenericLoader().LoadModel(app.Device, (string)modelData[2]));
-        entity.GetComponent<Model>().BindToTexture(app.TextureManager, (string)modelData[1], (bool)modelData[0]);
+        entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, (string)modelData[1], (bool)modelData[0]);
         break;
       default:
         break;

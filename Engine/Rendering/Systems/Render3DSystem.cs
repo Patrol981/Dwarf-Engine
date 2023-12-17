@@ -5,24 +5,18 @@ using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-
-using Dwarf.Engine;
-
-using OpenTK.Mathematics;
-
 using Vortice.Vulkan;
 
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
-  private Vulkan.Buffer _modelBuffer;
+  private Vulkan.Buffer _modelBuffer = null!;
 
-  private VkDescriptorSet _dynamicSet;
-  private DescriptorWriter _dynamicWriter;
+  private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
+  private DescriptorWriter _dynamicWriter = null!;
 
   public Render3DSystem(
     Device device,
@@ -38,11 +32,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
     .Build();
 
-    VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
+    VkDescriptorSetLayout[] descriptorSetLayouts = [
       _textureSetLayout.GetDescriptorSetLayout(),
       globalSetLayout,
       _setLayout.GetDescriptorSetLayout()
-    };
+    ];
     CreatePipelineLayout(descriptorSetLayouts);
     CreatePipeline(renderer.GetSwapchainRenderPass());
   }
@@ -69,7 +63,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   private void BindDescriptorTexture(Entity entity, ref TextureManager textures, int index, int modelPart = 0) {
-    // var id = entity.GetComponent<Model>().GetTextureIdReference(modelPart);
     var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
     var id = target!.GetTextureIdReference(modelPart);
     var texture = textures.GetTexture(id);
@@ -77,13 +70,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var nid = textures.GetTextureId("./Textures/base/no_texture.png");
       texture = textures.GetTexture(nid);
     }
-    VkDescriptorImageInfo imageInfo = new();
-    imageInfo.sampler = texture.GetSampler();
-    imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-    imageInfo.imageView = texture.GetImageView();
+    VkDescriptorImageInfo imageInfo = new() {
+      sampler = texture.GetSampler(),
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = texture.GetImageView()
+    };
     VkDescriptorSet set;
     unsafe {
-      var texWriter = new DescriptorWriter(_textureSetLayout, _texturePool)
+      _ = new DescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
     }
@@ -116,11 +110,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    // _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
     for (int x = 0; x < entities.Length; x++) {
-      // var en = entities[x].GetComponent<Model>();
       var en = entities[x].GetDrawable<IRender3DElement>() as IRender3DElement;
       _textureSets.Add(new());
       for (int y = 0; y < en!.MeshsesCount; y++) {
@@ -134,12 +126,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       (ulong)entities.Length,
       VkBufferUsageFlags.UniformBuffer,
       VkMemoryPropertyFlags.HostVisible,
-      // VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
       _device.Properties.limits.minUniformBufferOffsetAlignment
     );
 
     for (int i = 0; i < entities.Length; i++) {
-      // var targetModel = entities[i].GetComponent<Model>();
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
       if (targetModel!.MeshsesCount > 1) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
@@ -183,7 +173,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return true;
   }
 
-  public async void RenderEntities(FrameInfo frameInfo, Entity[] entities) {
+  public void RenderEntities(FrameInfo frameInfo, Entity[] entities) {
     if (entities.Length < 1) return;
 
     _pipeline.Bind(frameInfo.CommandBuffer);
@@ -200,38 +190,29 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       );
     }
 
-    List<Task> _tasks = new List<Task>();
-
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
     for (int i = 0; i < entities.Length; i++) {
-      var targetEntity = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-      // var targetEntity = entities[i].GetComponent<Model>();
-      var modelUBO = new ModelUniformBufferObject();
-      modelUBO.Material = entities[i].GetComponent<Material>().GetColor();
+      if (entities[i].GetDrawable<IRender3DElement>() is not IRender3DElement targetEntity) continue;
+
+      var modelUBO = new ModelUniformBufferObject {
+        Material = entities[i].GetComponent<Material>().GetColor()
+      };
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
       unsafe {
-        // var map = _modelBuffer.GetMappedMemory();
-        // char* memOffset = (char*)map;
         var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
-        // memOffset += fixedSize * (ulong)(i);
 
         var offset = fixedSize * (ulong)(i);
         _modelBuffer.WriteToBuffer((IntPtr)(&modelUBO), _modelBuffer.GetInstanceSize(), offset);
-        /*
-        VkUtils.MemCopy(
-          (IntPtr)memOffset,
-          (IntPtr)(&modelUBO),
-          (int)_modelBuffer.GetInstanceSize()
-        );
-        */
       }
 
-      var pushConstantData = new SimplePushConstantData();
-      pushConstantData.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      pushConstantData.NormalMatrix = entities[i].GetComponent<Transform>().NormalMatrix;
+      var transform = entities[i].GetComponent<Transform>();
+      var pushConstantData = new SimplePushConstantData {
+        ModelMatrix = transform.Matrix4,
+        NormalMatrix = transform.NormalMatrix
+      };
 
       unsafe {
         vkCmdPushConstants(
@@ -260,28 +241,26 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (!entities[i].CanBeDisposed && entities[i].Active) {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
-          _tasks.Add(targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout));
-          // await targetEntity.Bind(frameInfo.CommandBuffer, x);
-          // await targetEntity.Draw(frameInfo.CommandBuffer, x);
-          _tasks.Add(targetEntity.Bind(frameInfo.CommandBuffer, x));
-          _tasks.Add(targetEntity.Draw(frameInfo.CommandBuffer, x));
+          targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+          targetEntity.Bind(frameInfo.CommandBuffer, x);
+          targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }
     }
 
-    // Parallel.Invoke(_tasks.ToArray());
-    await Task.WhenAll(_tasks);
     _modelBuffer.Unmap();
   }
 
   private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new();
-    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = (uint)Unsafe.SizeOf<SimplePushConstantData>();
+    VkPushConstantRange pushConstantRange = new() {
+      stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+      offset = 0,
+      size = (uint)Unsafe.SizeOf<SimplePushConstantData>()
+    };
 
-    VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.setLayoutCount = (uint)layouts.Length;
+    VkPipelineLayoutCreateInfo pipelineInfo = new() {
+      setLayoutCount = (uint)layouts.Length
+    };
     unsafe {
       fixed (VkDescriptorSetLayout* ptr = layouts) {
         pipelineInfo.pSetLayouts = ptr;
@@ -294,9 +273,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   private void CreatePipeline(VkRenderPass renderPass) {
     _pipeline?.Dispose();
-    if (_pipelineConfigInfo == null) {
-      _pipelineConfigInfo = new PipelineConfigInfo();
-    }
+    _pipelineConfigInfo ??= new PipelineConfigInfo();
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
@@ -308,7 +285,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
     _modelBuffer?.Dispose();
-    _descriptorPool?.FreeDescriptors(new VkDescriptorSet[] { _dynamicSet });
+    _descriptorPool?.FreeDescriptors([_dynamicSet]);
     _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
     _texturePool?.Dispose();

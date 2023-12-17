@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Dwarf.Engine.Physics;
+﻿namespace Dwarf.Engine.Physics;
 public static class JoltConfig {
   public static uint MaxBodies { get; private set; } = 1024;
   public static uint NumBodyMutexes { get; private set; } = 0;

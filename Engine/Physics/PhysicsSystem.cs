@@ -1,15 +1,9 @@
-﻿using System.Drawing;
-
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
+﻿using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 
 using JoltPhysicsSharp;
 
 using System.Numerics;
-
-using Vortice.Vulkan;
 
 using static Dwarf.Engine.Physics.JoltConfig;
 
@@ -67,7 +61,7 @@ public class PhysicsSystem : IDisposable {
     var bodyInterface = _physicsSystem.BodyInterface;
 
     // Next we can create a rigid body to serve as the floor, we make a large box
-    // Create the settings for the collision volume (the shape). 
+    // Create the settings for the collision volume (the shape).
     // Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
     BoxShapeSettings floorShapeSettings = new(new System.Numerics.Vector3(100.0f, 1.0f, 100.0f));
     BodyCreationSettings floorSettings = new(floorShapeSettings, new Double3(0.0f, 5.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);

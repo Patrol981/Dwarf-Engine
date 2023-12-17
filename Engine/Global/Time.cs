@@ -1,7 +1,3 @@
-using System.Diagnostics;
-
-using Dwarf.Extensions.Logging;
-
 using static Dwarf.Extensions.GLFW.GLFW;
 
 namespace Dwarf.Engine.Globals;

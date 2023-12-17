@@ -4,8 +4,6 @@ using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
-using Dwarf.Engine.Rendering.UI;
-
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering;

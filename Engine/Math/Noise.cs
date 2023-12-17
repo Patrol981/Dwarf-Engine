@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Dwarf.Engine.Math;
 public static class Noise {
-  private static Random s_random = new Random();
+  private static readonly Random s_random = new();
 
   public static float Interpolate(float a0, float a1, float w) {
     return (a1 - a0) * w + a0;
@@ -39,7 +39,7 @@ public static class Noise {
     float dy = y - (float)iy;
 
     // Compute the dot-product
-    return (dx * gradient.x + dy * gradient.y);
+    return dx * gradient.x + dy * gradient.y;
   }
 
   public static float Perlin(float x, float y) {
@@ -48,8 +48,8 @@ public static class Noise {
     int y0 = (int)MathF.Floor(y);
     int y1 = y0 + 1;
 
-    float sx = x - (float)x0;
-    float sy = y - (float)y0;
+    float sx = x - x0;
+    float sy = y - y0;
 
     float n0, n1, ix0, ix1, value;
 

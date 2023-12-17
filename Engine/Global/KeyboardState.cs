@@ -1,7 +1,4 @@
-using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Testing;
 using Dwarf.Extensions.GLFW;
@@ -20,7 +17,7 @@ public class KeyState {
 }
 
 public sealed class KeyboardState {
-  private static KeyboardState s_instance = null!;
+  private static KeyboardState s_instance = GetInstance();
   private static bool s_debug = true;
 
   private Dictionary<int, KeyState> _keyStates = [];
@@ -30,44 +27,45 @@ public sealed class KeyboardState {
       _keyStates.TryAdd((int)enumValue, new());
     }
   }
-
   public static unsafe void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     switch (action) {
-      case (int)Dwarf.KeyAction.GLFW_PRESS:
-        s_instance._keyStates[key].KeyDown = true;
-        s_instance._keyStates[key].KeyPressed = true;
+      case (int)KeyAction.GLFW_PRESS:
+        if (s_instance._keyStates.ContainsKey(key)) {
+          s_instance._keyStates[key].KeyDown = true;
+          s_instance._keyStates[key].KeyPressed = true;
+        }
 
-        if (key == (int)Dwarf.Keys.GLFW_KEY_F) WindowState.FocusOnWindow();
-        if (key == (int)Dwarf.Keys.GLFW_KEY_F1) WindowState.MaximizeWindow();
-        if (key == (int)Dwarf.Keys.GLFW_KEY_GRAVE_ACCENT) ChangeWireframeMode();
-        if (key == (int)Dwarf.Keys.GLFW_KEY_1) ChangeDebugVisiblity();
+        if (key == (int)Keys.GLFW_KEY_F) WindowState.FocusOnWindow();
+        if (key == (int)Keys.GLFW_KEY_F1) WindowState.MaximizeWindow();
+        if (key == (int)Keys.GLFW_KEY_GRAVE_ACCENT) ChangeWireframeMode();
+        if (key == (int)Keys.GLFW_KEY_1) ChangeDebugVisiblity();
         break;
       case (int)KeyAction.GLFW_REPEAT:
         break;
       case (int)KeyAction.GLFW_RELEASE:
-        s_instance._keyStates[key].KeyDown = false;
+        if (s_instance._keyStates.ContainsKey(key)) {
+          s_instance._keyStates[key].KeyDown = false;
+        }
         break;
       default:
         break;
     }
-    // _currentKeyPressed = (int)Keys.GLFW_KEY_UNKNOWN;
     PerformanceTester.KeyHandler(action, key);
   }
 
   static void ChangeWireframeMode() {
-    if (ApplicationState.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)) {
-      ApplicationState.Instance.CurrentPipelineConfig = new VertexDebugPipeline();
+    if (Application.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)) {
+      Application.Instance.CurrentPipelineConfig = new VertexDebugPipeline();
     } else {
-      ApplicationState.Instance.CurrentPipelineConfig = new PipelineConfigInfo();
+      Application.Instance.CurrentPipelineConfig = new PipelineConfigInfo();
     }
-    ApplicationState.Instance.GetSystems().Reload3DRenderSystem = true;
-    ApplicationState.Instance.GetSystems().Reload2DRenderSystem = true;
-    // ApplicationState.Instance.GetSystems().ReloadUISystem = true;
+    Application.Instance.GetSystems().Reload3DRenderSystem = true;
+    Application.Instance.GetSystems().Reload2DRenderSystem = true;
   }
 
   static void ChangeDebugVisiblity() {
     s_debug = !s_debug;
-    var entities = ApplicationState.Instance.GetEntities();
+    var entities = Application.Instance.GetEntities();
     var debugObjects = Entity.DistinctInterface<IDebugRender3DObject>(entities);
     foreach (var entity in debugObjects) {
       var e = entity.GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
@@ -80,9 +78,7 @@ public sealed class KeyboardState {
   }
 
   private static KeyboardState GetInstance() {
-    if (s_instance == null) {
-      s_instance = new KeyboardState();
-    }
+    s_instance ??= new KeyboardState();
     return s_instance;
   }
 

@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Math;
 
@@ -14,8 +12,8 @@ public enum CameraType {
 }
 
 public class Camera : Component {
-  private System.Numerics.Matrix4x4 _projectionMatrix = System.Numerics.Matrix4x4.Identity;
-  private System.Numerics.Matrix4x4 _viewMatrix = System.Numerics.Matrix4x4.Identity;
+  private Matrix4x4 _projectionMatrix = Matrix4x4.Identity;
+  private Matrix4x4 _viewMatrix = Matrix4x4.Identity;
 
   protected Vector3 _front = -Vector3.UnitZ;
   protected Vector3 _forward = -Vector3.UnitZ;
@@ -38,25 +36,22 @@ public class Camera : Component {
 
   public void SetOrthograpicProjection() {
     SetOrthograpicProjection(-_aspect, _aspect, -1, 1, 0.1f, 100f);
-    // _projectionMatrix = GetProjectionMatrix2D();
-    // _projectionMatrix = Matrix4x4.CreateOrthographicOffCenterLeftHanded(-_aspect, _aspect, -1, 1, 0.01f, 100f);
     _cameraType = CameraType.Orthographic;
   }
 
   public void SetOrthograpicProjection(float left, float right, float top, float bottom, float near, float far) {
-    _projectionMatrix = System.Numerics.Matrix4x4.Identity;
+    _projectionMatrix = Matrix4x4.Identity;
     _projectionMatrix[0, 0] = 2.0f / (right - left);
     _projectionMatrix[1, 1] = 2.0f / (bottom - top);
     _projectionMatrix[2, 2] = 1.0f / (far - near);
     _projectionMatrix[0, 3] = -(right + left) / (right - left);
     _projectionMatrix[1, 3] = -(bottom + top) / (bottom - top);
     _projectionMatrix[2, 3] = -near / (far - near);
-    // _projectionMatrix = Matrix4.CreateOrthographicOffCenter(0, 1, 0, 1, 0.1f, 1000.0f);
     _cameraType = CameraType.Orthographic;
   }
 
   public void SetPerspectiveProjection(float near, float far) {
-    _projectionMatrix = System.Numerics.Matrix4x4.CreatePerspectiveFieldOfView(
+    _projectionMatrix = Matrix4x4.CreatePerspectiveFieldOfView(
       Converter.DegreesToRadians(_fov),
       _aspect,
       near,
@@ -66,7 +61,7 @@ public class Camera : Component {
     _cameraType = CameraType.Perspective;
   }
 
-  public System.Numerics.Matrix4x4 GetProjectionMatrix() {
+  public Matrix4x4 GetProjectionMatrix() {
     return _projectionMatrix;
   }
 
@@ -81,9 +76,9 @@ public class Camera : Component {
     return projectionMatrix;
   }
 
-  public System.Numerics.Matrix4x4 GetViewMatrix() {
+  public Matrix4x4 GetViewMatrix() {
     Vector3 position = Owner!.GetComponent<Transform>().Position;
-    _viewMatrix = System.Numerics.Matrix4x4.CreateLookAt(position, position + _front, _up);
+    _viewMatrix = Matrix4x4.CreateLookAt(position, position + _front, _up);
     return _viewMatrix;
   }
 

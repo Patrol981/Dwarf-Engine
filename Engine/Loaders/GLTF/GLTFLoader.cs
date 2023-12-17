@@ -10,7 +10,7 @@ using StbImageSharp;
 namespace Dwarf.Engine.Loader.Providers;
 
 public class GLTFLoader {
-  public static async Task<Model> Load(Application app, string path, bool preload = false, int flip = 1) {
+  public static async Task<MeshRenderer> Load(Application app, string path, bool preload = false, int flip = 1) {
     var model = ModelRoot.Load(path);
     var meshes = new List<Dwarf.Engine.Mesh>();
 
@@ -29,7 +29,7 @@ public class GLTFLoader {
 
     }
 
-    var resultModel = new Model(app.Device, meshes.ToArray());
+    var resultModel = new MeshRenderer(app.Device, meshes.ToArray());
 
     if (!preload) {
       var images = ProcessMaterials(model);

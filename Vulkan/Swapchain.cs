@@ -1,15 +1,7 @@
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -22,20 +14,19 @@ public class Swapchain : IDisposable {
 
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
   private VkImageView[] _swapChainImageViews = null!;
-  // private unsafe VkImage* _swapchainImages;
-  private VkImage[] _swapchainImages = new VkImage[0];
+  private VkImage[] _swapchainImages = [];
   private VkRenderPass _renderPass = VkRenderPass.Null;
-  private VkImage[] _depthImages = new VkImage[0];
-  private VkDeviceMemory[] _depthImagesMemories = new VkDeviceMemory[0];
-  private VkImageView[] _depthImageViews = new VkImageView[0];
+  private VkImage[] _depthImages = [];
+  private VkDeviceMemory[] _depthImagesMemories = [];
+  private VkImageView[] _depthImageViews = [];
   private VkFormat _swapchainImageFormat = VkFormat.Undefined;
   private VkFormat _swapchainDepthFormat = VkFormat.Undefined;
   private VkExtent2D _swapchainExtent = VkExtent2D.Zero;
-  private VkFramebuffer[] _swapchainFramebuffers = new VkFramebuffer[0];
-  private VkSemaphore[] _imageAvailableSemaphores = new VkSemaphore[0];
-  private VkSemaphore[] _renderFinishedSemaphores = new VkSemaphore[0];
-  private VkFence[] _inFlightFences = new VkFence[0];
-  private VkFence[] _imagesInFlight = new VkFence[0];
+  private VkFramebuffer[] _swapchainFramebuffers = [];
+  private VkSemaphore[] _imageAvailableSemaphores = [];
+  private VkSemaphore[] _renderFinishedSemaphores = [];
+  private VkFence[] _inFlightFences = [];
+  private VkFence[] _imagesInFlight = [];
 
   // private Swapchain _oldSwapchain = null!;
 
@@ -90,15 +81,16 @@ public class Swapchain : IDisposable {
       imageCount = swapChainSupport.Capabilities.maxImageCount;
     }
 
-    var createInfo = new VkSwapchainCreateInfoKHR();
-    createInfo.surface = _device.Surface;
+    var createInfo = new VkSwapchainCreateInfoKHR {
+      surface = _device.Surface,
 
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VkImageUsageFlags.ColorAttachment;
+      minImageCount = imageCount,
+      imageFormat = surfaceFormat.format,
+      imageColorSpace = surfaceFormat.colorSpace,
+      imageExtent = extent,
+      imageArrayLayers = 1,
+      imageUsage = VkImageUsageFlags.ColorAttachment
+    };
 
     var queueFamilies = DeviceHelper.FindQueueFamilies(_device.PhysicalDevice, _device.Surface);
 
@@ -177,60 +169,64 @@ public class Swapchain : IDisposable {
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
 
-    VkAttachmentDescription depthAttachment = new();
-    depthAttachment.format = FindDepthFormat();
-    depthAttachment.samples = VkSampleCountFlags.Count1;
-    depthAttachment.loadOp = VkAttachmentLoadOp.Clear;
-    depthAttachment.storeOp = VkAttachmentStoreOp.DontCare;
-    depthAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-    depthAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
-    depthAttachment.initialLayout = VkImageLayout.Undefined;
-    depthAttachment.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+    VkAttachmentDescription depthAttachment = new() {
+      format = FindDepthFormat(),
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.DontCare,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.DepthStencilAttachmentOptimal
+    };
 
-    VkAttachmentReference depthAttachmentRef = new();
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VkImageLayout.DepthStencilAttachmentOptimal;
+    VkAttachmentReference depthAttachmentRef = new() {
+      attachment = 1,
+      layout = VkImageLayout.DepthStencilAttachmentOptimal
+    };
 
-    VkAttachmentDescription colorAttachment = new();
-    colorAttachment.format = surfaceFormat.format;
-    colorAttachment.samples = VkSampleCountFlags.Count1;
-    colorAttachment.loadOp = VkAttachmentLoadOp.Clear;
-    colorAttachment.storeOp = VkAttachmentStoreOp.Store;
-    colorAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
-    colorAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
-    colorAttachment.initialLayout = VkImageLayout.Undefined;
-    colorAttachment.finalLayout = VkImageLayout.PresentSrcKHR;
+    VkAttachmentDescription colorAttachment = new() {
+      format = surfaceFormat.format,
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.Store,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.PresentSrcKHR
+    };
 
-    VkAttachmentReference colorAttachmentRef = new();
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VkImageLayout.ColorAttachmentOptimal;
+    VkAttachmentReference colorAttachmentRef = new() {
+      attachment = 0,
+      layout = VkImageLayout.ColorAttachmentOptimal
+    };
 
-    VkSubpassDescription subpass = new();
-    subpass.pipelineBindPoint = VkPipelineBindPoint.Graphics;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+    VkSubpassDescription subpass = new() {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics,
+      colorAttachmentCount = 1,
+      pColorAttachments = &colorAttachmentRef,
+      pDepthStencilAttachment = &depthAttachmentRef
+    };
 
-    VkSubpassDependency dependency = new();
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.srcAccessMask = 0;
-    dependency.srcStageMask =
-      VkPipelineStageFlags.ColorAttachmentOutput |
-      VkPipelineStageFlags.EarlyFragmentTests;
-    dependency.dstSubpass = 0;
-    dependency.dstStageMask =
-      VkPipelineStageFlags.ColorAttachmentOutput |
-      VkPipelineStageFlags.EarlyFragmentTests;
-    dependency.dstAccessMask =
-      VkAccessFlags.ColorAttachmentWrite |
-      VkAccessFlags.DepthStencilAttachmentWrite;
+    VkSubpassDependency dependency = new() {
+      srcSubpass = VK_SUBPASS_EXTERNAL,
+      srcAccessMask = 0,
+      srcStageMask =
+        VkPipelineStageFlags.ColorAttachmentOutput |
+        VkPipelineStageFlags.EarlyFragmentTests,
+      dstSubpass = 0,
+      dstStageMask =
+        VkPipelineStageFlags.ColorAttachmentOutput |
+        VkPipelineStageFlags.EarlyFragmentTests,
+      dstAccessMask =
+        VkAccessFlags.ColorAttachmentWrite |
+        VkAccessFlags.DepthStencilAttachmentWrite
+    };
 
-    // VkAttachmentDescription* attachments = stackalloc VkAttachmentDescription[2];
-    VkAttachmentDescription[] attachments = new VkAttachmentDescription[2];
-    attachments[0] = colorAttachment;
-    attachments[1] = depthAttachment;
-    VkRenderPassCreateInfo renderPassInfo = new();
-    renderPassInfo.attachmentCount = 2;
+    VkAttachmentDescription[] attachments = [colorAttachment, depthAttachment];
+    VkRenderPassCreateInfo renderPassInfo = new() {
+      attachmentCount = 2
+    };
     fixed (VkAttachmentDescription* ptr = attachments) {
       renderPassInfo.pAttachments = ptr;
     }
@@ -254,8 +250,9 @@ public class Swapchain : IDisposable {
     _depthImageViews = new VkImageView[swapChainImages.Length];
 
     for (int i = 0; i < _depthImages.Length; i++) {
-      VkImageCreateInfo imageInfo = new();
-      imageInfo.imageType = VkImageType.Image2D;
+      VkImageCreateInfo imageInfo = new() {
+        imageType = VkImageType.Image2D
+      };
       imageInfo.extent.width = _swapchainExtent.width;
       imageInfo.extent.height = _swapchainExtent.height;
       imageInfo.extent.depth = 1;
@@ -271,10 +268,11 @@ public class Swapchain : IDisposable {
 
       _device.CreateImageWithInfo(imageInfo, VkMemoryPropertyFlags.DeviceLocal, out _depthImages[i], out _depthImagesMemories[i]);
 
-      VkImageViewCreateInfo viewInfo = new();
-      viewInfo.image = _depthImages[i];
-      viewInfo.viewType = VkImageViewType.Image2D;
-      viewInfo.format = depthFormat;
+      VkImageViewCreateInfo viewInfo = new() {
+        image = _depthImages[i],
+        viewType = VkImageViewType.Image2D,
+        format = depthFormat
+      };
       viewInfo.subresourceRange.aspectMask = VkImageAspectFlags.Depth;
       viewInfo.subresourceRange.baseMipLevel = 0;
       viewInfo.subresourceRange.levelCount = 1;
@@ -290,18 +288,16 @@ public class Swapchain : IDisposable {
     _swapchainFramebuffers = new VkFramebuffer[swapChainImages.Length];
 
     for (int i = 0; i < swapChainImages.Length; i++) {
-      VkImageView[] attachmetns = new VkImageView[2];
-      attachmetns[0] = _swapChainImageViews[i];
-      attachmetns[1] = _depthImageViews[i];
-
+      VkImageView[] attachmetns = [_swapChainImageViews[i], _depthImageViews[i]];
       fixed (VkImageView* ptr = attachmetns) {
-        VkFramebufferCreateInfo framebufferInfo = new();
-        framebufferInfo.renderPass = _renderPass;
-        framebufferInfo.attachmentCount = 2;
-        framebufferInfo.pAttachments = ptr;
-        framebufferInfo.width = _swapchainExtent.width;
-        framebufferInfo.height = _swapchainExtent.height;
-        framebufferInfo.layers = 1;
+        VkFramebufferCreateInfo framebufferInfo = new() {
+          renderPass = _renderPass,
+          attachmentCount = 2,
+          pAttachments = ptr,
+          width = _swapchainExtent.width,
+          height = _swapchainExtent.height,
+          layers = 1
+        };
 
         vkCreateFramebuffer(_device.LogicalDevice, &framebufferInfo, null, out _swapchainFramebuffers[i]).CheckResult();
       }
@@ -318,8 +314,9 @@ public class Swapchain : IDisposable {
 
     VkSemaphoreCreateInfo semaphoreInfo = new();
 
-    VkFenceCreateInfo fenceInfo = new();
-    fenceInfo.flags = VkFenceCreateFlags.Signaled;
+    VkFenceCreateInfo fenceInfo = new() {
+      flags = VkFenceCreateFlags.Signaled
+    };
 
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
       vkCreateSemaphore(_device.LogicalDevice, &semaphoreInfo, null, out _imageAvailableSemaphores[i]).CheckResult();
@@ -373,8 +370,7 @@ public class Swapchain : IDisposable {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = buffers;
 
-    VkSemaphore[] signalSemaphores = new VkSemaphore[1];
-    signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
+    VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
     fixed (VkSemaphore* signalPtr = signalSemaphores) {
       submitInfo.signalSemaphoreCount = 1;
       submitInfo.pSignalSemaphores = signalPtr;
@@ -382,13 +378,12 @@ public class Swapchain : IDisposable {
       vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
       vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
 
-      VkPresentInfoKHR presentInfo = new();
+      VkPresentInfoKHR presentInfo = new() {
+        waitSemaphoreCount = 1,
+        pWaitSemaphores = signalPtr
+      };
 
-      presentInfo.waitSemaphoreCount = 1;
-      presentInfo.pWaitSemaphores = signalPtr;
-
-      VkSwapchainKHR[] swapchains = new VkSwapchainKHR[1];
-      swapchains[0] = _handle;
+      VkSwapchainKHR[] swapchains = [_handle];
       presentInfo.swapchainCount = 1;
       fixed (VkSwapchainKHR* ptr = swapchains) {
         presentInfo.pSwapchains = ptr;
@@ -404,10 +399,11 @@ public class Swapchain : IDisposable {
   }
 
   private VkFormat FindDepthFormat() {
-    var items = new List<VkFormat>();
-    items.Add(VkFormat.D32Sfloat);
-    items.Add(VkFormat.D32SfloatS8Uint);
-    items.Add(VkFormat.D24UnormS8Uint);
+    var items = new List<VkFormat> {
+      VkFormat.D32Sfloat,
+      VkFormat.D32SfloatS8Uint,
+      VkFormat.D24UnormS8Uint
+    };
     return _device.FindSupportedFormat(items, VkImageTiling.Optimal, VkFormatFeatureFlags.DepthStencilAttachment);
   }
 

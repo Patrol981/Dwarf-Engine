@@ -1,17 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
-using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
-// using static JoltPhysicsSharp.JoltApi;
 
 using System.Numerics;
 
@@ -19,6 +9,7 @@ using static Dwarf.Engine.Physics.JoltConfig;
 using Dwarf.Engine.Rendering;
 
 namespace Dwarf.Engine.Physics;
+
 public class Rigidbody : Component, IDisposable {
   private readonly Device _device = null!;
   private BodyInterface _bodyInterface;
@@ -79,7 +70,7 @@ public class Rigidbody : Component, IDisposable {
     BodyCreationSettings settings = new(
         shapeSettings,
         pos,
-        System.Numerics.Quaternion.Identity,
+        Quaternion.Identity,
         _motionType,
         Layers.Moving
       );
@@ -105,11 +96,11 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void Update() {
-    // if(_motionType ==)
-    // var pos = _bodyInterface.GetCenterOfMassPosition(_bodyId);
     var pos = _bodyInterface.GetPosition(_bodyId);
     var rot = _bodyInterface.GetRotation(_bodyId);
-    Owner!.GetComponent<Transform>().Position = pos;
+    var transform = Owner!.GetComponent<Transform>();
+
+    transform.Position = pos;
 
     if (_bodyInterface.GetMotionType(_bodyId) != _motionType) {
       _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
@@ -151,10 +142,33 @@ public class Rigidbody : Component, IDisposable {
     _bodyInterface.SetPosition(_bodyId, new(vec3.X, vec3.Y, vec3.Z), Activation.Activate);
   }
 
-  public void Collide() {
-    RayCastResult ray = new RayCastResult();
+  public static (Entity?, Entity?) GetCollisionData(BodyID body1, BodyID body2) {
+    var entities = Application.Instance.GetEntities().Where(x => x.HasComponent<Rigidbody>());
+    var first = entities.Where(x => x.GetComponent<Rigidbody>()._bodyId == body1).FirstOrDefault();
+    var second = entities.Where(x => x.GetComponent<Rigidbody>()._bodyId == body2).FirstOrDefault();
 
+    return (first, second);
   }
+
+  public void InvokeCollision(CollisionState collisionState, Entity otherColl) {
+    var scripts = Owner!.GetScripts();
+    for (short i = 0; i < scripts.Length; i++) {
+      switch (collisionState) {
+        case CollisionState.Enter:
+          scripts[i].CollisionEnter(otherColl);
+          break;
+        case CollisionState.Stay:
+          scripts[i].CollisionStay(otherColl);
+          break;
+        case CollisionState.Exit:
+          scripts[i].CollisionExit(otherColl);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
 
   public bool Kinematic {
     get {
@@ -164,10 +178,8 @@ public class Rigidbody : Component, IDisposable {
     set {
       if (value) {
         _motionType = MotionType.Static;
-        // _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.DontActivate);
       } else {
         _motionType = MotionType.Dynamic;
-        // _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
       }
     }
   }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Numerics;
 
 using Dwarf.Engine.Rendering.UI;
 
@@ -15,8 +10,13 @@ public class RectTransform : Transform {
   internal uint LastScreenX { get; set; } = 0;
   internal uint LastScreenY { get; set; } = 0;
   internal float LastGlobalScale { get; set; } = 0.0f;
+  internal bool RequireUpdate { get; set; } = true;
 
   public RectTransform() : base() { }
 
   public RectTransform(Vector3 position) : base(position) { }
+
+  public void SetRequireState() {
+    RequireUpdate = true;
+  }
 }

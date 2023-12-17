@@ -1,5 +1,3 @@
-using System.Linq;
-
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -14,12 +12,12 @@ public class DescriptorSetLayout {
     private readonly Device _device = null!;
     private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
     public Builder(Device device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
-      this._device = device;
-      this._bindings = bindings;
+      _device = device;
+      _bindings = bindings;
     }
 
     public Builder(Device device) {
-      this._device = device;
+      _device = device;
     }
 
     public Builder AddBinding(
@@ -28,33 +26,34 @@ public class DescriptorSetLayout {
       VkShaderStageFlags shaderStageFlags,
       uint count = 1
     ) {
-      VkDescriptorSetLayoutBinding layoutBinding = new();
-      layoutBinding.binding = binding;
-      layoutBinding.descriptorType = descriptorType;
-      layoutBinding.descriptorCount = count;
-      layoutBinding.stageFlags = shaderStageFlags;
-      this._bindings[binding] = layoutBinding;
+      VkDescriptorSetLayoutBinding layoutBinding = new() {
+        binding = binding,
+        descriptorType = descriptorType,
+        descriptorCount = count,
+        stageFlags = shaderStageFlags
+      };
+      _bindings[binding] = layoutBinding;
       return this;
     }
 
     public DescriptorSetLayout Build() {
-      return new DescriptorSetLayout(this._device, this._bindings);
+      return new DescriptorSetLayout(_device, _bindings);
     }
 
   }
 
   public unsafe DescriptorSetLayout(Device device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
-    this._device = device;
-    this._bindings = bindings;
+    _device = device;
+    _bindings = bindings;
 
     VkDescriptorSetLayoutBinding[] setLayoutBindings = new VkDescriptorSetLayoutBinding[bindings.Count];
     for (uint i = 0; i < bindings.Count; i++) {
       setLayoutBindings[i] = bindings[i];
     }
 
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo = new();
-    // descriptorSetLayoutInfo.sType = VkStructureType.DescriptorSetLayoutCreateInfo;
-    descriptorSetLayoutInfo.bindingCount = (uint)setLayoutBindings.Length;
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutInfo = new() {
+      bindingCount = (uint)setLayoutBindings.Length
+    };
     fixed (VkDescriptorSetLayoutBinding* ptr = setLayoutBindings) {
       descriptorSetLayoutInfo.pBindings = ptr;
     }

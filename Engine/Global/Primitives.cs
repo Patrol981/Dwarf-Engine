@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using System.Numerics;
-using Assimp;
-using OpenTK.Graphics.ES11;
+﻿using System.Numerics;
 using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine;

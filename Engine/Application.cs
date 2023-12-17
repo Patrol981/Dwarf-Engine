@@ -23,11 +23,9 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
-public static class ApplicationState {
-  public static Application Instance = null!;
-}
-
 public class Application {
+  public static Application Instance { get; private set; } = null!;
+
   public delegate void EventCallback();
 
   public void SetUpdateCallback(EventCallback eventCallback) {
@@ -77,7 +75,8 @@ public class Application {
     _renderer = new Renderer(_window, _device);
     _systems = new SystemCollection();
 
-    ApplicationState.Instance = this;
+    Application.Instance = this;
+
     _textureManager = new(_device);
 
     _systemCreationFlags = systemCreationFlags;
@@ -370,7 +369,7 @@ public class Application {
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
         _entities[i].DisposeEverything();
-        ApplicationState.Instance.RemoveEntity(_entities[i].EntityID);
+        Application.Instance.RemoveEntity(_entities[i].EntityID);
       }
     }
   }

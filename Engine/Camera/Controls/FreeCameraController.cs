@@ -162,22 +162,22 @@ public class FreeCameraController : Component {
         Owner!.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
       }
 
-      if (Input.GetKeyDown(GLFW_KEY_D)) {
+      if (Input.GetKey(GLFW_KEY_D)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKeyDown(GLFW_KEY_A)) {
+      if (Input.GetKey(GLFW_KEY_A)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKeyDown(GLFW_KEY_S)) {
+      if (Input.GetKey(GLFW_KEY_S)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKeyDown(GLFW_KEY_W)) {
+      if (Input.GetKey(GLFW_KEY_W)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKeyDown(GLFW_KEY_SPACE)) {
+      if (Input.GetKey(GLFW_KEY_SPACE)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKeyDown(GLFW_KEY_LEFT_SHIFT)) {
+      if (Input.GetKey(GLFW_KEY_LEFT_SHIFT)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
 

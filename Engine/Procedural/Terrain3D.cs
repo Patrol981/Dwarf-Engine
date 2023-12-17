@@ -7,7 +7,7 @@ using Dwarf.Vulkan;
 using System.Numerics;
 
 namespace Dwarf.Engine.Procedural;
-public class Terrain3D : Model {
+public class Terrain3D : MeshRenderer {
   const int HEIGHT = 512;
   const int WIDTH = 512;
 
@@ -109,7 +109,7 @@ public class Terrain3D : Model {
         indices.Add((uint)topRight);
         indices.Add((uint)topRight);
         indices.Add((uint)bottomLeft);
-        indices.Add((uint)bottomRight); 
+        indices.Add((uint)bottomRight);
         */
       }
     }

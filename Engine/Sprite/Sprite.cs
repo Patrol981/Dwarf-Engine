@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Numerics;
+﻿using System.Numerics;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Vulkan;
 
@@ -11,18 +6,15 @@ using static Vortice.Vulkan.Vulkan;
 using Vortice.Vulkan;
 using Dwarf.Extensions.Logging;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using StbImageSharp;
-using System.Drawing;
 using Dwarf.Engine.Math;
-using Dwarf.Engine.Rendering.UI;
 
 namespace Dwarf.Engine;
 public class Sprite : Component, IDisposable, I2DCollision {
   private readonly Device _device = null!;
 
-  private Dwarf.Vulkan.Buffer _vertexBuffer = null!;
-  private Dwarf.Vulkan.Buffer _indexBuffer = null!;
+  private Vulkan.Buffer _vertexBuffer = null!;
+  private Vulkan.Buffer _indexBuffer = null!;
   private Guid _textureIdRef = Guid.Empty;
   private bool _hasIndexBuffer = false;
   private bool _usesTexture = false;
@@ -61,7 +53,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   public unsafe void Bind(VkCommandBuffer commandBuffer) {
-    VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
+    VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
     fixed (ulong* offsetsPtr = offsets) {
@@ -107,9 +99,9 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   private void CreateSpriteVertexData() {
-    _spriteMesh = new();
-
-    _spriteMesh.Vertices = new Vertex[4];
+    _spriteMesh = new() {
+      Vertices = new Vertex[4]
+    };
     _spriteMesh.Vertices[0] = new Vertex {
       Position = new Vector3(0.5f, 0.5f, 0.0f),
       Uv = new Vector2(0.0f, 0.0f),
@@ -218,8 +210,6 @@ public class Sprite : Component, IDisposable, I2DCollision {
     var aspect = MathF.Round(image.Width / image.Height);
     if (aspect < 1) aspect = MathF.Round(image.Height / image.Width);
 
-    Logger.Info($"Aspect: {aspect} | {image.Width}x{image.Height}");
-
     if (aspect != 1) {
       AddPositionsToVertices(size, aspect);
     }
@@ -248,9 +238,9 @@ public class Sprite : Component, IDisposable, I2DCollision {
     _vertexCount = (ulong)vertices.Length;
 
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
-    ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
+    ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.Buffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -276,8 +266,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
   private unsafe void CreateIndexBuffer(uint[] indices) {
     _indexCount = (ulong)indices.Length;
     if (!_hasIndexBuffer) return;
-    ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
-    ulong indexSize = (ulong)sizeof(uint);
+    ulong bufferSize = sizeof(uint) * _indexCount;
+    ulong indexSize = sizeof(uint);
 
     var stagingBuffer = new Vulkan.Buffer(
       _device,
@@ -307,9 +297,10 @@ public class Sprite : Component, IDisposable, I2DCollision {
     var pos = Owner!.GetComponent<Transform>().Position;
     var size = GetSize();
 
-    _cachedBounds = new();
-    _cachedBounds.Min = new Vector2(pos.X, pos.Y);
-    _cachedBounds.Max = new Vector2(pos.X + size.X, pos.Y + size.Y);
+    _cachedBounds = new() {
+      Min = new Vector2(pos.X, pos.Y),
+      Max = new Vector2(pos.X + size.X, pos.Y + size.Y)
+    };
 
     return _cachedBounds;
   }
@@ -340,13 +331,6 @@ public class Sprite : Component, IDisposable, I2DCollision {
       MathF.Abs(minX - maxX) * scale.X,
       MathF.Abs(minY - maxY) * scale.Y
     );
-
-    /*
-    _cachedSize = new Vector2(
-      (MathF.Abs(minX) + MathF.Abs(maxX)) * scale.X,
-      (MathF.Abs(minY) + MathF.Abs(maxY)) * scale.Y
-    );
-    */
 
     return _cachedSize;
   }

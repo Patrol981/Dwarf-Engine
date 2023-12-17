@@ -1,9 +1,7 @@
 ﻿
 using System.Runtime.CompilerServices;
-using System;
 
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -19,7 +17,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
 
-  private Mesh _mesh;
+  private Mesh _mesh = null!;
   private bool _finishedInitialization = false;
   private bool _hasIndexBuffer = false;
 
@@ -37,10 +35,10 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public async void Init() {
-    Task[] tasks = new Task[2] {
+    Task[] tasks = [
       CreateVertexBuffer(_mesh.Vertices),
       CreateIndexBuffer(_mesh.Indices)
-    };
+    ];
     await Task.WhenAll(tasks);
     _finishedInitialization = true;
   }
@@ -50,8 +48,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
-    VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
-    ulong[] offsets = { 0 };
+    VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
+    ulong[] offsets = [0];
     fixed (VkBuffer* buffersPtr = buffers)
     fixed (ulong* offsetsPtr = offsets) {
       vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
@@ -68,6 +66,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public void Dispose() {
+    vkQueueWaitIdle(_device.PresentQueue);
+    vkQueueWaitIdle(_device.GraphicsQueue);
+    vkDeviceWaitIdle(_device.LogicalDevice);
     _vertexBuffer.Dispose();
     if (_hasIndexBuffer) {
       _indexBuffer.Dispose();
@@ -86,9 +87,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   private unsafe Task CreateVertexBuffer(Vertex[] vertices) {
     _vertexCount = (ulong)vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
-    ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
+    ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.Buffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -126,10 +127,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
     );
 
-    // vkDeviceWaitIdle(_device.LogicalDevice);
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
-    //stagingBuffer.Unmap();
 
     _indexBuffer = new Vulkan.Buffer(
       _device,

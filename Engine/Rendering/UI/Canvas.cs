@@ -83,8 +83,8 @@ public class Canvas : Component, IDisposable {
   private List<Entity> _entities = new();
 
   public Canvas() {
-    _window = ApplicationState.Instance.Window;
-    _application = ApplicationState.Instance;
+    _window = Application.Instance.Window;
+    _application = Application.Instance;
 
     _maxCanvasSize = new Vector2(_window.Size.X, _window.Size.Y);
     _currentResoltionScale = null!;
@@ -96,8 +96,9 @@ public class Canvas : Component, IDisposable {
 
     foreach (var entity in _entities) {
       var rect = entity.GetComponent<RectTransform>();
-      await CheckScale(ref rect);
+      await CheckScale(rect);
       await CheckAnchor(rect);
+      rect.RequireUpdate = false;
     }
   }
 
@@ -110,6 +111,7 @@ public class Canvas : Component, IDisposable {
   }
 
   public Span<Entity> GetUI() {
+    if (_entities.Count < 1) return new Entity[] { };
     return _entities.ToArray();
   }
 
@@ -130,7 +132,9 @@ public class Canvas : Component, IDisposable {
     button.AddComponent(new Button(_application, texturePath));
     button.Name = buttonName;
     _entities.Add(button);
+#pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
     MouseState.GetInstance().ClickEvent += button.GetComponent<Button>().CheckCollision;
+#pragma warning restore CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
     return button;
   }
 
@@ -169,7 +173,7 @@ public class Canvas : Component, IDisposable {
     text.GetComponent<RectTransform>().Anchor = anchor;
     text.GetComponent<RectTransform>().OffsetFromVector = offsetFromAnchor;
     text.GetComponent<RectTransform>().OriginScale = originScale;
-    text.AddComponent(new TextField(_application, textData));
+    text.AddComponent(new TextField(_application));
     text.GetComponent<TextField>().BindToTexture(_application.TextureManager, "./Fonts/atlas.png");
     text.GetComponent<TextField>().Init();
     text.Name = textName;
@@ -177,8 +181,8 @@ public class Canvas : Component, IDisposable {
     return text;
   }
 
-  private Task CheckScale(ref RectTransform rect) {
-    if (rect.LastGlobalScale == _globalScale) return Task.CompletedTask;
+  private Task CheckScale(RectTransform rect) {
+    if (rect.LastGlobalScale == _globalScale && !rect.RequireUpdate) return Task.CompletedTask;
     rect.LastGlobalScale = _globalScale;
 
     var scale = rect.OriginScale * rect.LastGlobalScale;
@@ -188,11 +192,11 @@ public class Canvas : Component, IDisposable {
   }
 
   private async Task<Task> CheckAnchor(RectTransform rect) {
-    await Task.Delay(50);
+    // await Task.Delay(50);
 
     // var extent = _window.Extent;
     var extent = _application.Renderer.Extent2D;
-    if (rect.LastScreenX == extent.width && rect.LastScreenY == extent.height) return Task.CompletedTask;
+    if (rect.LastScreenX == extent.width && rect.LastScreenY == extent.height && !rect.RequireUpdate) return Task.CompletedTask;
 
     rect.LastScreenX = extent.width;
     rect.LastScreenY = extent.height;

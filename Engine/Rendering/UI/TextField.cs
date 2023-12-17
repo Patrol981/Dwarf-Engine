@@ -26,15 +26,10 @@ public class TextField : Component, IUIElement {
   private ulong _indexCount = 0;
   private bool _hasIndexBuffer = false;
 
-  private string _text = string.Empty;
-  private float _fontSize = 1;
-  private float _maxLineSize = 1;
-  private int _numberOfLines = 1;
-  private bool _isCentered = false;
+  private string _text = "Enter text...";
 
   // debug
   private int _numOfRows = 11;
-  private int _numOfColumns = 11;
   private Dictionary<char, Vector2> _charactersOnAtlas = new();
 
   private Vector2 _startPos = Vector2.Zero;
@@ -47,9 +42,8 @@ public class TextField : Component, IUIElement {
 
   public TextField() { }
 
-  public TextField(Application app, string text) {
+  public TextField(Application app) {
     _app = app;
-    _text = text;
     _device = _app.Device;
 
     _glyphOffset = _cursorX / 1024;
@@ -70,9 +64,9 @@ public class TextField : Component, IUIElement {
       }
     }
 
-    DrawText(_text);
     if (_textMesh.Indices.Length > 0) _hasIndexBuffer = true;
-
+    CreateQuads();
+    CreateVertexBuffer(_textMesh.Vertices);
 
     var pos = Owner!.GetComponent<RectTransform>().Position;
     _startPos = new(pos.X, pos.Y);
@@ -89,25 +83,27 @@ public class TextField : Component, IUIElement {
   }
 
   public void DrawText(string text) {
-    CreateQuads(text);
-    RecreateBuffers(text);
+    if (text == _text) return;
     _text = text;
+    CreateQuads();
+    RecreateBuffers();
+    Owner!.TryGetComponent<RectTransform>()?.SetRequireState();
   }
 
   public void Update() {
     CheckBuffers(_textMesh.Vertices);
   }
 
-  private void CreateQuads(string text) {
+  private void CreateQuads() {
     _textMesh = new();
 
     var pos = Owner!.GetComponent<RectTransform>().Position;
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 
-    for (int i = 0; i < text.Length; i++) {
+    for (int i = 0; i < _text.Length; i++) {
       var tempMesh = new Mesh();
-      var targetChar = _charactersOnAtlas[text[i]];
+      var targetChar = _charactersOnAtlas[_text[i]];
       tempMesh.Vertices = new Vertex[6];
 
       var uX = ((targetChar.X * 96.0f) / 1024.0f);
@@ -156,8 +152,7 @@ public class TextField : Component, IUIElement {
     CreateVertexBuffer(vertices);
   }
 
-  private void RecreateBuffers(string text) {
-    if (text == _text) return;
+  private void RecreateBuffers() {
     vkDeviceWaitIdle(_device.LogicalDevice);
     Dispose();
     CreateVertexBuffer(_textMesh.Vertices);

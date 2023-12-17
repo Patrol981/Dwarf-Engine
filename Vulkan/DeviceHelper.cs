@@ -1,9 +1,7 @@
-using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
-using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -20,7 +18,6 @@ public unsafe static class DeviceHelper {
     vkEnumeratePhysicalDevices(instance, &count, null);
 
     VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[count];
-    // VkPhysicalDevice* physicalDevices = stackalloc VkPhysicalDevice[count];
     fixed (VkPhysicalDevice* ptr = physicalDevices) {
       vkEnumeratePhysicalDevices(instance, &count, ptr);
     }
@@ -44,7 +41,7 @@ public unsafe static class DeviceHelper {
       }
     }
 
-    Logger.Info($"Successfully found a device: {gpuInfo.GetDeviceName().ToString()}");
+    Logger.Info($"Successfully found a device: {gpuInfo.GetDeviceName()}");
 
     return returnDevice;
   }
@@ -64,21 +61,20 @@ public unsafe static class DeviceHelper {
 
   public static string[] EnumerateInstanceLayers() {
     if (!IsSupported()) {
-      return Array.Empty<string>();
+      return [];
     }
 
     uint count = 0;
     VkResult result = vkEnumerateInstanceLayerProperties(&count, null);
     if (result != VkResult.Success) {
-      return Array.Empty<string>();
+      return [];
     }
 
     if (count == 0) {
-      return Array.Empty<string>();
+      return [];
     }
 
     VkLayerProperties[] properties = new VkLayerProperties[count];
-    // VkLayerProperties* properties = stackalloc VkLayerProperties[count];
 
     fixed (VkLayerProperties* ptr = properties) {
       vkEnumerateInstanceLayerProperties(&count, ptr).CheckResult();
@@ -185,7 +181,6 @@ public unsafe static class DeviceHelper {
     }
 
     VkExtensionProperties[] props = new VkExtensionProperties[count];
-    // VkExtensionProperties* props = stackalloc VkExtensionProperties[count];
     fixed (VkExtensionProperties* ptr = props) {
       vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, ptr);
     }

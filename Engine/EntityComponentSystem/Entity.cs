@@ -1,9 +1,4 @@
-using System.Collections;
-using System.ComponentModel;
-
 using Dwarf.Engine.Rendering;
-using Dwarf.Engine.Rendering.UI;
-
 namespace Dwarf.Engine.EntityComponentSystem;
 
 public class Entity {
@@ -29,6 +24,13 @@ public class Entity {
     lock (_componentLock) {
       return _componentManager.GetComponent<T>();
     }
+  }
+
+  public T? TryGetComponent<T>() where T : Component, new() {
+    if (HasComponent<T>()) {
+      return GetComponent<T>();
+    }
+    return null!;
   }
 
   public T GetScript<T>() where T : DwarfScript {

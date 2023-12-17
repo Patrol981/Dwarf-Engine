@@ -11,13 +11,13 @@ public class PerformanceTester {
   public static void KeyHandler(int action, int key) {
     switch (action) {
       case (int)Dwarf.KeyAction.GLFW_PRESS:
-        if (key == (int)Dwarf.Keys.GLFW_KEY_P) CreateNewModel(ApplicationState.Instance, false);
-        if (key == (int)Dwarf.Keys.GLFW_KEY_LEFT_BRACKET) CreateNewModel(ApplicationState.Instance, true);
-        if (key == (int)Dwarf.Keys.GLFW_KEY_O) RemoveModel(ApplicationState.Instance);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_P) CreateNewModel(Application.Instance, false);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_LEFT_BRACKET) CreateNewModel(Application.Instance, true);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_O) RemoveModel(Application.Instance);
 
-        if (key == (int)Dwarf.Keys.GLFW_KEY_L) CreateNewComlexModel(ApplicationState.Instance, false);
-        if (key == (int)Dwarf.Keys.GLFW_KEY_K) CreateNewComlexModel(ApplicationState.Instance, true);
-        if (key == (int)Dwarf.Keys.GLFW_KEY_J) RemoveComplexModel(ApplicationState.Instance);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_L) CreateNewComlexModel(Application.Instance, false);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_K) CreateNewComlexModel(Application.Instance, true);
+        if (key == (int)Dwarf.Keys.GLFW_KEY_J) RemoveComplexModel(Application.Instance);
         break;
     }
   }
@@ -41,7 +41,7 @@ public class PerformanceTester {
     }
     var room = new Entity();
     room.AddComponent(new GenericLoader().LoadModel(app.Device, "./Models/viking_room.obj"));
-    room.GetComponent<Model>().BindToTexture(app.TextureManager, "viking_room/viking_room.png", true);
+    room.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, "viking_room/viking_room.png", true);
     room.AddComponent(new Material(new Vector3(1.0f, 1.0f, 1.0f)));
     room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
     room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
@@ -106,13 +106,13 @@ public class PerformanceTester {
     var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Models/dwarf_test_model.obj");
     en.AddComponent(model);
     var endModelTime = DateTime.Now;
-    en.GetComponent<Model>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad, true);
+    en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad, true);
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);
     en.GetComponent<Transform>().Rotation = new(180f, 0f, 0);
     en.AddComponent(new Rigidbody(app.Device, PrimitiveType.Cylinder, 0.25f));
-    var bodyInterface = ApplicationState.Instance.GetSystems().PhysicsSystem.BodyInterface;
+    var bodyInterface = Application.Instance.GetSystems().PhysicsSystem.BodyInterface;
     en.GetComponent<Rigidbody>().Init(bodyInterface);
     en.Name = "ComplexTest";
     app.AddEntity(en);

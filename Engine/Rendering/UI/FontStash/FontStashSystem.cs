@@ -26,7 +26,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2, IRenderSystem {
   private FontStashObject _fontStashObject;
 
   private int _vertexIndex = 0;
-  private object _lastTexture;
+  private object _lastTexture = null!;
 
   public FontStashSystem(
     Device device,
@@ -39,7 +39,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2, IRenderSystem {
     CreatePipelineLayout();
     CreatePipeline(renderer.GetSwapchainRenderPass());
 
-    var windowSize = ApplicationState.Instance.Window.Extent;
+    var windowSize = Application.Instance.Window.Extent;
     _transform = Matrix4x4.CreateOrthographicOffCenter(0, windowSize.width, windowSize.height, 0, 0, -1);
 
     _fontSystemSettings = new FontSystemSettings {

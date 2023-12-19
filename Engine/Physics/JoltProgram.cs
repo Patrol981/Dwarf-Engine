@@ -7,62 +7,6 @@ using static Dwarf.Engine.Physics.JoltConfig;
 
 namespace Dwarf.Engine.Physics;
 
-internal class BPLayerInterfaceImpl : BroadPhaseLayerInterface {
-  private readonly BroadPhaseLayer[] _objectToBroadPhase = new BroadPhaseLayer[Layers.NumLayers];
-
-  public BPLayerInterfaceImpl() {
-    _objectToBroadPhase[Layers.NonMoving] = BroadPhaseLayers.NonMoving;
-    _objectToBroadPhase[Layers.Moving] = BroadPhaseLayers.Moving;
-  }
-
-  protected override int GetNumBroadPhaseLayers() {
-    return BroadPhaseLayers.NumLayers;
-  }
-
-  protected override BroadPhaseLayer GetBroadPhaseLayer(ObjectLayer layer) {
-    Debug.Assert(layer < Layers.NumLayers);
-    return _objectToBroadPhase[layer];
-  }
-
-  protected override string GetBroadPhaseLayerName(BroadPhaseLayer layer) {
-    switch ((byte)layer) {
-      case BroadPhaseLayers.NonMoving: return "NON_MOVING";
-      case BroadPhaseLayers.Moving: return "MOVING";
-      default:
-        Debug.Assert(false);
-        return "INVALID";
-    }
-  }
-}
-
-internal class ObjectVsBroadPhaseLayerFilterImpl : ObjectVsBroadPhaseLayerFilter {
-  protected override bool ShouldCollide(ObjectLayer layer1, BroadPhaseLayer layer2) {
-    switch (layer1) {
-      case Layers.NonMoving:
-        return layer2 == BroadPhaseLayers.Moving;
-      case Layers.Moving:
-        return true;
-      default:
-        Debug.Assert(false);
-        return false;
-    }
-  }
-}
-
-internal class ObjectLayerPairFilterImpl : ObjectLayerPairFilter {
-  protected override bool ShouldCollide(ObjectLayer object1, ObjectLayer object2) {
-    switch (object1) {
-      case Layers.NonMoving:
-        return object2 == Layers.Moving;
-      case Layers.Moving:
-        return true;
-      default:
-        Debug.Assert(false);
-        return false;
-    }
-  }
-}
-
 public class JoltProgram {
   internal static Body CreateFloor(in BodyInterface bodyInterface, float size = 200.0f) {
     float scale = WorldScale;

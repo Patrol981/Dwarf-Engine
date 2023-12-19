@@ -16,38 +16,33 @@ public class PhysicsSystem : IDisposable {
   public const float DeltaTime = 1.0f / 60.0f;
   public const int CollisionSteps = 1;
 
-  private readonly TempAllocator _tempAllocator;
-  private readonly JobSystemThreadPool _jobSystem;
-  private readonly BPLayerInterfaceImpl _broadPhaseLayer;
-  private readonly ObjectVsBroadPhaseLayerFilterImpl _objectVsBroadphaseLayerFilter;
-  private readonly ObjectLayerPairFilterImpl _objectVsObjectLayerFilter;
-
   private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
   public PhysicsSystem() {
-    if (!Foundation.Init(true)) {
+    if (!Foundation.Init(0u, false)) {
       return;
     }
 
     Logger.Info($"[CREATING PHYSICS 3D]");
 
-    using TempAllocator tempAllocator = new TempAllocator(10 * 1024 * 1024);
+    // We use only 2 layers: one for non-moving objects and one for moving objects
+    var objectLayerPairFilter = new ObjectLayerPairFilterTable(2);
+    objectLayerPairFilter.EnableCollision(Layers.NonMoving, Layers.Moving);
+    objectLayerPairFilter.EnableCollision(Layers.Moving, Layers.Moving);
 
-    _tempAllocator = new(10 * 1024 * 1024);
-    _jobSystem = new(Foundation.MaxPhysicsJobs, Foundation.MaxPhysicsBarriers);
-    _broadPhaseLayer = new();
-    _objectVsBroadphaseLayerFilter = new();
-    _objectVsObjectLayerFilter = new();
+    // We use a 1-to-1 mapping between object layers and broadphase layers
+    var broadPhaseLayerInterface = new BroadPhaseLayerInterfaceTable(2, 2);
+    broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.NonMoving, BroadPhaseLayers.NonMoving);
+    broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.Moving, BroadPhaseLayers.Moving);
 
-    _physicsSystem = new();
-    _physicsSystem.Init(
-      MaxBodies,
-      NumBodyMutexes,
-      MaxBodyPairs,
-      MaxContactConstraints,
-      _broadPhaseLayer,
-      _objectVsBroadphaseLayerFilter,
-      _objectVsObjectLayerFilter
-    );
+    var objectVsBroadPhaseLayerFilter = new ObjectVsBroadPhaseLayerFilterTable(broadPhaseLayerInterface, 2, objectLayerPairFilter, 2);
+
+    PhysicsSystemSettings settings = new() {
+      ObjectLayerPairFilter = objectLayerPairFilter,
+      BroadPhaseLayerInterface = broadPhaseLayerInterface,
+      ObjectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter
+    };
+
+    _physicsSystem = new(settings);
 
     // ContactListener
     _physicsSystem.OnContactValidate += JoltProgram.OnContactValidate;
@@ -104,7 +99,7 @@ public class PhysicsSystem : IDisposable {
       if (entities[i].CanBeDisposed) continue;
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
-    _physicsSystem.Update(DeltaTime, CollisionSteps, _tempAllocator, _jobSystem);
+    _physicsSystem.Step(DeltaTime, CollisionSteps);
     return Task.CompletedTask;
   }
 
@@ -121,12 +116,6 @@ public class PhysicsSystem : IDisposable {
   }
 
   public void Dispose() {
-    _tempAllocator.Dispose();
-    _jobSystem?.Dispose();
-    _broadPhaseLayer?.Dispose();
-    _objectVsBroadphaseLayerFilter?.Dispose();
-    _objectVsObjectLayerFilter?.Dispose();
-
     _physicsSystem?.Dispose();
 
     Foundation.Shutdown();

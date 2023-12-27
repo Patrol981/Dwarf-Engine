@@ -121,9 +121,9 @@ public class Terrain3D : MeshRenderer {
   }
 
   private async void SetupTexture(Application app) {
-    var data = await Texture.LoadFromPath("./Textures/base/no_texture.png");
+    var data = await Texture.LoadDataFromPath("./Textures/base/no_texture.png");
     var texture = new Texture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
     texture.SetTextureData(data.Data);
-    app.TextureManager.Add(texture);
+    await app.TextureManager.AddTexture(texture);
   }
 }

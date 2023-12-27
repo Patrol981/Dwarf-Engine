@@ -1,15 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Vulkan;
-
-using Dwarf.Engine;
 
 using Vortice.Vulkan;
 
@@ -24,12 +17,12 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     PipelineConfigInfo configInfo = null!
   ) : base(device, renderer, globalSetLayout, configInfo) {
 
-    VkDescriptorSetLayout[] descriptorSetLayouts = new VkDescriptorSetLayout[] {
+    VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
-    };
+    ];
 
-    CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass());
+    CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
+    CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
   }
 
   public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
@@ -51,9 +44,14 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       if (targetEntity == null) continue;
       if (!targetEntity.Enabled) continue;
 
-      var pushConstant = new ColliderMeshPushConstant();
-      // pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
-      pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().Matrix4;
+      var pushConstant = new ColliderMeshPushConstant {
+        // pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
+        // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
+
+        ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
+          entities[i].GetComponent<Transform>().Matrix4 :
+          entities[i].GetComponent<Transform>().MatrixWithoutRotation
+      };
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
@@ -74,36 +72,11 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     }
   }
 
-  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new();
-    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = (uint)Unsafe.SizeOf<ColliderMeshPushConstant>();
-
-    VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.setLayoutCount = (uint)layouts.Length;
-    fixed (VkDescriptorSetLayout* ptr = layouts) {
-      pipelineInfo.pSetLayouts = ptr;
-    }
-    pipelineInfo.pushConstantRangeCount = 1;
-    pipelineInfo.pPushConstantRanges = &pushConstantRange;
-    vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
+  public override unsafe void Dispose() {
+    base.Dispose();
   }
 
-  private unsafe void CreatePipeline(VkRenderPass renderPass) {
-    _pipeline?.Dispose();
-    if (_pipelineConfigInfo == null) {
-      _pipelineConfigInfo = new PipelineConfigInfo();
-    }
-    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
-    pipelineConfig.RenderPass = renderPass;
-    pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "debug_vertex", "debug_fragment", pipelineConfig, new PipelineModelProvider());
-  }
-
-  public unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
-    _pipeline?.Dispose();
-    vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
+  public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+    throw new NotImplementedException();
   }
 }

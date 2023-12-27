@@ -9,7 +9,6 @@ using Vortice.Vulkan;
 namespace Dwarf.Engine.Rendering.UI;
 public interface IUIElement : IDrawable {
   public void Update();
-  public void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout);
   public Guid GetTextureIdReference();
   public void DrawText(string text);
 }

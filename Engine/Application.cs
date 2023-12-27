@@ -1,17 +1,10 @@
-using System.Diagnostics;
-using System.Linq;
-using System.Net.Mime;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 using System.Numerics;
@@ -69,7 +62,13 @@ public class Application {
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
 
-  public Application(string appName = "Dwarf Vulkan", SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D) {
+  public Application(
+    string appName = "Dwarf Vulkan",
+    SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
+    bool debugMode = true
+  ) {
+    Device.s_EnableValidationLayers = debugMode;
+
     _window = new Window(1200, 900, appName);
     _device = new Device(_window);
     _renderer = new Renderer(_window, _device);
@@ -114,9 +113,9 @@ public class Application {
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
     var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
-    _systems.Render3DSystem?.SetupRenderData(objs3D, ref _textureManager);
+    _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
     _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.RenderUISystem?.SetupUIData(_systems.Canvas, ref _textureManager);
+    _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
     _systems.PhysicsSystem?.Init(objs3D);
 
     MasterAwake(Entity.GetScripts(_entities));
@@ -156,14 +155,15 @@ public class Application {
         int frameIndex = _renderer.GetFrameIndex();
         FrameInfo frameInfo = new();
 
-        GlobalUniformBufferObject ubo = new();
-        ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
-        ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+        GlobalUniformBufferObject ubo = new() {
+          Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
+          View = _camera.GetComponent<Camera>().GetViewMatrix(),
 
-        ubo.LightPosition = _camera.GetComponent<Transform>().Position;
-        ubo.LightColor = new Vector4(1f, 1f, 1f, 1f);
-        ubo.AmientLightColor = new Vector4(1f, 1f, 1f, 1f);
-        ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
+          LightPosition = _camera.GetComponent<Transform>().Position,
+          LightColor = new Vector4(1f, 1f, 1f, 1f),
+          AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
+          CameraPosition = _camera.GetComponent<Transform>().Position
+        };
 
         uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
 
@@ -208,19 +208,19 @@ public class Application {
     _camera = camera;
   }
 
-  private void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
+  private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Awake();
     }
   }
 
-  private void MasterStart(ReadOnlySpan<DwarfScript> entities) {
+  private static void MasterStart(ReadOnlySpan<DwarfScript> entities) {
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Start();
     }
   }
 
-  private void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+  private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Update();
     }
@@ -302,10 +302,10 @@ public class Application {
     var startTime = DateTime.UtcNow;
     List<Task> tasks = new();
 
-    List<List<Texture>> textures = new();
+    List<List<Texture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
-      var t = await TextureManager.InitTexturesStatic(_device, paths[i].ToArray());
-      textures.Add(t.ToList());
+      var t = await TextureManager.AddTextures(_device, [.. paths[i]]);
+      textures.Add([.. t]);
     }
 
     for (int i = 0; i < paths.Count; i++) {

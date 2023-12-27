@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -37,8 +36,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       globalSetLayout,
       _setLayout.GetDescriptorSetLayout()
     ];
-    CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass());
+
+    CreatePipelineLayout<SimplePushConstantData>(descriptorSetLayouts);
+    CreatePipeline(renderer.GetSwapchainRenderPass(), "vertex", "fragment", new PipelineModelProvider());
   }
 
   private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
@@ -85,7 +85,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _textureSets.GetAt(index).SetAt(set, modelPart);
   }
 
-  public void SetupRenderData(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+  public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
     var startTime = DateTime.Now;
     // TODO: Reuse data from diffrent renders?
 
@@ -173,7 +173,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return true;
   }
 
-  public void RenderEntities(FrameInfo frameInfo, Entity[] entities) {
+  public void Render(FrameInfo frameInfo, Span<Entity> entities) {
     if (entities.Length < 1) return;
 
     _pipeline.Bind(frameInfo.CommandBuffer);
@@ -241,7 +241,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (!entities[i].CanBeDisposed && entities[i].Active) {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
-          targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+          // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+          Descriptor.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
           targetEntity.Bind(frameInfo.CommandBuffer, x);
           targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
@@ -251,45 +252,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Unmap();
   }
 
-  private void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new() {
-      stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-      offset = 0,
-      size = (uint)Unsafe.SizeOf<SimplePushConstantData>()
-    };
-
-    VkPipelineLayoutCreateInfo pipelineInfo = new() {
-      setLayoutCount = (uint)layouts.Length
-    };
-    unsafe {
-      fixed (VkDescriptorSetLayout* ptr = layouts) {
-        pipelineInfo.pSetLayouts = ptr;
-      }
-      pipelineInfo.pushConstantRangeCount = 1;
-      pipelineInfo.pPushConstantRanges = &pushConstantRange;
-      vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
-    }
-  }
-
-  private void CreatePipeline(VkRenderPass renderPass) {
-    _pipeline?.Dispose();
-    _pipelineConfigInfo ??= new PipelineConfigInfo();
-    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
-    pipelineConfig.RenderPass = renderPass;
-    pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "vertex", "fragment", pipelineConfig, new PipelineModelProvider());
-  }
-
-  public unsafe void Dispose() {
+  public override unsafe void Dispose() {
     vkQueueWaitIdle(_device.GraphicsQueue);
-    _setLayout?.Dispose();
-    _textureSetLayout?.Dispose();
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
-    _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
-    _texturePool?.Dispose();
-    _pipeline?.Dispose();
-    vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
+
+    base.Dispose();
   }
 }

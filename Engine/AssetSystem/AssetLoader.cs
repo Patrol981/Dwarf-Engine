@@ -209,7 +209,7 @@ public class AssetLoader {
       case MeshRenderer:
         var modelData = GetModelData(componentData);
         entity.AddComponent(new GenericLoader().LoadModel(app.Device, (string)modelData[2]));
-        entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, (string)modelData[1], (bool)modelData[0]);
+        entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, (string)modelData[1]);
         break;
       default:
         break;

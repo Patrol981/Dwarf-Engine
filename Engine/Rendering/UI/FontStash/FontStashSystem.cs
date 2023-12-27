@@ -11,7 +11,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using FontStashSharp;
 
 namespace Dwarf.Engine.Rendering.UI.FontStash;
-public class FontStashSystem : SystemBase, IFontStashRenderer2, IRenderSystem {
+public class FontStashSystem : SystemBase, IFontStashRenderer2 {
   private const int MAX_SPRITES = 2048;
   private const int MAX_VERTICES = MAX_SPRITES * 4;
   private const int MAX_INDICES = MAX_SPRITES * 6;

@@ -33,8 +33,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       _setLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout()
     ];
-    CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass());
+    CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
+    CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
   }
 
   public unsafe void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
@@ -81,7 +81,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       }
 
       var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      var writer = new DescriptorWriter(_setLayout, _descriptorPool)
+      _ = new DescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
@@ -107,7 +107,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     return true;
   }
 
-  public unsafe void RenderEntities(FrameInfo frameInfo, Span<Entity> entities) {
+  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
     _pipeline.Bind(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -124,15 +124,11 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     for (int i = 0; i < entities.Length; i++) {
       if (!entities[i].Active) continue;
 
-      var spriteUBO = new SpriteUniformBufferObject();
-      spriteUBO.SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      spriteUBO.SpriteColor = entities[i].GetComponent<Material>().GetColor();
-      spriteUBO.UseTexture = entities[i].GetComponent<Sprite>().UsesTexture;
-
-      var pushConstantData = new SpriteUniformBufferObject();
-      pushConstantData.SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4;
-      pushConstantData.SpriteColor = entities[i].GetComponent<Material>().GetColor();
-      pushConstantData.UseTexture = true;
+      var pushConstantData = new SpriteUniformBufferObject {
+        SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4,
+        SpriteColor = entities[i].GetComponent<Material>().GetColor(),
+        UseTexture = true
+      };
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
@@ -156,55 +152,25 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
     var id = entity.GetComponent<Sprite>().GetTextureIdReference();
     var texture = textureManager.GetTexture(id);
-    VkDescriptorImageInfo imageInfo = new();
-    imageInfo.sampler = texture.GetSampler();
-    imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-    imageInfo.imageView = texture.GetImageView();
+    VkDescriptorImageInfo imageInfo = new() {
+      sampler = texture.GetSampler(),
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = texture.GetImageView()
+    };
     VkDescriptorSet set;
-    var texWriter = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
 
     _textureSets.SetAt(set, index);
   }
 
-  private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new();
-    pushConstantRange.stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = (uint)Unsafe.SizeOf<SpriteUniformBufferObject>();
-
-    VkPipelineLayoutCreateInfo pipelineInfo = new();
-    pipelineInfo.setLayoutCount = (uint)layouts.Length;
-    fixed (VkDescriptorSetLayout* ptr = layouts) {
-      pipelineInfo.pSetLayouts = ptr;
-    }
-    pipelineInfo.pushConstantRangeCount = 1;
-    pipelineInfo.pPushConstantRanges = &pushConstantRange;
-    vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
-  }
-
-  private void CreatePipeline(VkRenderPass renderPass) {
-    _pipeline?.Dispose();
-    if (_pipelineConfigInfo == null) {
-      _pipelineConfigInfo = new PipelineConfigInfo();
-    }
-    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
-    pipelineConfig.RenderPass = renderPass;
-    pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "sprite_vertex", "sprite_fragment", pipelineConfig, new PipelineSpriteProvider());
-  }
-
-  public unsafe void Dispose() {
+  public override unsafe void Dispose() {
     vkQueueWaitIdle(_device.GraphicsQueue);
-    _setLayout?.Dispose();
-    _textureSetLayout?.Dispose();
     _spriteBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(_descriptorSets);
-    _descriptorPool?.Dispose();
     _texturePool?.FreeDescriptors(_textureSets);
-    _texturePool?.Dispose();
-    _pipeline?.Dispose();
-    vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
+
+    base.Dispose();
   }
 }

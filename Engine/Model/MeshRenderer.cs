@@ -76,30 +76,6 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     _finishedInitialization = true;
   }
 
-  public unsafe void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
-    vkCmdBindDescriptorSets(
-        frameInfo.CommandBuffer,
-        VkPipelineBindPoint.Graphics,
-        pipelineLayout,
-        0,
-        descriptorSets
-      );
-  }
-
-  public unsafe Task BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
-    vkCmdBindDescriptorSets(
-      frameInfo.CommandBuffer,
-      VkPipelineBindPoint.Graphics,
-      pipelineLayout,
-      0,
-      1,
-      &textureSet,
-      0,
-      null
-    );
-    return Task.CompletedTask;
-  }
-
   public Task Bind(VkCommandBuffer commandBuffer, uint index) {
     VkBuffer[] buffers = [_vertexBuffers[index].GetBuffer()];
     ulong[] offsets = [0];
@@ -126,39 +102,35 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
-  public void BindToTexture(
+  public async void BindToTexture(
     TextureManager textureManager,
     string texturePath,
-    bool useLocalPath = false,
     int modelPart = 0
   ) {
-    if (useLocalPath) {
-      _textureIdRefs[modelPart] = textureManager.GetTextureId($"./Textures/{texturePath}");
-    } else {
-      _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
-    }
+    _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
 
     if (_textureIdRefs[modelPart] == Guid.Empty) {
+      var texture = await Texture.LoadFromPath(_device, texturePath);
+      await textureManager.AddTexture(texture);
+      _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
+
       Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
+      Logger.Info($"Binding ({texturePath})");
     }
   }
 
-  public void BindMultipleModelPartsToTexture(
-    TextureManager textureManager,
-    string path
-  ) {
+  public void BindMultipleModelPartsToTexture(TextureManager textureManager, string path) {
     for (int i = 0; i < _meshesCount; i++) {
-      BindToTexture(textureManager, path, false, i);
+      BindToTexture(textureManager, path, i);
     }
   }
 
   public void BindMultipleModelPartsToTextures(
     TextureManager textureManager,
-    ReadOnlySpan<string> paths,
-    bool useLocalPath = false
+    ReadOnlySpan<string> paths
   ) {
     for (int i = 0; i < _meshesCount; i++) {
-      BindToTexture(textureManager, paths[i], useLocalPath, i);
+      BindToTexture(textureManager, paths[i], i);
     }
   }
 

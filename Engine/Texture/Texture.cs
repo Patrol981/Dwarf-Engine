@@ -1,8 +1,9 @@
 using System.Drawing;
 using System.Net.Mime;
-
+using System.Runtime.InteropServices;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using OpenTK.Compute.OpenCL;
@@ -37,20 +38,44 @@ public class Texture : IDisposable {
     _size = _width * _height * 4;
   }
 
+  public void SetTextureData(nint dataPtr) {
+    var stagingBuffer = new Vulkan.Buffer(
+      _device,
+      (ulong)_size,
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
+
+    var data = new byte[_size];
+    Marshal.Copy(dataPtr, data, 0, data.Length);
+    if (MemoryUtils.IsNull(data)) {
+      Logger.Warn($"[Texture Bytes] Memory is null");
+      return;
+    }
+
+    stagingBuffer.Map();
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
+    stagingBuffer.Unmap();
+
+    ProcessTexture(stagingBuffer);
+  }
+
   public void SetTextureData(byte[] data) {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
-      (ulong)(_size),
+      (ulong)_size,
       VkBufferUsageFlags.TransferSrc,
       VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
     );
 
     stagingBuffer.Map();
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
-
-
     stagingBuffer.Unmap();
 
+    ProcessTexture(stagingBuffer);
+  }
+
+  private void ProcessTexture(Vulkan.Buffer stagingBuffer) {
     unsafe {
       if (_textureImage.IsNotNull) {
         vkDeviceWaitIdle(_device.LogicalDevice);
@@ -103,7 +128,14 @@ public class Texture : IDisposable {
     CreateSampler(_device, out _imageSampler);
   }
 
-  public static async Task<ImageResult> LoadFromPath(string path, int flip = 1) {
+  public static async Task<Texture> LoadFromPath(Device device, string path, int flip = 1) {
+    var textureData = await LoadDataFromPath(path, flip);
+    var texture = new Texture(device, textureData.Width, textureData.Height, path);
+    texture.SetTextureData(textureData.Data);
+    return texture;
+  }
+
+  public static async Task<ImageResult> LoadDataFromPath(string path, int flip = 1) {
     StbImage.stbi_set_flip_vertically_on_load(flip);
 
     using var stream = File.OpenRead(path);
@@ -112,7 +144,7 @@ public class Texture : IDisposable {
     return img;
   }
 
-  public static async Task<ImageResult> LoadFromBytes(byte[] data, int flip = 1) {
+  public static ImageResult LoadDataFromBytes(byte[] data, int flip = 1) {
     StbImage.stbi_set_flip_vertically_on_load(flip);
 
     using var stream = new MemoryStream(data);

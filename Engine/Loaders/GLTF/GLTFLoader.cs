@@ -41,8 +41,8 @@ public class GLTFLoader {
         paths[i] = $"./Resources/{tags[i]}.png";
       }
 
-      var textures = await TextureManager.InitTexturesStatic(app.Device, paths, flip);
-      app.TextureManager.AddRange(textures.ToArray());
+      var textures = await TextureManager.AddTextures(app.Device, paths, flip);
+      app.TextureManager.AddRange([.. textures]);
 
       if (resultModel.MeshsesCount == images.Count || images.Count > resultModel.MeshsesCount) {
         resultModel.BindMultipleModelPartsToTextures(app.TextureManager, paths);

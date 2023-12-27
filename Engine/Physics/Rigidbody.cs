@@ -184,6 +184,8 @@ public class Rigidbody : Component, IDisposable {
     }
   }
 
+  public PrimitiveType PrimitiveType => _primitiveType;
+
   public void Dispose() {
     _bodyInterface.DeactivateBody(_bodyId);
     _bodyInterface.RemoveBody(_bodyId);

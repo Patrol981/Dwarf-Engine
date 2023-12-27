@@ -41,7 +41,7 @@ public class PerformanceTester {
     }
     var room = new Entity();
     room.AddComponent(new GenericLoader().LoadModel(app.Device, "./Models/viking_room.obj"));
-    room.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, "viking_room/viking_room.png", true);
+    room.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, "viking_room/viking_room.png");
     room.AddComponent(new Material(new Vector3(1.0f, 1.0f, 1.0f)));
     room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
     room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
@@ -106,7 +106,7 @@ public class PerformanceTester {
     var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Models/dwarf_test_model.obj");
     en.AddComponent(model);
     var endModelTime = DateTime.Now;
-    en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad, true);
+    en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad);
     en.AddComponent(new Material(new Vector3(1f, 0.7f, 0.9f)));
     en.AddComponent(new Transform(new Vector3(0.0f, 0f, 0f)));
     en.GetComponent<Transform>().Scale = new(1f, 1f, 1f);

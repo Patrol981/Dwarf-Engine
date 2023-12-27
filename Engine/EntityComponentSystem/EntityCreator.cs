@@ -168,15 +168,15 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, new[] { mesh });
+    var model = new MeshRenderer(app.Device, [mesh]);
     entity.AddComponent(model);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
   }
 
-  public static void AddRigdbody(Device device, ref Entity entity, PrimitiveType primitiveType, float radius, bool kinematic = false) {
+  public static void AddRigdbody(Device device, ref Entity entity, PrimitiveType primitiveType, float radius, bool kinematic = false, bool flip = false) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, radius, kinematic));
+    entity.AddComponent(new Rigidbody(device, primitiveType, radius, kinematic, flip));
   }
 
   public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, bool kinematic = false, float radius = 1) {

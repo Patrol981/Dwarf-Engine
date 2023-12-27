@@ -18,8 +18,8 @@ public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
   private readonly Device _device;
-  private Dwarf.Vulkan.Buffer _vertexBuffer = null!;
-  private Dwarf.Vulkan.Buffer _indexBuffer = null!;
+  private Vulkan.Buffer _vertexBuffer = null!;
+  private Vulkan.Buffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
   private Guid _textAtlasId = Guid.Empty;
   private ulong _vertexCount = 0;

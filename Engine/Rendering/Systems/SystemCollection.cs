@@ -33,8 +33,8 @@ public class SystemCollection : IDisposable {
     // Thread t = new Thread(new ThreadStart(_physicsSystem!.Tick));
     // t.Start();
 
-    _render3DSystem?.RenderEntities(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
-    _render2DSystem?.RenderEntities(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
+    _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
+    _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
     _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
     _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
 
@@ -115,7 +115,7 @@ public class SystemCollection : IDisposable {
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
     if (_render3DSystem != null) {
-      _render3DSystem.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
+      _render3DSystem.Setup(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
     }
 
     if (_render2DSystem != null) {
@@ -123,7 +123,7 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      _renderUISystem.SetupUIData(canvas, ref textureManager);
+      _renderUISystem.Setup(canvas, ref textureManager);
     }
   }
 
@@ -142,7 +142,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _render3DSystem?.SetupRenderData(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
+    _render3DSystem?.Setup(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
   }
 
   public void Reload2DRenderer(
@@ -177,7 +177,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _renderUISystem?.SetupUIData(_canvas ?? throw new Exception("Canvas cannot be null"), ref textureManager);
+    _renderUISystem?.Setup(_canvas ?? throw new Exception("Canvas cannot be null"), ref textureManager);
   }
 
   public Render3DSystem Render3DSystem {

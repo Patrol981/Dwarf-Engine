@@ -1,6 +1,7 @@
-﻿using Dwarf.Extensions.GLFW;
+using Dwarf.GLFW;
+using static Dwarf.GLFW.GLFW;
 
-using static Dwarf.Extensions.GLFW.GLFW;
+using Dwarf.Extensions.GLFW;
 
 namespace Dwarf.Engine.Globals;
 public static class Input {

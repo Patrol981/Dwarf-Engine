@@ -1,4 +1,5 @@
-using Dwarf.Extensions.GLFW;
+// using Dwarf.Extensions.GLFW;
+using Dwarf.GLFW.Core;
 
 namespace Dwarf.Engine.Globals;
 

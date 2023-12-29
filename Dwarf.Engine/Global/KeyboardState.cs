@@ -1,8 +1,10 @@
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Testing;
-using Dwarf.Extensions.GLFW;
+// using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
+using Dwarf.GLFW;
+using Dwarf.GLFW.Core;
 
 namespace Dwarf.Engine.Globals;
 

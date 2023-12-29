@@ -10,9 +10,9 @@ using Dwarf.Vulkan;
 using System.Numerics;
 
 using Vortice.Vulkan;
-
-using static Dwarf.Extensions.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
+
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine;
 

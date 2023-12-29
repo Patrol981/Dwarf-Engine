@@ -6,7 +6,7 @@ using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
-using static Dwarf.Extensions.GLFW.GLFW;
+using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -277,7 +277,7 @@ public class Device : IDisposable {
 
   private unsafe void CreateSurface() {
     VkSurfaceKHR surface;
-    _window.CreateSurface(_vkInstance, &surface);
+    _window.CreateSurface(_vkInstance.Handle, &surface);
     _surface = surface;
   }
 

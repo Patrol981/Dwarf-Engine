@@ -1,6 +1,8 @@
 using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
-using static Dwarf.Extensions.GLFW.GLFW;
+// using Dwarf.Extensions.GLFW;
+// using static Dwarf.Extensions.GLFW.GLFW;
+using Dwarf.GLFW;
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Globals;
 public static class WindowState {

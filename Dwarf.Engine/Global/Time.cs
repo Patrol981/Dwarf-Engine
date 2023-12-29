@@ -1,4 +1,4 @@
-using static Dwarf.Extensions.GLFW.GLFW;
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Globals;
 

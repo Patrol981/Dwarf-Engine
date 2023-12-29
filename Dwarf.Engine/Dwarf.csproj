@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -28,31 +28,41 @@
 	  <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
   </ItemGroup>
 
-
   <ItemGroup>
-    <None Update="*.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="CompiledShaders/*.spv">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Models/**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Update="Textures/**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-	<None Update="Mappings/**">
-	 <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</None>
-
-  <None Update="Fonts/**">
-	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
+    <ProjectReference Include="..\Dwarf.GLFW\Dwarf.GLFW.csproj" />
+    <ProjectReference Include="..\Dwarf.Utils\Dwarf.Utils.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="../*.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\CompiledShaders\**\*" Visible="false">
+      <Link>CompiledShaders\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <None Include="..\Fonts\**\*" Visible="false">
+      <Link>Fonts\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <None Include="..\Mappings\**\*" Visible="false">
+      <Link>Mappings\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <None Include="..\Textures\**\*" Visible="false">
+      <Link>Textures\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+
+    <None Include="..\Models\**\*" Visible="false">
+      <Link>Models\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

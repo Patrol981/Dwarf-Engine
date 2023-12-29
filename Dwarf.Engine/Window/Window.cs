@@ -7,8 +7,7 @@ using System.Text;
 using Dwarf.Engine.Global;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
-// using GLFW;
-using Dwarf.Extensions.GLFW;
+
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -17,8 +16,15 @@ using StbImageSharp;
 using Vortice.Vulkan;
 
 using static System.Net.Mime.MediaTypeNames;
-using static Dwarf.Extensions.GLFW.GLFW;
+
 using static Vortice.Vulkan.Vulkan;
+
+using Dwarf.GLFW;
+using Dwarf.GLFW.Core;
+using static Dwarf.GLFW.GLFW;
+
+// using Dwarf.Extensions.GLFW;
+// using static Dwarf.Extensions.GLFW.GLFW;
 
 namespace Dwarf.Engine.Windowing;
 
@@ -140,7 +146,9 @@ public unsafe class Window : IDisposable {
 
   public bool WasWindowResized() => _frambufferWindowResized;
 
-  public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) => glfwCreateWindowSurface(instance, _window, null, surface);
+  public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) {
+    return glfwCreateWindowSurface(instance, _window, null, surface);
+  }
 
   public bool ShouldClose => glfwWindowShouldClose(_window);
   public bool FramebufferResized {

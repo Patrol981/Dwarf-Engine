@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
-using Dwarf.Extensions.GLFW;
+// using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
-using static Dwarf.Extensions.GLFW.GLFW;
+// using static Dwarf.Extensions.GLFW.GLFW;
+using static Dwarf.GLFW.GLFW;
+using Dwarf.GLFW;
 
 using OpenTK.Mathematics;
 

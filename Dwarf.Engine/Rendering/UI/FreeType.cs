@@ -61,8 +61,8 @@ public class FreeType {
         c.ToString()
       );
 
-      var buff = targetFace.GlyphBitmap.buffer;
-      texture.SetTextureData(buff);
+      // var buff = targetFace.GlyphBitmap.buffer;
+      // texture.SetTextureData(buff);
 
       Character character = new() {
         Texture = texture,

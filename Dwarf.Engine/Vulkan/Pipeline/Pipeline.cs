@@ -12,7 +12,7 @@ using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
-using static Dwarf.Extensions.GLFW.GLFW;
+using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;

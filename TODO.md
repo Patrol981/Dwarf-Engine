@@ -5,8 +5,8 @@
 - [Dwarf UI] Complete redesign of UI System (this one is shit) [in progress]
 - [Dwarf Textures] Optimize texture management (the more textured objs on scene,
   more fps drops)
-- Abstract GLFW into separate csproj [in progress]
-- Remove need of manually copying nessessary folders into client project
+- Abstract GLFW into separate csproj [done]
+- Remove need of manually copying nessessary folders into client project[done]
 
 # Engine Mesh System
 

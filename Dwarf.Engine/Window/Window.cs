@@ -22,6 +22,7 @@ using static Vortice.Vulkan.Vulkan;
 using Dwarf.GLFW;
 using Dwarf.GLFW.Core;
 using static Dwarf.GLFW.GLFW;
+using Dwarf.Utils;
 
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
@@ -85,27 +86,31 @@ public unsafe class Window : IDisposable {
 
   private unsafe void LoadIcons() {
     // Load Engine Icon
-    var engineIcoStream = File.OpenRead("./Textures/ico/dwarf_ico.png");
+    Logger.Info(Dwarf.Utils.DwarfPath.AssemblyDirectory);
+    Logger.Info($"{Directory.GetCurrentDirectory()}");
+    var engineIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/dwarf_ico.png");
     var engineIco = ImageResult.FromStream(engineIcoStream, ColorComponents.RedGreenBlueAlpha);
     IntPtr engineIcoPtr = Marshal.AllocHGlobal(engineIco.Data.Length * sizeof(char));
     Marshal.Copy(engineIco.Data, 0, engineIcoPtr, engineIco.Data.Length);
-    GLFWImage engineImage = new();
-    engineImage.Width = engineIco.Width;
-    engineImage.Height = engineIco.Height;
-    engineImage.Pixels = (char*)engineIcoPtr;
+    GLFWImage engineImage = new() {
+      Width = engineIco.Width,
+      Height = engineIco.Height,
+      Pixels = (char*)engineIcoPtr
+    };
     glfwSetWindowIcon(_window, 1, &engineImage);
     Marshal.FreeHGlobal(engineIcoPtr);
     engineIcoStream.Dispose();
 
     // Load Cursor
-    var cursorIcoStream = File.OpenRead("./Textures/ico/cursor.png");
+    var cursorIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/cursor.png");
     var cursorIco = ImageResult.FromStream(cursorIcoStream, ColorComponents.RedGreenBlueAlpha);
     IntPtr cursorPtr = Marshal.AllocHGlobal(cursorIco.Data.Length * sizeof(char));
     Marshal.Copy(cursorIco.Data, 0, cursorPtr, cursorIco.Data.Length);
-    GLFWImage cursorImage = new();
-    cursorImage.Width = cursorIco.Width;
-    cursorImage.Height = cursorIco.Height;
-    cursorImage.Pixels = (char*)cursorPtr;
+    GLFWImage cursorImage = new() {
+      Width = cursorIco.Width,
+      Height = cursorIco.Height,
+      Pixels = (char*)cursorPtr
+    };
     var cursor = glfwCreateCursor(&cursorImage, 0, 0);
     _cursor = new IntPtr(cursor);
     glfwSetCursor(_window, (void*)_cursor);
@@ -114,7 +119,7 @@ public unsafe class Window : IDisposable {
   }
 
   private void LoadGamePadInput() {
-    var db = File.ReadAllText("./Mappings/gamecontrollerdb.txt");
+    var db = File.ReadAllText($"{DwarfPath.AssemblyDirectory}/Resources/gamecontrollerdb.txt");
     IntPtr mappingsPtr = Marshal.AllocHGlobal(db.Length * sizeof(char));
     Marshal.Copy(db.ToCharArray(), 0, mappingsPtr, db.Length);
 

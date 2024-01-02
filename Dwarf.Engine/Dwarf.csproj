@@ -45,23 +45,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 
-    <None Include="..\Fonts\**\*" Visible="false">
-      <Link>Fonts\%(RecursiveDir)/%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Include="..\Mappings\**\*" Visible="false">
-      <Link>Mappings\%(RecursiveDir)/%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Include="..\Textures\**\*" Visible="false">
-      <Link>Textures\%(RecursiveDir)/%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-
-    <None Include="..\Models\**\*" Visible="false">
-      <Link>Models\%(RecursiveDir)/%(FileName)%(Extension)</Link>
+    <None Include="..\Resources\**\*" Visible="false">
+      <Link>Resources\%(RecursiveDir)/%(FileName)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

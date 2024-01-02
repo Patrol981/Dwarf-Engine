@@ -177,7 +177,7 @@ public class Canvas : Component, IDisposable {
     text.GetComponent<RectTransform>().OffsetFromVector = offsetFromAnchor;
     text.GetComponent<RectTransform>().OriginScale = originScale;
     text.AddComponent(new TextField(_application));
-    text.GetComponent<TextField>().BindToTexture(_application.TextureManager, "./Fonts/atlas.png");
+    text.GetComponent<TextField>().BindToTexture(_application.TextureManager, $"{DwarfPath.AssemblyDirectory}/Resources/fonts/atlas.png");
     text.GetComponent<TextField>().Init();
     text.Name = textName;
     _entities.Add(text);

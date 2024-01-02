@@ -8,6 +8,7 @@ using FreeTypeSharp.Native;
 using Dwarf.Extensions.Logging;
 using System.Numerics;
 using Dwarf.Vulkan;
+using Dwarf.Utils;
 
 public struct Character {
   public Texture Texture;
@@ -31,7 +32,7 @@ public class FreeType {
       Logger.Error($"[FREETYPE] Failed to load library");
       return;
     }
-    if (FT_New_Face(ftLibrary.Native, "./Fonts/DroidSans.ttf", 0, out var face) != FT_Error.FT_Err_Ok) {
+    if (FT_New_Face(ftLibrary.Native, $"{DwarfPath.AssemblyDirectory}/Resources/fonts/DroidSans.ttf", 0, out var face) != FT_Error.FT_Err_Ok) {
       Logger.Error($"[FREETYPE] Failed to load face");
       return;
     }

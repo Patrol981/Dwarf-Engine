@@ -13,6 +13,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
+using Dwarf.Engine.Global;
 
 namespace Dwarf.Engine;
 
@@ -50,6 +51,8 @@ public class Application {
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
+  private VkDescriptorSet[] _globalDescriptorSets = [];
+  private Vulkan.Buffer[] _uboBuffers = [];
 
   private List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
@@ -61,6 +64,8 @@ public class Application {
   // ubos
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
+
+  private FrameInfo _currentFrameInfo = new();
 
   public Application(
     string appName = "Dwarf Vulkan",
@@ -86,9 +91,9 @@ public class Application {
   }
 
   public unsafe void Run() {
-    Vulkan.Buffer[] uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
-    for (int i = 0; i < uboBuffers.Length; i++) {
-      uboBuffers[i] = new(
+    _uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < _uboBuffers.Length; i++) {
+      _uboBuffers[i] = new(
         _device,
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
         1,
@@ -96,19 +101,19 @@ public class Application {
         VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
-      uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
     }
 
     _globalSetLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
 
-    VkDescriptorSet[] globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
-    for (int i = 0; i < globalDescriptorSets.Length; i++) {
-      var bufferInfo = uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+    _globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < _globalDescriptorSets.Length; i++) {
+      var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
       var writer = new DescriptorWriter(_globalSetLayout, _globalPool)
         .WriteBuffer(0, &bufferInfo)
-        .Build(out globalDescriptorSets[i]);
+        .Build(out _globalDescriptorSets[i]);
     }
 
     SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
@@ -122,66 +127,18 @@ public class Application {
     _onLoad?.Invoke();
     MasterStart(Entity.GetScripts(_entities));
 
+    var renderThread = new Thread(RenderLoop);
+    var calculationThread = new Thread(CalculationLoop);
+    renderThread.Start();
+    calculationThread.Start();
+
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
       Time.Tick();
 
-      _systems.ValidateSystems(
-        _entities.ToArray(),
-        _device, _renderer,
-        _globalSetLayout.GetDescriptorSetLayout(),
-        CurrentPipelineConfig,
-        ref _textureManager
-      );
 
-      float aspect = _renderer.AspectRatio;
-      if (aspect != _camera.GetComponent<Camera>().Aspect) {
-        _camera.GetComponent<Camera>().Aspect = aspect;
-        switch (_camera.GetComponent<Camera>().CameraType) {
-          case CameraType.Perspective:
-            _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
-            break;
-          case CameraType.Orthographic:
-            _camera.GetComponent<Camera>()?.SetOrthograpicProjection();
-            break;
-          default:
-            break;
-        }
-      }
-
-      var commandBuffer = _renderer.BeginFrame();
-      if (commandBuffer != VkCommandBuffer.Null) {
-        int frameIndex = _renderer.GetFrameIndex();
-        FrameInfo frameInfo = new();
-
-        GlobalUniformBufferObject ubo = new() {
-          Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
-          View = _camera.GetComponent<Camera>().GetViewMatrix(),
-
-          LightPosition = _camera.GetComponent<Transform>().Position,
-          LightColor = new Vector4(1f, 1f, 1f, 1f),
-          AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
-          CameraPosition = _camera.GetComponent<Transform>().Position
-        };
-
-        uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-
-        frameInfo.Camera = _camera.GetComponent<Camera>();
-        frameInfo.CommandBuffer = commandBuffer;
-        frameInfo.FrameIndex = frameIndex;
-        frameInfo.GlobalDescriptorSet = globalDescriptorSets[frameIndex];
-        frameInfo.TextureManager = _textureManager;
-
-        // render
-        _renderer.BeginSwapchainRenderPass(commandBuffer);
-        _onRender?.Invoke();
-        _systems.UpdateSystems(_entities.ToArray(), frameInfo);
-        _renderer.EndSwapchainRenderPass(commandBuffer);
-        _renderer.EndFrame();
-
-        Collect();
-      }
+      // Render();
 
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
@@ -191,15 +148,16 @@ public class Application {
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
-    _systems.PhysicsThread?.Join();
+    renderThread.Join();
+    calculationThread.Join();
 
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
       Logger.Error(result.ToString());
     }
 
-    for (int i = 0; i < uboBuffers.Length; i++) {
-      uboBuffers[i].Dispose();
+    for (int i = 0; i < _uboBuffers.Length; i++) {
+      _uboBuffers[i].Dispose();
     }
     Cleanup();
   }
@@ -223,6 +181,83 @@ public class Application {
   private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Update();
+    }
+  }
+
+  private unsafe void Render() {
+    Frames.TickStart();
+    _systems.ValidateSystems(
+        _entities.ToArray(),
+        _device, _renderer,
+        _globalSetLayout.GetDescriptorSetLayout(),
+        CurrentPipelineConfig,
+        ref _textureManager
+      );
+
+    float aspect = _renderer.AspectRatio;
+    if (aspect != _camera.GetComponent<Camera>().Aspect) {
+      _camera.GetComponent<Camera>().Aspect = aspect;
+      switch (_camera.GetComponent<Camera>().CameraType) {
+        case CameraType.Perspective:
+          _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+          break;
+        case CameraType.Orthographic:
+          _camera.GetComponent<Camera>()?.SetOrthograpicProjection();
+          break;
+        default:
+          break;
+      }
+    }
+
+    var commandBuffer = _renderer.BeginFrame();
+    if (commandBuffer != VkCommandBuffer.Null) {
+      int frameIndex = _renderer.GetFrameIndex();
+      // FrameInfo frameInfo = new();
+
+      GlobalUniformBufferObject ubo = new() {
+        Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
+        View = _camera.GetComponent<Camera>().GetViewMatrix(),
+
+        LightPosition = _camera.GetComponent<Transform>().Position,
+        LightColor = new Vector4(1f, 1f, 1f, 1f),
+        AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
+        CameraPosition = _camera.GetComponent<Transform>().Position
+      };
+
+      _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+
+      _currentFrameInfo.Camera = _camera.GetComponent<Camera>();
+      _currentFrameInfo.CommandBuffer = commandBuffer;
+      _currentFrameInfo.FrameIndex = frameIndex;
+      _currentFrameInfo.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      _currentFrameInfo.TextureManager = _textureManager;
+
+      // render
+      _renderer.BeginSwapchainRenderPass(commandBuffer);
+      _onRender?.Invoke();
+      _systems.UpdateSystems(_entities.ToArray(), _currentFrameInfo);
+      _renderer.EndSwapchainRenderPass(commandBuffer);
+      _renderer.EndFrame();
+
+      Collect();
+    }
+
+    Frames.TickEnd();
+  }
+
+  private unsafe void PerformCalculations() {
+    _systems.UpdateCalculationSystems(GetEntities().ToArray());
+  }
+
+  private unsafe void RenderLoop() {
+    while (!_window.ShouldClose) {
+      Render();
+    }
+  }
+
+  private unsafe void CalculationLoop() {
+    while (!_window.ShouldClose) {
+      PerformCalculations();
     }
   }
 
@@ -378,4 +413,5 @@ public class Application {
   public Window Window => _window;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;
+  public FrameInfo FrameInfo => _currentFrameInfo;
 }

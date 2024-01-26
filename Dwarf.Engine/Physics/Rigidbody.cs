@@ -108,6 +108,8 @@ public class Rigidbody : Component, IDisposable {
 
     // freeze rigidbody to X an Z axis
     _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
+
+    // Console.WriteLine(pos);
   }
 
   public void AddForce(Vector3 vec3) {

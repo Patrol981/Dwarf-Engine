@@ -45,7 +45,6 @@ public class Pipeline : IDisposable {
   public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
     _device = device;
     _pipelineProvider = pipelineProvider;
-
     CreateGraphicsPipeline(vertexName, fragmentName, configInfo);
   }
 

@@ -180,14 +180,9 @@ public unsafe class Renderer : IDisposable {
     _commandBuffers = new VkCommandBuffer[len];
 
     VkCommandBufferAllocateInfo allocInfo = new();
-    // allocInfo.sType = VkStructureType.CommandBufferAllocateInfo;
     allocInfo.level = VkCommandBufferLevel.Primary;
     allocInfo.commandPool = _device.CommandPool;
     allocInfo.commandBufferCount = (uint)_commandBuffers.Length;
-
-    //GCHandle handle = GCHandle.Alloc(_commandBuffers, GCHandleType.Pinned);
-    //IntPtr ptr = handle.AddrOfPinnedObject();
-    //VkCommandBuffer* bufferPtr = (VkCommandBuffer*)ptr;
 
     fixed (VkCommandBuffer* ptr = _commandBuffers) {
       vkAllocateCommandBuffers(_device.LogicalDevice, &allocInfo, ptr).CheckResult();

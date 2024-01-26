@@ -360,11 +360,11 @@ public class Swapchain : IDisposable {
     VkPipelineStageFlags[] waitStages = new VkPipelineStageFlags[1];
     waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
     submitInfo.waitSemaphoreCount = 1;
-    fixed (VkSemaphore* ptr = waitSemaphores) {
-      submitInfo.pWaitSemaphores = ptr;
-    }
-    fixed (VkPipelineStageFlags* ptr = waitStages) {
-      submitInfo.pWaitDstStageMask = ptr;
+    fixed (VkSemaphore* waitSemaphoresPtr = waitSemaphores)
+    fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
+      submitInfo.pWaitSemaphores = waitSemaphoresPtr;
+      // submitInfo.pWaitDstStageMask = waitStagesPtr;
+      submitInfo.pWaitDstStageMask = null;
     }
 
     submitInfo.commandBufferCount = 1;

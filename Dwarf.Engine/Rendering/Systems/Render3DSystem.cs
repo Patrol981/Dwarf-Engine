@@ -4,6 +4,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -11,11 +12,17 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
+  public const int ObjectInstanceCount = 2048;
+
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
   private Vulkan.Buffer _modelBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private DescriptorWriter _dynamicWriter = null!;
+
+
+  private List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
+  private Vulkan.Buffer _indirectCommandBuffer = null!;
 
   public Render3DSystem(
     Device device,
@@ -67,7 +74,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     var id = target!.GetTextureIdReference(modelPart);
     var texture = textures.GetTexture(id);
     if (texture == null) {
-      var nid = textures.GetTextureId("./Textures/base/no_texture.png");
+      var nid = textures.GetTextureId("./Resources/Textures/base/no_texture.png");
       texture = textures.GetTexture(nid);
     }
     VkDescriptorImageInfo imageInfo = new() {
@@ -149,8 +156,42 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     }
 
+    // PrepareIndirect(entities);
+
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
+  }
+
+  private void PrepareIndirect(ReadOnlySpan<Entity> entities) {
+    _indirectCommands = [];
+    for (int i = 0; i < entities.Length; i++) {
+      VkDrawIndexedIndirectCommand drawCommand = new();
+      drawCommand.instanceCount = ObjectInstanceCount;
+      drawCommand.firstInstance = (uint)i * ObjectInstanceCount;
+      drawCommand.firstIndex = entities[i].GetComponent<MeshRenderer>().Meshes.Last().Indices[0];
+      drawCommand.indexCount = (uint)entities[i].GetComponent<MeshRenderer>().Meshes.Last().Indices.Length;
+      _indirectCommands.Add(drawCommand);
+    }
+
+    var stagingBuffer = new Vulkan.Buffer(
+      _device,
+      (ulong)_indirectCommands.Count * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
+    stagingBuffer.Map(stagingBuffer.GetBufferSize());
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(_indirectCommands.ToArray()), stagingBuffer.GetBufferSize());
+
+    _indirectCommandBuffer = new(
+      _device,
+      stagingBuffer.GetBufferSize(),
+      VkBufferUsageFlags.IndirectBuffer | VkBufferUsageFlags.TransferDst,
+      VkMemoryPropertyFlags.DeviceLocal
+    );
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indirectCommandBuffer.GetBuffer(), stagingBuffer.GetBufferSize());
+    stagingBuffer.Dispose();
+
+    // drawCommand.instanceCount
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
@@ -201,10 +242,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       };
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
+      ulong offset = 0;
       unsafe {
         var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
 
-        var offset = fixedSize * (ulong)(i);
+        offset = fixedSize * (ulong)(i);
         _modelBuffer.WriteToBuffer((IntPtr)(&modelUBO), _modelBuffer.GetInstanceSize(), offset);
       }
 
@@ -244,10 +286,26 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
           Descriptor.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
           targetEntity.Bind(frameInfo.CommandBuffer, x);
+
+          // targetEntity.DrawIndirect(frameInfo.CommandBuffer, _modelBuffer.GetBuffer(), offset, 1,)
           targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }
     }
+
+    /*
+    uint inId = 0;
+    foreach (var cmd in _indirectCommands) {
+      vkCmdDrawIndexedIndirect(
+        frameInfo.CommandBuffer,
+        _indirectCommandBuffer.GetBuffer(),
+        inId * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
+        1,
+        (uint)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>()
+      );
+      inId++;
+    }
+    */
 
     _modelBuffer.Unmap();
   }
@@ -257,6 +315,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
     _texturePool?.FreeDescriptors(_textureSets);
+
+    _indirectCommandBuffer?.Dispose();
 
     base.Dispose();
   }

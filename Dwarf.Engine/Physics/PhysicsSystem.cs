@@ -1,4 +1,4 @@
-﻿using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 
 using JoltPhysicsSharp;
@@ -13,7 +13,7 @@ public delegate void PhysicsSystemCallback();
 
 public class PhysicsSystem : IDisposable {
   // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
-  public const float DeltaTime = 1.0f / 60.0f;
+  public const float DeltaTime = 1.0f / 300.0f;
   public const int CollisionSteps = 1;
 
   private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
@@ -94,13 +94,15 @@ public class PhysicsSystem : IDisposable {
     }
   }
 
-  public Task Tick(ReadOnlySpan<Entity> entities) {
+  public void Tick(ReadOnlySpan<Entity> entities) {
     for (short i = 0; i < entities.Length; i++) {
       if (entities[i].CanBeDisposed) continue;
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
     _physicsSystem.Step(DeltaTime, CollisionSteps);
-    return Task.CompletedTask;
+    // Console.WriteLine(entities.Length);
+    // Logger.Info("Physics Tick");
+    // return Task.CompletedTask;
   }
 
   public static void Calculate(object application) {

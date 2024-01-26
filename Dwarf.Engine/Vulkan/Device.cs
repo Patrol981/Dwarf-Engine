@@ -22,7 +22,10 @@ public class Device : IDisposable {
   private VkSurfaceKHR _surface = VkSurfaceKHR.Null;
   private VkPhysicalDevice _physicalDevice = VkPhysicalDevice.Null;
   private VkDevice _logicalDevice = VkDevice.Null;
+
   private VkCommandPool _commandPool = VkCommandPool.Null;
+  private readonly object _commandPoolLock = new object();
+
   public VkQueue GraphicsQueue = VkQueue.Null;
   public VkQueue PresentQueue = VkQueue.Null;
   public VkPhysicalDeviceProperties Properties;
@@ -78,6 +81,17 @@ public class Device : IDisposable {
     EndSingleTimeCommands(commandBuffer);
 
     return Task.CompletedTask;
+  }
+
+  public static unsafe VkSemaphore CreateSemaphore(Device device) {
+    var semaphoreInfo = new VkSemaphoreCreateInfo();
+    var semaphore = new VkSemaphore();
+    vkCreateSemaphore(device.LogicalDevice, &semaphoreInfo, null, &semaphore);
+    return semaphore;
+  }
+
+  public static unsafe void DestroySemaphore(Device device, VkSemaphore semaphore) {
+    vkDestroySemaphore(device.LogicalDevice, semaphore, null);
   }
 
   public VkFormat FindSupportedFormat(List<VkFormat> candidates, VkImageTiling tilling, VkFormatFeatureFlags features) {
@@ -141,7 +155,6 @@ public class Device : IDisposable {
       commandBufferCount = 1
     };
 
-    _mutex.WaitOne();
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
@@ -150,24 +163,22 @@ public class Device : IDisposable {
     };
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    _mutex.ReleaseMutex();
     return commandBuffer;
   }
 
   public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
-    _mutex.WaitOne();
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = new() {
       commandBufferCount = 1,
-      pCommandBuffers = &commandBuffer
+      pCommandBuffers = &commandBuffer,
     };
 
+    vkQueueWaitIdle(GraphicsQueue);
     vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VkFence.Null);
     vkQueueWaitIdle(GraphicsQueue);
 
     vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
-    _mutex.ReleaseMutex();
   }
 
   private unsafe void CreateInstance() {
@@ -310,7 +321,9 @@ public class Device : IDisposable {
       samplerAnisotropy = true,
       fillModeNonSolid = true,
       alphaToOne = true,
-      sampleRateShading = true
+      sampleRateShading = true,
+      multiDrawIndirect = true,
+      geometryShader = true
     };
 
     VkDeviceCreateInfo createInfo = new() {
@@ -362,6 +375,13 @@ public class Device : IDisposable {
   public VkDevice LogicalDevice => _logicalDevice;
   public VkPhysicalDevice PhysicalDevice => _physicalDevice;
   public VkSurfaceKHR Surface => _surface;
-  public VkCommandPool CommandPool => _commandPool;
+
+  public VkCommandPool CommandPool {
+    get {
+      lock (_commandPoolLock) {
+        return _commandPool;
+      }
+    }
+  }
   public VkInstance VkInstance => _vkInstance;
 }

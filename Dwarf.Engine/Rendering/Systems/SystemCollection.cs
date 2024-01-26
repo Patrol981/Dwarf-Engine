@@ -1,10 +1,12 @@
-﻿using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
+using static Vortice.Vulkan.Vulkan;
 using Vortice.Vulkan;
+using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Rendering;
 public class SystemCollection : IDisposable {
@@ -20,25 +22,37 @@ public class SystemCollection : IDisposable {
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
   private Thread? _physicsThread;
+  private readonly object _renderLock = new object();
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
   public bool ReloadUISystem = false;
 
-  public async void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
-    if (_physicsSystem != null) {
-      await _physicsSystem!.Tick(entities);
+  public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
+    lock (_renderLock) {
+      _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
+      _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
+      _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+      _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
     }
-    // _physicsSystem?.StoreEntities(Entity.Distinct<Rigidbody>(entities).ToArray());
-    // Thread t = new Thread(new ThreadStart(_physicsSystem!.Tick));
-    // t.Start();
+  }
 
-    _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
-    _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-    _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
-    _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
+  public void UpdateCalculationSystems(Entity[] entities) {
+    if (_physicsSystem != null) {
+      _physicsSystem!.Tick(entities);
+    }
+  }
 
-    // t.Join();
+  private void RenderThread() {
+    lock (_renderLock) {
+      var frameInfo = Application.Instance.FrameInfo;
+      var entities = Application.Instance.GetEntities();
+
+      _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
+      _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
+      _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+      _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
+    }
   }
 
   public void ValidateSystems(
@@ -204,6 +218,7 @@ public class SystemCollection : IDisposable {
   }
 
   public Thread PhysicsThread {
+    set { _physicsThread = value; }
     get { return _physicsThread ?? null!; }
   }
 

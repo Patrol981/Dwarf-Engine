@@ -102,6 +102,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
+  public void DrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, ulong offset, uint drawCount, uint stride) {
+    vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
+  }
+
   public async void BindToTexture(
     TextureManager textureManager,
     string texturePath,

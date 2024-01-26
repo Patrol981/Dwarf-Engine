@@ -6,6 +6,8 @@ namespace Dwarf.Engine.Global;
 public static class Frames {
   private static int s_frameCount = 0;
   private static double s_prevTime = glfwGetTime();
+  private static DateTime s_startTime;
+  private static DateTime s_endTime;
   private static double s_frameRate = 0.0f;
 
   public static float GetFramesDelta() {
@@ -13,6 +15,20 @@ public static class Frames {
     return lastUpdate;
   }
 
+  public static double GetFrames() {
+    return (s_endTime - s_startTime).TotalMilliseconds;
+    // return MathF.Round(, 5, MidpointRounding.ToZero);
+  }
+
+  public static void TickStart() {
+    s_startTime = DateTime.UtcNow;
+  }
+
+  public static void TickEnd() {
+    s_endTime = DateTime.UtcNow;
+  }
+
+  /*
   public static double GetFrames() {
     double currentTime = glfwGetTime();
     s_frameCount++;
@@ -23,4 +39,5 @@ public static class Frames {
     }
     return s_frameRate;
   }
+  */
 }

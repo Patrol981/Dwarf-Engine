@@ -41,6 +41,9 @@ public abstract class SystemBase {
     _pipelineConfigInfo = configInfo;
   }
 
+  public void BindBuffer(FrameInfo frameInfo) {
+    // vkCmdBindVertexBuffers(frameInfo.CommandBuffer, 0, 1, )
+  }
 
   #region Pipeline
 

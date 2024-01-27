@@ -29,6 +29,9 @@ often. Also some things may be messy (for example you need to copy Mappings,
 Fonts and Textures folders into your project, because the engine assumes that
 theese exists in client project itself - it is subject to change though -)
 
+NOTE#2: Engine may be less stable for now, since I'm changing it's architecture
+a bit (mostly optimalizations and multithreading)
+
 ## Example code
 
 ```csharp

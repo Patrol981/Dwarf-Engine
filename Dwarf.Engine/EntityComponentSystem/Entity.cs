@@ -38,18 +38,20 @@ public class Entity {
   }
 
   public DwarfScript[] GetScripts() {
-    var components = _componentManager.GetAllComponents();
-    var list = new List<DwarfScript>();
+    lock (_componentLock) {
+      var components = _componentManager.GetAllComponents();
+      var list = new List<DwarfScript>();
 
-    foreach (var item in components) {
-      var t = typeof(DwarfScript).IsAssignableFrom(item.Key);
-      if (t) {
-        var value = item.Value;
-        list.Add((DwarfScript)value);
+      foreach (var item in components) {
+        var t = typeof(DwarfScript).IsAssignableFrom(item.Key);
+        if (t) {
+          var value = item.Value;
+          list.Add((DwarfScript)value);
+        }
       }
-    }
 
-    return list.ToArray();
+      return list.ToArray();
+    }
   }
 
   public Component GetDrawable<T>() where T : IDrawable {
@@ -125,7 +127,7 @@ public class Entity {
     var list = new List<DwarfScript>();
 
     foreach (var e in entities) {
-      list.AddRange(e.GetScripts());
+      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
     }
 
     return list.ToArray();

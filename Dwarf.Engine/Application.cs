@@ -149,7 +149,7 @@ public class Application {
 
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
-      MasterUpdate(Entity.GetScripts(_entities));
+      MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
       _onGUI?.Invoke();
 
       GC.Collect(2, GCCollectionMode.Optimized, false);

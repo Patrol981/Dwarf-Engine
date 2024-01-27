@@ -5,6 +5,8 @@ public class PublicList<T> {
   private int _size = 0;
   private int _capacity;
 
+  private readonly object _lock = new object();
+
   public PublicList(int initialCapacity = 8) {
     if (initialCapacity < 1) initialCapacity = 1;
     _capacity = initialCapacity;
@@ -25,36 +27,42 @@ public class PublicList<T> {
   }
 
   public void InsertAt(T newElement, int index) {
-    ThrowIfIndexOutOfRange(index);
-    if (_size == _capacity) {
-      Resize();
-    }
+    lock (_lock) {
+      ThrowIfIndexOutOfRange(index);
+      if (_size == _capacity) {
+        Resize();
+      }
 
-    for (int i = _size; i > index; i--) {
-      _data[i] = _data[i - 1];
-    }
+      for (int i = _size; i > index; i--) {
+        _data[i] = _data[i - 1];
+      }
 
-    _data[index] = newElement;
-    _size++;
+      _data[index] = newElement;
+      _size++;
+    }
   }
 
   public void DeleteAt(int index) {
-    ThrowIfIndexOutOfRange(index);
-    for (int i = index; i < _size - 1; i++) {
-      _data[i] = _data[i + 1];
-    }
+    lock (_lock) {
+      ThrowIfIndexOutOfRange(index);
+      for (int i = index; i < _size - 1; i++) {
+        _data[i] = _data[i + 1];
+      }
 
-    _data[_size - 1] = default(T)!;
-    _size--;
+      _data[_size - 1] = default(T)!;
+      _size--;
+    }
   }
 
   public void Add(T newElement) {
-    if (_size == _capacity) {
-      Resize();
-    }
+    lock (_lock) {
+      if (_size == _capacity) {
+        Resize();
+      }
 
-    _data[_size] = newElement;
-    _size++;
+      _data[_size] = newElement;
+      _size++;
+    }
   }
 
   public bool Contains(T value) {
@@ -73,12 +81,14 @@ public class PublicList<T> {
   }
 
   private void Resize() {
-    T[] resized = new T[_capacity * 2];
-    for (int i = 0; i < _capacity; i++) {
-      resized[i] = _data[i];
+    lock (_lock) {
+      T[] resized = new T[_capacity * 2];
+      for (int i = 0; i < _capacity; i++) {
+        resized[i] = _data[i];
+      }
+      _data = resized;
+      _capacity = _capacity * 2;
     }
-    _data = resized;
-    _capacity = _capacity * 2;
   }
 
   private void ThrowIfIndexOutOfRange(int index) {

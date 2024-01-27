@@ -149,6 +149,7 @@ public class Device : IDisposable {
   }
 
   public unsafe VkCommandBuffer BeginSingleTimeCommands() {
+    _mutex.WaitOne();
     VkCommandBufferAllocateInfo allocInfo = new() {
       level = VkCommandBufferLevel.Primary,
       commandPool = _commandPool,
@@ -163,10 +164,12 @@ public class Device : IDisposable {
     };
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    _mutex.ReleaseMutex();
     return commandBuffer;
   }
 
   public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+    _mutex.WaitOne();
     vkEndCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = new() {
@@ -174,11 +177,12 @@ public class Device : IDisposable {
       pCommandBuffers = &commandBuffer,
     };
 
-    vkQueueWaitIdle(GraphicsQueue);
     vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VkFence.Null);
     vkQueueWaitIdle(GraphicsQueue);
+    vkDeviceWaitIdle(_logicalDevice);
 
     vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+    _mutex.ReleaseMutex();
   }
 
   private unsafe void CreateInstance() {

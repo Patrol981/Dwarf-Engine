@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Loaders;
 using Dwarf.Extensions.GLFW;
@@ -23,37 +23,25 @@ public class PerformanceTester {
   }
 
   public static async void CreateNewModel(Application app, bool addTexture = false) {
-    if (addTexture) {
-      var prefix = "./Textures/";
+    if (!addTexture) return; ;
 
-      string[] basePaths =  {
-      $"{prefix}viking_room/viking_room.png",
-    };
-
-      List<List<string>> paths = new() {
-        basePaths.ToList()
-      };
-      vkQueueWaitIdle(app.Device.GraphicsQueue);
-      vkDeviceWaitIdle(app.Device.LogicalDevice);
-      // await app.TextureManager.AddTextureFromLocal("viking_room/viking_room.png");
-      // app.MultiThreadedTextureLoad(paths);
-      await app.LoadTexturesAsSeparateThreads(paths);
-    }
-    var room = new Entity();
-    room.AddComponent(new GenericLoader().LoadModel(app.Device, "./Models/viking_room.obj"));
-    room.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, "viking_room/viking_room.png");
-    room.AddComponent(new Material(new Vector3(1.0f, 1.0f, 1.0f)));
-    room.AddComponent(new Transform(new Vector3(4.5f, 0, 1f)));
-    room.GetComponent<Transform>().Rotation = new Vector3(90, 225, 0);
-    room.GetComponent<Transform>().Scale = new Vector3(3, 3, 3);
-    room.Name = "viking room";
-    app.AddEntity(room);
+    var entity = await EntityCreator.Create3DPrimitive(
+      "test",
+      "./Resources/gigachad.png",
+      PrimitiveType.Cylinder,
+      new(-5, 0, 0),
+      new(0, 0, 0),
+      new(1, 1, 1)
+    );
+    entity.AddRigdbody(PrimitiveType.Cylinder);
+    entity.GetComponent<Rigidbody>().Init(Application.Instance.GetSystems().PhysicsSystem.BodyInterface);
+    app.AddEntity(entity);
   }
 
   public static async void CreateNewComlexModel(Application app, bool addTexture = false) {
 
     if (addTexture) {
-      var prefix = "./Textures/";
+      var prefix = "./Resources/Textures/";
       string[] anime1Paths = {
         $"{prefix}dwarf_test_model/_01.png", // mouth
         $"{prefix}dwarf_test_model/_02.png", // eyes
@@ -103,7 +91,7 @@ public class PerformanceTester {
 
     var en = new Entity();
     var startModelTime = DateTime.Now;
-    var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Models/dwarf_test_model.obj");
+    var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Textures/Models/dwarf_test_model.obj");
     en.AddComponent(model);
     var endModelTime = DateTime.Now;
     en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad);
@@ -121,7 +109,7 @@ public class PerformanceTester {
   }
 
   public static void RemoveModel(Application app) {
-    var room = app.GetEntities().Where(x => x.Name == "viking room").FirstOrDefault();
+    var room = app.GetEntities().Where(x => x.Name == "test").FirstOrDefault();
     if (room == null) return;
     room.CanBeDisposed = true;
   }

@@ -93,6 +93,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+    _device._mutex.WaitOne();
     var startTime = DateTime.Now;
     // TODO: Reuse data from diffrent renders?
 
@@ -160,6 +161,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
+    _device._mutex.ReleaseMutex();
   }
 
   private void PrepareIndirect(ReadOnlySpan<Entity> entities) {
@@ -215,6 +217,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void Render(FrameInfo frameInfo, Span<Entity> entities) {
+    _device._mutex.WaitOne();
     if (entities.Length < 1) return;
 
     _pipeline.Bind(frameInfo.CommandBuffer);
@@ -308,6 +311,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     */
 
     _modelBuffer.Unmap();
+    _device._mutex.ReleaseMutex();
   }
 
   public override unsafe void Dispose() {

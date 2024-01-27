@@ -67,6 +67,11 @@ public class Application {
 
   private FrameInfo _currentFrameInfo = new();
 
+  private Thread _renderThread;
+  private Thread _calculationThread;
+  private bool _calculationShouldClose = false;
+  private bool _renderShouldClose = false;
+
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
@@ -127,18 +132,20 @@ public class Application {
     _onLoad?.Invoke();
     MasterStart(Entity.GetScripts(_entities));
 
-    var renderThread = new Thread(RenderLoop);
-    var calculationThread = new Thread(CalculationLoop);
-    renderThread.Start();
-    calculationThread.Start();
+    _renderThread = new Thread(RenderLoop);
+    _calculationThread = new Thread(CalculationLoop);
+
+
+    _renderThread?.Start();
+    // _calculationThread?.Start();
 
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
       glfwPollEvents();
       Time.Tick();
 
-
       // Render();
+      PerformCalculations();
 
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
@@ -148,13 +155,18 @@ public class Application {
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
-    renderThread.Join();
-    calculationThread.Join();
-
     var result = vkDeviceWaitIdle(_device.LogicalDevice);
     if (result != VkResult.Success) {
       Logger.Error(result.ToString());
     }
+
+    _calculationShouldClose = true;
+    _renderShouldClose = true;
+
+    if (_renderThread != null && _renderThread.IsAlive)
+      _renderThread?.Join();
+    if (_calculationThread != null && _calculationThread.IsAlive)
+      _calculationThread?.Join();
 
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i].Dispose();
@@ -250,13 +262,13 @@ public class Application {
   }
 
   private unsafe void RenderLoop() {
-    while (!_window.ShouldClose) {
+    while (!_renderShouldClose) {
       Render();
     }
   }
 
   private unsafe void CalculationLoop() {
-    while (!_window.ShouldClose) {
+    while (!_calculationShouldClose) {
       PerformCalculations();
     }
   }
@@ -274,6 +286,7 @@ public class Application {
   public SystemCollection GetSystems() {
     return _systems;
   }
+
 
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
@@ -391,6 +404,7 @@ public class Application {
         t?.Dispose();
       }
     }
+
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
@@ -401,12 +415,27 @@ public class Application {
   }
 
   private void Collect() {
+    var didChange = false;
+
+    vkDeviceWaitIdle(_device.LogicalDevice);
+    vkQueueWaitIdle(_device.PresentQueue);
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
+        didChange = true;
+        // _calculationShouldClose = true;
         _entities[i].DisposeEverything();
         Application.Instance.RemoveEntity(_entities[i].EntityID);
       }
     }
+
+    /*
+    if (didChange) {
+      _calculationThread?.Join();
+      _calculationThread = new Thread(CalculationLoop);
+      _calculationThread.Start();
+      _calculationShouldClose = false;
+    }
+    */
   }
 
   public Device Device => _device;

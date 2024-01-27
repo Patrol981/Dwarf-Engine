@@ -77,6 +77,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   }
 
   public Task Bind(VkCommandBuffer commandBuffer, uint index) {
+    _device._mutex.WaitOne();
     VkBuffer[] buffers = [_vertexBuffers[index].GetBuffer()];
     ulong[] offsets = [0];
     unsafe {
@@ -89,16 +90,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     if (_hasIndexBuffer[index]) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
-
+    _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 
   public Task Draw(VkCommandBuffer commandBuffer, uint index) {
+    _device._mutex.WaitOne();
     if (_hasIndexBuffer[index]) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
     } else {
       vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
     }
+    _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 

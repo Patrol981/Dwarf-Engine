@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Numerics;
 
 using JoltPhysicsSharp;
@@ -7,7 +7,7 @@ using static Dwarf.Engine.Physics.JoltConfig;
 
 namespace Dwarf.Engine.Physics;
 
-public class JoltProgram {
+public static class JoltProgram {
   internal static Body CreateFloor(in BodyInterface bodyInterface, float size = 200.0f) {
     float scale = WorldScale;
 

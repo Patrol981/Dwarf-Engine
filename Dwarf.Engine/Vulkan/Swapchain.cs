@@ -376,7 +376,9 @@ public class Swapchain : IDisposable {
       submitInfo.pSignalSemaphores = signalPtr;
 
       vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+      _device._mutex.WaitOne();
       vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
+      _device._mutex.ReleaseMutex();
 
       VkPresentInfoKHR presentInfo = new() {
         waitSemaphoreCount = 1,

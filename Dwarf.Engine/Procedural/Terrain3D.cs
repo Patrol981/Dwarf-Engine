@@ -50,7 +50,7 @@ public class Terrain3D : MeshRenderer {
         v.Position = new Vector3(
           (float)x / ((float)WIDTH - 1) * _size,
           0,
-          // (float)_points[x, y],
+          // (float)_points[x, y] * 5,
           (float)y / ((float)HEIGHT - 1) * _size
         );
 

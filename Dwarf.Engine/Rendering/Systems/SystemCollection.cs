@@ -37,10 +37,11 @@ public class SystemCollection : IDisposable {
     }
   }
 
-  public void UpdateCalculationSystems(Entity[] entities) {
+  public Task UpdateCalculationSystems(Entity[] entities) {
     if (_physicsSystem != null) {
       _physicsSystem!.Tick(entities);
     }
+    return Task.CompletedTask;
   }
 
   private void RenderThread() {

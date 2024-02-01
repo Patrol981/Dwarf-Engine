@@ -86,8 +86,6 @@ public unsafe class Window : IDisposable {
 
   private unsafe void LoadIcons() {
     // Load Engine Icon
-    Logger.Info(Dwarf.Utils.DwarfPath.AssemblyDirectory);
-    Logger.Info($"{Directory.GetCurrentDirectory()}");
     var engineIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/dwarf_ico.png");
     var engineIco = ImageResult.FromStream(engineIcoStream, ColorComponents.RedGreenBlueAlpha);
     IntPtr engineIcoPtr = Marshal.AllocHGlobal(engineIco.Data.Length * sizeof(char));

@@ -20,6 +20,12 @@ public class Rigidbody : Component, IDisposable {
   private PrimitiveType _primitiveType = PrimitiveType.None;
   private float _inputRadius = 0.0f;
   private bool _flip = false;
+  private float _sizeX = 1.0f;
+  private float _sizeY = 1.0f;
+  private float _sizeZ = 1.0f;
+  private float _offsetX = 0.0f;
+  private float _offsetY = 0.0f;
+  private float _offsetZ = 0.0f;
 
   public Rigidbody() { }
 
@@ -31,6 +37,52 @@ public class Rigidbody : Component, IDisposable {
     if (kinematic) {
       _motionType = MotionType.Kinematic;
     }
+  }
+
+  public Rigidbody(
+    Device device,
+    PrimitiveType primitiveType,
+    float sizeX,
+    float sizeY,
+    float sizeZ,
+    bool kinematic,
+    bool flip
+  ) {
+    _device = device;
+    _primitiveType = primitiveType;
+    _flip = flip;
+    if (kinematic) {
+      _motionType = MotionType.Kinematic;
+    }
+    _sizeX = sizeX;
+    _sizeY = sizeY;
+    _sizeZ = sizeZ;
+  }
+
+  public Rigidbody(
+    Device device,
+    PrimitiveType primitiveType,
+    float sizeX,
+    float sizeY,
+    float sizeZ,
+    float offsetX,
+    float offsetY,
+    float offsetZ,
+    bool kinematic,
+    bool flip
+  ) {
+    _device = device;
+    _primitiveType = primitiveType;
+    _flip = flip;
+    if (kinematic) {
+      _motionType = MotionType.Kinematic;
+    }
+    _sizeX = sizeX;
+    _sizeY = sizeY;
+    _sizeZ = sizeZ;
+    _offsetX = offsetX;
+    _offsetY = offsetY;
+    _offsetZ = offsetZ;
   }
 
   public unsafe void Init(in BodyInterface bodyInterface) {
@@ -48,20 +100,32 @@ public class Rigidbody : Component, IDisposable {
 
     switch (_primitiveType) {
       case PrimitiveType.Cylinder:
-        mesh = Primitives.CreateCylinderPrimitive(_inputRadius, height, 20);
+        mesh = Primitives.CreateCylinderPrimitive(1, 1, 20);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
         mesh = Primitives.CreateConvex(target.Meshes, _flip);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Box:
-        mesh = Primitives.CreateBoxPrimitive(_inputRadius, height);
+        mesh = Primitives.CreateBoxPrimitive(1);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
+      case PrimitiveType.Torus:
+        mesh = Primitives.CreateConvex(target.Meshes, _flip);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
+        shapeSettings = JoltProgram.CreateTorusMesh(1, 1, 16, 16);
+        break;
       default:
-        mesh = Primitives.CreateBoxPrimitive(0.25f, height);
-        shapeSettings = new BoxShapeSettings(new(height / 2, height / 2, height / 2));
+        mesh = Primitives.CreateBoxPrimitive(1);
+        shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));
         break;
     }
 
@@ -76,12 +140,28 @@ public class Rigidbody : Component, IDisposable {
       );
     _bodyId = _bodyInterface.CreateAndAddBody(settings, Activation.Activate);
 
-    _bodyInterface.SetGravityFactor(_bodyId, 0.025f);
+    _bodyInterface.SetGravityFactor(_bodyId, 0.1f);
     _bodyInterface.SetMotionQuality(_bodyId, _motionQuality);
   }
 
+  private void AdjustColliderMesh(Mesh colliderMesh) {
+    for (int i = 0; i < colliderMesh.Vertices.Length; i++) {
+      colliderMesh.Vertices[i].Position.X += _offsetX;
+      colliderMesh.Vertices[i].Position.Y += _offsetY;
+      colliderMesh.Vertices[i].Position.Z += _offsetZ;
+    }
+  }
+
+  private void ScaleColliderMesh(Mesh colliderMesh) {
+    for (int i = 0; i < colliderMesh.Vertices.Length; i++) {
+      colliderMesh.Vertices[i].Position.X *= _sizeX;
+      colliderMesh.Vertices[i].Position.Y *= _sizeY;
+      colliderMesh.Vertices[i].Position.Z *= _sizeZ;
+    }
+  }
+
   private ConvexHullShapeSettings ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
-    List<Vector3> vertices = new();
+    List<Vector3> vertices = [];
     var scale = entity.GetComponent<Transform>().Scale;
     foreach (var m in colliderMesh.Vertices) {
       Vertex v = new();
@@ -91,7 +171,7 @@ public class Rigidbody : Component, IDisposable {
       vertices.Add(v.Position);
     }
 
-    ConvexHullShapeSettings settings = new(vertices.ToArray());
+    ConvexHullShapeSettings settings = new(vertices.ToArray(), 0.01f);
     return settings;
   }
 

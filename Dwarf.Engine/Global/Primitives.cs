@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+using System.Numerics;
+
 using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine;
@@ -9,11 +10,12 @@ public enum PrimitiveType {
   Capsule,
   Convex,
   Sphere,
+  Torus,
   None
 }
 
 public static class Primitives {
-  static Vector3 Color = new Vector3(0.19f, 0.65f, 0.32f);
+  static Vector3 Color = new(1f, 1f, 1f);
 
   public static Mesh CreatePrimitive(PrimitiveType primitiveType) {
     var mesh = new Mesh();
@@ -23,7 +25,10 @@ public static class Primitives {
         mesh = CreateCylinderPrimitive(2, 2, 20);
         break;
       case PrimitiveType.Box:
-        mesh = CreateBoxPrimitive(2, 2);
+        mesh = CreateBoxPrimitive(1);
+        break;
+      case PrimitiveType.Sphere:
+        mesh = CreateSpherePrimitve(128, 128);
         break;
       default:
         break;
@@ -71,53 +76,83 @@ public static class Primitives {
     return outputMesh;
   }
 
-  public static Mesh CreateBoxPrimitive(float radius, float height) {
-    // Define the half-extents of the box
-    float halfWidth = radius;
-    float halfDepth = radius;
+  public static Mesh CreateBoxPrimitive(float scale) {
+    Vector3[] normals = [
+      Vector3.UnitZ,
+      -Vector3.UnitZ,
+      Vector3.UnitZ,
+      Vector3.UnitX,
+      Vector3.UnitX,
+      Vector3.UnitY,
+      -Vector3.UnitY,
+      Vector3.UnitZ
+    ];
 
-    // Define the eight vertices of the box
-    Vertex[] vertices = new Vertex[] {
-      new Vertex { Position = new Vector3(-halfWidth, 0, -halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(halfWidth, 0, -halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(halfWidth, 0, halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(-halfWidth, 0, halfDepth), Color = Color, Normal = Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(-halfWidth, -height, -halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(halfWidth, -height, -halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(halfWidth, -height, halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero },
-      new Vertex { Position = new Vector3(-halfWidth, -height, halfDepth), Color = Color, Normal = -Vector3.UnitY, Uv = Vector2.Zero }
-    };
+    Vertex[] vertices = [
+      new Vertex { Position = new Vector3(-scale, -scale, -scale), Color = Color, Normal = normals[0], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(scale, -scale, -scale), Color = Color, Normal = normals[1], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(scale, scale, -scale), Color = Color, Normal = normals[2], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-scale, scale, -scale), Color = Color, Normal = normals[3], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-scale, -scale, scale), Color = Color, Normal = normals[4], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(scale, -scale, scale), Color = Color, Normal = normals[5], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(scale, scale, scale), Color = Color, Normal = normals[6], Uv = Vector2.Zero },
+      new Vertex { Position = new Vector3(-scale, scale, scale), Color = Color, Normal = normals[7], Uv = Vector2.Zero }
+    ];
 
-    // Define the indices to form triangles for each face of the box
-    uint[] indices = new uint[] {
+    uint[] indices = [
       // Front face
-      0, 1, 2,
-      2, 3, 0,
+      0,
+      3,
+      2,
+      2,
+      1,
+      0,
 
       // Back face
-      4, 5, 6,
-      6, 7, 4,
+      4,
+      5,
+      6,
+      6,
+      7,
+      4,
 
       // Left face
-      0, 4, 7,
-      7, 3, 0,
+      0,
+      4,
+      7,
+      7,
+      3,
+      0,
 
       // Right face
-      1, 5, 6,
-      6, 2, 1,
+      1,
+      2,
+      6,
+      6,
+      5,
+      1,
 
       // Top face
-      3, 2, 6,
-      6, 7, 3,
+      3,
+      7,
+      6,
+      6,
+      2,
+      3,
 
       // Bottom face
-      0, 1, 5,
-      5, 4, 0
-    };
+      0,
+      1,
+      5,
+      5,
+      4,
+      0
+    ];
 
-    var mesh = new Mesh();
-    mesh.Indices = indices;
-    mesh.Vertices = vertices;
+    var mesh = new Mesh {
+      Indices = indices,
+      Vertices = vertices
+    };
     return mesh;
   }
 
@@ -172,25 +207,155 @@ public static class Primitives {
       uint bottom2 = top2 + 1;
 
       indices.Add(top1);
-      indices.Add(bottom1);
+      // indices.Add(bottom1);
       indices.Add(top2);
+      indices.Add(bottom1);
+
 
       indices.Add(bottom2);
+      // indices.Add(bottom1);
       indices.Add(bottom1);
       indices.Add(top2);
 
       indices.Add((uint)vertices.Count() - 1);
       indices.Add(top2);
+      // indices.Add(bottom1);
       indices.Add(top1);
 
       indices.Add((uint)vertices.Count() - 2);
       indices.Add(bottom1);
+      // indices.Add(top2);
       indices.Add(bottom2);
     }
 
     var mesh = new Mesh();
     mesh.Vertices = vertices.ToArray();
     mesh.Indices = indices.ToArray();
+    return mesh;
+  }
+
+  public static Mesh CreateSpherePrimitve(int slices, int stacks) {
+    Mesh mesh = new();
+    // List<Vertex> vertices = new();
+    var vertices = new Vertex[slices * stacks];
+    int index = 0;
+
+    // top vertex
+    /*
+    vertices.Add(new() {
+      Position = new(0, 1, 0),
+      Normal = new(1, 1, 1)
+    });
+    */
+
+    // generate vertices per stack / slice
+    for (int i = 0; i < slices; i++) {
+      for (int j = 0; j < stacks - 1; j++) {
+        var x = MathF.Sin(MathF.PI * i / slices) * MathF.Cos(2 * MathF.PI * j / stacks);
+        var y = MathF.Sin(MathF.PI * i / slices) * MathF.Sin(2 * MathF.PI * j / stacks);
+        var z = MathF.Cos(MathF.PI * i / slices);
+        vertices[index++] = (new() {
+          Position = new(x, y, z),
+          Normal = new(0, -1, 0),
+          Color = new(1, 1, 1)
+        });
+      }
+    }
+
+    /*
+    for (int i = 0; i < slices - 1; i++) {
+      var phi = MathF.PI * (i + 1) / stacks;
+      for (int j = 0; j < slices; j++) {
+        var theta = 2.0f * MathF.PI * j / slices;
+        var x = MathF.Sin(phi) * MathF.Cos(theta);
+        var y = MathF.Cos(phi);
+        var z = MathF.Sin(phi) * MathF.Sin(theta);
+        vertices.Add(new() {
+          Position = new(x, y, z),
+          Normal = new(1, 1, 1)
+        });
+      }
+    }
+    */
+
+    // bottom vertex
+    /*
+    vertices.Add(new() {
+      Position = new(0, -1, 0),
+      Normal = new(1, 1, 1)
+    });
+    */
+
+    /*
+    // top and bottom triangles
+    for (int i = 0; i < slices; ++i) {
+      var i0 = i + 1;
+      var i1 = (i + 1) % slices + 1;
+      vertices.AddRange([
+        new() {
+          Position = new(0, 1, 0),
+          Normal = new(1,1,1)
+        },
+        new() {
+          Position = new(i1, i1, i1),
+          Normal = new(1,1,1)
+        },
+        new() {
+          Position = new(i0, i0, i0),
+          Normal = new(1,1,1)
+        },
+      ]);
+
+      i0 = i + slices * (stacks - 2) + 1;
+      i1 = (i + 1) % slices + slices * (stacks - 2) + 1;
+      vertices.AddRange([
+        new() {
+          Position = new(0, -1, 0),
+          Normal = new(1,1,1)
+        },
+        new() {
+          Position = new(i0, i0, i0),
+          Normal = new(1,1,1)
+        },
+        new() {
+          Position = new(i1, i1, i1),
+          Normal = new(1,1,1)
+        },
+      ]);
+    }
+
+    // quads per stack
+    for (int j = 0; j < stacks - 2; j++) {
+      var j0 = j * slices + 1;
+      var j1 = (j + 1) * slices + 1;
+      for (int i = 0; i < slices; i++) {
+        var i0 = j0 + i;
+        var i1 = j0 + (i + 1) % slices;
+        var i2 = j1 + (i + 1) % slices;
+        var i3 = j1 + i;
+        vertices.AddRange([
+          new() {
+            Position = new(i0, i0, i0),
+            Normal = new(1,1,1)
+          },
+          new() {
+            Position = new(i1, i1, i1),
+            Normal = new(1,1,1)
+          },
+          new() {
+            Position = new(i2, i2, i2),
+            Normal = new(1,1,1)
+          },
+          new() {
+            Position = new(i3, i3, i3),
+            Normal = new(1,1,1)
+          }
+        ]);
+      }
+    }
+    */
+
+    mesh.Vertices = [.. vertices];
     return mesh;
   }
 }

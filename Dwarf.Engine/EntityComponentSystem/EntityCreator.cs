@@ -156,7 +156,7 @@ public static class EntityCreator {
 
     var entity = await CreateBase(entityName, position, rotation, scale);
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, new[] { mesh });
+    var model = new MeshRenderer(app.Device, [mesh]);
     entity.AddComponent(model);
 
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
@@ -173,15 +173,83 @@ public static class EntityCreator {
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
   }
 
-  public static void AddRigdbody(Device device, ref Entity entity, PrimitiveType primitiveType, float radius, bool kinematic = false, bool flip = false) {
+  public static void AddRigdbody(
+    Device device,
+    ref Entity entity,
+    PrimitiveType primitiveType,
+    float radius,
+    bool kinematic = false,
+    bool flip = false
+  ) {
     if (entity == null) return;
 
     entity.AddComponent(new Rigidbody(device, primitiveType, radius, kinematic, flip));
+  }
+
+  public static void AddRigdbody(
+    Device device,
+    ref Entity entity,
+    PrimitiveType primitiveType,
+    float sizeX = 1,
+    float sizeY = 1,
+    float sizeZ = 1,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, kinematic, flip));
+  }
+
+  public static void AddRigdbody(
+    Device device,
+    ref Entity entity,
+    PrimitiveType primitiveType,
+    float sizeX = 1,
+    float sizeY = 1,
+    float sizeZ = 1,
+    float offsetX = 0,
+    float offsetY = 0,
+    float offsetZ = 0,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, kinematic, flip));
   }
 
   public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, bool kinematic = false, float radius = 1) {
     var device = Application.Instance.Device;
 
     AddRigdbody(device, ref entity, primitiveType, radius, kinematic);
+  }
+
+  public static void AddRigdbody(
+    this Entity entity,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    float sizeX = 1,
+    float sizeY = 1,
+    float sizeZ = 1,
+    float offsetX = 0,
+    float offsetY = 0,
+    float offsetZ = 0,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    var device = Application.Instance.Device;
+    AddRigdbody(device, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, kinematic, flip);
+  }
+
+  public static void AddRigdbody(
+    this Entity entity,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    Vector3 size = default,
+    Vector3 offset = default,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    var device = Application.Instance.Device;
+    AddRigdbody(device, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, kinematic, flip);
   }
 }

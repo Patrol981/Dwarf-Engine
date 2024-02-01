@@ -33,7 +33,7 @@ public class PerformanceTester {
       new(0, 0, 0),
       new(1, 1, 1)
     );
-    entity.AddRigdbody(PrimitiveType.Cylinder);
+    entity.AddRigdbody(PrimitiveType.Cylinder, false, 1);
     entity.GetComponent<Rigidbody>().Init(Application.Instance.GetSystems().PhysicsSystem.BodyInterface);
     app.AddEntity(entity);
   }

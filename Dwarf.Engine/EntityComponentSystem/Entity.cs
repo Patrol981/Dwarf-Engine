@@ -137,7 +137,7 @@ public class Entity {
     var list = new List<DwarfScript>();
 
     foreach (var e in entities) {
-      list.AddRange(e.GetScripts());
+      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
     }
 
     return list.ToArray();

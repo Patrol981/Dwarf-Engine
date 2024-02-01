@@ -46,8 +46,10 @@ public class GLTFLoader {
 
       if (resultModel.MeshsesCount == images.Count || images.Count > resultModel.MeshsesCount) {
         resultModel.BindMultipleModelPartsToTextures(app.TextureManager, paths);
-      } else {
+      } else if (paths.Length > 0) {
         resultModel.BindMultipleModelPartsToTexture(app.TextureManager, paths[0]);
+      } else {
+        resultModel.BindMultipleModelPartsToTexture(app.TextureManager, "./Resources/Textures/base/no_texture.png");
       }
     }
 

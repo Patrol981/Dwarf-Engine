@@ -133,7 +133,7 @@ public class Application {
     MasterStart(Entity.GetScripts(_entities));
 
     _renderThread = new Thread(RenderLoop);
-    _calculationThread = new Thread(CalculationLoop);
+    // _calculationThread = new Thread(CalculationLoop);
 
 
     _renderThread?.Start();
@@ -230,7 +230,8 @@ public class Application {
         Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
         View = _camera.GetComponent<Camera>().GetViewMatrix(),
 
-        LightPosition = _camera.GetComponent<Transform>().Position,
+        // LightPosition = _camera.GetComponent<Transform>().Position,
+        LightPosition = new Vector3(0, -5, 0),
         LightColor = new Vector4(1f, 1f, 1f, 1f),
         AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
         CameraPosition = _camera.GetComponent<Transform>().Position
@@ -257,7 +258,7 @@ public class Application {
     Frames.TickEnd();
   }
 
-  private unsafe void PerformCalculations() {
+  private void PerformCalculations() {
     _systems.UpdateCalculationSystems(GetEntities().ToArray());
   }
 

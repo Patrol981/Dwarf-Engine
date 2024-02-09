@@ -122,7 +122,7 @@ public class RenderUISystem : SystemBase {
 
       var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
-      Descriptor.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
+      Descriptor.BindDescriptorSet(_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
       uiComponent?.Bind(frameInfo.CommandBuffer, 0);
       uiComponent?.Draw(frameInfo.CommandBuffer, 0);
     }
@@ -191,7 +191,7 @@ public class RenderUISystem : SystemBase {
   }
 
   public override unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
+    _device.WaitQueue();
     _uiBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(_descriptorSets);
     _texturePool?.FreeDescriptors(_textureSets);

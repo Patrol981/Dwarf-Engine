@@ -10,6 +10,14 @@ layout (location = 1) out vec3 fragPositionWorld;
 layout (location = 2) out vec3 fragNormalWorld;
 layout (location = 3) out vec2 texCoord;
 
+struct Material {
+  vec3 color;
+  float shininess;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+};
+
 layout (push_constant) uniform Push {
   mat4 transform;
   mat4 normalMatrix;
@@ -27,7 +35,8 @@ layout (set = 1, binding = 0) uniform GlobalUbo {
 // 500 FPS on avg
 // TODO: optimize set, so its reusable across all models?
 layout (set = 2, binding = 0) uniform ModelUBO {
-  vec3 material;
+  // vec3 material_color;
+  Material material;
 } modelUBO;
 
 void main() {

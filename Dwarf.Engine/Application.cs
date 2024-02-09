@@ -14,6 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
 using Dwarf.Engine.Global;
+using Dwarf.Rendering;
 
 namespace Dwarf.Engine;
 
@@ -159,10 +160,16 @@ public class Application {
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
-    var result = vkDeviceWaitIdle(_device.LogicalDevice);
-    if (result != VkResult.Success) {
-      Logger.Error(result.ToString());
+    _device._mutex.WaitOne();
+    try {
+      var result = vkDeviceWaitIdle(_device.LogicalDevice);
+      if (result != VkResult.Success) {
+        Logger.Error(result.ToString());
+      }
+    } finally {
+      _device._mutex.ReleaseMutex();
     }
+
 
     _calculationShouldClose = true;
     _renderShouldClose = true;
@@ -200,7 +207,7 @@ public class Application {
     }
   }
 
-  private unsafe void Render() {
+  private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
         _entities.ToArray(),
@@ -225,6 +232,7 @@ public class Application {
       }
     }
 
+
     var commandBuffer = _renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = _renderer.GetFrameIndex();
@@ -243,17 +251,18 @@ public class Application {
 
       _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
 
-      _currentFrameInfo.Camera = _camera.GetComponent<Camera>();
-      _currentFrameInfo.CommandBuffer = commandBuffer;
-      _currentFrameInfo.FrameIndex = frameIndex;
-      _currentFrameInfo.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      _currentFrameInfo.TextureManager = _textureManager;
+      var currentFrame = new FrameInfo();
+      currentFrame.Camera = _camera.GetComponent<Camera>();
+      currentFrame.CommandBuffer = commandBuffer;
+      currentFrame.FrameIndex = frameIndex;
+      currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      currentFrame.TextureManager = _textureManager;
 
       // render
       _renderer.BeginSwapchainRenderPass(commandBuffer);
       _onRender?.Invoke();
-      _skybox.Render(_currentFrameInfo);
-      _systems.UpdateSystems(_entities.ToArray(), _currentFrameInfo);
+      _skybox.Render(currentFrame);
+      _systems.UpdateSystems(_entities.ToArray(), currentFrame);
       _renderer.EndSwapchainRenderPass(commandBuffer);
       _renderer.EndFrame();
 
@@ -268,9 +277,32 @@ public class Application {
   }
 
   private unsafe void RenderLoop() {
-    while (!_renderShouldClose) {
-      Render();
+    var pool = _device.CreateCommandPool();
+    var threadInfo = new ThreadInfo() {
+      CommandPool = pool,
+      CommandBuffer = [_renderer.MAX_FRAMES_IN_FLIGHT]
+    };
+
+    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
+    secondaryCmdBufAllocateInfo.level = VkCommandBufferLevel.Primary;
+    secondaryCmdBufAllocateInfo.commandPool = threadInfo.CommandPool;
+    secondaryCmdBufAllocateInfo.commandBufferCount = 1;
+
+    fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
+      vkAllocateCommandBuffers(_device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
     }
+
+    _renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+
+    while (!_renderShouldClose) {
+      Render(threadInfo);
+    }
+
+    fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
+      vkFreeCommandBuffers(_device.LogicalDevice, threadInfo.CommandPool, (uint)_renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+    }
+
+    vkDestroyCommandPool(_device.LogicalDevice, threadInfo.CommandPool, null);
   }
 
   private unsafe void CalculationLoop() {
@@ -423,8 +455,8 @@ public class Application {
   }
 
   private void Collect() {
-    vkDeviceWaitIdle(_device.LogicalDevice);
-    vkQueueWaitIdle(_device.PresentQueue);
+    _device.WaitQueue();
+    _device.WaitDevice();
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
         _entities[i].DisposeEverything();

@@ -77,12 +77,12 @@ public class Texture : IDisposable {
   private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
-        vkDeviceWaitIdle(_device.LogicalDevice);
+        _device.WaitDevice();
         vkDestroyImage(_device.LogicalDevice, _textureImage);
       }
 
       if (_textureImageMemory.IsNotNull) {
-        vkDeviceWaitIdle(_device.LogicalDevice);
+        _device.WaitDevice();
         vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
       }
     }
@@ -204,9 +204,7 @@ public class Texture : IDisposable {
     region.imageOffset = new(0, 0, 0);
     region.imageExtent = new(width, height, 1);
 
-    device._mutex.WaitOne();
     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VkImageLayout.TransferDstOptimal, 1, &region);
-    device._mutex.ReleaseMutex();
 
     device.EndSingleTimeCommands(commandBuffer);
   }
@@ -250,7 +248,6 @@ public class Texture : IDisposable {
       Logger.Error($"Unsupported layout transition");
     }
 
-    device._mutex.WaitOne();
     vkCmdPipelineBarrier(
       commandBuffer,
       sourceStage,
@@ -260,7 +257,6 @@ public class Texture : IDisposable {
       0, null,
       1, &barrier
     );
-    device._mutex.ReleaseMutex();
 
     device.EndSingleTimeCommands(commandBuffer);
   }

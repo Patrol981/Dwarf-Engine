@@ -48,7 +48,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
-    _device._mutex.WaitOne();
+    // _device._mutex.WaitOne();
     VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
     ulong[] offsets = [0];
     fixed (VkBuffer* buffersPtr = buffers)
@@ -59,7 +59,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     if (_hasIndexBuffer) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.GetBuffer(), 0, VkIndexType.Uint32);
     }
-    _device._mutex.ReleaseMutex();
+    // _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 
@@ -68,9 +68,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public void Dispose() {
-    vkQueueWaitIdle(_device.PresentQueue);
-    vkQueueWaitIdle(_device.GraphicsQueue);
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitQueue();
+    _device.WaitDevice();
     _vertexBuffer.Dispose();
     if (_hasIndexBuffer) {
       _indexBuffer.Dispose();
@@ -78,13 +77,13 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
-    _device._mutex.WaitOne();
+    // _device._mutex.WaitOne();
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
       vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     }
-    _device._mutex.ReleaseMutex();
+    // _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 
@@ -142,7 +141,13 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       VkMemoryPropertyFlags.DeviceLocal
     );
 
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
+    _device._mutex.WaitOne();
+    try {
+      _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
+    } finally {
+      _device._mutex.ReleaseMutex();
+    }
+
     stagingBuffer.Dispose();
     return Task.CompletedTask;
   }

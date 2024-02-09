@@ -176,6 +176,7 @@ public unsafe class Buffer : IDisposable {
   }
 
   public void DestoryBuffer() {
+    _device.WaitDevice();
     vkDestroyBuffer(_device.LogicalDevice, _buffer);
   }
 

@@ -374,15 +374,28 @@ public class Swapchain : IDisposable {
       VkSwapchainKHR[] swapchains = [_handle];
       VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
 
-      fixed (VkSwapchainKHR* ptr = swapchains)
+      //var fenceInfo = new VkFenceCreateInfo();
+      //fenceInfo.flags = VkFenceCreateFlags.None;
+      //vkCreateFence(_device.LogicalDevice, &fenceInfo, null, out var fence).CheckResult();
+
+      fixed (VkSwapchainKHR* swPtr = swapchains)
+      fixed (VkFence* swFlightFencesPtr = _inFlightFences)
       fixed (VkSemaphore* signalPtr = signalSemaphores) {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalPtr;
 
-        _device._mutex.WaitOne();
+        // _device._mutex.WaitOne();
+        // vkWaitForFences(_device.LogicalDevice, 1, &fence, VkBool32.True, 100000000000);
+        // vkWaitForFences(_device.LogicalDevice, 1, swFlightFencesPtr, VkBool32.True, 100000000000);
         vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-        vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
-        _device._mutex.ReleaseMutex();
+        _device._mutex.WaitOne();
+        try {
+          vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
+        } finally {
+          _device._mutex.ReleaseMutex();
+        }
+        // vkDestroyFence(_device.LogicalDevice, fence, null);
+        // _device._mutex.ReleaseMutex();
 
         VkPresentInfoKHR presentInfo = new() {
           waitSemaphoreCount = 1,
@@ -390,7 +403,7 @@ public class Swapchain : IDisposable {
         };
 
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = ptr;
+        presentInfo.pSwapchains = swPtr;
 
         presentInfo.pImageIndices = &imageIndex;
 

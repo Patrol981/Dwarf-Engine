@@ -137,7 +137,7 @@ public class FreeTypeText : Component, IUIElement {
   }
 
   private void RecreateBuffers() {
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(_mesh.Vertices);
   }

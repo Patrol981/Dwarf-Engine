@@ -1,4 +1,4 @@
-﻿using Dwarf.Vulkan;
+using Dwarf.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 using FontStashSharp.Interfaces;
@@ -93,7 +93,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2 {
   }
 
   public unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
+    _device.WaitQueue();
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
   }

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using System.Runtime.CompilerServices;
 
 using Dwarf.Engine;
@@ -147,13 +147,13 @@ public class TextField : Component, IUIElement {
   private void CheckBuffers(Vertex[] vertices) {
     if (_vertexCount == (ulong)vertices.Length) return;
 
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(vertices);
   }
 
   private void RecreateBuffers() {
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(_textMesh.Vertices);
   }

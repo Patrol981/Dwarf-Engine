@@ -126,7 +126,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
       var pushConstantData = new SpriteUniformBufferObject {
         SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4,
-        SpriteColor = entities[i].GetComponent<Material>().GetColor(),
+        SpriteColor = entities[i].GetComponent<Material>().Color,
         UseTexture = true
       };
 
@@ -166,7 +166,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   }
 
   public override unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
+    _device.WaitQueue();
     _spriteBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(_descriptorSets);
     _texturePool?.FreeDescriptors(_textureSets);

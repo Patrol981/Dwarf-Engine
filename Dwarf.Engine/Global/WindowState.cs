@@ -24,7 +24,7 @@ public static class WindowState {
   }
 
   public static unsafe void MaximizeWindow() {
-    vkDeviceWaitIdle(Application.Instance.Device.LogicalDevice);
+    Application.Instance.Device.WaitDevice();
     glfwMaximizeWindow(s_Window.GLFWwindow);
   }
 

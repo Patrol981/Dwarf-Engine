@@ -314,7 +314,7 @@ public class Skybox : IDisposable {
 
     var pushConstantData = new SkyboxBufferObject {
       SkyboxMatrix = _transform.Matrix4,
-      SkyboxColor = _material.GetColor()
+      SkyboxColor = _material.Color
     };
 
     vkCmdPushConstants(
@@ -332,7 +332,7 @@ public class Skybox : IDisposable {
   }
 
   private unsafe void BindTexture(FrameInfo frameInfo) {
-    Descriptor.BindDescriptorSet(_textureSet, frameInfo, ref _pipelineLayout, 0, 1);
+    Descriptor.BindDescriptorSet(_device, _textureSet, frameInfo, ref _pipelineLayout, 0, 1);
   }
 
   private unsafe void BindDescriptorTexture() {
@@ -445,7 +445,8 @@ public class Skybox : IDisposable {
 
   protected unsafe void Dispose(bool disposing) {
     if (disposing) {
-      vkQueueWaitIdle(_device.GraphicsQueue);
+      _device.WaitQueue();
+      _device.WaitDevice();
       _textureSetLayout?.Dispose();
       _descriptorPool?.Dispose();
       _texturePool?.Dispose();

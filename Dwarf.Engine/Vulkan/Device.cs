@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -26,9 +27,14 @@ public class Device : IDisposable {
   private VkCommandPool _commandPool = VkCommandPool.Null;
   private readonly object _commandPoolLock = new object();
 
-  public VkQueue GraphicsQueue = VkQueue.Null;
-  public VkQueue PresentQueue = VkQueue.Null;
+  private VkQueue _graphicsQueue = VkQueue.Null;
+  private VkQueue _presentQueue = VkQueue.Null;
+  private readonly object _graphicsQueueLock = new object();
+  private readonly object _presentQueueLock = new object();
+  private readonly object _deviceLock = new();
+
   public VkPhysicalDeviceProperties Properties;
+  public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
 
@@ -40,7 +46,7 @@ public class Device : IDisposable {
     CreateSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
-    CreateCommandPool();
+    _commandPool = CreateCommandPool();
   }
 
   public unsafe void CreateBuffer(
@@ -119,7 +125,12 @@ public class Device : IDisposable {
     fenceInfo.flags = VkFenceCreateFlags.None;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     // Submit to the queue
-    vkQueueSubmit(queue, submitInfo, fence).CheckResult();
+    _mutex.WaitOne();
+    try {
+      vkQueueSubmit(queue, submitInfo, fence).CheckResult();
+    } finally {
+      _mutex.ReleaseMutex();
+    }
     vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, 100000000000);
     vkDestroyFence(_logicalDevice, fence, null);
     if (free) {
@@ -197,7 +208,6 @@ public class Device : IDisposable {
   }
 
   public unsafe VkCommandBuffer BeginSingleTimeCommands() {
-    _mutex.WaitOne();
     VkCommandBufferAllocateInfo allocInfo = new() {
       level = VkCommandBufferLevel.Primary,
       commandPool = _commandPool,
@@ -212,25 +222,116 @@ public class Device : IDisposable {
     };
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    _mutex.ReleaseMutex();
     return commandBuffer;
   }
 
   public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
-    _mutex.WaitOne();
     vkEndCommandBuffer(commandBuffer);
 
+    SubmitQueue(commandBuffer);
+
+    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+  }
+
+  public unsafe VkSemaphore CreateTimelineSemaphore() {
+    var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
+    timelineCreateInfo.pNext = null;
+    timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
+    timelineCreateInfo.initialValue = 0;
+
+    var createInfo = new VkSemaphoreCreateInfo();
+    createInfo.pNext = &timelineCreateInfo;
+    createInfo.flags = VkSemaphoreCreateFlags.None;
+
+    vkCreateSemaphore(_logicalDevice, &createInfo, null, out var semaphore).CheckResult();
+    return semaphore;
+  }
+
+  public unsafe void WaitDevice() {
+    _mutex.WaitOne();
+    try {
+      vkDeviceWaitIdle(_logicalDevice).CheckResult();
+    } finally {
+      _mutex.ReleaseMutex();
+    }
+  }
+
+  public unsafe VkFence CreateFence() {
+    var fenceInfo = new VkFenceCreateInfo();
+    fenceInfo.flags = VkFenceCreateFlags.None;
+    vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
+    return fence;
+  }
+
+  public unsafe void WaitQueue(VkQueue queue) {
+    _mutex.WaitOne();
+    try {
+      vkQueueWaitIdle(queue).CheckResult();
+    } finally {
+      _mutex.ReleaseMutex();
+    }
+  }
+
+  public void WaitQueue() {
+    WaitQueue(_graphicsQueue);
+  }
+
+  public unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
     VkSubmitInfo submitInfo = new() {
       commandBufferCount = 1,
       pCommandBuffers = &commandBuffer,
     };
 
-    vkQueueSubmit(GraphicsQueue, 1, &submitInfo, VkFence.Null);
-    vkQueueWaitIdle(GraphicsQueue);
-    vkDeviceWaitIdle(_logicalDevice);
+    // Create fence to ensure that the command buffer has finished executing
+    var fence = CreateFence();
 
-    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
-    _mutex.ReleaseMutex();
+    _mutex.WaitOne();
+    try {
+      vkQueueSubmit(queue, submitInfo, fence);
+    } finally {
+      _mutex.ReleaseMutex();
+    }
+
+    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+    vkDestroyFence(_logicalDevice, fence);
+  }
+
+  public void SubmitQueue(VkCommandBuffer commandBuffer) {
+    SubmitQueue(_graphicsQueue, commandBuffer);
+  }
+
+  public unsafe void SubmitSemaphore() {
+    var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
+    timelineCreateInfo.pNext = null;
+    timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
+    timelineCreateInfo.initialValue = 0;
+
+    var createInfo = new VkSemaphoreCreateInfo();
+    createInfo.pNext = &timelineCreateInfo;
+    createInfo.flags = VkSemaphoreCreateFlags.None;
+
+    vkCreateSemaphore(_logicalDevice, &createInfo, null, out var timelineSemaphore).CheckResult();
+
+    ulong waitValue = 2; // Wait until semaphore value is >= 2
+    ulong signalValue = 3; // Set semaphore value to 3
+
+    VkTimelineSemaphoreSubmitInfo timelineInfo = new();
+    timelineInfo.pNext = null;
+    timelineInfo.waitSemaphoreValueCount = 1;
+    timelineInfo.pWaitSemaphoreValues = &waitValue;
+    timelineInfo.signalSemaphoreValueCount = 1;
+    timelineInfo.pSignalSemaphoreValues = &signalValue;
+
+    VkSubmitInfo submitInfo = new();
+    submitInfo.pNext = &timelineInfo;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &timelineSemaphore;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &timelineSemaphore;
+    submitInfo.commandBufferCount = 0;
+    submitInfo.pCommandBuffers = null;
+
+    vkQueueSubmit(GraphicsQueue, submitInfo, VkFence.Null);
   }
 
   private unsafe void CreateInstance() {
@@ -375,12 +476,17 @@ public class Device : IDisposable {
       alphaToOne = true,
       sampleRateShading = true,
       multiDrawIndirect = true,
-      geometryShader = true
+      geometryShader = true,
     };
+
+    VkPhysicalDeviceVulkan12Features deviceFeatures2 = new();
+    deviceFeatures2.timelineSemaphore = true;
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount
     };
+    createInfo.pNext = &deviceFeatures2;
+
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;
     }
@@ -402,11 +508,11 @@ public class Device : IDisposable {
 
     vkLoadDevice(_logicalDevice);
 
-    vkGetDeviceQueue(_logicalDevice, queueFamilies.graphicsFamily, 0, out GraphicsQueue);
-    vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out PresentQueue);
+    vkGetDeviceQueue(_logicalDevice, queueFamilies.graphicsFamily, 0, out _graphicsQueue);
+    vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
   }
 
-  private unsafe void CreateCommandPool() {
+  public unsafe VkCommandPool CreateCommandPool() {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
@@ -414,8 +520,10 @@ public class Device : IDisposable {
       flags = VkCommandPoolCreateFlags.Transient | VkCommandPoolCreateFlags.ResetCommandBuffer
     };
 
-    var result = vkCreateCommandPool(_logicalDevice, &poolCreateInfo, null, out _commandPool);
+    var result = vkCreateCommandPool(_logicalDevice, &poolCreateInfo, null, out var commandPool);
     if (result != VkResult.Success) throw new Exception("Failed to create command pool!");
+
+    return commandPool;
   }
 
   public unsafe void Dispose() {
@@ -437,5 +545,22 @@ public class Device : IDisposable {
       }
     }
   }
+
+  public VkQueue GraphicsQueue {
+    get {
+      lock (_graphicsQueueLock) {
+        return _graphicsQueue;
+      }
+    }
+  }
+
+  public VkQueue PresentQueue {
+    get {
+      lock (_presentQueueLock) {
+        return _presentQueue;
+      }
+    }
+  }
+
   public VkInstance VkInstance => _vkInstance;
 }

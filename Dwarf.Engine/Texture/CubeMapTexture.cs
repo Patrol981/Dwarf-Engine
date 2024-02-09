@@ -75,12 +75,12 @@ public class CubeMapTexture : Texture {
   private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
-        vkDeviceWaitIdle(_device.LogicalDevice);
+        _device.WaitDevice();
         vkDestroyImage(_device.LogicalDevice, _textureImage);
       }
 
       if (_textureImageMemory.IsNotNull) {
-        vkDeviceWaitIdle(_device.LogicalDevice);
+        _device.WaitDevice();
         vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
       }
     }

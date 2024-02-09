@@ -42,6 +42,8 @@ public class Pipeline : IDisposable {
   private VkShaderModule _fragmentShaderModule;
   private readonly PipelineProvider _pipelineProvider;
 
+  private readonly object _pipelineLock = new();
+
   public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
     _device = device;
     _pipelineProvider = pipelineProvider;
@@ -49,7 +51,9 @@ public class Pipeline : IDisposable {
   }
 
   public void Bind(VkCommandBuffer commandBuffer) {
-    vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, _graphicsPipeline);
+    lock (_pipelineLock) {
+      vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.Graphics, _graphicsPipeline);
+    }
   }
 
   private unsafe void CreateGraphicsPipeline(string vertexName, string fragmentName, PipelineConfigInfo configInfo) {

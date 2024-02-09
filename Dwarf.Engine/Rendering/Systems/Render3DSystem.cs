@@ -93,7 +93,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
-    _device._mutex.WaitOne();
+    _device.WaitDevice();
+    _device.WaitQueue();
     var startTime = DateTime.Now;
     // TODO: Reuse data from diffrent renders?
 
@@ -105,7 +106,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     Logger.Info("Recreating Renderer 3D");
 
     _descriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(1000)
+      .SetMaxSets(2000)
+      // .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
@@ -128,10 +130,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       }
     }
 
+    // entities.length before, param no.3
     _modelBuffer = new(
       _device,
       (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
-      (ulong)entities.Length,
+      (ulong)_texturesCount,
       VkBufferUsageFlags.UniformBuffer,
       VkMemoryPropertyFlags.HostVisible,
       _device.Properties.limits.minUniformBufferOffsetAlignment
@@ -161,7 +164,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
-    _device._mutex.ReleaseMutex();
   }
 
   private void PrepareIndirect(ReadOnlySpan<Entity> entities) {
@@ -217,7 +219,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void Render(FrameInfo frameInfo, Span<Entity> entities) {
-    _device._mutex.WaitOne();
     if (entities.Length < 1) return;
 
     _pipeline.Bind(frameInfo.CommandBuffer);
@@ -241,9 +242,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     for (int i = 0; i < entities.Length; i++) {
       if (entities[i].GetDrawable<IRender3DElement>() is not IRender3DElement targetEntity) continue;
+      if (entities[i].CanBeDisposed) continue;
 
       var modelUBO = new ModelUniformBufferObject {
-        Material = entities[i].GetComponent<Material>().GetColor()
+        Material = entities[i].GetComponent<Material>().Data
       };
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
@@ -290,7 +292,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           if (!targetEntity.FinishedInitialization) continue;
           // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
 
-          Descriptor.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
+          if (i == _textureSets.Size) continue;
+          Descriptor.BindDescriptorSet(_device, _textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
 
           if (targetEntity != lastModel)
             targetEntity.Bind(frameInfo.CommandBuffer, x);
@@ -318,16 +321,16 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     */
 
     _modelBuffer.Unmap();
-    _device._mutex.ReleaseMutex();
   }
 
   public override unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
+    _device.WaitQueue();
+    _device.WaitDevice();
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
     _texturePool?.FreeDescriptors(_textureSets);
 
-    _indirectCommandBuffer?.Dispose();
+    // _indirectCommandBuffer?.Dispose();
 
     base.Dispose();
   }

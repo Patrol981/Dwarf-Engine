@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Vulkan;
 
@@ -225,7 +225,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
       CreateStandardVertices(ref image);
     }
 
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitDevice();
     Dispose();
 
     CreateVertexBuffer(_spriteMesh.Vertices);

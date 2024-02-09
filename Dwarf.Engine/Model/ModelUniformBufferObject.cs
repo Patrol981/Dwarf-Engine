@@ -6,5 +6,5 @@ namespace Dwarf.Engine;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct ModelUniformBufferObject {
-  [FieldOffset(0)] public Vector3 Material;
+  [FieldOffset(0)] public MaterialData Material;
 }

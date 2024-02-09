@@ -1,4 +1,4 @@
-﻿
+
 using Dwarf.Engine.Rendering;
 using Dwarf.Vulkan;
 
@@ -100,7 +100,7 @@ public abstract class SystemBase {
   #endregion
 
   public virtual unsafe void Dispose() {
-    vkQueueWaitIdle(_device.GraphicsQueue);
+    _device.WaitQueue();
     _setLayout?.Dispose();
     _textureSetLayout?.Dispose();
     _descriptorPool?.Dispose();

@@ -28,10 +28,10 @@ public unsafe class Renderer : IDisposable {
     _device = device;
     // _swapchain = new Swapchain(_device, _window.Extent);
     RecreateSwapchain();
-    CreateCommandBuffers();
+    // CreateCommandBuffers();
   }
 
-  public VkCommandBuffer BeginFrame() {
+  public VkCommandBuffer BeginFrame(VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
     if (_isFrameStarted) {
       Logger.Error("Cannot start frame while already in progress!");
       return VkCommandBuffer.Null;
@@ -54,6 +54,10 @@ public unsafe class Renderer : IDisposable {
     var commandBuffer = GetCurrentCommandBuffer();
 
     VkCommandBufferBeginInfo beginInfo = new();
+    if (level == VkCommandBufferLevel.Secondary) {
+      beginInfo.flags = VkCommandBufferUsageFlags.RenderPassContinue;
+      // beginInfo.pInheritanceInfo
+    }
     // beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo).CheckResult();
@@ -95,7 +99,6 @@ public unsafe class Renderer : IDisposable {
     }
 
     VkRenderPassBeginInfo renderPassInfo = new();
-    // renderPassInfo.sType = VkStructureType.RenderPassBeginInfo;
     renderPassInfo.renderPass = _swapchain.RenderPass;
     renderPassInfo.framebuffer = _swapchain.GetFramebuffer((int)_imageIndex);
 
@@ -146,7 +149,7 @@ public unsafe class Renderer : IDisposable {
       glfwWaitEvents();
     }
 
-    vkDeviceWaitIdle(_device.LogicalDevice);
+    _device.WaitDevice();
 
     if (_swapchain != null) _swapchain.Dispose();
     _swapchain = new(_device, extent);
@@ -175,13 +178,13 @@ public unsafe class Renderer : IDisposable {
     // }
   }
 
-  private void CreateCommandBuffers() {
+  public void CreateCommandBuffers(VkCommandPool commandPool, VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
     int len = _swapchain.GetMaxFramesInFlight();
     _commandBuffers = new VkCommandBuffer[len];
 
     VkCommandBufferAllocateInfo allocInfo = new();
-    allocInfo.level = VkCommandBufferLevel.Primary;
-    allocInfo.commandPool = _device.CommandPool;
+    allocInfo.level = level;
+    allocInfo.commandPool = commandPool;
     allocInfo.commandBufferCount = (uint)_commandBuffers.Length;
 
     fixed (VkCommandBuffer* ptr = _commandBuffers) {
@@ -189,9 +192,14 @@ public unsafe class Renderer : IDisposable {
     }
   }
 
+  private void CreateCommandBuffers() {
+    CreateCommandBuffers(_device.CommandPool);
+  }
+
   private void FreeCommandBuffers() {
     if (_commandBuffers != null) {
       for (int i = 0; i < _commandBuffers.Length; i++) {
+        if (_commandBuffers[i] == VkCommandBuffer.Null) continue;
         vkFreeCommandBuffers(_device.LogicalDevice, _device.CommandPool, _commandBuffers[i]);
       }
       Array.Clear(_commandBuffers);
@@ -199,7 +207,7 @@ public unsafe class Renderer : IDisposable {
   }
 
   public void Dispose() {
-    FreeCommandBuffers();
+    // FreeCommandBuffers();
     _swapchain.Dispose();
   }
 

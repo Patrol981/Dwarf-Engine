@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -200,7 +200,7 @@ public class AssetLoader {
         break;
       case Material:
         var materialData = GetMaterialData(componentData);
-        entity.GetComponent<Material>().SetColor((Vector3)materialData[0]);
+        entity.GetComponent<Material>().Color = (Vector3)materialData[0];
         break;
       case Sprite:
         var spriteData = GetSpriteData(componentData);

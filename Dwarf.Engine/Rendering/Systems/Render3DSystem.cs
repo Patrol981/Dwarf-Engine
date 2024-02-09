@@ -237,6 +237,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
+    IRender3DElement lastModel = null!;
+
     for (int i = 0; i < entities.Length; i++) {
       if (entities[i].GetDrawable<IRender3DElement>() is not IRender3DElement targetEntity) continue;
 
@@ -287,13 +289,18 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
           // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
+
           Descriptor.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
-          targetEntity.Bind(frameInfo.CommandBuffer, x);
+
+          if (targetEntity != lastModel)
+            targetEntity.Bind(frameInfo.CommandBuffer, x);
 
           // targetEntity.DrawIndirect(frameInfo.CommandBuffer, _modelBuffer.GetBuffer(), offset, 1,)
           targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }
+
+      lastModel = targetEntity;
     }
 
     /*

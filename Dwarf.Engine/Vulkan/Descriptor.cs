@@ -14,6 +14,9 @@ public static class Descriptor {
     uint firstSet,
     uint setCount
   ) {
+    Application.Instance.Device._mutex.WaitOne();
+    vkDeviceWaitIdle(Application.Instance.Device.LogicalDevice);
+    vkQueueWaitIdle(Application.Instance.Device.GraphicsQueue);
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
@@ -24,6 +27,7 @@ public static class Descriptor {
       0,
       null
     );
+    Application.Instance.Device._mutex.ReleaseMutex();
   }
 
   public static unsafe void BindDescriptorSets(VkDescriptorSet[] descriptorSets, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {

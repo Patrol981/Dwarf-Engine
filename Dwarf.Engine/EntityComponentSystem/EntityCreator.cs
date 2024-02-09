@@ -164,12 +164,13 @@ public static class EntityCreator {
     return entity;
   }
 
-  public static void AddPrimitive(this Entity entity, string texturePath, PrimitiveType primitiveType = PrimitiveType.Cylinder) {
+  public static async void AddPrimitive(this Entity entity, string texturePath, PrimitiveType primitiveType = PrimitiveType.Cylinder) {
     var app = Application.Instance;
 
     var mesh = Primitives.CreatePrimitive(primitiveType);
     var model = new MeshRenderer(app.Device, [mesh]);
     entity.AddComponent(model);
+    await app.TextureManager.AddTexture(texturePath);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
   }
 

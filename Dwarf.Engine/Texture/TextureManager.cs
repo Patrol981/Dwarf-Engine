@@ -2,6 +2,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
+using Vortice.Vulkan;
 
 namespace Dwarf.Engine;
 
@@ -28,14 +29,14 @@ public class TextureManager : IDisposable {
     }
   }
 
-  public async Task<Task> AddTexture(string texturePath) {
+  public async Task<Task> AddTexture(string texturePath, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     foreach (var tex in _loadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    var texture = await Texture.LoadFromPath(_device, texturePath);
+    var texture = await Texture.LoadFromPath(_device, texturePath, default, createFlags);
     _loadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }

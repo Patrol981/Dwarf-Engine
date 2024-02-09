@@ -17,13 +17,17 @@ public class PublicList<T> {
   public bool IsEmpty { get { return _size == 0; } }
 
   public T GetAt(int index) {
-    ThrowIfIndexOutOfRange(index);
-    return _data[index];
+    lock (_lock) {
+      ThrowIfIndexOutOfRange(index);
+      return _data[index];
+    }
   }
 
   public void SetAt(T newElement, int index) {
-    ThrowIfIndexOutOfRange(index);
-    _data[index] = newElement;
+    lock (_lock) {
+      ThrowIfIndexOutOfRange(index);
+      _data[index] = newElement;
+    }
   }
 
   public void InsertAt(T newElement, int index) {

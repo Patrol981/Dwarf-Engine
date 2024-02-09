@@ -30,6 +30,8 @@ public class Device : IDisposable {
   public VkQueue PresentQueue = VkQueue.Null;
   public VkPhysicalDeviceProperties Properties;
 
+  public VkPhysicalDeviceFeatures Features { get; private set; }
+
   internal Mutex _mutex = new();
 
   public Device(Window window) {
@@ -81,6 +83,52 @@ public class Device : IDisposable {
     EndSingleTimeCommands(commandBuffer);
 
     return Task.CompletedTask;
+  }
+
+  public unsafe VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, VkCommandPool commandPool, bool begin) {
+    var allocInfo = new VkCommandBufferAllocateInfo();
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = level;
+    allocInfo.commandBufferCount = 1;
+
+    var cmdBuffer = new VkCommandBuffer();
+    vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &cmdBuffer).CheckResult();
+    if (begin) {
+      var buffInfo = new VkCommandBufferBeginInfo();
+      vkBeginCommandBuffer(cmdBuffer, &buffInfo).CheckResult();
+    }
+
+    return cmdBuffer;
+  }
+
+  public unsafe VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, bool begin) {
+    return CreateCommandBuffer(level, _commandPool, begin);
+  }
+
+  public unsafe void FlushCommandBuffer(VkCommandBuffer cmdBuffer, VkQueue queue, VkCommandPool pool, bool free) {
+    if (cmdBuffer == VkCommandBuffer.Null) return;
+
+    vkEndCommandBuffer(cmdBuffer).CheckResult();
+
+    var submitInfo = new VkSubmitInfo();
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    // Create fence to ensure that the command buffer has finished executing
+    var fenceInfo = new VkFenceCreateInfo();
+    fenceInfo.flags = VkFenceCreateFlags.None;
+    vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
+    // Submit to the queue
+    vkQueueSubmit(queue, submitInfo, fence).CheckResult();
+    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, 100000000000);
+    vkDestroyFence(_logicalDevice, fence, null);
+    if (free) {
+      vkFreeCommandBuffers(_logicalDevice, pool, 1, &cmdBuffer);
+    }
+  }
+
+  public void FlushCommandBuffer(VkCommandBuffer cmdBuffer, VkQueue queue, bool free) {
+    FlushCommandBuffer(cmdBuffer, queue, _commandPool, free);
   }
 
   public static unsafe VkSemaphore CreateSemaphore(Device device) {
@@ -346,6 +394,8 @@ public class Device : IDisposable {
     createInfo.pEnabledFeatures = &deviceFeatures;
     createInfo.enabledExtensionCount = deviceExtensionNames.Length;
     createInfo.ppEnabledExtensionNames = deviceExtensionNames;
+
+    Features = deviceFeatures;
 
     var result = vkCreateDevice(_physicalDevice, &createInfo, null, out _logicalDevice);
     if (result != VkResult.Success) throw new Exception("Failed to create a device!");

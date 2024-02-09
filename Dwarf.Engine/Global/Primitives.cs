@@ -1,7 +1,4 @@
 using System.Numerics;
-
-using Dwarf.Extensions.Logging;
-
 namespace Dwarf.Engine;
 
 public enum PrimitiveType {
@@ -42,8 +39,6 @@ public static class Primitives {
   }
 
   public static Mesh CreateConvex(Mesh[] meshes, bool flip = false) {
-    Logger.Info($"len: {meshes.Length}");
-
     var outputMesh = new Mesh();
     var vertices = new List<Vertex>();
     var indices = new List<uint>();
@@ -69,23 +64,20 @@ public static class Primitives {
     outputMesh.Vertices = vertices.ToArray();
     outputMesh.Indices = indices.ToArray();
 
-    Logger.Info($"vert[0]: {meshes[0].Vertices.Length}");
-    Logger.Info($"out vert: {outputMesh.Vertices.Length}");
-
-    // return meshes[1];
     return outputMesh;
   }
 
   public static Mesh CreateBoxPrimitive(float scale) {
     Vector3[] normals = [
-      Vector3.UnitZ,
-      -Vector3.UnitZ,
-      Vector3.UnitZ,
-      Vector3.UnitX,
-      Vector3.UnitX,
-      Vector3.UnitY,
-      -Vector3.UnitY,
-      Vector3.UnitZ
+      new(-1, -1, -1),
+      new(1, -1, -1),
+      new(1, 1, -1),
+      new(-1, 1, -1),
+
+      new(-1, -1, 1),
+      new(1, -1, 1),
+      new(1, 1, 1),
+      new(-1, 1, 1),
     ];
 
     Vertex[] vertices = [
@@ -157,18 +149,14 @@ public static class Primitives {
   }
 
   public static Mesh CreateCylinderPrimitive(float radius = 0.5f, float height = 1.0f, int segments = 20) {
-    // height = height * -1;
     float cylinderStep = (MathF.PI * 2) / segments;
     var vertices = new List<Vertex>();
     var indices = new List<uint>();
-
-    // z x y
 
     for (int i = 0; i < segments; ++i) {
       float theta = cylinderStep * i;
       float x = radius * (float)MathF.Cos(theta);
       float z = radius * (float)MathF.Sin(theta);
-
       // var pos = new Vector3(x, 0.0f, z);
       var y = 0.0f;
       var pos = new Vector3(x, y, z);
@@ -188,7 +176,6 @@ public static class Primitives {
     }
 
     var topCenter = new Vector3(0.0f, -height, 0.0f);
-    // var topCenter = new Vector3(0.0f, 0.0f, height);
     var bottomCenter = new Vector3(0.0f, 0.0f, 0.0f);
 
     var vertexTop = new Vertex();
@@ -207,24 +194,20 @@ public static class Primitives {
       uint bottom2 = top2 + 1;
 
       indices.Add(top1);
-      // indices.Add(bottom1);
       indices.Add(top2);
       indices.Add(bottom1);
 
 
       indices.Add(bottom2);
-      // indices.Add(bottom1);
       indices.Add(bottom1);
       indices.Add(top2);
 
       indices.Add((uint)vertices.Count() - 1);
       indices.Add(top2);
-      // indices.Add(bottom1);
       indices.Add(top1);
 
       indices.Add((uint)vertices.Count() - 2);
       indices.Add(bottom1);
-      // indices.Add(top2);
       indices.Add(bottom2);
     }
 
@@ -357,5 +340,41 @@ public static class Primitives {
 
     mesh.Vertices = [.. vertices];
     return mesh;
+  }
+
+  private static Vector3[] CalculateNormals(Vertex[] vertices, uint[] indices) {
+    var normals = new List<Vector3>();
+
+    for (int i = 0; i < indices.Length; i += 3) {
+      var i0 = indices[i];
+      var i1 = indices[i + 1];
+      var i2 = indices[i + 2];
+
+      var v0 = vertices[i0].Position;
+      var v1 = vertices[i1].Position;
+      var v2 = vertices[i2].Position;
+
+      var normal = CalculateTriangleNormal([v0, v1, v2]);
+      normals.Add(normal);
+
+      vertices[i0].Normal = normal;
+      vertices[i1].Normal = normal;
+      vertices[i2].Normal = normal;
+    }
+
+    return [.. normals];
+  }
+
+  private static Vector3 CalculateTriangleNormal(Vector3[] triangle) {
+    var u = triangle[1] - triangle[0];
+    var v = triangle[2] - triangle[0];
+
+    var normal = new Vector3 {
+      X = (u.Y * v.Z) - (u.Z * v.Y),
+      Y = (u.Z * v.Y) - (u.X * v.Z),
+      Z = (u.X * v.Y) - (u.Y * v.X)
+    };
+
+    return normal;
   }
 }

@@ -13,3 +13,9 @@ public struct SimpleVertex {
   public Vector3 Position;
   public Vector3 Color;
 }
+
+public struct TexturedVertex {
+  public Vector3 Position;
+  public Vector3 Color;
+  public Vector2 Uv;
+}

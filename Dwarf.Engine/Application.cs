@@ -72,6 +72,8 @@ public class Application {
   private bool _calculationShouldClose = false;
   private bool _renderShouldClose = false;
 
+  private Skybox _skybox = null!;
+
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
@@ -127,6 +129,8 @@ public class Application {
     _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
     _systems.PhysicsSystem?.Init(objs3D);
+
+    _skybox = new(_device, _textureManager, _renderer, _globalSetLayout.GetDescriptorSetLayout());
 
     MasterAwake(Entity.GetScripts(_entities));
     _onLoad?.Invoke();
@@ -248,6 +252,7 @@ public class Application {
       // render
       _renderer.BeginSwapchainRenderPass(commandBuffer);
       _onRender?.Invoke();
+      _skybox.Render(_currentFrameInfo);
       _systems.UpdateSystems(_entities.ToArray(), _currentFrameInfo);
       _renderer.EndSwapchainRenderPass(commandBuffer);
       _renderer.EndFrame();
@@ -395,6 +400,8 @@ public class Application {
   }
 
   private void Cleanup() {
+    _skybox?.Dispose();
+
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
       entities[i].GetComponent<Sprite>()?.Dispose();
@@ -416,27 +423,14 @@ public class Application {
   }
 
   private void Collect() {
-    var didChange = false;
-
     vkDeviceWaitIdle(_device.LogicalDevice);
     vkQueueWaitIdle(_device.PresentQueue);
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
-        didChange = true;
-        // _calculationShouldClose = true;
         _entities[i].DisposeEverything();
-        Application.Instance.RemoveEntity(_entities[i].EntityID);
+        RemoveEntity(_entities[i].EntityID);
       }
     }
-
-    /*
-    if (didChange) {
-      _calculationThread?.Join();
-      _calculationThread = new Thread(CalculationLoop);
-      _calculationThread.Start();
-      _calculationShouldClose = false;
-    }
-    */
   }
 
   public Device Device => _device;

@@ -1,0 +1,282 @@
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
+using System.Runtime.InteropServices;
+
+using Dwarf.Vulkan;
+
+using Vortice.Vulkan;
+using static Vortice.Vulkan.Vulkan;
+using StbImageSharp;
+
+namespace Dwarf.Engine;
+public class CubeMapTexture : Texture {
+  private string[] _paths = [];
+  private PackedTexture _cubemapPack;
+
+  public CubeMapTexture(
+    Device device,
+    int width,
+    int height,
+    string[] paths,
+    string textureName = ""
+  ) : base(device, width, height, textureName) {
+    _paths = paths;
+
+    var textures = ImageUtils.LoadTextures(_paths);
+    _cubemapPack = ImageUtils.PackImage(textures);
+    SetTextureData([.. _cubemapPack.ByteArray]);
+  }
+
+  public static new async Task<ImageResult> LoadDataFromPath(string path, int flip = 1) {
+    return await Texture.LoadDataFromPath(path, flip);
+  }
+
+  public void SetTextureData(byte[] data) {
+    var stagingBuffer = new Vulkan.Buffer(
+      _device,
+      (ulong)_cubemapPack.Size,
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
+
+    stagingBuffer.Map();
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.Unmap();
+
+    ProcessTexture(stagingBuffer);
+
+    stagingBuffer.Dispose();
+  }
+
+  public void SetTextureData(nint dataPtr) {
+    var stagingBuffer = new Vulkan.Buffer(
+      _device,
+      (ulong)_cubemapPack.Size,
+      VkBufferUsageFlags.TransferSrc,
+      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+    );
+
+    var data = new byte[_cubemapPack.Size];
+    Marshal.Copy(dataPtr, data, 0, data.Length);
+    if (MemoryUtils.IsNull(data)) {
+      Logger.Warn($"[Texture Bytes] Memory is null");
+      return;
+    }
+
+    stagingBuffer.Map();
+    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.Unmap();
+
+    ProcessTexture(stagingBuffer);
+
+    stagingBuffer.Dispose();
+  }
+
+  private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+    unsafe {
+      if (_textureImage.IsNotNull) {
+        vkDeviceWaitIdle(_device.LogicalDevice);
+        vkDestroyImage(_device.LogicalDevice, _textureImage);
+      }
+
+      if (_textureImageMemory.IsNotNull) {
+        vkDeviceWaitIdle(_device.LogicalDevice);
+        vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+      }
+    }
+
+    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Srgb, out _textureImage, out _textureImageMemory);
+    HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Srgb, 1);
+  }
+
+  private unsafe static void CreateImage(
+    Device device,
+    uint width,
+    uint height,
+    VkFormat format,
+    out VkImage textureImage,
+    out VkDeviceMemory textureImageMemory
+  ) {
+    var imageInfo = new VkImageCreateInfo();
+    imageInfo.imageType = VkImageType.Image2D;
+    imageInfo.format = format;
+    imageInfo.mipLevels = 1;
+    imageInfo.samples = VkSampleCountFlags.Count1;
+    imageInfo.tiling = VkImageTiling.Optimal;
+    imageInfo.sharingMode = VkSharingMode.Exclusive;
+    imageInfo.initialLayout = VkImageLayout.Undefined;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.usage = VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled;
+    imageInfo.extent.depth = 1;
+
+    // Cube faces count as array layers in Vulkan
+    imageInfo.arrayLayers = 6;
+    // This flag is required for cube map images
+    imageInfo.flags = VkImageCreateFlags.CubeCompatible;
+
+    vkCreateImage(device.LogicalDevice, &imageInfo, null, out textureImage).CheckResult();
+    vkGetImageMemoryRequirements(device.LogicalDevice, textureImage, out VkMemoryRequirements memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = new();
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, VkMemoryPropertyFlags.DeviceLocal);
+
+    vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
+    vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();
+  }
+
+  private unsafe void HandleCubemap(VkBuffer stagingBuffer, VkFormat format, uint mipLevels) {
+    var copyCmd = _device.CreateCommandBuffer(VkCommandBufferLevel.Primary, true);
+
+    var bufferCopyRegions = new List<VkBufferImageCopy>();
+    uint offset = 0;
+
+    for (uint face = 0; face < 6; face++) {
+      for (uint level = 0; level < mipLevels; level++) {
+        // Calculate offset into staging buffer for the current mip level and face
+        // Handle Offsets
+
+        uint mipWidth = (uint)System.Math.Max(1, _width >> (int)level);
+        uint mipHeight = (uint)System.Math.Max(1, _height >> (int)level);
+        uint mipSize = mipWidth * mipHeight * 4;
+
+        var bufferCopyRegion = new VkBufferImageCopy();
+        bufferCopyRegion.imageSubresource.aspectMask = VkImageAspectFlags.Color;
+        bufferCopyRegion.imageSubresource.mipLevel = level;
+        bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+        bufferCopyRegion.imageSubresource.layerCount = 1;
+        bufferCopyRegion.imageExtent.width = (uint)(_width >> (int)level);
+        bufferCopyRegion.imageExtent.height = (uint)(_height >> (int)level);
+        bufferCopyRegion.imageExtent.depth = 1;
+        bufferCopyRegion.bufferOffset = offset;
+        bufferCopyRegions.Add(bufferCopyRegion);
+
+        offset += (uint)_cubemapPack.Headers[face].Size;
+      }
+    }
+
+    var subresourceRange = new VkImageSubresourceRange();
+    subresourceRange.aspectMask = VkImageAspectFlags.Color;
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = mipLevels;
+    subresourceRange.layerCount = 6;
+
+    SetImageLayout(
+      copyCmd,
+      _textureImage,
+      VkImageLayout.Undefined,
+      VkImageLayout.TransferDstOptimal,
+      subresourceRange
+    );
+    fixed (VkBufferImageCopy* imageCopyPtr = bufferCopyRegions.ToArray()) {
+      vkCmdCopyBufferToImage(
+        copyCmd,
+        stagingBuffer,
+        _textureImage,
+        VkImageLayout.TransferDstOptimal,
+        (uint)bufferCopyRegions.Count,
+        imageCopyPtr
+      );
+    }
+
+    SetImageLayout(
+      copyCmd,
+      _textureImage,
+      VkImageLayout.TransferDstOptimal,
+      VkImageLayout.ShaderReadOnlyOptimal,
+      subresourceRange
+    );
+
+    _device.FlushCommandBuffer(copyCmd, _device.GraphicsQueue, true);
+
+    // create sampler
+    var samplerInfo = new VkSamplerCreateInfo();
+    samplerInfo.magFilter = VkFilter.Linear;
+    samplerInfo.minFilter = VkFilter.Linear;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode.Linear;
+    samplerInfo.addressModeU = VkSamplerAddressMode.ClampToEdge;
+    samplerInfo.addressModeV = samplerInfo.addressModeU;
+    samplerInfo.addressModeW = samplerInfo.addressModeU;
+    samplerInfo.mipLodBias = 0;
+    samplerInfo.compareOp = VkCompareOp.Never;
+    samplerInfo.minLod = 0;
+    samplerInfo.maxLod = mipLevels;
+    samplerInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
+    samplerInfo.maxAnisotropy = 1;
+    if (_device.Features.samplerAnisotropy) {
+      samplerInfo.maxAnisotropy = _device.Properties.limits.maxSamplerAnisotropy;
+      samplerInfo.anisotropyEnable = true;
+    }
+    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _imageSampler).CheckResult();
+
+    // create image view
+    var viewInfo = new VkImageViewCreateInfo();
+    // cubemap view type
+    viewInfo.viewType = VkImageViewType.ImageCube;
+    viewInfo.format = format;
+    viewInfo.subresourceRange = new(VkImageAspectFlags.Color, 0, 1, 0, 1);
+    // 6 array layers (faces)
+    viewInfo.subresourceRange.layerCount = 6;
+    // number of mip levels
+    viewInfo.subresourceRange.levelCount = mipLevels;
+    viewInfo.image = _textureImage;
+    vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _imageView).CheckResult();
+  }
+
+  private static void SetImageLayout(
+    VkCommandBuffer commandBuffer,
+    VkImage image,
+    VkImageLayout oldImageLayout,
+    VkImageLayout newImageLayout,
+    VkImageSubresourceRange subresourceRange,
+    VkPipelineStageFlags srcStageFlags = VkPipelineStageFlags.AllCommands,
+    VkPipelineStageFlags dstStageFlags = VkPipelineStageFlags.AllCommands
+  ) {
+    var imageMemoryBarrier = new VkImageMemoryBarrier();
+    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.oldLayout = oldImageLayout;
+    imageMemoryBarrier.newLayout = newImageLayout;
+    imageMemoryBarrier.image = image;
+    imageMemoryBarrier.subresourceRange = subresourceRange;
+
+    _ = oldImageLayout switch {
+      VkImageLayout.Undefined => imageMemoryBarrier.srcAccessMask = 0,
+      VkImageLayout.Preinitialized => imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite,
+      VkImageLayout.ColorAttachmentOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.ColorAttachmentWrite,
+      VkImageLayout.DepthStencilAttachmentOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite,
+      VkImageLayout.TransferSrcOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferRead,
+      VkImageLayout.TransferDstOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferWrite,
+      VkImageLayout.ShaderReadOnlyOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.ShaderRead,
+      _ => imageMemoryBarrier.dstAccessMask = VkAccessFlags.None
+    };
+
+    _ = newImageLayout switch {
+      VkImageLayout.TransferDstOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferWrite,
+      VkImageLayout.TransferSrcOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferRead,
+      VkImageLayout.ColorAttachmentOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.ColorAttachmentWrite,
+      VkImageLayout.DepthStencilAttachmentOptimal => imageMemoryBarrier.dstAccessMask |= VkAccessFlags.DepthStencilAttachmentWrite,
+      _ => imageMemoryBarrier.dstAccessMask = VkAccessFlags.None
+    };
+
+    if (newImageLayout == VkImageLayout.ShaderReadOnlyOptimal) {
+      if (imageMemoryBarrier.srcAccessMask == 0) {
+        imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite | VkAccessFlags.TransferWrite;
+      }
+      imageMemoryBarrier.dstAccessMask = VkAccessFlags.ShaderRead;
+    }
+
+    unsafe {
+      vkCmdPipelineBarrier(
+        commandBuffer,
+        srcStageFlags,
+        dstStageFlags,
+        0,
+        0, null,
+        0, null,
+        1, &imageMemoryBarrier
+     );
+    }
+  }
+}

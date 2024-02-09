@@ -16,7 +16,7 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private MotionQuality _motionQuality = MotionQuality.LinearCast;
+  private MotionQuality _motionQuality = MotionQuality.Discrete;
   private PrimitiveType _primitiveType = PrimitiveType.None;
   private float _inputRadius = 0.0f;
   private bool _flip = false;

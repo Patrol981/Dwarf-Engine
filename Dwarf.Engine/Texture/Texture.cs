@@ -7,8 +7,6 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
-using OpenTK.Compute.OpenCL;
-
 using StbImageSharp;
 
 using Vortice.Vulkan;
@@ -19,16 +17,16 @@ namespace Dwarf.Engine;
 
 public class Texture : IDisposable {
   public readonly string TextureName;
-  private readonly Device _device = null!;
+  protected readonly Device _device = null!;
 
   internal VkImage _textureImage = VkImage.Null;
   internal VkDeviceMemory _textureImageMemory = VkDeviceMemory.Null;
   internal VkImageView _imageView = VkImageView.Null;
   internal VkSampler _imageSampler = VkSampler.Null;
 
-  private int _width = 0;
-  private int _height = 0;
-  private int _size = 0;
+  protected int _width = 0;
+  protected int _height = 0;
+  protected int _size = 0;
 
   public Texture(Device device, int width, int height, string textureName = "") {
     _device = device;
@@ -39,7 +37,7 @@ public class Texture : IDisposable {
     _size = _width * _height * 4;
   }
 
-  public void SetTextureData(nint dataPtr) {
+  public void SetTextureData(nint dataPtr, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_size,
@@ -58,10 +56,10 @@ public class Texture : IDisposable {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
-    ProcessTexture(stagingBuffer);
+    ProcessTexture(stagingBuffer, createFlags);
   }
 
-  public void SetTextureData(byte[] data) {
+  public void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_size,
@@ -73,10 +71,10 @@ public class Texture : IDisposable {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
-    ProcessTexture(stagingBuffer);
+    ProcessTexture(stagingBuffer, createFlags);
   }
 
-  private void ProcessTexture(Vulkan.Buffer stagingBuffer) {
+  private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         vkDeviceWaitIdle(_device.LogicalDevice);
@@ -129,10 +127,10 @@ public class Texture : IDisposable {
     CreateSampler(_device, out _imageSampler);
   }
 
-  public static async Task<Texture> LoadFromPath(Device device, string path, int flip = 1) {
+  public static async Task<Texture> LoadFromPath(Device device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
     var textureData = await LoadDataFromPath(path, flip);
     var texture = new Texture(device, textureData.Width, textureData.Height, path);
-    texture.SetTextureData(textureData.Data);
+    texture.SetTextureData(textureData.Data, imageCreateFlags);
     return texture;
   }
 
@@ -162,7 +160,8 @@ public class Texture : IDisposable {
     VkImageUsageFlags imageUsageFlags,
     VkMemoryPropertyFlags memoryPropertyFlags,
     out VkImage textureImage,
-    out VkDeviceMemory textureImageMemory
+    out VkDeviceMemory textureImageMemory,
+    VkImageCreateFlags createFlags = VkImageCreateFlags.None
   ) {
     VkImageCreateInfo imageInfo = new();
     imageInfo.imageType = VkImageType.Image2D;
@@ -178,15 +177,12 @@ public class Texture : IDisposable {
     imageInfo.usage = imageUsageFlags;
     imageInfo.sharingMode = VkSharingMode.Exclusive;
     imageInfo.samples = VkSampleCountFlags.Count1;
-    imageInfo.flags = 0;
+    imageInfo.flags = createFlags;
 
     vkCreateImage(device.LogicalDevice, &imageInfo, null, out textureImage).CheckResult();
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device.LogicalDevice, textureImage, out memRequirements);
+    vkGetImageMemoryRequirements(device.LogicalDevice, textureImage, out VkMemoryRequirements memRequirements);
 
     VkMemoryAllocateInfo allocInfo = new();
-    // allocInfo.sType = VkStructureType.MemoryAllocateInfo;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, memoryPropertyFlags);
 
@@ -310,11 +306,18 @@ public class Texture : IDisposable {
     vkCreateSampler(device.LogicalDevice, &samplerInfo, null, out imageSampler).CheckResult();
   }
 
-  public unsafe void Dispose() {
-    vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
-    vkDestroyImage(_device.LogicalDevice, _textureImage);
-    vkDestroyImageView(_device.LogicalDevice, _imageView);
-    vkDestroySampler(_device.LogicalDevice, _imageSampler);
+  public unsafe virtual void Dispose(bool disposing) {
+    if (disposing) {
+      vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+      vkDestroyImage(_device.LogicalDevice, _textureImage);
+      vkDestroyImageView(_device.LogicalDevice, _imageView);
+      vkDestroySampler(_device.LogicalDevice, _imageSampler);
+    }
+  }
+
+  public void Dispose() {
+    Dispose(true);
+    GC.SuppressFinalize(this);
   }
 
   public VkSampler GetSampler() => _imageSampler;

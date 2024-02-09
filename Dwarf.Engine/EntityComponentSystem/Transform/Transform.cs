@@ -44,6 +44,21 @@ public class Transform : Component {
     Rotation.X += rotation.X;
     Rotation.Y += rotation.Y;
     Rotation.Z += rotation.Z;
+
+    if (Rotation.X > 360) {
+      var offset = Rotation.X - 360;
+      Rotation.X = 0 + offset;
+    }
+
+    if (Rotation.Y > 360) {
+      var offset = Rotation.Y - 360;
+      Rotation.Y = 0 + offset;
+    }
+
+    if (Rotation.Z > 360) {
+      var offset = Rotation.Z - 360;
+      Rotation.Z = 0 + offset;
+    }
   }
 
   private Matrix4x4 GetMatrix() {

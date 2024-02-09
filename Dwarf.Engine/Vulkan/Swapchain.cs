@@ -32,7 +32,7 @@ public class Swapchain : IDisposable {
 
   private int _currentFrame = 0;
 
-  private UploadContext _uploadContext;
+  private readonly object _swapchainLock = new();
 
   public Swapchain(Device device, VkExtent2D extent) {
     _device = device;
@@ -347,56 +347,58 @@ public class Swapchain : IDisposable {
   }
 
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
-    if (_imagesInFlight[imageIndex] != VkFence.Null) {
-      vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
-    }
-    _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+    lock (_swapchainLock) {
+      if (_imagesInFlight[imageIndex] != VkFence.Null) {
+        vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
+      }
+      _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
-    VkSubmitInfo submitInfo = new();
+      VkSubmitInfo submitInfo = new();
 
-    VkSemaphore[] waitSemaphores = new VkSemaphore[1];
-    waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
+      VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
+      waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
 
-    VkPipelineStageFlags[] waitStages = new VkPipelineStageFlags[1];
-    waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
-    submitInfo.waitSemaphoreCount = 1;
-    fixed (VkSemaphore* waitSemaphoresPtr = waitSemaphores)
-    fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
-      submitInfo.pWaitSemaphores = waitSemaphoresPtr;
-      // submitInfo.pWaitDstStageMask = waitStagesPtr;
-      submitInfo.pWaitDstStageMask = null;
-    }
+      VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
+      waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+      submitInfo.waitSemaphoreCount = 1;
+      // fixed (VkSemaphore* waitSemaphoresPtr = waitSemaphores)
+      // fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
+      submitInfo.pWaitSemaphores = waitSemaphores;
+      submitInfo.pWaitDstStageMask = waitStages;
+      // submitInfo.pWaitDstStageMask = null;
+      // }
 
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = buffers;
-
-    VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
-    fixed (VkSemaphore* signalPtr = signalSemaphores) {
-      submitInfo.signalSemaphoreCount = 1;
-      submitInfo.pSignalSemaphores = signalPtr;
-
-      vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-      _device._mutex.WaitOne();
-      vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
-      _device._mutex.ReleaseMutex();
-
-      VkPresentInfoKHR presentInfo = new() {
-        waitSemaphoreCount = 1,
-        pWaitSemaphores = signalPtr
-      };
+      submitInfo.commandBufferCount = 1;
+      submitInfo.pCommandBuffers = buffers;
 
       VkSwapchainKHR[] swapchains = [_handle];
-      presentInfo.swapchainCount = 1;
-      fixed (VkSwapchainKHR* ptr = swapchains) {
+      VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
+
+      fixed (VkSwapchainKHR* ptr = swapchains)
+      fixed (VkSemaphore* signalPtr = signalSemaphores) {
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalPtr;
+
+        _device._mutex.WaitOne();
+        vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+        vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
+        _device._mutex.ReleaseMutex();
+
+        VkPresentInfoKHR presentInfo = new() {
+          waitSemaphoreCount = 1,
+          pWaitSemaphores = signalPtr
+        };
+
+        presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = ptr;
+
+        presentInfo.pImageIndices = &imageIndex;
+
+        var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
+        _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+        return result;
       }
-
-      presentInfo.pImageIndices = &imageIndex;
-
-      var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
-      _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-      return result;
     }
   }
 

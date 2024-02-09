@@ -21,7 +21,29 @@ public static class Input {
     return keyPressed;
   }
 
-  public unsafe static bool GetMouseButtonDown(MouseButtonMap.Buttons button) {
+  public static bool GetMouseButtonDown(MouseButtonMap.Buttons button) {
+    var mouseState = MouseState.GetInstance();
+    bool mouseBtnPressed = false;
+
+    switch (button) {
+      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_LEFT:
+        mouseBtnPressed = mouseState.MouseButtons.Left;
+        mouseState.MouseButtons.Left = false;
+        return mouseBtnPressed;
+      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
+        mouseBtnPressed = mouseState.MouseButtons.Middle;
+        mouseState.MouseButtons.Middle = false;
+        return mouseBtnPressed;
+      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_RIGHT:
+        mouseBtnPressed = mouseState.MouseButtons.Right;
+        mouseState.MouseButtons.Right = false;
+        return mouseBtnPressed;
+      default:
+        return mouseBtnPressed;
+    }
+  }
+
+  public unsafe static bool GetMouseButton(MouseButtonMap.Buttons button) {
     if (glfwGetMouseButton(WindowState.s_Window.GLFWwindow, (int)button) == (int)MouseButtonMap.Action.GLFW_PRESS) {
       return true;
     }

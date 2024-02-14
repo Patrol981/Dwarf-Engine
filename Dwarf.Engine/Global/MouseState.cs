@@ -26,6 +26,11 @@ public sealed class MouseState {
     Right = false,
     Middle = false,
   };
+  private MouseButtons _quickStateMouseButtons = new() {
+    Left = false,
+    Right = false,
+    Middle = false,
+  };
 
   public unsafe static void MouseCallback(GLFWwindow* window, double xpos, double ypos) {
     GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
@@ -45,12 +50,15 @@ public sealed class MouseState {
         switch (button) {
           case (int)Buttons.GLFW_MOUSE_BUTTON_LEFT:
             s_instance._mouseButtons.Left = true;
+            s_instance._quickStateMouseButtons.Left = true;
             break;
           case (int)Buttons.GLFW_MOUSE_BUTTON_RIGHT:
             s_instance._mouseButtons.Right = true;
+            s_instance._quickStateMouseButtons.Right = true;
             break;
           case (int)Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
             s_instance._mouseButtons.Middle = true;
+            s_instance._quickStateMouseButtons.Middle = true;
             break;
           default:
             Logger.Error("Unknown mouse button key");
@@ -61,12 +69,15 @@ public sealed class MouseState {
         switch (button) {
           case (int)Buttons.GLFW_MOUSE_BUTTON_LEFT:
             // s_instance._mouseButtons.Left = false;
+            s_instance._quickStateMouseButtons.Left = false;
             break;
           case (int)Buttons.GLFW_MOUSE_BUTTON_RIGHT:
             // s_instance._mouseButtons.Right = false;
+            s_instance._quickStateMouseButtons.Right = false;
             break;
           case (int)Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
             // s_instance._mouseButtons.Middle = false;
+            s_instance._quickStateMouseButtons.Middle = false;
             break;
           default:
             Logger.Error("Unknown mouse button key");
@@ -92,6 +103,10 @@ public sealed class MouseState {
   public MouseButtons MouseButtons {
     get { return _mouseButtons; }
     set { _mouseButtons = value; }
+  }
+
+  public MouseButtons QuickStateMouseButtons {
+    get { return _quickStateMouseButtons; }
   }
 
   public static MouseState GetInstance() {

@@ -225,7 +225,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public static (Entity?, Entity?) GetCollisionData(BodyID body1, BodyID body2) {
-    var entities = Application.Instance.GetEntities().Where(x => x.HasComponent<Rigidbody>());
+    var entities = Application.Instance.GetEntities().Where(x => x.HasComponent<Rigidbody>() && !x.CanBeDisposed);
     var first = entities.Where(x => x.GetComponent<Rigidbody>()._bodyId == body1).FirstOrDefault();
     var second = entities.Where(x => x.GetComponent<Rigidbody>()._bodyId == body2).FirstOrDefault();
 

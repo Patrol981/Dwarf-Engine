@@ -20,7 +20,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private DescriptorWriter _dynamicWriter = null!;
 
-
   private List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
   private Vulkan.Buffer _indirectCommandBuffer = null!;
 
@@ -84,7 +83,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     };
     VkDescriptorSet set;
     unsafe {
-      _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+      _ = new DescriptorWriter(_textureSetLayout, _descriptorPool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
     }
@@ -107,18 +106,20 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(2000)
-      // .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);
 
+    /*
     _texturePool = new DescriptorPool.Builder(_device)
       .SetMaxSets((uint)_texturesCount)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
+    */
 
     _textureSets = new();
 
@@ -328,7 +329,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _device.WaitDevice();
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
-    _texturePool?.FreeDescriptors(_textureSets);
+    // _texturePool?.FreeDescriptors(_textureSets);
 
     // _indirectCommandBuffer?.Dispose();
 

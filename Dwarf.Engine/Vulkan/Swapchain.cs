@@ -390,7 +390,7 @@ public class Swapchain : IDisposable {
         vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
         _device._mutex.WaitOne();
         try {
-          vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
+          vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
         } finally {
           _device._mutex.ReleaseMutex();
         }

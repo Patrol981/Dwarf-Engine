@@ -39,6 +39,8 @@ public unsafe class Window : IDisposable {
   private Vector2I _windowSize;
   private bool _frambufferWindowResized = false;
 
+  public event EventHandler OnResizedEventDispatcher;
+
   // private static bool EnableValidationLayers = true;
 
   public Window(int width, int height, string windowName) {
@@ -139,6 +141,11 @@ public unsafe class Window : IDisposable {
   private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
     WindowState.s_Window.FramebufferResized = true;
     WindowState.s_Window.Extent = new VkExtent2D((uint)width, (uint)height);
+    WindowState.s_Window.OnResizedEvent(null!);
+  }
+
+  private void OnResizedEvent(EventArgs e) {
+    WindowState.s_Window.OnResizedEventDispatcher?.Invoke(this, e);
   }
 
   public void Dispose() {

@@ -37,6 +37,7 @@ public class Device : IDisposable {
   public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
+  public List<string> DeviceExtensions { get; private set; }
 
   internal Mutex _mutex = new();
 
@@ -250,7 +251,10 @@ public class Device : IDisposable {
   public unsafe void WaitDevice() {
     _mutex.WaitOne();
     try {
-      vkDeviceWaitIdle(_logicalDevice).CheckResult();
+      var result = vkDeviceWaitIdle(_logicalDevice);
+      if (result == VkResult.ErrorDeviceLost) {
+        throw new VkException("Device Lost!");
+      }
     } finally {
       _mutex.ReleaseMutex();
     }
@@ -266,7 +270,7 @@ public class Device : IDisposable {
   public unsafe void WaitQueue(VkQueue queue) {
     _mutex.WaitOne();
     try {
-      vkQueueWaitIdle(queue).CheckResult();
+      vkQueueWaitIdle(queue);
     } finally {
       _mutex.ReleaseMutex();
     }
@@ -502,6 +506,7 @@ public class Device : IDisposable {
     createInfo.ppEnabledExtensionNames = deviceExtensionNames;
 
     Features = deviceFeatures;
+    DeviceExtensions = enabledExtensions;
 
     var result = vkCreateDevice(_physicalDevice, &createInfo, null, out _logicalDevice);
     if (result != VkResult.Success) throw new Exception("Failed to create a device!");

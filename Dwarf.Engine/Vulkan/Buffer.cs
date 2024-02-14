@@ -1,3 +1,5 @@
+using Dwarf.Extensions.Logging;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -67,11 +69,14 @@ public unsafe class Buffer : IDisposable {
     }
   }
 
+  public void AddToMapped(int value) {
+    _mapped += value;
+  }
+
   public void Unmap() {
     if (_mapped != IntPtr.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
       _mapped = IntPtr.Zero;
-      // GC.Collect();
     }
   }
 
@@ -79,6 +84,10 @@ public unsafe class Buffer : IDisposable {
     if (size == VK_WHOLE_SIZE) {
       VkUtils.MemCopy((IntPtr)_mapped, data, (int)_bufferSize);
     } else {
+      if (size <= 0) {
+        // Logger.Warn("[Buffer] Size of an write is less or equal to 0");
+        return;
+      }
       char* memOffset = (char*)_mapped;
       memOffset += offset;
       VkUtils.MemCopy((IntPtr)memOffset, data, (int)size);

@@ -162,7 +162,7 @@ public class CubeMapTexture : Texture {
     subresourceRange.levelCount = mipLevels;
     subresourceRange.layerCount = 6;
 
-    SetImageLayout(
+    VkUtils.SetImageLayout(
       copyCmd,
       _textureImage,
       VkImageLayout.Undefined,
@@ -180,7 +180,7 @@ public class CubeMapTexture : Texture {
       );
     }
 
-    SetImageLayout(
+    VkUtils.SetImageLayout(
       copyCmd,
       _textureImage,
       VkImageLayout.TransferDstOptimal,
@@ -222,61 +222,5 @@ public class CubeMapTexture : Texture {
     viewInfo.subresourceRange.levelCount = mipLevels;
     viewInfo.image = _textureImage;
     vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _imageView).CheckResult();
-  }
-
-  private static void SetImageLayout(
-    VkCommandBuffer commandBuffer,
-    VkImage image,
-    VkImageLayout oldImageLayout,
-    VkImageLayout newImageLayout,
-    VkImageSubresourceRange subresourceRange,
-    VkPipelineStageFlags srcStageFlags = VkPipelineStageFlags.AllCommands,
-    VkPipelineStageFlags dstStageFlags = VkPipelineStageFlags.AllCommands
-  ) {
-    var imageMemoryBarrier = new VkImageMemoryBarrier();
-    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    imageMemoryBarrier.oldLayout = oldImageLayout;
-    imageMemoryBarrier.newLayout = newImageLayout;
-    imageMemoryBarrier.image = image;
-    imageMemoryBarrier.subresourceRange = subresourceRange;
-
-    _ = oldImageLayout switch {
-      VkImageLayout.Undefined => imageMemoryBarrier.srcAccessMask = 0,
-      VkImageLayout.Preinitialized => imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite,
-      VkImageLayout.ColorAttachmentOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.ColorAttachmentWrite,
-      VkImageLayout.DepthStencilAttachmentOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite,
-      VkImageLayout.TransferSrcOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferRead,
-      VkImageLayout.TransferDstOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferWrite,
-      VkImageLayout.ShaderReadOnlyOptimal => imageMemoryBarrier.srcAccessMask = VkAccessFlags.ShaderRead,
-      _ => imageMemoryBarrier.dstAccessMask = VkAccessFlags.None
-    };
-
-    _ = newImageLayout switch {
-      VkImageLayout.TransferDstOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferWrite,
-      VkImageLayout.TransferSrcOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferRead,
-      VkImageLayout.ColorAttachmentOptimal => imageMemoryBarrier.dstAccessMask = VkAccessFlags.ColorAttachmentWrite,
-      VkImageLayout.DepthStencilAttachmentOptimal => imageMemoryBarrier.dstAccessMask |= VkAccessFlags.DepthStencilAttachmentWrite,
-      _ => imageMemoryBarrier.dstAccessMask = VkAccessFlags.None
-    };
-
-    if (newImageLayout == VkImageLayout.ShaderReadOnlyOptimal) {
-      if (imageMemoryBarrier.srcAccessMask == 0) {
-        imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite | VkAccessFlags.TransferWrite;
-      }
-      imageMemoryBarrier.dstAccessMask = VkAccessFlags.ShaderRead;
-    }
-
-    unsafe {
-      vkCmdPipelineBarrier(
-        commandBuffer,
-        srcStageFlags,
-        dstStageFlags,
-        0,
-        0, null,
-        0, null,
-        1, &imageMemoryBarrier
-     );
-    }
   }
 }

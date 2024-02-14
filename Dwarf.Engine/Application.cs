@@ -15,6 +15,7 @@ using static Vortice.Vulkan.Vulkan;
 using static Dwarf.GLFW.GLFW;
 using Dwarf.Engine.Global;
 using Dwarf.Rendering;
+using ImGuiNET;
 
 namespace Dwarf.Engine;
 
@@ -74,6 +75,7 @@ public class Application {
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
+  private ImGuiController _imguiController = null!;
 
   public Application(
     string appName = "Dwarf Vulkan",
@@ -132,6 +134,9 @@ public class Application {
     _systems.PhysicsSystem?.Init(objs3D);
 
     _skybox = new(_device, _textureManager, _renderer, _globalSetLayout.GetDescriptorSetLayout());
+    _imguiController = new(_device, _renderer);
+    _imguiController.Init((int)_window.Extent.width, (int)_window.Extent.height);
+    // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
     MasterAwake(Entity.GetScripts(_entities));
     _onLoad?.Invoke();
@@ -207,6 +212,32 @@ public class Application {
     }
   }
 
+  private void UpdateUI() {
+
+
+    /*
+    
+
+    ImGui.Begin(" ",
+      ImGuiWindowFlags.NoMove |
+      ImGuiWindowFlags.NoResize |
+      ImGuiWindowFlags.NoCollapse |
+      ImGuiWindowFlags.NoTitleBar
+    );
+    */
+    var halfExtent = ImGui.GetIO().DisplaySize / 2;
+
+    ImGui.SetNextWindowPos(new(halfExtent.X, 0));
+    ImGui.SetNextWindowSize(ImGui.GetIO().DisplaySize / 2);
+
+    ImGui.ShowDemoWindow();
+
+
+
+    //ImGui.Begin("Hello World", ImGuiWindowFlags.NoTitleBar);
+    //ImGui.End();
+  }
+
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
@@ -231,6 +262,11 @@ public class Application {
           break;
       }
     }
+
+
+    // _imguiController.NewFrame();
+    // _imguiController.UpdateBuffers();
+    // _imguiController.UpdateImBuffers()
 
 
     var commandBuffer = _renderer.BeginFrame();
@@ -260,9 +296,17 @@ public class Application {
 
       // render
       _renderer.BeginSwapchainRenderPass(commandBuffer);
+
       _onRender?.Invoke();
       _skybox.Render(currentFrame);
       _systems.UpdateSystems(_entities.ToArray(), currentFrame);
+
+      // _imguiController.DrawFrame(commandBuffer);
+
+      _imguiController.Update(Time.DeltaTime);
+      UpdateUI();
+      _imguiController.Render(currentFrame);
+
       _renderer.EndSwapchainRenderPass(commandBuffer);
       _renderer.EndFrame();
 
@@ -433,6 +477,7 @@ public class Application {
 
   private void Cleanup() {
     _skybox?.Dispose();
+    _imguiController?.Dispose();
 
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {

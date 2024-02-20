@@ -9,10 +9,10 @@ layout (location = 0) out vec4 outColor;
 
 struct Material {
   vec3 color;
-  float shininess;
   vec3 ambient;
   vec3 diffuse;
   vec3 specular;
+  float shininess;
 };
 
 layout (push_constant) uniform Push {
@@ -58,6 +58,6 @@ void main() {
 
   // output
   // vec3 result = (ambient + diffuse + specular) * fragColor * modelUBO.material.color;
-  vec3 result = (ambient + diffuse) * fragColor * modelUBO.material.color;
+  vec3 result = (ambient + diffuse + specular) * fragColor * modelUBO.material.color;
   outColor = texture(textureSampler, texCoord) * vec4(result, 1.0);
 }

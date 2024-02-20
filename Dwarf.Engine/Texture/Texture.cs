@@ -91,7 +91,7 @@ public class Texture : IDisposable {
       _device,
       (uint)_width,
       (uint)_height,
-      VkFormat.R8G8B8A8Srgb,
+      VkFormat.R8G8B8A8Unorm,
       VkImageTiling.Optimal,
       VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
       VkMemoryPropertyFlags.DeviceLocal,
@@ -262,7 +262,7 @@ public class Texture : IDisposable {
   }
 
   private static void CreateTextureImageView(Device device, VkImage textureImage, out VkImageView imageView) {
-    imageView = CreateImageView(device, VkFormat.R8G8B8A8Srgb, textureImage);
+    imageView = CreateImageView(device, VkFormat.R8G8B8A8Unorm, textureImage);
   }
 
   private unsafe static VkImageView CreateImageView(Device device, VkFormat format, VkImage textureImage) {

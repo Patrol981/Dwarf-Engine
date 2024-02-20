@@ -85,8 +85,8 @@ public class CubeMapTexture : Texture {
       }
     }
 
-    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Srgb, out _textureImage, out _textureImageMemory);
-    HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Srgb, 1);
+    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Unorm, out _textureImage, out _textureImageMemory);
+    HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, 1);
   }
 
   private unsafe static void CreateImage(

@@ -342,10 +342,6 @@ public class Swapchain : IDisposable {
     return result;
   }
 
-  public unsafe void ImmediateSubmit(VkCommandBuffer commandBuffer) {
-    throw new NotImplementedException();
-  }
-
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     lock (_swapchainLock) {
       if (_imagesInFlight[imageIndex] != VkFence.Null) {
@@ -428,14 +424,15 @@ public class Swapchain : IDisposable {
     // If the surface format list only includes one entry with VK_FORMAT_UNDEFINED,
     // there is no preferred format, so we assume VK_FORMAT_B8G8R8A8_UNORM
     if ((availableFormats.Length == 1) && (availableFormats[0].format == VkFormat.Undefined)) {
-      return new VkSurfaceFormatKHR(VkFormat.B8G8R8A8Unorm, availableFormats[0].colorSpace);
+      return new VkSurfaceFormatKHR(VkFormat.R8G8B8A8Unorm, availableFormats[0].colorSpace);
     }
 
     // iterate over the list of available surface format and
     // check for the presence of VK_FORMAT_B8G8R8A8_UNORM
     foreach (VkSurfaceFormatKHR availableFormat in availableFormats) {
-      // B8G8R8A8Unorm
-      if (availableFormat.format == VkFormat.B8G8R8A8Srgb) {
+      // R8G8B8A8Unorm
+      // R8G8B8A8Srgb
+      if (availableFormat.format == VkFormat.R8G8B8A8Unorm) {
         return availableFormat;
       }
     }

@@ -12,10 +12,10 @@ layout (location = 3) out vec2 texCoord;
 
 struct Material {
   vec3 color;
-  float shininess;
   vec3 ambient;
   vec3 diffuse;
   vec3 specular;
+  float shininess;
 };
 
 layout (push_constant) uniform Push {

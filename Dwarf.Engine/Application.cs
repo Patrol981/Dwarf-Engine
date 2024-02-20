@@ -160,7 +160,6 @@ public class Application {
       _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
       MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
-      _onGUI?.Invoke();
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
@@ -211,33 +210,6 @@ public class Application {
       entities[i].Update();
     }
   }
-
-  private void UpdateUI() {
-
-
-    /*
-    
-
-    ImGui.Begin(" ",
-      ImGuiWindowFlags.NoMove |
-      ImGuiWindowFlags.NoResize |
-      ImGuiWindowFlags.NoCollapse |
-      ImGuiWindowFlags.NoTitleBar
-    );
-    */
-    var halfExtent = ImGui.GetIO().DisplaySize / 2;
-
-    ImGui.SetNextWindowPos(new(halfExtent.X, 0));
-    ImGui.SetNextWindowSize(ImGui.GetIO().DisplaySize / 2);
-
-    ImGui.ShowDemoWindow();
-
-
-
-    //ImGui.Begin("Hello World", ImGuiWindowFlags.NoTitleBar);
-    //ImGui.End();
-  }
-
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
@@ -304,7 +276,7 @@ public class Application {
       // _imguiController.DrawFrame(commandBuffer);
 
       _imguiController.Update(Time.DeltaTime);
-      UpdateUI();
+      _onGUI?.Invoke();
       _imguiController.Render(currentFrame);
 
       _renderer.EndSwapchainRenderPass(commandBuffer);

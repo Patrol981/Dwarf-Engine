@@ -245,8 +245,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (entities[i].GetDrawable<IRender3DElement>() is not IRender3DElement targetEntity) continue;
       if (entities[i].CanBeDisposed) continue;
 
+      var materialData = entities[i].GetComponent<Material>().Data;
       var modelUBO = new ModelUniformBufferObject {
-        Material = entities[i].GetComponent<Material>().Data
+        Material = materialData
+        // Color = materialData.Color,
+        // Ambient = materialData.Ambient,
+        // Diffuse = materialData.Diffuse,
+        // Specular = materialData.Specular,
+        // Shininess = materialData.Shininess
       };
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 

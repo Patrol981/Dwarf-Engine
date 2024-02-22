@@ -72,6 +72,13 @@ public class VulkanSwapchain : IDisposable {
   private unsafe void CreateSwapChain() {
     SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
 
+    // TODO : Ducktape solution, prevents from crashing
+    if (swapChainSupport.Capabilities.maxImageExtent.width < 1)
+      swapChainSupport.Capabilities.maxImageExtent.width = _extent.width;
+
+    if (swapChainSupport.Capabilities.maxImageExtent.height < 1)
+      swapChainSupport.Capabilities.maxImageExtent.height = _extent.height;
+
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
     var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
@@ -458,11 +465,10 @@ public class VulkanSwapchain : IDisposable {
     } else {
       VkExtent2D actualExtent = _extent;
 
-      // if (capabilities.minImageExtent.width < 1 || capabilities.minImageExtent.height < 1) return actualExtent;
       actualExtent = new VkExtent2D(
-          Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
-          Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
-          );
+        Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
+        Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
+      );
 
       return actualExtent;
     }

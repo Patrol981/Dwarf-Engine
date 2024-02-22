@@ -152,7 +152,12 @@ public class Application {
 
     while (!_window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
-      glfwPollEvents();
+      if (_window.IsMinimalized) {
+        glfwWaitEvents();
+      } else {
+        glfwPollEvents();
+      }
+
       Time.Tick();
 
       // Render();
@@ -163,6 +168,8 @@ public class Application {
       MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
+
+      // Logger.Info($"Render: {_renderShouldClose}");
     }
 
     _device._mutex.WaitOne();
@@ -312,6 +319,8 @@ public class Application {
     _renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
 
     while (!_renderShouldClose) {
+      if (_window.IsMinimalized) continue;
+
       Render(threadInfo);
     }
 

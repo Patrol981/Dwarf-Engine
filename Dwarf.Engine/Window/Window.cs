@@ -38,8 +38,11 @@ public unsafe class Window : IDisposable {
   private DwarfExtent2D _extent;
   private Vector2I _windowSize;
   private bool _frambufferWindowResized = false;
+  private bool _windowMinimalized = false;
 
   public event EventHandler OnResizedEventDispatcher;
+
+  private readonly object _windowLock = new();
 
   // private static bool EnableValidationLayers = true;
 
@@ -79,6 +82,7 @@ public unsafe class Window : IDisposable {
     glfwSetScrollCallback(_window, MouseState.ScrollCallback);
     glfwSetMouseButtonCallback(_window, MouseState.MouseButtonCallback);
     glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
+    glfwSetWindowIconifyCallback(_window, IconifyCallback);
 
     WindowState.CenterWindow();
     // WindowState.MaximizeWindow();
@@ -146,6 +150,15 @@ public unsafe class Window : IDisposable {
     WindowState.s_Window.OnResizedEvent(null!);
   }
 
+  private static unsafe void IconifyCallback(GLFWwindow* window, int iconified) {
+    if (iconified == 0) {
+      WindowState.s_Window._windowMinimalized = false;
+    } else {
+      WindowState.s_Window._windowMinimalized = true;
+    }
+    Logger.Info($"Window Minimalized: {WindowState.s_Window._windowMinimalized}");
+  }
+
   private void OnResizedEvent(EventArgs e) {
     WindowState.s_Window.OnResizedEventDispatcher?.Invoke(this, e);
   }
@@ -157,6 +170,7 @@ public unsafe class Window : IDisposable {
   }
 
   public bool WasWindowResized() => _frambufferWindowResized;
+  public bool WasWindowMinimalized() => _windowMinimalized;
 
   public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) {
     return glfwCreateWindowSurface(instance, _window, null, surface);
@@ -165,7 +179,20 @@ public unsafe class Window : IDisposable {
   public bool ShouldClose => glfwWindowShouldClose(_window);
   public bool FramebufferResized {
     get { return _frambufferWindowResized; }
-    set { _frambufferWindowResized = value; }
+    private set { _frambufferWindowResized = value; }
+  }
+
+  public bool IsMinimalized {
+    get {
+      lock (_windowLock) {
+        return _windowMinimalized;
+      }
+    }
+    private set {
+      lock (_windowLock) {
+        _windowMinimalized = value;
+      }
+    }
   }
 
   public DwarfExtent2D Extent {

@@ -77,6 +77,7 @@ public unsafe class Renderer : IDisposable {
     var result = _swapchain.SubmitCommandBuffers(&commandBuffer, _imageIndex);
 
     if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || _window.WasWindowResized()) {
+      Logger.Info("Recreate Swapchain Request");
       _window.ResetWindowResizedFlag();
       RecreateSwapchain();
     } else if (result != VkResult.Success) {
@@ -145,7 +146,7 @@ public unsafe class Renderer : IDisposable {
 
   private void RecreateSwapchain() {
     var extent = _window.Extent.ToVkExtent2D();
-    while (extent.width == 0 || extent.height == 0) {
+    while (extent.width == 0 || extent.height == 0 || _window.IsMinimalized) {
       extent = _window.Extent.ToVkExtent2D();
       glfwWaitEvents();
     }

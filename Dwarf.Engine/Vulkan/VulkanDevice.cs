@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
+using Dwarf.AbstractionLayer;
+using Dwarf.Engine;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 
@@ -12,7 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class Device : IDisposable {
+public class VulkanDevice : IDevice {
   private readonly string[] VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
   public static bool s_EnableValidationLayers = true;
   private readonly Window _window;
@@ -41,7 +43,7 @@ public class Device : IDisposable {
 
   internal Mutex _mutex = new();
 
-  public Device(Window window) {
+  public VulkanDevice(Window window) {
     _window = window;
     CreateInstance();
     CreateSurface();
@@ -52,14 +54,14 @@ public class Device : IDisposable {
 
   public unsafe void CreateBuffer(
     ulong size,
-    VkBufferUsageFlags uFlags,
-    VkMemoryPropertyFlags pFlags,
+    BufferUsage uFlags,
+    MemoryProperty pFlags,
     out VkBuffer buffer,
     out VkDeviceMemory bufferMemory
   ) {
     VkBufferCreateInfo bufferInfo = new() {
       size = size,
-      usage = uFlags,
+      usage = (VkBufferUsageFlags)uFlags,
       sharingMode = VkSharingMode.Exclusive
     };
 
@@ -70,7 +72,7 @@ public class Device : IDisposable {
 
     VkMemoryAllocateInfo allocInfo = new() {
       allocationSize = memRequirements.size,
-      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags)
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)pFlags)
     };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out bufferMemory).CheckResult();
@@ -143,14 +145,14 @@ public class Device : IDisposable {
     FlushCommandBuffer(cmdBuffer, queue, _commandPool, free);
   }
 
-  public static unsafe VkSemaphore CreateSemaphore(Device device) {
+  public static unsafe VkSemaphore CreateSemaphore(VulkanDevice device) {
     var semaphoreInfo = new VkSemaphoreCreateInfo();
     var semaphore = new VkSemaphore();
     vkCreateSemaphore(device.LogicalDevice, &semaphoreInfo, null, &semaphore);
     return semaphore;
   }
 
-  public static unsafe void DestroySemaphore(Device device, VkSemaphore semaphore) {
+  public static unsafe void DestroySemaphore(VulkanDevice device, VkSemaphore semaphore) {
     vkDestroySemaphore(device.LogicalDevice, semaphore, null);
   }
 

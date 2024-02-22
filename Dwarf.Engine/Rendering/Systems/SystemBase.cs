@@ -13,7 +13,7 @@ using Dwarf.Engine.EntityComponentSystem;
 
 namespace Dwarf.Engine;
 public abstract class SystemBase {
-  protected readonly Device _device = null!;
+  protected readonly VulkanDevice _device = null!;
   protected readonly Renderer _renderer = null!;
   protected VkDescriptorSetLayout _globalDescriptorSetLayout;
   protected PipelineConfigInfo _pipelineConfigInfo;
@@ -30,7 +30,7 @@ public abstract class SystemBase {
   protected int _texturesCount = 0;
 
   public SystemBase(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!

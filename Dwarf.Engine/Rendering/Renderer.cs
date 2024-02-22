@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine;
+using Dwarf.Engine.Math;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -16,14 +17,14 @@ namespace Dwarf.Engine.Rendering;
 
 public unsafe class Renderer : IDisposable {
   private Window _window = null!;
-  private Device _device = null!;
-  private Swapchain _swapchain = null!;
+  private VulkanDevice _device = null!;
+  private VulkanSwapchain _swapchain = null!;
   private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
 
   private uint _imageIndex = 0;
   private int _frameIndex = 0;
   private bool _isFrameStarted = false;
-  public Renderer(Window window, Device device) {
+  public Renderer(Window window, VulkanDevice device) {
     _window = window;
     _device = device;
     // _swapchain = new Swapchain(_device, _window.Extent);
@@ -143,9 +144,9 @@ public unsafe class Renderer : IDisposable {
   }
 
   private void RecreateSwapchain() {
-    var extent = _window.Extent;
+    var extent = _window.Extent.ToVkExtent2D();
     while (extent.width == 0 || extent.height == 0) {
-      extent = _window.Extent;
+      extent = _window.Extent.ToVkExtent2D();
       glfwWaitEvents();
     }
 
@@ -221,8 +222,8 @@ public unsafe class Renderer : IDisposable {
   }
   public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
   public float AspectRatio => _swapchain.ExtentAspectRatio();
-  public VkExtent2D Extent2D => _swapchain.Extent2D;
+  public DwarfExtent2D Extent2D => _swapchain.Extent2D.FromVkExtent2D();
   public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
   public bool IsFrameStarted => _isFrameStarted;
-  public Swapchain Swapchain => _swapchain;
+  public VulkanSwapchain Swapchain => _swapchain;
 }

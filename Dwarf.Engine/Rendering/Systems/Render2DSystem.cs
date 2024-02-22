@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
@@ -15,7 +16,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   private Vulkan.Buffer _spriteBuffer = null!;
 
   public Render2DSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -63,8 +64,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
         _device,
         (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
         (uint)entities.Length,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
     _descriptorSets = new VkDescriptorSet[entities.Length];

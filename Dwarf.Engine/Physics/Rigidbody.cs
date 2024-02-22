@@ -11,7 +11,7 @@ using Dwarf.Engine.Rendering;
 namespace Dwarf.Engine.Physics;
 
 public class Rigidbody : Component, IDisposable {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
   private BodyInterface _bodyInterface;
 
   private BodyID _bodyId;
@@ -29,7 +29,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Rigidbody() { }
 
-  public Rigidbody(Device device, PrimitiveType colliderShape, float inputRadius, bool kinematic = false, bool flip = false) {
+  public Rigidbody(VulkanDevice device, PrimitiveType colliderShape, float inputRadius, bool kinematic = false, bool flip = false) {
     _primitiveType = colliderShape;
     _device = device;
     _inputRadius = inputRadius;
@@ -40,7 +40,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public Rigidbody(
-    Device device,
+    VulkanDevice device,
     PrimitiveType primitiveType,
     float sizeX,
     float sizeY,
@@ -60,7 +60,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public Rigidbody(
-    Device device,
+    VulkanDevice device,
     PrimitiveType primitiveType,
     float sizeX,
     float sizeY,

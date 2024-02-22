@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
@@ -22,7 +23,7 @@ public class FontStashObject : IDisposable {
   private const int MAX_VERTICES = MAX_SPRITES * 4;
   private const int MAX_INDICES = MAX_SPRITES * 6;
 
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
   private Vulkan.Buffer _vertexBuffer = null!;
   private Vulkan.Buffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
@@ -30,7 +31,7 @@ public class FontStashObject : IDisposable {
 
   private FontMesh _fontMesh;
 
-  public FontStashObject(Device device) {
+  public FontStashObject(VulkanDevice device) {
     _device = device;
 
     _fontMesh = new();
@@ -73,8 +74,8 @@ public class FontStashObject : IDisposable {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -92,8 +93,8 @@ public class FontStashObject : IDisposable {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
   }
 
@@ -106,8 +107,8 @@ public class FontStashObject : IDisposable {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -117,8 +118,8 @@ public class FontStashObject : IDisposable {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);

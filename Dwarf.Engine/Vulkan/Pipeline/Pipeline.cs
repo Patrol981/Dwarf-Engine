@@ -35,7 +35,7 @@ public struct PipelineConfigInfoStruct {
 }
 
 public class Pipeline : IDisposable {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
 
   private VkPipeline _graphicsPipeline;
   private VkShaderModule _vertexShaderModule;
@@ -44,7 +44,7 @@ public class Pipeline : IDisposable {
 
   private readonly object _pipelineLock = new();
 
-  public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
+  public Pipeline(VulkanDevice device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
     _device = device;
     _pipelineProvider = pipelineProvider;
     CreateGraphicsPipeline(vertexName, fragmentName, configInfo);

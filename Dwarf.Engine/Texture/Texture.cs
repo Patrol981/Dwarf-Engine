@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
@@ -17,7 +18,7 @@ namespace Dwarf.Engine;
 
 public class Texture : IDisposable {
   public readonly string TextureName;
-  protected readonly Device _device = null!;
+  protected readonly VulkanDevice _device = null!;
 
   internal VkImage _textureImage = VkImage.Null;
   internal VkDeviceMemory _textureImageMemory = VkDeviceMemory.Null;
@@ -28,7 +29,7 @@ public class Texture : IDisposable {
   protected int _height = 0;
   protected int _size = 0;
 
-  public Texture(Device device, int width, int height, string textureName = "") {
+  public Texture(VulkanDevice device, int width, int height, string textureName = "") {
     _device = device;
     _width = width;
     _height = height;
@@ -41,8 +42,8 @@ public class Texture : IDisposable {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     var data = new byte[_size];
@@ -63,8 +64,8 @@ public class Texture : IDisposable {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map();
@@ -94,7 +95,7 @@ public class Texture : IDisposable {
       VkFormat.R8G8B8A8Unorm,
       VkImageTiling.Optimal,
       VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
-      VkMemoryPropertyFlags.DeviceLocal,
+      MemoryProperty.DeviceLocal,
       out _textureImage,
       out _textureImageMemory
     );
@@ -127,7 +128,7 @@ public class Texture : IDisposable {
     CreateSampler(_device, out _imageSampler);
   }
 
-  public static async Task<Texture> LoadFromPath(Device device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
+  public static async Task<Texture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
     var textureData = await LoadDataFromPath(path, flip);
     var texture = new Texture(device, textureData.Width, textureData.Height, path);
     texture.SetTextureData(textureData.Data, imageCreateFlags);
@@ -152,13 +153,13 @@ public class Texture : IDisposable {
   }
 
   private unsafe static void CreateImage(
-    Device device,
+    VulkanDevice device,
     uint width,
     uint height,
     VkFormat format,
     VkImageTiling tiling,
     VkImageUsageFlags imageUsageFlags,
-    VkMemoryPropertyFlags memoryPropertyFlags,
+    MemoryProperty memoryPropertyFlags,
     out VkImage textureImage,
     out VkDeviceMemory textureImageMemory,
     VkImageCreateFlags createFlags = VkImageCreateFlags.None
@@ -184,13 +185,13 @@ public class Texture : IDisposable {
 
     VkMemoryAllocateInfo allocInfo = new();
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, memoryPropertyFlags);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)memoryPropertyFlags);
 
     vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();
   }
 
-  private unsafe static void CopyBufferToImage(Device device, VkBuffer buffer, VkImage image, int width, int height) {
+  private unsafe static void CopyBufferToImage(VulkanDevice device, VkBuffer buffer, VkImage image, int width, int height) {
     VkCommandBuffer commandBuffer = device.BeginSingleTimeCommands();
 
     VkBufferImageCopy region = new();
@@ -210,7 +211,7 @@ public class Texture : IDisposable {
   }
 
   private unsafe static void CreateImageTransitions(
-    Device device,
+    VulkanDevice device,
     VkImageLayout oldLayout,
     VkImageLayout newLayout,
     VkImage textureImage
@@ -261,11 +262,11 @@ public class Texture : IDisposable {
     device.EndSingleTimeCommands(commandBuffer);
   }
 
-  private static void CreateTextureImageView(Device device, VkImage textureImage, out VkImageView imageView) {
+  private static void CreateTextureImageView(VulkanDevice device, VkImage textureImage, out VkImageView imageView) {
     imageView = CreateImageView(device, VkFormat.R8G8B8A8Unorm, textureImage);
   }
 
-  private unsafe static VkImageView CreateImageView(Device device, VkFormat format, VkImage textureImage) {
+  private unsafe static VkImageView CreateImageView(VulkanDevice device, VkFormat format, VkImage textureImage) {
     VkImageViewCreateInfo viewInfo = new();
     viewInfo.image = textureImage;
     viewInfo.viewType = VkImageViewType.Image2D;
@@ -281,7 +282,7 @@ public class Texture : IDisposable {
     return view;
   }
 
-  private unsafe static void CreateSampler(Device device, out VkSampler imageSampler) {
+  private unsafe static void CreateSampler(VulkanDevice device, out VkSampler imageSampler) {
     VkPhysicalDeviceProperties properties = new();
     vkGetPhysicalDeviceProperties(device.PhysicalDevice, &properties);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -15,10 +15,11 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
 
   private Mesh _mesh = null!;
   private bool _hasIndexBuffer = false;
@@ -33,7 +34,7 @@ public class GuiTexture : Component, IUIElement {
 
   public GuiTexture() { }
 
-  public GuiTexture(Device device) {
+  public GuiTexture(VulkanDevice device) {
     _device = device;
 
     CreateVertexData();
@@ -181,8 +182,8 @@ public class GuiTexture : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -192,8 +193,8 @@ public class GuiTexture : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -210,8 +211,8 @@ public class GuiTexture : Component, IUIElement {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -222,8 +223,8 @@ public class GuiTexture : Component, IUIElement {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);

@@ -35,7 +35,7 @@ public unsafe class Window : IDisposable {
 
   private GLFWwindow* _window;
   private IntPtr _cursor;
-  private VkExtent2D _extent;
+  private DwarfExtent2D _extent;
   private Vector2I _windowSize;
   private bool _frambufferWindowResized = false;
 
@@ -67,7 +67,7 @@ public unsafe class Window : IDisposable {
     glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
     glfwWindowHint((int)WindowHintBool.Resizable, 1);
     _window = glfwCreateWindow(_windowSize.X, _windowSize.Y, windowName, null, null);
-    _extent = new VkExtent2D(_windowSize.X, _windowSize.Y);
+    _extent = new DwarfExtent2D(_windowSize.X, _windowSize.Y);
 
     // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
     //var w = this;
@@ -139,8 +139,10 @@ public unsafe class Window : IDisposable {
   }
 
   private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
+    if (width <= 0 || height <= 0) return;
+    Logger.Info($"RESISING {width} {height}");
     WindowState.s_Window.FramebufferResized = true;
-    WindowState.s_Window.Extent = new VkExtent2D((uint)width, (uint)height);
+    WindowState.s_Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
     WindowState.s_Window.OnResizedEvent(null!);
   }
 
@@ -166,9 +168,9 @@ public unsafe class Window : IDisposable {
     set { _frambufferWindowResized = value; }
   }
 
-  public VkExtent2D Extent {
+  public DwarfExtent2D Extent {
     get { return _extent; }
-    set { _extent = value; }
+    private set { _extent = value; }
   }
   public Vector2I Size => _windowSize;
   public GLFWwindow* GLFWwindow => _window;

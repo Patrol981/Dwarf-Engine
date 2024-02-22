@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -34,7 +34,7 @@ public class Button : Component, I2DCollision, IUIElement {
   public void CheckCollision(object sender, EventArgs e) {
     var camera = CameraState.GetCamera();
     var size = WindowState.s_Window.Extent;
-    var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.width, size.height));
+    var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.Width, size.Height));
     if (collResult) {
       Logger.Info("COLL DETECTED");
     }

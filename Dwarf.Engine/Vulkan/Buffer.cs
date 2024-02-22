@@ -1,3 +1,4 @@
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -9,7 +10,7 @@ namespace Dwarf.Vulkan;
 public unsafe class Buffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
-  private Device _device;
+  private VulkanDevice _device;
   private IntPtr _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
   private VkDeviceMemory _memory = VkDeviceMemory.Null;
@@ -18,15 +19,15 @@ public unsafe class Buffer : IDisposable {
   private ulong _instanceCount;
   private ulong _instanceSize;
   private ulong _alignmentSize;
-  private VkBufferUsageFlags _usageFlags;
-  private VkMemoryPropertyFlags _memoryPropertyFlags;
+  private BufferUsage _usageFlags;
+  private MemoryProperty _memoryPropertyFlags;
 
   public Buffer(
-    Device device,
+    VulkanDevice device,
     ulong instanceSize,
     ulong instanceCount,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags propertyFlags,
+    BufferUsage usageFlags,
+    MemoryProperty propertyFlags,
     ulong minOffsetAlignment = 1
   ) {
     _device = device;
@@ -41,10 +42,10 @@ public unsafe class Buffer : IDisposable {
   }
 
   public Buffer(
-    Device device,
+    VulkanDevice device,
     ulong bufferSize,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags propertyFlags,
+    BufferUsage usageFlags,
+    MemoryProperty propertyFlags,
     ulong minOffsetAlignment = 1
   ) {
     _device = device;
@@ -160,11 +161,11 @@ public unsafe class Buffer : IDisposable {
     return _alignmentSize;
   }
 
-  public VkBufferUsageFlags GetVkBufferUsageFlags() {
+  public BufferUsage GetVkBufferUsageFlags() {
     return _usageFlags;
   }
 
-  public VkMemoryPropertyFlags GetVkMemoryPropertyFlags() {
+  public MemoryProperty GetVkMemoryPropertyFlags() {
     return _memoryPropertyFlags;
   }
 

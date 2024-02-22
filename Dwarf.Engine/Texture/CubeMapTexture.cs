@@ -7,6 +7,7 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine;
 public class CubeMapTexture : Texture {
@@ -14,7 +15,7 @@ public class CubeMapTexture : Texture {
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
-    Device device,
+    VulkanDevice device,
     int width,
     int height,
     string[] paths,
@@ -35,8 +36,8 @@ public class CubeMapTexture : Texture {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_cubemapPack.Size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map();
@@ -52,8 +53,8 @@ public class CubeMapTexture : Texture {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_cubemapPack.Size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     var data = new byte[_cubemapPack.Size];
@@ -90,7 +91,7 @@ public class CubeMapTexture : Texture {
   }
 
   private unsafe static void CreateImage(
-    Device device,
+    VulkanDevice device,
     uint width,
     uint height,
     VkFormat format,
@@ -120,7 +121,7 @@ public class CubeMapTexture : Texture {
 
     VkMemoryAllocateInfo allocInfo = new();
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, VkMemoryPropertyFlags.DeviceLocal);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();

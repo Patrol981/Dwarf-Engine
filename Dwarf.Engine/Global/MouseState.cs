@@ -45,7 +45,7 @@ public sealed class MouseState {
   public unsafe static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     switch (action) {
       case (int)MouseButtonMap.Action.GLFW_PRESS:
-        GetInstance().OnClicked(null!);
+        // GetInstance().OnClicked(null!);
 
         switch (button) {
           case (int)Buttons.GLFW_MOUSE_BUTTON_LEFT:

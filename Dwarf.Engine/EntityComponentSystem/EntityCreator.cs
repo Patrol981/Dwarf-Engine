@@ -175,7 +175,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float radius,
@@ -188,7 +188,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
@@ -203,7 +203,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,

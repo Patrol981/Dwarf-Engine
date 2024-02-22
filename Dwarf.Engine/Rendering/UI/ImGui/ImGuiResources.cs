@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -88,7 +89,7 @@ public partial class ImGuiController {
     vkGetImageMemoryRequirements(_device.LogicalDevice, _fontImage, &memReqs);
     VkMemoryAllocateInfo memAllocInfo = new();
     memAllocInfo.allocationSize = memReqs.size;
-    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, VkMemoryPropertyFlags.DeviceLocal);
+    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, (VkMemoryPropertyFlags)MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(_device.LogicalDevice, &memAllocInfo, null, out _fontMemory).CheckResult();
     vkBindImageMemory(_device.LogicalDevice, _fontImage, _fontMemory, 0).CheckResult();
@@ -108,8 +109,8 @@ public partial class ImGuiController {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)uploadSize,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     _device.WaitDevice();
@@ -216,7 +217,7 @@ public partial class ImGuiController {
     vkGetImageMemoryRequirements(_device.LogicalDevice, _fontImage, &memReqs);
     VkMemoryAllocateInfo memAllocInfo = new();
     memAllocInfo.allocationSize = memReqs.size;
-    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, VkMemoryPropertyFlags.DeviceLocal);
+    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(_device.LogicalDevice, &memAllocInfo, null, out _fontMemory).CheckResult();
     vkBindImageMemory(_device.LogicalDevice, _fontImage, _fontMemory, 0).CheckResult();
@@ -236,8 +237,8 @@ public partial class ImGuiController {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)uploadSize,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     _device.WaitDevice();
@@ -459,15 +460,15 @@ public partial class ImGuiController {
     _vertexBuffer = new(
       _device,
       (ulong)Unsafe.SizeOf<ImDrawVert>(),
-      VkBufferUsageFlags.VertexBuffer,
-      VkMemoryPropertyFlags.HostVisible
+      BufferUsage.VertexBuffer,
+      MemoryProperty.HostVisible
     );
 
     _indexBuffer = new(
       _device,
       (ulong)Unsafe.SizeOf<ImDrawVert>(),
-      VkBufferUsageFlags.IndexBuffer,
-      VkMemoryPropertyFlags.HostVisible
+      BufferUsage.IndexBuffer,
+      MemoryProperty.HostVisible
     );
   }
 

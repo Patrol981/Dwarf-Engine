@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Vulkan;
 
@@ -21,7 +22,7 @@ public class Skybox : IDisposable {
     public TexturedVertex[] Vertices = [];
   }
 
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly TextureManager _textureManager;
   private readonly Renderer _renderer;
   private readonly float[] _vertices = [
@@ -247,7 +248,7 @@ public class Skybox : IDisposable {
   private string[] _cubemapNames = new string[6];
   private CubeMapTexture _cubemapTexture = null!;
 
-  public Skybox(Device device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
+  public Skybox(VulkanDevice device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
     _device = device;
     _textureManager = textureManager;
     _renderer = renderer;
@@ -370,8 +371,8 @@ public class Skybox : IDisposable {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -381,8 +382,8 @@ public class Skybox : IDisposable {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -406,8 +407,8 @@ public class Skybox : IDisposable {
       _device,
       (ulong)Unsafe.SizeOf<SkyboxBufferObject>(),
       1,
-      VkBufferUsageFlags.UniformBuffer,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
       _device.Properties.limits.minUniformBufferOffsetAlignment
     );
   }

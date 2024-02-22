@@ -5,10 +5,11 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 using System.Runtime.CompilerServices;
 using Dwarf.Extensions.Logging;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly FreeType _ft;
 
   private string _text = string.Empty;
@@ -26,7 +27,7 @@ public class FreeTypeText : Component, IUIElement {
     _ft = null!;
   }
 
-  public FreeTypeText(Device device, FreeType ft, string text, TextureManager textureManager) {
+  public FreeTypeText(VulkanDevice device, FreeType ft, string text, TextureManager textureManager) {
     _device = device;
     _ft = ft;
     _text = text;
@@ -152,8 +153,8 @@ public class FreeTypeText : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -163,8 +164,8 @@ public class FreeTypeText : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);

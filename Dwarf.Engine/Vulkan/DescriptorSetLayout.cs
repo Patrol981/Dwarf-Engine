@@ -5,18 +5,18 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class DescriptorSetLayout {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
   private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
   private VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
   public class Builder {
-    private readonly Device _device = null!;
+    private readonly VulkanDevice _device = null!;
     private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
-    public Builder(Device device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
+    public Builder(VulkanDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
       _device = device;
       _bindings = bindings;
     }
 
-    public Builder(Device device) {
+    public Builder(VulkanDevice device) {
       _device = device;
     }
 
@@ -42,7 +42,7 @@ public class DescriptorSetLayout {
 
   }
 
-  public unsafe DescriptorSetLayout(Device device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
+  public unsafe DescriptorSetLayout(VulkanDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
     _device = device;
     _bindings = bindings;
 

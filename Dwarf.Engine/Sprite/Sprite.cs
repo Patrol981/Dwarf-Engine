@@ -8,10 +8,11 @@ using Dwarf.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using StbImageSharp;
 using Dwarf.Engine.Math;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine;
 public class Sprite : Component, IDisposable, I2DCollision {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
 
   private Vulkan.Buffer _vertexBuffer = null!;
   private Vulkan.Buffer _indexBuffer = null!;
@@ -29,7 +30,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
 
   public Sprite() { }
 
-  public Sprite(Device device) {
+  public Sprite(VulkanDevice device) {
     _device = device;
 
     CreateSpriteVertexData();
@@ -244,8 +245,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -255,8 +256,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -273,8 +274,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -285,8 +286,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);

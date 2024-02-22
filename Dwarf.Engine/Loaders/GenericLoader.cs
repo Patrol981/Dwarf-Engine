@@ -66,7 +66,7 @@ public class GenericLoader {
     return Task.FromResult(meshes);
   }
 
-  public async Task<MeshRenderer> LoadModelOptimized(Device device, string path) {
+  public async Task<MeshRenderer> LoadModelOptimized(VulkanDevice device, string path) {
     var processingStart = DateTime.Now;
     var assimpContext = new AssimpContext();
 
@@ -105,7 +105,7 @@ public class GenericLoader {
     return new MeshRenderer(device, meshes.ToArray());
   }
 
-  public MeshRenderer LoadModel(Device device, string path) {
+  public MeshRenderer LoadModel(VulkanDevice device, string path) {
     var assimpContext = new AssimpContext();
 
     var scene = assimpContext.ImportFile($"{path}",

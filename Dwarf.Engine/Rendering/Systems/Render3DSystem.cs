@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
@@ -24,7 +25,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private Vulkan.Buffer _indirectCommandBuffer = null!;
 
   public Render3DSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -136,8 +137,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _device,
       (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
       (ulong)_texturesCount,
-      VkBufferUsageFlags.UniformBuffer,
-      VkMemoryPropertyFlags.HostVisible,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible,
       _device.Properties.limits.minUniformBufferOffsetAlignment
     );
 
@@ -181,8 +182,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     var stagingBuffer = new Vulkan.Buffer(
       _device,
       (ulong)_indirectCommands.Count * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
     stagingBuffer.Map(stagingBuffer.GetBufferSize());
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(_indirectCommands.ToArray()), stagingBuffer.GetBufferSize());
@@ -190,8 +191,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _indirectCommandBuffer = new(
       _device,
       stagingBuffer.GetBufferSize(),
-      VkBufferUsageFlags.IndirectBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndirectBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indirectCommandBuffer.GetBuffer(), stagingBuffer.GetBufferSize());
     stagingBuffer.Dispose();

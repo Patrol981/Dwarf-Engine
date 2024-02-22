@@ -1,3 +1,4 @@
+using Dwarf.Engine.Math;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -6,10 +7,10 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class Swapchain : IDisposable {
+public class VulkanSwapchain : IDisposable {
   private const int MAX_FRAMES_IN_FLIGHT = 2;
 
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly VkExtent2D _extent;
 
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
@@ -34,7 +35,7 @@ public class Swapchain : IDisposable {
 
   private readonly object _swapchainLock = new();
 
-  public Swapchain(Device device, VkExtent2D extent) {
+  public VulkanSwapchain(VulkanDevice device, VkExtent2D extent) {
     _device = device;
     _extent = extent;
 
@@ -54,7 +55,7 @@ public class Swapchain : IDisposable {
   }
   */
 
-  public bool CompareSwapFormats(Swapchain swapchain) {
+  public bool CompareSwapFormats(VulkanSwapchain swapchain) {
     return swapchain._swapchainDepthFormat == _swapchainDepthFormat &&
            swapchain._swapchainImageFormat == _swapchainImageFormat;
   }
@@ -457,6 +458,7 @@ public class Swapchain : IDisposable {
     } else {
       VkExtent2D actualExtent = _extent;
 
+      // if (capabilities.minImageExtent.width < 1 || capabilities.minImageExtent.height < 1) return actualExtent;
       actualExtent = new VkExtent2D(
           Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
           Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))

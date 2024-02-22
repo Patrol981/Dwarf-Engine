@@ -58,7 +58,7 @@ public class SystemCollection : IDisposable {
 
   public void ValidateSystems(
     ReadOnlySpan<Entity> entities,
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
@@ -101,7 +101,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void ReloadSystems(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
@@ -143,7 +143,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload3DRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -161,7 +161,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload2DRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -179,7 +179,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void ReloadUIRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,

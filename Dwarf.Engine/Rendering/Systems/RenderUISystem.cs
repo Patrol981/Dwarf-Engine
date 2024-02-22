@@ -9,6 +9,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using Dwarf.Engine.Rendering.UI;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering;
 
@@ -17,7 +18,7 @@ public class RenderUISystem : SystemBase {
   private Vulkan.Buffer _uiBuffer = null!;
 
   public RenderUISystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -68,8 +69,8 @@ public class RenderUISystem : SystemBase {
         _device,
         (ulong)Unsafe.SizeOf<UIUniformObject>(),
         (uint)entities.Length,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
     _descriptorSets = new VkDescriptorSet[entities.Length];

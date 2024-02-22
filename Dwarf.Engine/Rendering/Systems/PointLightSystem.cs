@@ -5,7 +5,7 @@ namespace Dwarf.Engine.Rendering.Systems;
 
 public class PointLightSystem : SystemBase {
   public PointLightSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!

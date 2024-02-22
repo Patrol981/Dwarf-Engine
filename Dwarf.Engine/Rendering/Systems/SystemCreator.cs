@@ -24,7 +24,7 @@ public class SystemCreator {
   public static void CreateSystems(
     ref SystemCollection systemCollection,
     SystemCreationFlags flags,
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     DescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!

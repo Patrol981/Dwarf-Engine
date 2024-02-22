@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -199,10 +199,10 @@ public class Canvas : Component, IDisposable {
 
     // var extent = _window.Extent;
     var extent = _application.Renderer.Extent2D;
-    if (rect.LastScreenX == extent.width && rect.LastScreenY == extent.height && !rect.RequireUpdate) return Task.CompletedTask;
+    if (rect.LastScreenX == extent.Width && rect.LastScreenY == extent.Height && !rect.RequireUpdate) return Task.CompletedTask;
 
-    rect.LastScreenX = extent.width;
-    rect.LastScreenY = extent.height;
+    rect.LastScreenX = extent.Width;
+    rect.LastScreenY = extent.Height;
     // 100% = 1920x1080
     // 1% = axb
     // a = (1 * 1920) / 100
@@ -214,28 +214,28 @@ public class Canvas : Component, IDisposable {
 
     switch (rect.Anchor) {
       case Anchor.Right:
-        point.X = extent.width - (scaledOffset.X);
-        point.Y = extent.height / 2;
+        point.X = extent.Width - (scaledOffset.X);
+        point.Y = extent.Height / 2;
         break;
       case Anchor.Left:
         point.X = 0 + (scaledOffset.X);
-        point.Y = extent.height / 2;
+        point.Y = extent.Height / 2;
         break;
       case Anchor.Top:
-        point.X = extent.width / 2;
-        point.Y = extent.height + (scaledOffset.Y);
+        point.X = extent.Width / 2;
+        point.Y = extent.Height + (scaledOffset.Y);
         break;
       case Anchor.Bottom:
-        point.X = extent.width / 2;
-        point.Y = extent.height - (scaledOffset.Y);
+        point.X = extent.Width / 2;
+        point.Y = extent.Height - (scaledOffset.Y);
         break;
       case Anchor.RightTop:
-        point.X = extent.width - (scaledOffset.X);
+        point.X = extent.Width - (scaledOffset.X);
         point.Y = 0 - (scaledOffset.Y);
         break;
       case Anchor.RightBottom:
-        point.X = extent.width - (scaledOffset.X);
-        point.Y = extent.height + (scaledOffset.Y);
+        point.X = extent.Width - (scaledOffset.X);
+        point.Y = extent.Height + (scaledOffset.Y);
         break;
       case Anchor.LeftTop:
         point.X = 0 + (scaledOffset.X);
@@ -243,25 +243,25 @@ public class Canvas : Component, IDisposable {
         break;
       case Anchor.LeftBottom:
         point.X = 0 + (scaledOffset.X);
-        point.Y = extent.height + (scaledOffset.Y);
+        point.Y = extent.Height + (scaledOffset.Y);
         break;
       case Anchor.Middle:
-        point.X = extent.width / 2 + scaledOffset.X;
-        point.Y = extent.height / 2 + scaledOffset.Y;
+        point.X = extent.Width / 2 + scaledOffset.X;
+        point.Y = extent.Height / 2 + scaledOffset.Y;
         break;
       case Anchor.MiddleBottom:
-        point.X = extent.width / 2 + scaledOffset.X;
-        point.Y = extent.height + scaledOffset.Y;
+        point.X = extent.Width / 2 + scaledOffset.X;
+        point.Y = extent.Height + scaledOffset.Y;
         break;
       case Anchor.MiddleTop:
-        point.X = extent.width / 2 + scaledOffset.X;
+        point.X = extent.Width / 2 + scaledOffset.X;
         point.Y = 0 + scaledOffset.Y;
         break;
       default:
         break;
     }
 
-    var pos = Ray.ScreenPointToWorld2D(CameraState.GetCamera(), point, new Vector2(extent.width, extent.height));
+    var pos = Ray.ScreenPointToWorld2D(CameraState.GetCamera(), point, new Vector2(extent.Width, extent.Height));
     rect.Position.X = pos.X;
     rect.Position.Y = pos.Y;
 
@@ -269,9 +269,9 @@ public class Canvas : Component, IDisposable {
   }
 
   private Task CheckResolution() {
-    if (_maxCanvasSize.X == _window.Extent.width && _maxCanvasSize.Y == _window.Extent.height) return Task.CompletedTask;
+    if (_maxCanvasSize.X == _window.Extent.Width && _maxCanvasSize.Y == _window.Extent.Height) return Task.CompletedTask;
 
-    _maxCanvasSize = new Vector2(_window.Extent.width, _window.Extent.height);
+    _maxCanvasSize = new Vector2(_window.Extent.Width, _window.Extent.Height);
     var minDistance = float.MaxValue;
     Resolution closestRes = null!;
 

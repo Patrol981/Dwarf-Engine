@@ -8,7 +8,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 public static class Descriptor {
   public static unsafe void BindDescriptorSet(
-    Device device,
+    VulkanDevice device,
     VkDescriptorSet textureSet,
     FrameInfo frameInfo,
     ref VkPipelineLayout pipelineLayout,

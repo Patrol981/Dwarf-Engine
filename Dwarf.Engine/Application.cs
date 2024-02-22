@@ -16,6 +16,7 @@ using static Dwarf.GLFW.GLFW;
 using Dwarf.Engine.Global;
 using Dwarf.Rendering;
 using ImGuiNET;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine;
 
@@ -48,7 +49,7 @@ public class Application {
   private EventCallback? _onLoad;
 
   private Window _window = null!;
-  private Device _device = null!;
+  private VulkanDevice _device = null!;
   private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = null!;
@@ -82,10 +83,10 @@ public class Application {
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool debugMode = true
   ) {
-    Device.s_EnableValidationLayers = debugMode;
+    VulkanDevice.s_EnableValidationLayers = debugMode;
 
     _window = new Window(1200, 900, appName);
-    _device = new Device(_window);
+    _device = new VulkanDevice(_window);
     _renderer = new Renderer(_window, _device);
     _systems = new SystemCollection();
 
@@ -107,8 +108,8 @@ public class Application {
         _device,
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
         1,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
         _device.Properties.limits.minUniformBufferOffsetAlignment
       );
       _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -135,7 +136,7 @@ public class Application {
 
     _skybox = new(_device, _textureManager, _renderer, _globalSetLayout.GetDescriptorSetLayout());
     _imguiController = new(_device, _renderer);
-    _imguiController.Init((int)_window.Extent.width, (int)_window.Extent.height);
+    _imguiController.Init((int)_window.Extent.Width, (int)_window.Extent.Height);
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
     MasterAwake(Entity.GetScripts(_entities));
@@ -329,7 +330,7 @@ public class Application {
 
   private void SetupSystems(
     SystemCreationFlags creationFlags,
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     DescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo
@@ -482,7 +483,7 @@ public class Application {
     }
   }
 
-  public Device Device => _device;
+  public VulkanDevice Device => _device;
   public Window Window => _window;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;

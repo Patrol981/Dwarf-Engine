@@ -12,12 +12,13 @@ using System.Numerics;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private Vulkan.Buffer _vertexBuffer = null!;
   private Vulkan.Buffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
@@ -208,8 +209,8 @@ public class TextField : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -219,8 +220,8 @@ public class TextField : Component, IUIElement {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -238,8 +239,8 @@ public class TextField : Component, IUIElement {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -250,8 +251,8 @@ public class TextField : Component, IUIElement {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);

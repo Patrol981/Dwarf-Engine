@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Math;
 using Dwarf.Engine.Physics;
@@ -14,7 +15,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
 
   private Vulkan.Buffer[] _vertexBuffers = [];
   private ulong[] _vertexCount = [];
@@ -32,11 +33,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public MeshRenderer() { }
 
-  public MeshRenderer(Device device) {
+  public MeshRenderer(VulkanDevice device) {
     _device = device;
   }
 
-  public MeshRenderer(Device device, Mesh[] meshes) {
+  public MeshRenderer(VulkanDevice device, Mesh[] meshes) {
     _device = device;
     Init(meshes);
   }
@@ -150,8 +151,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       _device,
       vertexSize,
       _vertexCount[index],
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -161,8 +162,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       _device,
       vertexSize,
       _vertexCount[index],
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffers[index].GetBuffer(), bufferSize);
@@ -180,8 +181,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       _device,
       indexSize,
       _indexCount[index],
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -191,8 +192,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       _device,
       indexSize,
       _indexCount[index],
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffers[index].GetBuffer(), bufferSize);

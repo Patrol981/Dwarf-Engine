@@ -18,11 +18,11 @@ public struct Character {
 }
 
 public class FreeType {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
 
   private Dictionary<char, Character> _characters = [];
 
-  public FreeType(Device device) {
+  public FreeType(VulkanDevice device) {
     _device = device;
   }
 

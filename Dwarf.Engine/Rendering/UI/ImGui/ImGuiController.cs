@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -15,7 +16,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI;
 public partial class ImGuiController : IDisposable {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly Renderer _renderer;
 
   private Vulkan.Buffer _vertexBuffer;
@@ -65,7 +66,7 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(Device device, Renderer renderer) {
+  public unsafe ImGuiController(VulkanDevice device, Renderer renderer) {
     _device = device;
     _renderer = renderer;
 
@@ -126,8 +127,8 @@ public partial class ImGuiController : IDisposable {
 
   private void WindowResized(object? sender, EventArgs e) {
     var windowExtent = WindowState.s_Window.Extent;
-    _width = (int)windowExtent.width;
-    _height = (int)windowExtent.height;
+    _width = (int)windowExtent.Width;
+    _height = (int)windowExtent.Height;
     Logger.Info($"[ImGUI] Window Resized ({_width}{_height})");
   }
 
@@ -182,8 +183,8 @@ public partial class ImGuiController : IDisposable {
       _vertexBuffer = new(
         _device,
         (ulong)vertexBufferSize,
-        VkBufferUsageFlags.VertexBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+        BufferUsage.VertexBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
       _vertexBuffer.Map((ulong)vertexBufferSize);
     }
@@ -193,8 +194,8 @@ public partial class ImGuiController : IDisposable {
       _indexBuffer = new(
         _device,
         (ulong)indexBufferSize,
-        VkBufferUsageFlags.IndexBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+        BufferUsage.IndexBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
       _indexBuffer.Map((ulong)indexBufferSize);
     }

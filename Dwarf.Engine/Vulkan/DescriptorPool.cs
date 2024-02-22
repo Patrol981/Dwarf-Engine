@@ -7,22 +7,22 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class DescriptorPool : IDisposable {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private VkDescriptorPool _descriptorPool;
   public class Builder {
-    private readonly Device _device;
+    private readonly VulkanDevice _device;
     private VkDescriptorPoolSize[] _poolSizes = [];
     private uint _maxSets = 1000;
     private VkDescriptorPoolCreateFlags _poolFlags = 0;
 
-    public Builder(Device device, uint maxSets, VkDescriptorPoolCreateFlags poolFlags, VkDescriptorPoolSize[] poolSizes) {
+    public Builder(VulkanDevice device, uint maxSets, VkDescriptorPoolCreateFlags poolFlags, VkDescriptorPoolSize[] poolSizes) {
       this._device = device;
       this._maxSets = maxSets;
       this._poolSizes = poolSizes;
       this._poolFlags = poolFlags;
     }
 
-    public Builder(Device device) {
+    public Builder(VulkanDevice device) {
       this._device = device;
     }
 
@@ -53,7 +53,7 @@ public class DescriptorPool : IDisposable {
   }
 
   public unsafe DescriptorPool(
-    Device device,
+    VulkanDevice device,
     uint maxSets,
     VkDescriptorPoolCreateFlags poolFlags,
     VkDescriptorPoolSize[] poolSizes
@@ -115,7 +115,7 @@ public class DescriptorPool : IDisposable {
     return _descriptorPool;
   }
 
-  public Device Device => _device;
+  public VulkanDevice Device => _device;
 
   public unsafe void Dispose() {
     vkDestroyDescriptorPool(_device.LogicalDevice, _descriptorPool);

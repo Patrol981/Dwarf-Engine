@@ -32,7 +32,7 @@ public class AssetLoader {
     return entity;
   }
 
-  private static string SeekFile(ref FileStream file, ref Entity entity, Device device) {
+  private static string SeekFile(ref FileStream file, ref Entity entity, VulkanDevice device) {
     using var reader = new StreamReader(file, Encoding.UTF8, true);
     string fullData = string.Empty;
     string line = string.Empty;
@@ -44,7 +44,7 @@ public class AssetLoader {
     return fullData;
   }
 
-  private static void ProcessLine(string line, ref Entity entity, Device device) {
+  private static void ProcessLine(string line, ref Entity entity, VulkanDevice device) {
     if (line != string.Empty) {
       if (line.Contains($"[{AssetConstants.AssetNameKeyword}]")) {
         ProcessAssetName(line, ref entity);
@@ -64,7 +64,7 @@ public class AssetLoader {
     entity.Name = match.Groups[1].Value.Trim();
   }
 
-  private static void ProcessDependencies(string line, ref Entity entity, Device device) {
+  private static void ProcessDependencies(string line, ref Entity entity, VulkanDevice device) {
     string keyword = $"[{AssetConstants.AssetEngineDependeciesKeyword}]";
     int keywordLen = keyword.Length;
     string pattern = @"\[(.*?)\]";
@@ -216,7 +216,7 @@ public class AssetLoader {
     }
   }
 
-  private static object[] HandleConstructorData(Device device, Type componentType) {
+  private static object[] HandleConstructorData(VulkanDevice device, Type componentType) {
     object component = Activator.CreateInstance(componentType)!;
 
     switch (component) {

@@ -1,6 +1,7 @@
 
 using System.Runtime.CompilerServices;
 
+using Dwarf.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Vulkan;
 
@@ -10,7 +11,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Physics;
 public class ColliderMesh : Component, IDebugRender3DObject {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
 
   private Vulkan.Buffer _vertexBuffer = null!;
   private Vulkan.Buffer _indexBuffer = null!;
@@ -25,7 +26,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
 
   public ColliderMesh() { }
 
-  public ColliderMesh(Device device, Mesh mesh) {
+  public ColliderMesh(VulkanDevice device, Mesh mesh) {
     _device = device;
     _mesh = mesh;
 
@@ -96,8 +97,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -107,8 +108,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -126,8 +127,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
@@ -137,8 +138,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device._mutex.WaitOne();

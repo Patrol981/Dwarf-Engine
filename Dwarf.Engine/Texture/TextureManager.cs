@@ -7,11 +7,11 @@ using Vortice.Vulkan;
 namespace Dwarf.Engine;
 
 public class TextureManager : IDisposable {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private Dictionary<Guid, Texture> _loadedTextures;
   private readonly FreeType _ft;
 
-  public TextureManager(Device device) {
+  public TextureManager(VulkanDevice device) {
     _device = device;
     _loadedTextures = [];
 
@@ -52,7 +52,7 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public static async Task<Texture[]> AddTextures(Device device, string[] paths, int flip = 1) {
+  public static async Task<Texture[]> AddTextures(VulkanDevice device, string[] paths, int flip = 1) {
     var textures = new Texture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {
       textures[i] = await Texture.LoadFromPath(device, paths[i], flip);
@@ -60,7 +60,7 @@ public class TextureManager : IDisposable {
     return textures;
   }
 
-  public static Texture[] AddTextures(Device device, List<byte[]> bytes, string[] nameTags) {
+  public static Texture[] AddTextures(VulkanDevice device, List<byte[]> bytes, string[] nameTags) {
     var textures = new Texture[bytes.Count];
     for (int i = 0; i < bytes.Count; i++) {
       var imgData = Texture.LoadDataFromBytes(bytes[i]);

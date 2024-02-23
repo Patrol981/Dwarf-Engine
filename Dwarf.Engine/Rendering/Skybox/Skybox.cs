@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Vulkan;
 
@@ -241,8 +241,8 @@ public class Skybox : IDisposable {
   private DescriptorSetLayout _textureSetLayout = null!;
 
   private VkDescriptorSet _textureSet = VkDescriptorSet.Null;
-  private Vulkan.Buffer _skyboxBuffer = null!;
-  private Vulkan.Buffer _vertexBuffer = null!;
+  private Vulkan.DwarfBuffer _skyboxBuffer = null!;
+  private Vulkan.DwarfBuffer _vertexBuffer = null!;
   private ulong _vertexCount = 0;
 
   private string[] _cubemapNames = new string[6];
@@ -367,7 +367,7 @@ public class Skybox : IDisposable {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<TexturedVertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<TexturedVertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -378,7 +378,7 @@ public class Skybox : IDisposable {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -403,7 +403,7 @@ public class Skybox : IDisposable {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _skyboxBuffer = new Vulkan.Buffer(
+    _skyboxBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)Unsafe.SizeOf<SkyboxBufferObject>(),
       1,

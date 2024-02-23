@@ -80,11 +80,11 @@ public class Button : Component, I2DCollision, IUIElement {
     return _cachedSize;
   }
 
-  public void Bind(VkCommandBuffer commandBuffer) {
+  public void Bind(IntPtr commandBuffer) {
     throw new NotImplementedException();
   }
 
-  public Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Bind(IntPtr commandBuffer, uint index = 0) {
     _guiTexture.Bind(commandBuffer, index);
     return Task.CompletedTask;
   }
@@ -97,7 +97,7 @@ public class Button : Component, I2DCollision, IUIElement {
     _guiTexture.Dispose();
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     _guiTexture.Draw(commandBuffer, index);
     return Task.CompletedTask;
   }

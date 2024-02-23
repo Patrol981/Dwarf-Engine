@@ -15,7 +15,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
@@ -23,8 +23,8 @@ public class GuiTexture : Component, IUIElement {
 
   private Mesh _mesh = null!;
   private bool _hasIndexBuffer = false;
-  private Dwarf.Vulkan.Buffer _vertexBuffer = null!;
-  private Dwarf.Vulkan.Buffer _indexBuffer = null!;
+  private Dwarf.Vulkan.DwarfBuffer _vertexBuffer = null!;
+  private Dwarf.Vulkan.DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private Guid _textureIdRef = Guid.Empty;
@@ -44,11 +44,11 @@ public class GuiTexture : Component, IUIElement {
     CreateIndexBuffer(_mesh.Indices);
   }
 
-  public void Bind(VkCommandBuffer commandBuffer) {
+  public void Bind(IntPtr commandBuffer) {
     throw new NotImplementedException();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -82,7 +82,7 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -178,7 +178,7 @@ public class GuiTexture : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new Dwarf.Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -189,7 +189,7 @@ public class GuiTexture : Component, IUIElement {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -207,7 +207,7 @@ public class GuiTexture : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -219,7 +219,7 @@ public class GuiTexture : Component, IUIElement {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
-    _indexBuffer = new Vulkan.Buffer(
+    _indexBuffer = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

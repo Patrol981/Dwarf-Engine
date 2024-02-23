@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
@@ -16,13 +16,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public const int ObjectInstanceCount = 2048;
 
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
-  private Vulkan.Buffer _modelBuffer = null!;
+  private Vulkan.DwarfBuffer _modelBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private DescriptorWriter _dynamicWriter = null!;
 
   private List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
-  private Vulkan.Buffer _indirectCommandBuffer = null!;
+  private Vulkan.DwarfBuffer _indirectCommandBuffer = null!;
 
   public Render3DSystem(
     VulkanDevice device,
@@ -179,7 +179,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _indirectCommands.Add(drawCommand);
     }
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)_indirectCommands.Count * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
       BufferUsage.TransferSrc,

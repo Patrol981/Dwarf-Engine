@@ -7,10 +7,10 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine;
-public class CubeMapTexture : Texture {
+public class CubeMapTexture : VulkanTexture {
   private string[] _paths = [];
   private PackedTexture _cubemapPack;
 
@@ -29,11 +29,11 @@ public class CubeMapTexture : Texture {
   }
 
   public static new async Task<ImageResult> LoadDataFromPath(string path, int flip = 1) {
-    return await Texture.LoadDataFromPath(path, flip);
+    return await TextureLoader.LoadDataFromPath(path, flip);
   }
 
   public void SetTextureData(byte[] data) {
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -50,7 +50,7 @@ public class CubeMapTexture : Texture {
   }
 
   public void SetTextureData(nint dataPtr) {
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -73,7 +73,7 @@ public class CubeMapTexture : Texture {
     stagingBuffer.Dispose();
   }
 
-  private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+  private void ProcessTexture(Vulkan.DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();
@@ -121,7 +121,7 @@ public class CubeMapTexture : Texture {
 
     VkMemoryAllocateInfo allocInfo = new();
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)MemoryProperty.DeviceLocal);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();

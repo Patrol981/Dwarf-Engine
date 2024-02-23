@@ -2,7 +2,7 @@ using System.Drawing;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
@@ -16,8 +16,8 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
-public class Texture : IDisposable {
-  public readonly string TextureName;
+public class VulkanTexture : ITexture {
+  private readonly string _textureName;
   protected readonly VulkanDevice _device = null!;
 
   internal VkImage _textureImage = VkImage.Null;
@@ -29,17 +29,20 @@ public class Texture : IDisposable {
   protected int _height = 0;
   protected int _size = 0;
 
-  public Texture(VulkanDevice device, int width, int height, string textureName = "") {
+  public VulkanTexture(VulkanDevice device, int width, int height, string textureName = "") {
     _device = device;
     _width = width;
     _height = height;
-    TextureName = textureName;
+    _textureName = textureName;
 
     _size = _width * _height * 4;
   }
 
-  public void SetTextureData(nint dataPtr, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    var stagingBuffer = new Vulkan.Buffer(
+  public void SetTextureData(nint dataPtr) {
+    SetTextureData(dataPtr, VkImageCreateFlags.None);
+  }
+  private void SetTextureData(nint dataPtr, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)_size,
       BufferUsage.TransferSrc,
@@ -60,8 +63,12 @@ public class Texture : IDisposable {
     ProcessTexture(stagingBuffer, createFlags);
   }
 
-  public void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    var stagingBuffer = new Vulkan.Buffer(
+  public void SetTextureData(byte[] data) {
+    SetTextureData(data, VkImageCreateFlags.None);
+  }
+
+  private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)_size,
       BufferUsage.TransferSrc,
@@ -75,7 +82,7 @@ public class Texture : IDisposable {
     ProcessTexture(stagingBuffer, createFlags);
   }
 
-  private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+  private void ProcessTexture(Vulkan.DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();
@@ -128,9 +135,9 @@ public class Texture : IDisposable {
     CreateSampler(_device, out _imageSampler);
   }
 
-  public static async Task<Texture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
+  public static async Task<ITexture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
     var textureData = await LoadDataFromPath(path, flip);
-    var texture = new Texture(device, textureData.Width, textureData.Height, path);
+    var texture = new VulkanTexture(device, textureData.Width, textureData.Height, path);
     texture.SetTextureData(textureData.Data, imageCreateFlags);
     return texture;
   }
@@ -185,7 +192,7 @@ public class Texture : IDisposable {
 
     VkMemoryAllocateInfo allocInfo = new();
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)memoryPropertyFlags);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, memoryPropertyFlags);
 
     vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();
@@ -317,10 +324,11 @@ public class Texture : IDisposable {
     GC.SuppressFinalize(this);
   }
 
-  public VkSampler GetSampler() => _imageSampler;
-  public VkImageView GetImageView() => _imageView;
-  public VkImage GetTextureImage() => _textureImage;
+  public ulong GetSampler() => _imageSampler;
+  public ulong GetImageView() => _imageView;
+  public ulong GetTextureImage() => _textureImage;
   public int Width => _width;
   public int Height => _height;
   public int Size => _size;
+  public string TextureName => _textureName;
 }

@@ -121,8 +121,8 @@ public class Terrain3D : MeshRenderer {
   }
 
   private async void SetupTexture(Application app) {
-    var data = await Texture.LoadDataFromPath("./Resources/Textures/base/no_texture.png");
-    var texture = new Texture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
+    var data = await TextureLoader.LoadDataFromPath("./Resources/Textures/base/no_texture.png");
+    var texture = new VulkanTexture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
     texture.SetTextureData(data.Data);
     await app.TextureManager.AddTexture(texture);
   }

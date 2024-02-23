@@ -1,4 +1,4 @@
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -7,10 +7,10 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public unsafe class Buffer : IDisposable {
+public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
-  private VulkanDevice _device;
+  private IDevice _device;
   private IntPtr _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
   private VkDeviceMemory _memory = VkDeviceMemory.Null;
@@ -22,8 +22,8 @@ public unsafe class Buffer : IDisposable {
   private BufferUsage _usageFlags;
   private MemoryProperty _memoryPropertyFlags;
 
-  public Buffer(
-    VulkanDevice device,
+  public DwarfBuffer(
+    IDevice device,
     ulong instanceSize,
     ulong instanceCount,
     BufferUsage usageFlags,
@@ -41,8 +41,8 @@ public unsafe class Buffer : IDisposable {
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
   }
 
-  public Buffer(
-    VulkanDevice device,
+  public DwarfBuffer(
+    IDevice device,
     ulong bufferSize,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
@@ -64,7 +64,7 @@ public unsafe class Buffer : IDisposable {
     }
   }
 
-  public static void Map(Buffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
+  public static void Map(DwarfBuffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     fixed (void* ptr = &buff._mapped) {
       vkMapMemory(buff._device.LogicalDevice, buff._memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
     }

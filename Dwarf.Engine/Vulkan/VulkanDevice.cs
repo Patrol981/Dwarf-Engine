@@ -2,8 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-using Dwarf.AbstractionLayer;
-using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 
@@ -72,14 +71,14 @@ public class VulkanDevice : IDevice {
 
     VkMemoryAllocateInfo allocInfo = new() {
       allocationSize = memRequirements.size,
-      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, (VkMemoryPropertyFlags)pFlags)
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags)
     };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out bufferMemory).CheckResult();
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
   }
 
-  public unsafe Task CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
+  public unsafe Task CopyBuffer(ulong srcBuffer, ulong dstBuffer, ulong size) {
     VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
 
     VkBufferCopy copyRegion = new() {
@@ -170,7 +169,7 @@ public class VulkanDevice : IDevice {
     throw new Exception("failed to find candidate!");
   }
 
-  public unsafe void CreateImageWithInfo(
+  internal unsafe void CreateImageWithInfo(
     VkImageCreateInfo imageInfo,
     VkMemoryPropertyFlags properties,
     out VkImage image,
@@ -184,21 +183,21 @@ public class VulkanDevice : IDevice {
 
     VkMemoryAllocateInfo allocInfo = new() {
       allocationSize = memRequirements.size,
-      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, (MemoryProperty)properties)
     };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out imageMemory).CheckResult();
     vkBindImageMemory(_logicalDevice, image, imageMemory, 0);
   }
 
-  public uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties) {
+  public uint FindMemoryType(uint typeFilter, MemoryProperty properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out memProperties);
     for (int i = 0; i < memProperties.memoryTypeCount; i++) {
       // 1 << n is basically an equivalent to 2^n.
       // if ((typeFilter & (1 << i)) &&
 
-      if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+      if (((MemoryProperty)memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
         return (uint)i;
       }
 
@@ -210,7 +209,7 @@ public class VulkanDevice : IDevice {
     throw new Exception($"Failed to find suitable memory type");
   }
 
-  public unsafe VkCommandBuffer BeginSingleTimeCommands() {
+  public unsafe IntPtr BeginSingleTimeCommands() {
     VkCommandBufferAllocateInfo allocInfo = new() {
       level = VkCommandBufferLevel.Primary,
       commandPool = _commandPool,
@@ -228,15 +227,16 @@ public class VulkanDevice : IDevice {
     return commandBuffer;
   }
 
-  public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
+  public unsafe void EndSingleTimeCommands(IntPtr commandBuffer) {
     vkEndCommandBuffer(commandBuffer);
 
     SubmitQueue(commandBuffer);
 
-    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+    // vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+    vkFreeCommandBuffers(_logicalDevice, _commandPool, commandBuffer);
   }
 
-  public unsafe VkSemaphore CreateTimelineSemaphore() {
+  private unsafe VkSemaphore CreateTimelineSemaphore() {
     var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
     timelineCreateInfo.pNext = null;
     timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
@@ -262,14 +262,14 @@ public class VulkanDevice : IDevice {
     }
   }
 
-  public unsafe VkFence CreateFence() {
+  private unsafe VkFence CreateFence() {
     var fenceInfo = new VkFenceCreateInfo();
     fenceInfo.flags = VkFenceCreateFlags.None;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     return fence;
   }
 
-  public unsafe void WaitQueue(VkQueue queue) {
+  private unsafe void WaitQueue(VkQueue queue) {
     _mutex.WaitOne();
     try {
       vkQueueWaitIdle(queue);
@@ -282,7 +282,7 @@ public class VulkanDevice : IDevice {
     WaitQueue(_graphicsQueue);
   }
 
-  public unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
+  private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
     VkSubmitInfo submitInfo = new() {
       commandBufferCount = 1,
       pCommandBuffers = &commandBuffer,
@@ -302,11 +302,11 @@ public class VulkanDevice : IDevice {
     vkDestroyFence(_logicalDevice, fence);
   }
 
-  public void SubmitQueue(VkCommandBuffer commandBuffer) {
+  private void SubmitQueue(VkCommandBuffer commandBuffer) {
     SubmitQueue(_graphicsQueue, commandBuffer);
   }
 
-  public unsafe void SubmitSemaphore() {
+  private unsafe void SubmitSemaphore() {
     var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
     timelineCreateInfo.pNext = null;
     timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
@@ -519,7 +519,7 @@ public class VulkanDevice : IDevice {
     vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
   }
 
-  public unsafe VkCommandPool CreateCommandPool() {
+  public unsafe ulong CreateCommandPool() {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
@@ -541,11 +541,11 @@ public class VulkanDevice : IDevice {
     vkDestroyInstance(_vkInstance);
   }
 
-  public VkDevice LogicalDevice => _logicalDevice;
-  public VkPhysicalDevice PhysicalDevice => _physicalDevice;
-  public VkSurfaceKHR Surface => _surface;
+  public IntPtr LogicalDevice => _logicalDevice;
+  public IntPtr PhysicalDevice => _physicalDevice;
+  public ulong Surface => _surface;
 
-  public VkCommandPool CommandPool {
+  public ulong CommandPool {
     get {
       lock (_commandPoolLock) {
         return _commandPool;
@@ -553,7 +553,7 @@ public class VulkanDevice : IDevice {
     }
   }
 
-  public VkQueue GraphicsQueue {
+  public IntPtr GraphicsQueue {
     get {
       lock (_graphicsQueueLock) {
         return _graphicsQueue;
@@ -561,7 +561,7 @@ public class VulkanDevice : IDevice {
     }
   }
 
-  public VkQueue PresentQueue {
+  public IntPtr PresentQueue {
     get {
       lock (_presentQueueLock) {
         return _presentQueue;

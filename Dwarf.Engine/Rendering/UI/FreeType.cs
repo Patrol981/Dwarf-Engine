@@ -11,7 +11,7 @@ using Dwarf.Vulkan;
 using Dwarf.Utils;
 
 public struct Character {
-  public Texture Texture;
+  public VulkanTexture Texture;
   public Vector2 Size;
   public Vector2 Bearing;
   public uint Advance;
@@ -55,7 +55,7 @@ public class FreeType {
 
       Console.WriteLine(c);
 
-      var texture = new Texture(
+      var texture = new VulkanTexture(
         _device,
         (int)targetFace.GlyphBitmap.width,
         (int)targetFace.GlyphBitmap.rows,

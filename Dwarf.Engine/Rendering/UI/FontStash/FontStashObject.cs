@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
@@ -24,8 +24,8 @@ public class FontStashObject : IDisposable {
   private const int MAX_INDICES = MAX_SPRITES * 6;
 
   private readonly VulkanDevice _device = null!;
-  private Vulkan.Buffer _vertexBuffer = null!;
-  private Vulkan.Buffer _indexBuffer = null!;
+  private Vulkan.DwarfBuffer _vertexBuffer = null!;
+  private Vulkan.DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
 
@@ -70,7 +70,7 @@ public class FontStashObject : IDisposable {
     ulong bufferSize = (ulong)Unsafe.SizeOf<VertexPositionColorTexture>() * MAX_VERTICES;
     ulong vertexSize = (ulong)Unsafe.SizeOf<VertexPositionColorTexture>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -89,7 +89,7 @@ public class FontStashObject : IDisposable {
     ulong bufferSize = (ulong)Unsafe.SizeOf<VertexPositionColorTexture>() * MAX_VERTICES;
     ulong vertexSize = (ulong)Unsafe.SizeOf<VertexPositionColorTexture>();
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -103,7 +103,7 @@ public class FontStashObject : IDisposable {
     ulong bufferSize = sizeof(uint) * _indexCount;
     ulong indexSize = sizeof(uint);
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -114,7 +114,7 @@ public class FontStashObject : IDisposable {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
 
-    _indexBuffer = new Vulkan.Buffer(
+    _indexBuffer = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

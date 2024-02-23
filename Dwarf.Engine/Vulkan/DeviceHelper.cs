@@ -92,8 +92,8 @@ public unsafe static class DeviceHelper {
     // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
     List<string> validationLayers = new()
     {
-            "VK_LAYER_KHRONOS_validation"
-        };
+       "VK_LAYER_KHRONOS_validation"
+    };
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -101,10 +101,9 @@ public unsafe static class DeviceHelper {
     }
 
     // Otherwise we fallback to using the LunarG meta layer
-    validationLayers = new()
-    {
-            "VK_LAYER_LUNARG_standard_validation"
-        };
+    validationLayers = new() {
+       "VK_LAYER_LUNARG_standard_validation"
+    };
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);

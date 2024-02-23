@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -53,7 +53,7 @@ public partial class ImGuiController {
     io.Fonts.GetTexDataAsRGBA32(out nint fontData, out int texWidth, out int texHeight, out int bytesPerPixel);
     var uploadSize = texWidth * texHeight * bytesPerPixel * sizeof(byte);
 
-    _fontTexture = new Texture(_device, texWidth, texHeight, "im_gui_texture");
+    _fontTexture = new VulkanTexture(_device, texWidth, texHeight, "im_gui_texture");
     _fontTexture.SetTextureData(fontData);
 
     VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.GetSampler(), _fontTexture.GetImageView(), VkImageLayout.ShaderReadOnlyOptimal);
@@ -89,7 +89,7 @@ public partial class ImGuiController {
     vkGetImageMemoryRequirements(_device.LogicalDevice, _fontImage, &memReqs);
     VkMemoryAllocateInfo memAllocInfo = new();
     memAllocInfo.allocationSize = memReqs.size;
-    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, (VkMemoryPropertyFlags)MemoryProperty.DeviceLocal);
+    memAllocInfo.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(_device.LogicalDevice, &memAllocInfo, null, out _fontMemory).CheckResult();
     vkBindImageMemory(_device.LogicalDevice, _fontImage, _fontMemory, 0).CheckResult();
@@ -106,7 +106,7 @@ public partial class ImGuiController {
     vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _fontView);
 
     // staging buffers
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       (ulong)uploadSize,
       BufferUsage.TransferSrc,

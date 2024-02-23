@@ -16,7 +16,7 @@ using static Dwarf.GLFW.GLFW;
 using Dwarf.Engine.Global;
 using Dwarf.Rendering;
 using ImGuiNET;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine;
 
@@ -55,7 +55,7 @@ public class Application {
   private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
   private VkDescriptorSet[] _globalDescriptorSets = [];
-  private Vulkan.Buffer[] _uboBuffers = [];
+  private Vulkan.DwarfBuffer[] _uboBuffers = [];
 
   private List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
@@ -78,11 +78,15 @@ public class Application {
   private Skybox _skybox = null!;
   private ImGuiController _imguiController = null!;
 
+  public RenderAPI CurrentAPI { get; private set; }
+
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool debugMode = true
   ) {
+    CurrentAPI = RenderAPI.Vulkan;
+
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
     _window = new Window(1200, 900, appName);
@@ -93,7 +97,6 @@ public class Application {
     Application.Instance = this;
 
     _textureManager = new(_device);
-
     _systemCreationFlags = systemCreationFlags;
   }
 
@@ -102,7 +105,7 @@ public class Application {
   }
 
   public unsafe void Run() {
-    _uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
+    _uboBuffers = new Vulkan.DwarfBuffer[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
         _device,
@@ -322,6 +325,8 @@ public class Application {
       if (_window.IsMinimalized) continue;
 
       Render(threadInfo);
+
+      GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
     fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
@@ -414,7 +419,7 @@ public class Application {
     var startTime = DateTime.UtcNow;
     List<Task> tasks = new();
 
-    List<List<Texture>> textures = [];
+    List<List<ITexture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
       var t = await TextureManager.AddTextures(_device, [.. paths[i]]);
       textures.Add([.. t]);

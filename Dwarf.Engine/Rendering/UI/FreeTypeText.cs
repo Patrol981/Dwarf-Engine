@@ -5,7 +5,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 using System.Runtime.CompilerServices;
 using Dwarf.Extensions.Logging;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {
@@ -20,7 +20,7 @@ public class FreeTypeText : Component, IUIElement {
   private Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
-  private Vulkan.Buffer _vertexBuffer = null!;
+  private Vulkan.DwarfBuffer _vertexBuffer = null!;
 
   public FreeTypeText() {
     _device = null!;
@@ -51,7 +51,7 @@ public class FreeTypeText : Component, IUIElement {
     RecreateBuffers();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index) {
     VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
     ulong[] offsets = [0];
     fixed (VkBuffer* buffersPtr = buffers)
@@ -61,7 +61,7 @@ public class FreeTypeText : Component, IUIElement {
     return Task.CompletedTask;
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     return Task.CompletedTask;
   }
@@ -149,7 +149,7 @@ public class FreeTypeText : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -160,7 +160,7 @@ public class FreeTypeText : Component, IUIElement {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,

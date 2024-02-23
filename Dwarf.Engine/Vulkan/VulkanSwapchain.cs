@@ -357,6 +357,9 @@ public class VulkanSwapchain : IDisposable {
       }
       _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
+      // var waitStages = new VkPipelineStageFlags[1];
+      // waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+
       VkSubmitInfo submitInfo = new();
 
       VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
@@ -364,9 +367,10 @@ public class VulkanSwapchain : IDisposable {
 
       VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
       waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+
       submitInfo.waitSemaphoreCount = 1;
-      // fixed (VkSemaphore* waitSemaphoresPtr = waitSemaphores)
-      // fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
+      // fixed (VkSemaphore* waitSemaphoresPtr = _imageAvailableSemaphores)
+      //fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
       submitInfo.pWaitSemaphores = waitSemaphores;
       submitInfo.pWaitDstStageMask = waitStages;
       // submitInfo.pWaitDstStageMask = null;

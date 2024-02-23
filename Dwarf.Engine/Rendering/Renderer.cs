@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Math;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
@@ -17,7 +18,8 @@ namespace Dwarf.Engine.Rendering;
 
 public unsafe class Renderer : IDisposable {
   private Window _window = null!;
-  private VulkanDevice _device = null!;
+  // private VulkanDevice _device = null!;
+  private IDevice _device;
   private VulkanSwapchain _swapchain = null!;
   private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
 
@@ -154,7 +156,7 @@ public unsafe class Renderer : IDisposable {
     _device.WaitDevice();
 
     if (_swapchain != null) _swapchain.Dispose();
-    _swapchain = new(_device, extent);
+    _swapchain = new((VulkanDevice)_device, extent);
 
     Logger.Info("Recreated Swapchain");
 

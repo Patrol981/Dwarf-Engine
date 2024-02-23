@@ -9,13 +9,13 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering;
 
 public class RenderUISystem : SystemBase {
   private PublicList<VkDescriptorSet> _textureSets = new PublicList<VkDescriptorSet>();
-  private Vulkan.Buffer _uiBuffer = null!;
+  private Vulkan.DwarfBuffer _uiBuffer = null!;
 
   public RenderUISystem(
     VulkanDevice device,
@@ -65,7 +65,7 @@ public class RenderUISystem : SystemBase {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _uiBuffer = new Vulkan.Buffer(
+    _uiBuffer = new Vulkan.DwarfBuffer(
         _device,
         (ulong)Unsafe.SizeOf<UIUniformObject>(),
         (uint)entities.Length,

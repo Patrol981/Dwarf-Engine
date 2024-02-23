@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Math;
 using Dwarf.Engine.Physics;
@@ -15,12 +15,12 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
-  private readonly VulkanDevice _device = null!;
+  private readonly IDevice _device = null!;
 
-  private Vulkan.Buffer[] _vertexBuffers = [];
+  private Vulkan.DwarfBuffer[] _vertexBuffers = [];
   private ulong[] _vertexCount = [];
   private bool[] _hasIndexBuffer = [];
-  private Vulkan.Buffer[] _indexBuffers = [];
+  private Vulkan.DwarfBuffer[] _indexBuffers = [];
   private ulong[] _indexCount = [];
   private int _meshesCount = 0;
   private Guid[] _textureIdRefs = [];
@@ -33,11 +33,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public MeshRenderer() { }
 
-  public MeshRenderer(VulkanDevice device) {
+  public MeshRenderer(IDevice device) {
     _device = device;
   }
 
-  public MeshRenderer(VulkanDevice device, Mesh[] meshes) {
+  public MeshRenderer(IDevice device, Mesh[] meshes) {
     _device = device;
     Init(meshes);
   }
@@ -45,9 +45,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   protected void Init(Mesh[] meshes) {
     _meshesCount = meshes.Length;
     _indexCount = new ulong[_meshesCount];
-    _indexBuffers = new Vulkan.Buffer[_meshesCount];
+    _indexBuffers = new Vulkan.DwarfBuffer[_meshesCount];
     _indexCount = new ulong[_meshesCount];
-    _vertexBuffers = new Vulkan.Buffer[_meshesCount];
+    _vertexBuffers = new Vulkan.DwarfBuffer[_meshesCount];
     _vertexCount = new ulong[_meshesCount];
     _hasIndexBuffer = new bool[_meshesCount];
     _textureIdRefs = new Guid[_meshesCount];
@@ -77,8 +77,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     _finishedInitialization = true;
   }
 
-  public Task Bind(VkCommandBuffer commandBuffer, uint index) {
-    // _device._mutex.WaitOne();
+  public Task Bind(IntPtr commandBuffer, uint index) {
     VkBuffer[] buffers = [_vertexBuffers[index].GetBuffer()];
     ulong[] offsets = [0];
     unsafe {
@@ -91,18 +90,15 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     if (_hasIndexBuffer[index]) {
       vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
     }
-    // _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index) {
-    // _device._mutex.WaitOne();
+  public Task Draw(IntPtr commandBuffer, uint index) {
     if (_hasIndexBuffer[index]) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
     } else {
       vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
     }
-    // _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
   }
 
@@ -118,7 +114,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
 
     if (_textureIdRefs[modelPart] == Guid.Empty) {
-      var texture = await Texture.LoadFromPath(_device, texturePath);
+      var texture = await TextureLoader.LoadFromPath(_device, texturePath);
       await textureManager.AddTexture(texture);
       _textureIdRefs[modelPart] = textureManager.GetTextureId(texturePath);
 
@@ -147,7 +143,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount[index];
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount[index],
@@ -158,7 +154,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffers[index] = new Vulkan.Buffer(
+    _vertexBuffers[index] = new Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount[index],
@@ -177,7 +173,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     ulong bufferSize = sizeof(uint) * _indexCount[index];
     ulong indexSize = sizeof(uint);
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount[index],
@@ -188,7 +184,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
 
-    _indexBuffers[index] = new Vulkan.Buffer(
+    _indexBuffers[index] = new Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount[index],

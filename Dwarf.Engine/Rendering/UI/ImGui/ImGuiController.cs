@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -19,8 +19,8 @@ public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly Renderer _renderer;
 
-  private Vulkan.Buffer _vertexBuffer;
-  private Vulkan.Buffer _indexBuffer;
+  private Vulkan.DwarfBuffer _vertexBuffer;
+  private Vulkan.DwarfBuffer _indexBuffer;
   private int _vertexCount;
   private int _indexCount;
 
@@ -49,7 +49,7 @@ public partial class ImGuiController : IDisposable {
   protected VkDescriptorSet _systemDescriptorSet;
   protected DescriptorWriter _descriptorWriter;
 
-  private Texture _fontTexture;
+  private VulkanTexture _fontTexture;
 
   private int _vertexBufferSize = 0;
   private int _indexBufferSize = 0;

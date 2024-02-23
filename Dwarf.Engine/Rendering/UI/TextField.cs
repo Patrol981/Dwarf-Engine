@@ -12,15 +12,15 @@ using System.Numerics;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using Dwarf.AbstractionLayer;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
   private readonly VulkanDevice _device;
-  private Vulkan.Buffer _vertexBuffer = null!;
-  private Vulkan.Buffer _indexBuffer = null!;
+  private Vulkan.DwarfBuffer _vertexBuffer = null!;
+  private Vulkan.DwarfBuffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
   private Guid _textAtlasId = Guid.Empty;
   private ulong _vertexCount = 0;
@@ -74,7 +74,7 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -205,7 +205,7 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new Dwarf.Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -216,7 +216,7 @@ public class TextField : Component, IUIElement {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Dwarf.Vulkan.Buffer(
+    _vertexBuffer = new Dwarf.Vulkan.DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -235,7 +235,7 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new Dwarf.Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -247,7 +247,7 @@ public class TextField : Component, IUIElement {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
-    _indexBuffer = new Dwarf.Vulkan.Buffer(
+    _indexBuffer = new Dwarf.Vulkan.DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -287,7 +287,7 @@ public class TextField : Component, IUIElement {
     throw new NotImplementedException();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)

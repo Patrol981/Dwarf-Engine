@@ -13,7 +13,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 public class Render2DSystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new();
-  private Vulkan.DwarfBuffer _spriteBuffer = null!;
+  private DwarfBuffer _spriteBuffer = null!;
 
   public Render2DSystem(
     VulkanDevice device,
@@ -60,7 +60,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _spriteBuffer = new Vulkan.DwarfBuffer(
+    _spriteBuffer = new DwarfBuffer(
         _device,
         (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
         (uint)entities.Length,

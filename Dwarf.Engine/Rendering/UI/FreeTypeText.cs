@@ -20,7 +20,7 @@ public class FreeTypeText : Component, IUIElement {
   private Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
-  private Vulkan.DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
 
   public FreeTypeText() {
     _device = null!;
@@ -149,7 +149,7 @@ public class FreeTypeText : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -160,7 +160,7 @@ public class FreeTypeText : Component, IUIElement {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.DwarfBuffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,

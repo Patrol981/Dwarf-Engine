@@ -189,7 +189,7 @@ public class GuiTexture : Component, IUIElement {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.DwarfBuffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -207,7 +207,7 @@ public class GuiTexture : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -219,7 +219,7 @@ public class GuiTexture : Component, IUIElement {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
-    _indexBuffer = new Vulkan.DwarfBuffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

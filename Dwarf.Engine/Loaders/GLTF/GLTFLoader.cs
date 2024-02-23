@@ -29,7 +29,7 @@ public class GLTFLoader {
 
     }
 
-    var resultModel = new MeshRenderer(app.Device, meshes.ToArray());
+    var resultModel = new MeshRenderer(app.Device, app.Renderer, meshes.ToArray());
 
     if (!preload) {
       var images = ProcessMaterials(model);

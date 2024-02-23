@@ -42,7 +42,7 @@ public class VulkanTexture : ITexture {
     SetTextureData(dataPtr, VkImageCreateFlags.None);
   }
   private void SetTextureData(nint dataPtr, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_size,
       BufferUsage.TransferSrc,
@@ -68,7 +68,7 @@ public class VulkanTexture : ITexture {
   }
 
   private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_size,
       BufferUsage.TransferSrc,
@@ -82,7 +82,7 @@ public class VulkanTexture : ITexture {
     ProcessTexture(stagingBuffer, createFlags);
   }
 
-  private void ProcessTexture(Vulkan.DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+  private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();

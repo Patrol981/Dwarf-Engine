@@ -91,7 +91,7 @@ public class PerformanceTester {
 
     var en = new Entity();
     var startModelTime = DateTime.Now;
-    var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Textures/Models/dwarf_test_model.obj");
+    var model = await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, "./Textures/Models/dwarf_test_model.obj");
     en.AddComponent(model);
     var endModelTime = DateTime.Now;
     en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad);

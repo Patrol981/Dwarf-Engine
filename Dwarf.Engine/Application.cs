@@ -55,7 +55,7 @@ public class Application {
   private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
   private VkDescriptorSet[] _globalDescriptorSets = [];
-  private Vulkan.DwarfBuffer[] _uboBuffers = [];
+  private DwarfBuffer[] _uboBuffers = [];
 
   private List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
@@ -105,7 +105,7 @@ public class Application {
   }
 
   public unsafe void Run() {
-    _uboBuffers = new Vulkan.DwarfBuffer[_renderer.MAX_FRAMES_IN_FLIGHT];
+    _uboBuffers = new DwarfBuffer[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
         _device,

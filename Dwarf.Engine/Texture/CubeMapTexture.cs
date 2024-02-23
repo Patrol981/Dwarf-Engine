@@ -33,7 +33,7 @@ public class CubeMapTexture : VulkanTexture {
   }
 
   public void SetTextureData(byte[] data) {
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -50,7 +50,7 @@ public class CubeMapTexture : VulkanTexture {
   }
 
   public void SetTextureData(nint dataPtr) {
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -73,7 +73,7 @@ public class CubeMapTexture : VulkanTexture {
     stagingBuffer.Dispose();
   }
 
-  private void ProcessTexture(Vulkan.DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+  private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();

@@ -114,7 +114,7 @@ public static class EntityCreator {
         }
       }
     } else {
-      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, modelPath));
+      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, modelPath));
 
       if (texturePaths.Length > 1) {
         entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
@@ -156,7 +156,7 @@ public static class EntityCreator {
 
     var entity = await CreateBase(entityName, position, rotation, scale);
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
 
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
@@ -168,7 +168,7 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
     await app.TextureManager.AddTexture(texturePath);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);

@@ -18,7 +18,7 @@ public class Terrain3D : MeshRenderer {
 
   public Terrain3D() { }
 
-  public Terrain3D(Application app) : base(app.Device) {
+  public Terrain3D(Application app) : base(app.Device, app.Renderer) {
     _app = app;
     _points = new double[HEIGHT, WIDTH];
   }

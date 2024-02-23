@@ -106,7 +106,7 @@ public partial class ImGuiController {
     vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _fontView);
 
     // staging buffers
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)uploadSize,
       BufferUsage.TransferSrc,

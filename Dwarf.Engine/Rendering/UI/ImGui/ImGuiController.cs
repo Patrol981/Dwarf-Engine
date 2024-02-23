@@ -19,8 +19,8 @@ public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly Renderer _renderer;
 
-  private Vulkan.DwarfBuffer _vertexBuffer;
-  private Vulkan.DwarfBuffer _indexBuffer;
+  private DwarfBuffer _vertexBuffer;
+  private DwarfBuffer _indexBuffer;
   private int _vertexCount;
   private int _indexCount;
 

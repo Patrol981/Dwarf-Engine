@@ -15,7 +15,7 @@ namespace Dwarf.Engine.Rendering;
 
 public class RenderUISystem : SystemBase {
   private PublicList<VkDescriptorSet> _textureSets = new PublicList<VkDescriptorSet>();
-  private Vulkan.DwarfBuffer _uiBuffer = null!;
+  private DwarfBuffer _uiBuffer = null!;
 
   public RenderUISystem(
     VulkanDevice device,
@@ -65,7 +65,7 @@ public class RenderUISystem : SystemBase {
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _uiBuffer = new Vulkan.DwarfBuffer(
+    _uiBuffer = new DwarfBuffer(
         _device,
         (ulong)Unsafe.SizeOf<UIUniformObject>(),
         (uint)entities.Length,

@@ -13,8 +13,8 @@ namespace Dwarf.Engine.Physics;
 public class ColliderMesh : Component, IDebugRender3DObject {
   private readonly VulkanDevice _device = null!;
 
-  private Vulkan.DwarfBuffer _vertexBuffer = null!;
-  private Vulkan.DwarfBuffer _indexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
 
@@ -93,7 +93,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -104,7 +104,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.DwarfBuffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -123,7 +123,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     ulong bufferSize = sizeof(uint) * _indexCount;
     ulong indexSize = sizeof(uint);
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -134,7 +134,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
 
-    _indexBuffer = new Vulkan.DwarfBuffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

@@ -14,8 +14,8 @@ namespace Dwarf.Engine;
 public class Sprite : Component, IDisposable, I2DCollision {
   private readonly VulkanDevice _device = null!;
 
-  private Vulkan.DwarfBuffer _vertexBuffer = null!;
-  private Vulkan.DwarfBuffer _indexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _indexBuffer = null!;
   private Guid _textureIdRef = Guid.Empty;
   private bool _hasIndexBuffer = false;
   private bool _usesTexture = false;
@@ -241,7 +241,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -252,7 +252,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     stagingBuffer.Map(bufferSize);
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.DwarfBuffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -270,7 +270,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     ulong bufferSize = sizeof(uint) * _indexCount;
     ulong indexSize = sizeof(uint);
 
-    var stagingBuffer = new Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -282,7 +282,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
-    _indexBuffer = new Vulkan.DwarfBuffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

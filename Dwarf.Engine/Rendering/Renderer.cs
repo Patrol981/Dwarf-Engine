@@ -1,13 +1,9 @@
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Math;
+using Dwarf.Engine.Vulkan;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-
-using OpenTK.Mathematics;
 
 using Vortice.Vulkan;
 
@@ -26,9 +22,14 @@ public unsafe class Renderer : IDisposable {
   private uint _imageIndex = 0;
   private int _frameIndex = 0;
   private bool _isFrameStarted = false;
+
+  private CommandList _commandList = null!;
   public Renderer(Window window, VulkanDevice device) {
     _window = window;
     _device = device;
+
+    _commandList = new VulkanCommandList();
+
     // _swapchain = new Swapchain(_device, _window.Extent);
     RecreateSwapchain();
     // CreateCommandBuffers();
@@ -229,4 +230,5 @@ public unsafe class Renderer : IDisposable {
   public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
   public bool IsFrameStarted => _isFrameStarted;
   public VulkanSwapchain Swapchain => _swapchain;
+  public CommandList CommandList => _commandList;
 }

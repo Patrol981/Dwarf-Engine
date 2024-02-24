@@ -57,7 +57,7 @@ public partial class ImGuiController {
     _fontTexture.SetTextureData(fontData);
 
     VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.GetSampler(), _fontTexture.GetImageView(), VkImageLayout.ShaderReadOnlyOptimal);
-    _descriptorWriter = new DescriptorWriter(_systemSetLayout, _systemDescriptorPool);
+    _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
     _descriptorWriter.WriteImage(0, &fontDescriptor);
     _descriptorWriter.Build(out _systemDescriptorSet);
 
@@ -180,7 +180,7 @@ public partial class ImGuiController {
     vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _sampler).CheckResult();
 
     VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_sampler, _fontView, VkImageLayout.ShaderReadOnlyOptimal);
-    _descriptorWriter = new DescriptorWriter(_systemSetLayout, _systemDescriptorPool);
+    _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
     _descriptorWriter.WriteImage(0, &fontDescriptor);
     _descriptorWriter.Build(out _systemDescriptorSet);
 

@@ -125,7 +125,7 @@ public class Application {
     _globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _globalDescriptorSets.Length; i++) {
       var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      var writer = new DescriptorWriter(_globalSetLayout, _globalPool)
+      var writer = new VulkanDescriptorWriter(_globalSetLayout, _globalPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out _globalDescriptorSets[i]);
     }
@@ -246,12 +246,6 @@ public class Application {
       }
     }
 
-
-    // _imguiController.NewFrame();
-    // _imguiController.UpdateBuffers();
-    // _imguiController.UpdateImBuffers()
-
-
     var commandBuffer = _renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = _renderer.GetFrameIndex();
@@ -283,8 +277,6 @@ public class Application {
       _onRender?.Invoke();
       _skybox.Render(currentFrame);
       _systems.UpdateSystems(_entities.ToArray(), currentFrame);
-
-      // _imguiController.DrawFrame(commandBuffer);
 
       _imguiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();

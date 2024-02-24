@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using StbImageSharp;
 using Dwarf.Engine.Math;
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Utils;
 
 namespace Dwarf.Engine;
 public class Sprite : Component, IDisposable, I2DCollision {
@@ -250,7 +251,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -279,7 +280,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(

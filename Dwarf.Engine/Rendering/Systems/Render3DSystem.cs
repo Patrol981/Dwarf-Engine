@@ -13,13 +13,11 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
-  public const int ObjectInstanceCount = 2048;
-
   private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
   private DwarfBuffer _modelBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
-  private DescriptorWriter _dynamicWriter = null!;
+  private VulkanDescriptorWriter _dynamicWriter = null!;
 
   private List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
   private DwarfBuffer _indirectCommandBuffer = null!;
@@ -84,7 +82,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     };
     VkDescriptorSet set;
     unsafe {
-      _ = new DescriptorWriter(_textureSetLayout, _descriptorPool)
+      _ = new VulkanDescriptorWriter(_textureSetLayout, _descriptorPool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
     }
@@ -113,14 +111,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);
-
-    /*
-    _texturePool = new DescriptorPool.Builder(_device)
-      .SetMaxSets((uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
-      .Build();
-    */
 
     _textureSets = new();
 
@@ -156,7 +146,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     var range = _modelBuffer.GetDescriptorBufferInfo(_modelBuffer.GetAlignmentSize());
     range.range = _modelBuffer.GetAlignmentSize();
     unsafe {
-      _dynamicWriter = new DescriptorWriter(_setLayout, _descriptorPool);
+      _dynamicWriter = new VulkanDescriptorWriter(_setLayout, _descriptorPool);
       _dynamicWriter.WriteBuffer(0, &range);
       _dynamicWriter.Build(out _dynamicSet);
 
@@ -166,38 +156,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
-  }
-
-  private void PrepareIndirect(ReadOnlySpan<Entity> entities) {
-    _indirectCommands = [];
-    for (int i = 0; i < entities.Length; i++) {
-      VkDrawIndexedIndirectCommand drawCommand = new();
-      drawCommand.instanceCount = ObjectInstanceCount;
-      drawCommand.firstInstance = (uint)i * ObjectInstanceCount;
-      drawCommand.firstIndex = entities[i].GetComponent<MeshRenderer>().Meshes.Last().Indices[0];
-      drawCommand.indexCount = (uint)entities[i].GetComponent<MeshRenderer>().Meshes.Last().Indices.Length;
-      _indirectCommands.Add(drawCommand);
-    }
-
-    var stagingBuffer = new DwarfBuffer(
-      _device,
-      (ulong)_indirectCommands.Count * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
-      BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-    stagingBuffer.Map(stagingBuffer.GetBufferSize());
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(_indirectCommands.ToArray()), stagingBuffer.GetBufferSize());
-
-    _indirectCommandBuffer = new(
-      _device,
-      stagingBuffer.GetBufferSize(),
-      BufferUsage.IndirectBuffer | BufferUsage.TransferDst,
-      MemoryProperty.DeviceLocal
-    );
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indirectCommandBuffer.GetBuffer(), stagingBuffer.GetBufferSize());
-    stagingBuffer.Dispose();
-
-    // drawCommand.instanceCount
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {

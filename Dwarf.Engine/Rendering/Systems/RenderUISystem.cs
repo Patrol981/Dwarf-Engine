@@ -85,7 +85,7 @@ public class RenderUISystem : SystemBase {
       BindDescriptorTexture(targetUI.Owner!, ref textureManager, i);
 
       var bufferInfo = _uiBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<UIUniformObject>());
-      _ = new DescriptorWriter(_setLayout, _descriptorPool)
+      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
@@ -158,7 +158,7 @@ public class RenderUISystem : SystemBase {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
       imageView = texture.GetImageView()
     };
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out VkDescriptorSet set);
     _textureSets.SetAt(set, index);

@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using DwarfEngine.Vulkan;
@@ -342,7 +343,7 @@ public class Skybox : IDisposable {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
       imageView = _cubemapTexture.GetImageView()
     };
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out VkDescriptorSet set);
     _textureSet = set;
@@ -376,7 +377,7 @@ public class Skybox : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,

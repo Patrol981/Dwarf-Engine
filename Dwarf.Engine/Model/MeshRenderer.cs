@@ -6,11 +6,8 @@ using Dwarf.Engine.Math;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
-
-using Vortice.Vulkan;
-
-using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
@@ -87,36 +84,16 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       _renderer.CommandList.BindIndex(commandBuffer, index, _indexBuffers);
     }
 
-    /*
-    VkBuffer[] buffers = [_vertexBuffers[index].GetBuffer()];
-    ulong[] offsets = [0];
-    unsafe {
-      fixed (VkBuffer* buffersPtr = buffers)
-      fixed (ulong* offsetsPtr = offsets) {
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
-      }
-    }
-
-    if (_hasIndexBuffer[index]) {
-      vkCmdBindIndexBuffer(commandBuffer, _indexBuffers[index].GetBuffer(), 0, VkIndexType.Uint32);
-    }
-    */
     return Task.CompletedTask;
   }
 
   public Task Draw(IntPtr commandBuffer, uint index) {
     if (_hasIndexBuffer[index]) {
       _renderer.CommandList.DrawIndexed(commandBuffer, index, _indexCount, 1, 0, 0, 0);
-      // vkCmdDrawIndexed(commandBuffer, (uint)_indexCount[index], 1, 0, 0, 0);
     } else {
       _renderer.CommandList.Draw(commandBuffer, index, _vertexCount, 1, 0, 0);
-      // vkCmdDraw(commandBuffer, (uint)_vertexCount[index], 1, 0, 0);
     }
     return Task.CompletedTask;
-  }
-
-  public void DrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, ulong offset, uint drawCount, uint stride) {
-    vkCmdDrawIndexedIndirect(commandBuffer, buffer, offset, drawCount, stride);
   }
 
   public async void BindToTexture(
@@ -165,7 +142,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffers[index] = new DwarfBuffer(
       _device,
@@ -195,7 +172,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffers[index] = new DwarfBuffer(
       _device,

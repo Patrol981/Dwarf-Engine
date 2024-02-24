@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using ImGuiNET;
@@ -47,7 +48,7 @@ public partial class ImGuiController : IDisposable {
   protected DescriptorPool _systemDescriptorPool = null!;
   protected DescriptorSetLayout _systemSetLayout = null!;
   protected VkDescriptorSet _systemDescriptorSet;
-  protected DescriptorWriter _descriptorWriter;
+  protected VulkanDescriptorWriter _descriptorWriter;
 
   private VulkanTexture _fontTexture;
 
@@ -206,8 +207,8 @@ public partial class ImGuiController : IDisposable {
     for (int n = 0; n < drawData.CmdListsCount; n++) {
       var cmdList = drawData.CmdLists[n];
 
-      VkUtils.MemCopy(vtxDst, cmdList.VtxBuffer.Data, cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-      VkUtils.MemCopy(idxDst, cmdList.IdxBuffer.Data, cmdList.IdxBuffer.Size * sizeof(ushort));
+      MemoryUtils.MemCopy(vtxDst, cmdList.VtxBuffer.Data, cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
+      MemoryUtils.MemCopy(idxDst, cmdList.IdxBuffer.Data, cmdList.IdxBuffer.Size * sizeof(ushort));
 
       vtxDst += cmdList.VtxBuffer.Size;
       idxDst += cmdList.IdxBuffer.Size;

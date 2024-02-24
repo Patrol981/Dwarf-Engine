@@ -1,5 +1,3 @@
-using Dwarf.Engine.Windowing;
-
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.AbstractionLayer;

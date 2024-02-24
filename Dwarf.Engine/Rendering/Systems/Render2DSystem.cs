@@ -82,7 +82,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       }
 
       var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      _ = new DescriptorWriter(_setLayout, _descriptorPool)
+      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
@@ -159,7 +159,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       imageView = texture.GetImageView()
     };
     VkDescriptorSet set;
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
 

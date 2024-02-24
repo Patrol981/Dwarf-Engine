@@ -4,16 +4,16 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class DescriptorWriter {
+public class VulkanDescriptorWriter {
   private readonly DescriptorSetLayout _setLayout;
   private readonly DescriptorPool _pool;
   private VkWriteDescriptorSet[] _writes = [];
-  public DescriptorWriter(DescriptorSetLayout setLayout, DescriptorPool pool) {
+  public VulkanDescriptorWriter(DescriptorSetLayout setLayout, DescriptorPool pool) {
     _setLayout = setLayout;
     _pool = pool;
   }
 
-  public unsafe DescriptorWriter WriteBuffer(uint binding, VkDescriptorBufferInfo* bufferInfo) {
+  public unsafe VulkanDescriptorWriter WriteBuffer(uint binding, VkDescriptorBufferInfo* bufferInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
 
     VkWriteDescriptorSet write = new() {
@@ -29,7 +29,7 @@ public class DescriptorWriter {
     return this;
   }
 
-  public unsafe DescriptorWriter WriteImage(uint binding, VkDescriptorImageInfo* imageInfo) {
+  public unsafe VulkanDescriptorWriter WriteImage(uint binding, VkDescriptorImageInfo* imageInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
 
     VkWriteDescriptorSet write = new() {

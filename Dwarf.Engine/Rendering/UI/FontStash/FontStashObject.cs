@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
@@ -77,7 +78,7 @@ public class FontStashObject : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
@@ -110,7 +111,7 @@ public class FontStashObject : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffer = new DwarfBuffer(
       _device,

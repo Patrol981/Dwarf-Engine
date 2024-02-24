@@ -6,6 +6,7 @@ using static Vortice.Vulkan.Vulkan;
 using System.Runtime.CompilerServices;
 using Dwarf.Extensions.Logging;
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Utils;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {
@@ -158,7 +159,7 @@ public class FreeTypeText : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,

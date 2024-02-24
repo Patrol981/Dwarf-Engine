@@ -1,6 +1,6 @@
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.AbstractionLayer;
+namespace Dwarf.Engine.AbstractionLayer;
 
 [Flags]
 public enum BufferUsage {

@@ -1,3 +1,5 @@
+using Dwarf.Engine.AbstractionLayer;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -5,18 +7,18 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class DescriptorSetLayout {
-  private readonly VulkanDevice _device = null!;
+  private readonly IDevice _device = null!;
   private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
   private VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
   public class Builder {
-    private readonly VulkanDevice _device = null!;
+    private readonly IDevice _device = null!;
     private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
-    public Builder(VulkanDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
+    public Builder(IDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
       _device = device;
       _bindings = bindings;
     }
 
-    public Builder(VulkanDevice device) {
+    public Builder(IDevice device) {
       _device = device;
     }
 
@@ -42,7 +44,7 @@ public class DescriptorSetLayout {
 
   }
 
-  public unsafe DescriptorSetLayout(VulkanDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
+  public unsafe DescriptorSetLayout(IDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
     _device = device;
     _bindings = bindings;
 

@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dwarf.GLFW\Dwarf.GLFW.csproj" />
     <ProjectReference Include="..\Dwarf.Utils\Dwarf.Utils.csproj" />
+    <ProjectReference Include="..\Dwarf.AbstractionLayer\Dwarf.AbstractionLayer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

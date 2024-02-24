@@ -1,17 +1,16 @@
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Vulkan;
+namespace Dwarf.Engine.AbstractionLayer;
 
 public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
   private IDevice _device;
-  private IntPtr _mapped;
+  private nint _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
   private VkDeviceMemory _memory = VkDeviceMemory.Null;
 
@@ -75,15 +74,15 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   public void Unmap() {
-    if (_mapped != IntPtr.Zero) {
+    if (_mapped != nint.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
-      _mapped = IntPtr.Zero;
+      _mapped = nint.Zero;
     }
   }
 
-  public void WriteToBuffer(IntPtr data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
+  public void WriteToBuffer(nint data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     if (size == VK_WHOLE_SIZE) {
-      VkUtils.MemCopy((IntPtr)_mapped, data, (int)_bufferSize);
+      MemoryUtils.MemCopy(_mapped, data, (int)_bufferSize);
     } else {
       if (size <= 0) {
         // Logger.Warn("[Buffer] Size of an write is less or equal to 0");
@@ -91,7 +90,7 @@ public unsafe class DwarfBuffer : IDisposable {
       }
       char* memOffset = (char*)_mapped;
       memOffset += offset;
-      VkUtils.MemCopy((IntPtr)memOffset, data, (int)size);
+      MemoryUtils.MemCopy((nint)memOffset, data, (int)size);
     }
   }
   public VkResult Flush(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -121,7 +120,7 @@ public unsafe class DwarfBuffer : IDisposable {
     return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
   }
 
-  public void WrtieToIndex(IntPtr data, int index) {
+  public void WrtieToIndex(nint data, int index) {
     WriteToBuffer(data, _instanceSize, (ulong)index * _alignmentSize);
   }
 
@@ -145,7 +144,7 @@ public unsafe class DwarfBuffer : IDisposable {
     return _memory;
   }
 
-  public IntPtr GetMappedMemory() {
+  public nint GetMappedMemory() {
     return _mapped;
   }
 
@@ -175,7 +174,7 @@ public unsafe class DwarfBuffer : IDisposable {
 
   private static ulong GetAlignment(ulong instanceSize, ulong minOffsetAlignment) {
     if (minOffsetAlignment > 0) {
-      return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
+      return instanceSize + minOffsetAlignment - 1 & ~(minOffsetAlignment - 1);
       // return (instanceSize + minOffsetAlignment - 1) / minOffsetAlignment * minOffsetAlignment;
     }
     return instanceSize;

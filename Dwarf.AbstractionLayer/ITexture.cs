@@ -1,5 +1,3 @@
-using StbImageSharp;
-
 namespace Dwarf.Engine.AbstractionLayer;
 public interface ITexture : IDisposable {
   public string TextureName { get; }

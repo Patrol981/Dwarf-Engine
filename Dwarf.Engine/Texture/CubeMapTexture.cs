@@ -41,7 +41,7 @@ public class CubeMapTexture : VulkanTexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);
@@ -65,7 +65,7 @@ public class CubeMapTexture : VulkanTexture {
     }
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);

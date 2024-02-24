@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -102,7 +103,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -132,7 +133,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffer = new DwarfBuffer(
       _device,

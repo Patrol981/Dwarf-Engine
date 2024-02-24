@@ -57,7 +57,7 @@ public class VulkanTexture : ITexture {
     }
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer, createFlags);
@@ -76,7 +76,7 @@ public class VulkanTexture : ITexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer, createFlags);

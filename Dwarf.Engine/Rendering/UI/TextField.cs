@@ -13,6 +13,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Utils;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
@@ -205,7 +206,7 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new Dwarf.Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -214,9 +215,9 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Dwarf.Vulkan.DwarfBuffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
@@ -235,7 +236,7 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Dwarf.Vulkan.DwarfBuffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
@@ -244,10 +245,10 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
-    _indexBuffer = new Dwarf.Vulkan.DwarfBuffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,

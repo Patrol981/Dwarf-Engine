@@ -51,7 +51,7 @@ public class RenderUISystem : SystemBase {
 
     Logger.Info("Recreating UI Renderer");
 
-    _descriptorPool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -59,7 +59,7 @@ public class RenderUISystem : SystemBase {
 
     _texturesCount = entities.Length;
 
-    _texturePool = new DescriptorPool.Builder(_device)
+    _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
     .SetMaxSets((uint)_texturesCount)
     .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -71,7 +71,7 @@ public class RenderUISystem : SystemBase {
         (uint)entities.Length,
         BufferUsage.UniformBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
+        ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
       );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
@@ -123,7 +123,7 @@ public class RenderUISystem : SystemBase {
 
       var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
-      Descriptor.BindDescriptorSet(_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
+      Descriptor.BindDescriptorSet((VulkanDevice)_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
       uiComponent?.Bind(frameInfo.CommandBuffer, 0);
       uiComponent?.Draw(frameInfo.CommandBuffer, 0);
     }

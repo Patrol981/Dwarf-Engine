@@ -15,6 +15,7 @@ public class SystemCollection : IDisposable {
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
+  private PointLightSystem? _pointLightSystem;
 
   // TODO : More canvases in the future?
   private Canvas? _canvas = null;
@@ -33,6 +34,7 @@ public class SystemCollection : IDisposable {
       _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
       _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
       _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+      _pointLightSystem?.Render(frameInfo);
       _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
     }
   }
@@ -228,6 +230,11 @@ public class SystemCollection : IDisposable {
     set { _renderDebugSystem = value; }
   }
 
+  public PointLightSystem PointLightSystem {
+    get { return _pointLightSystem ?? null!; }
+    set { _pointLightSystem = value; }
+  }
+
   public Canvas Canvas {
     get { return _canvas ?? null!; }
     set { _canvas = value; }
@@ -240,5 +247,6 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();
+    _pointLightSystem?.Dispose();
   }
 }

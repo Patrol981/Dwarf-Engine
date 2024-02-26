@@ -227,7 +227,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
       CreateStandardVertices(ref image);
     }
 
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
 
     CreateVertexBuffer(_spriteMesh.Vertices);

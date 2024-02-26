@@ -149,13 +149,13 @@ public class TextField : Component, IUIElement {
   private void CheckBuffers(Vertex[] vertices) {
     if (_vertexCount == (ulong)vertices.Length) return;
 
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(vertices);
   }
 
   private void RecreateBuffers() {
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(_textMesh.Vertices);
   }

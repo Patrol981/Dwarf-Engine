@@ -15,8 +15,8 @@ public static class Descriptor {
     uint firstSet,
     uint setCount
   ) {
-    device.WaitDevice();
-    device.WaitQueue();
+    // device.WaitDevice();
+    // device.WaitQueue();
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,

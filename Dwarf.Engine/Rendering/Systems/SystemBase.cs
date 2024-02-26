@@ -10,10 +10,11 @@ using System.Runtime.CompilerServices;
 using DwarfEngine.Vulkan;
 using Dwarf.Extensions.Logging;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine;
 public abstract class SystemBase {
-  protected readonly VulkanDevice _device = null!;
+  protected readonly IDevice _device = null!;
   protected readonly Renderer _renderer = null!;
   protected VkDescriptorSetLayout _globalDescriptorSetLayout;
   protected PipelineConfigInfo _pipelineConfigInfo;
@@ -30,7 +31,7 @@ public abstract class SystemBase {
   protected int _texturesCount = 0;
 
   public SystemBase(
-    VulkanDevice device,
+    IDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!

@@ -17,6 +17,7 @@ using Dwarf.Engine.Global;
 using Dwarf.Rendering;
 using ImGuiNET;
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Rendering.Lightning;
 
 namespace Dwarf.Engine;
 
@@ -77,6 +78,8 @@ public class Application {
 
   private Skybox _skybox = null!;
   private ImGuiController _imguiController = null!;
+  private GlobalUniformBufferObject _ubo = new();
+  private DirectionalLight _directionalLight = new();
 
   public RenderAPI CurrentAPI { get; private set; }
 
@@ -135,6 +138,7 @@ public class Application {
     _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
     _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
+    _systems.PointLightSystem?.Setup();
     _systems.PhysicsSystem?.Init(objs3D);
 
     _skybox = new(_device, _textureManager, _renderer, _globalSetLayout.GetDescriptorSetLayout());
@@ -251,6 +255,7 @@ public class Application {
       int frameIndex = _renderer.GetFrameIndex();
       // FrameInfo frameInfo = new();
 
+      /*
       GlobalUniformBufferObject ubo = new() {
         Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
         View = _camera.GetComponent<Camera>().GetViewMatrix(),
@@ -261,8 +266,18 @@ public class Application {
         AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
         CameraPosition = _camera.GetComponent<Transform>().Position
       };
+      */
 
-      _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      _ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
+      _ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+      _ubo.LightPosition = _directionalLight.LightPosition;
+      _ubo.LightColor = _directionalLight.LightColor;
+      _ubo.AmientLightColor = _directionalLight.AmbientColor;
+      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
+
+      fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
+        _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      }
 
       var currentFrame = new FrameInfo();
       currentFrame.Camera = _camera.GetComponent<Camera>();
@@ -325,6 +340,9 @@ public class Application {
       vkFreeCommandBuffers(_device.LogicalDevice, threadInfo.CommandPool, (uint)_renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
     }
 
+    _device.WaitQueue();
+    _device.WaitDevice();
+
     vkDestroyCommandPool(_device.LogicalDevice, threadInfo.CommandPool, null);
   }
 
@@ -351,6 +369,8 @@ public class Application {
 
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
+      _device.WaitDevice();
+      _device.WaitQueue();
       _entities.Add(entity);
       MasterAwake(Entity.GetScripts(new[] { entity }));
       MasterStart(Entity.GetScripts(new[] { entity }));
@@ -365,12 +385,16 @@ public class Application {
 
   public void RemoveEntityAt(int index) {
     lock (_entitiesLock) {
+      _device.WaitDevice();
+      _device.WaitQueue();
       _entities.RemoveAt(index);
     }
   }
 
   public void RemoveEntity(Entity entity) {
     lock (_entitiesLock) {
+      _device.WaitDevice();
+      _device.WaitQueue();
       _entities.Remove(entity);
     }
   }
@@ -378,6 +402,8 @@ public class Application {
   public void RemoveEntity(Guid id) {
     lock (_entitiesLock) {
       var target = _entities.Where((x) => x.EntityID == id).First();
+      _device.WaitDevice();
+      _device.WaitQueue();
       _entities.Remove(target);
     }
   }
@@ -479,12 +505,17 @@ public class Application {
   }
 
   private void Collect() {
-    _device.WaitQueue();
-    _device.WaitDevice();
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
+        _device.WaitDevice();
+        _device.WaitQueue();
+
         _entities[i].DisposeEverything();
         RemoveEntity(_entities[i].EntityID);
+
+        _device.WaitDevice();
+        _device.WaitQueue();
+
       }
     }
   }
@@ -494,4 +525,5 @@ public class Application {
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer => _renderer;
   public FrameInfo FrameInfo => _currentFrameInfo;
+  public DirectionalLight DirectionalLight => _directionalLight;
 }

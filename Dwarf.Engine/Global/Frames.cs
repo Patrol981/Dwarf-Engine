@@ -16,8 +16,8 @@ public static class Frames {
   }
 
   public static double GetFrames() {
-    // return (s_endTime - s_startTime).TotalMilliseconds;
-    return Time.DeltaTime;
+    return (s_startTime - s_endTime).TotalMilliseconds;
+    // return Time.DeltaTime;
     // return MathF.Round(, 5, MidpointRounding.ToZero);
   }
 

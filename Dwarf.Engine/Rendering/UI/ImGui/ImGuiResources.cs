@@ -518,12 +518,31 @@ public partial class ImGuiController {
     }
   }
 
-  public unsafe void SetScissorRect(FrameInfo frameInfo, ImDrawCmdPtr pcmd) {
+  public unsafe void SetScissorRect(FrameInfo frameInfo, ImDrawCmdPtr pcmd, ImDrawDataPtr drawData) {
+    var clipOff = drawData.DisplayPos;
+    var clipScale = drawData.FramebufferScale;
+
+    Vector4 clipRect;
+    clipRect.X = (pcmd.ClipRect.X - clipOff.X) * clipScale.X;
+    clipRect.Y = (pcmd.ClipRect.Y - clipOff.Y) * clipScale.Y;
+    clipRect.Z = (pcmd.ClipRect.Z - clipOff.X) * clipScale.X;
+    clipRect.W = (pcmd.ClipRect.W - clipOff.Y) * clipScale.Y;
+
+    if (clipRect.X < 0.0f)
+      clipRect.X = 0.0f;
+    if (clipRect.Y < 0.0f)
+      clipRect.Y = 0.0f;
+
     VkRect2D scissorRect;
-    scissorRect.offset.x = System.Math.Max((int)pcmd.ClipRect.X, 0);
-    scissorRect.offset.y = System.Math.Max((int)pcmd.ClipRect.Y, 0);
-    scissorRect.extent.width = (uint)(pcmd.ClipRect.Z - pcmd.ClipRect.X);
-    scissorRect.extent.height = (uint)(pcmd.ClipRect.W - pcmd.ClipRect.Y);
+    scissorRect.offset.x = (int)clipRect.X;
+    scissorRect.offset.y = (int)clipRect.Y;
+    scissorRect.extent.width = (uint)(clipRect.Z - clipRect.X);
+    scissorRect.extent.height = (uint)(clipRect.W - clipRect.Y);
+
+    // scissorRect.offset.x = System.Math.Max((int)pcmd.ClipRect.X, 0);
+    // scissorRect.offset.y = System.Math.Max((int)pcmd.ClipRect.Y, 0);
+    // scissorRect.extent.width = (uint)(pcmd.ClipRect.Z - pcmd.ClipRect.X);
+    // scissorRect.extent.height = (uint)(pcmd.ClipRect.W - pcmd.ClipRect.Y);
     vkCmdSetScissor(frameInfo.CommandBuffer, 0, 1, &scissorRect);
   }
 }

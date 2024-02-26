@@ -22,8 +22,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
   private DwarfBuffer _indirectCommandBuffer = null!;
 
+  private ModelUniformBufferObject _modelUbo = new();
+
   public Render3DSystem(
-    VulkanDevice device,
+    IDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -91,7 +93,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
-    _device.WaitDevice();
+    // _device.WaitDevice();
     _device.WaitQueue();
     var startTime = DateTime.Now;
     // TODO: Reuse data from diffrent renders?
@@ -103,7 +105,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     Logger.Info("Recreating Renderer 3D");
 
-    _descriptorPool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(2000)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
@@ -129,7 +131,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       (ulong)_texturesCount,
       BufferUsage.UniformBuffer,
       MemoryProperty.HostVisible,
-      _device.Properties.limits.minUniformBufferOffsetAlignment
+      ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
     );
 
     for (int i = 0; i < entities.Length; i++) {
@@ -205,14 +207,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (entities[i].CanBeDisposed) continue;
 
       var materialData = entities[i].GetComponent<Material>().Data;
+      /*
       var modelUBO = new ModelUniformBufferObject {
         Material = materialData
-        // Color = materialData.Color,
-        // Ambient = materialData.Ambient,
-        // Diffuse = materialData.Diffuse,
-        // Specular = materialData.Specular,
-        // Shininess = materialData.Shininess
       };
+      */
+
+      _modelUbo.Material = materialData;
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
       ulong offset = 0;
@@ -220,7 +221,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
 
         offset = fixedSize * (ulong)(i);
-        _modelBuffer.WriteToBuffer((IntPtr)(&modelUBO), _modelBuffer.GetInstanceSize(), offset);
+        fixed (ModelUniformBufferObject* modelUboPtr = &_modelUbo) {
+          _modelBuffer.WriteToBuffer((IntPtr)(modelUboPtr), _modelBuffer.GetInstanceSize(), offset);
+        }
       }
 
       var transform = entities[i].GetComponent<Transform>();
@@ -259,7 +262,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
 
           if (i == _textureSets.Size) continue;
-          Descriptor.BindDescriptorSet(_device, _textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
+          Descriptor.BindDescriptorSet((VulkanDevice)_device, _textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
 
           if (targetEntity != lastModel)
             targetEntity.Bind(frameInfo.CommandBuffer, x);

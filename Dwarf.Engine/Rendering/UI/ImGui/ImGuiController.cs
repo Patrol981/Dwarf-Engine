@@ -52,8 +52,8 @@ public partial class ImGuiController : IDisposable {
 
   private VulkanTexture _fontTexture;
 
-  private int _vertexBufferSize = 0;
-  private int _indexBufferSize = 0;
+  // private int _vertexBufferSize = 0;
+  // private int _indexBufferSize = 0;
 
   private bool _frameBegun = false;
 
@@ -78,8 +78,8 @@ public partial class ImGuiController : IDisposable {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
     _systemDescriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(descriptorCount * 2)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, descriptorCount)
+      .SetMaxSets(100)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 100)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
       .Build();
 
@@ -179,43 +179,91 @@ public partial class ImGuiController : IDisposable {
       return;
     }
 
-    if (_vertexBuffer.GetBuffer() == VkBuffer.Null || _vertexCount != drawData.TotalVtxCount) {
+    if ((_vertexBuffer.GetBuffer() == VkBuffer.Null) || (_vertexCount < drawData.TotalVtxCount)) {
+      _vertexCount = drawData.TotalVtxCount;
+
       _vertexBuffer?.Dispose();
       _vertexBuffer = new(
         _device,
-        (ulong)vertexBufferSize,
+        (ulong)sizeof(ImDrawVert),
+        (ulong)drawData.TotalVtxCount,
         BufferUsage.VertexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
-      _vertexBuffer.Map((ulong)vertexBufferSize);
+
+      // _vertexBuffer.Map((ulong)vertexBufferSize);
+      //_vertexBuffer.Map();
     }
 
-    if (_indexBuffer.GetBuffer() == VkBuffer.Null || _indexCount < drawData.TotalIdxCount) {
+    if ((_indexBuffer.GetBuffer() == VkBuffer.Null) || (_indexCount < drawData.TotalIdxCount)) {
+      _indexCount = drawData.TotalIdxCount;
+
       _indexBuffer?.Dispose();
       _indexBuffer = new(
         _device,
-        (ulong)indexBufferSize,
+        (ulong)sizeof(ushort),
+        (ulong)drawData.TotalIdxCount,
         BufferUsage.IndexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
-      _indexBuffer.Map((ulong)indexBufferSize);
+
+      // _indexBuffer.Map((ulong)indexBufferSize);
+      // _indexBuffer.Map();
     }
 
-    var vtxDst = _vertexBuffer.GetMappedMemory();
-    var idxDst = _indexBuffer.GetMappedMemory();
+    // var vtxDst = _vertexBuffer.GetMappedMemory();
+    // var idxDst = _indexBuffer.GetMappedMemory();
+
+    ImDrawVert* vtxDst = null;
+    ushort* idxDst = null;
+
+    vkMapMemory(_device.LogicalDevice, _vertexBuffer.GetVkDeviceMemory(), 0, _vertexBuffer.GetBufferSize(), 0, (void**)&vtxDst);
+    vkMapMemory(_device.LogicalDevice, _indexBuffer.GetVkDeviceMemory(), 0, _indexBuffer.GetBufferSize(), 0, (void**)&idxDst);
+
+    var vtxOffset = 0;
+    var idxOffset = 0;
+
+
+    nint totalVtxData = 0;
+    nint totalIdxData = 0;
+
+    var totalVtxSize = drawData.TotalVtxCount * sizeof(ImDrawVert);
+    var totalIdxSize = drawData.TotalIdxCount * sizeof(ushort);
 
     for (int n = 0; n < drawData.CmdListsCount; n++) {
       var cmdList = drawData.CmdLists[n];
 
-      MemoryUtils.MemCopy(vtxDst, cmdList.VtxBuffer.Data, cmdList.VtxBuffer.Size * sizeof(ImDrawVert));
-      MemoryUtils.MemCopy(idxDst, cmdList.IdxBuffer.Data, cmdList.IdxBuffer.Size * sizeof(ushort));
+      // MemoryUtils.MemCopy(vtxDst, cmdList.VtxBuffer.Data, vertexBufferSize);
+      // MemoryUtils.MemCopy(idxDst, cmdList.IdxBuffer.Data, indexBufferSize);
+      var vtxSize = cmdList.VtxBuffer.Size * sizeof(ImDrawVert);
+      var idxSize = cmdList.IdxBuffer.Size * sizeof(ushort);
+      // _vertexBuffer.WriteToBuffer(cmdList.VtxBuffer.Data, (ulong)vtxSize, (ulong)vtxOffset);
+      //_indexBuffer.WriteToBuffer(cmdList.IdxBuffer.Data, (ulong)idxSize, (ulong)idxOffset);
+
+      Unsafe.CopyBlock(vtxDst, cmdList.VtxBuffer.Data.ToPointer(), (uint)cmdList.VtxBuffer.Size * (uint)sizeof(ImDrawVert));
+      Unsafe.CopyBlock(idxDst, cmdList.IdxBuffer.Data.ToPointer(), (uint)cmdList.IdxBuffer.Size * sizeof(ushort));
+
+      // _vertexBuffer.WrtieToIndex(cmdList.VtxBuffer.Data, n);
+      // _indexBuffer.WrtieToIndex(cmdList.IdxBuffer.Data, n);
+
+      // totalIdxData += cmdList.IdxBuffer.Data;
+      // totalVtxData += cmdList.VtxBuffer.Data;
 
       vtxDst += cmdList.VtxBuffer.Size;
       idxDst += cmdList.IdxBuffer.Size;
+
+      // vtxOffset += cmdList.VtxBuffer.Size;
+      // idxOffset += cmdList.IdxBuffer.Size;
     }
 
-    // _vertexBuffer.Flush();
-    // _indexBuffer.Flush();
+    // _vertexBuffer.Unmap();
+    // _indexBuffer.Unmap();
+
+    vkUnmapMemory(_device.LogicalDevice, _vertexBuffer.GetVkDeviceMemory());
+    vkUnmapMemory(_device.LogicalDevice, _indexBuffer.GetVkDeviceMemory());
+
+    // _vertexBuffer.Flush((ulong)vertexBufferSize);
+    // _indexBuffer.Flush((ulong)indexBufferSize);
   }
 
   public unsafe void RenderImDrawData(ImDrawDataPtr drawData, FrameInfo frameInfo) {
@@ -230,7 +278,7 @@ public partial class ImGuiController : IDisposable {
     uint indexOffset = 0;
 
     if (drawData.CmdListsCount > 0) {
-      ulong[] offsets = { 0 };
+      ulong[] offsets = [0];
       VkBuffer[] vertexBuffers = [_vertexBuffer.GetBuffer()];
 
       fixed (VkBuffer* vertexPtr = vertexBuffers)
@@ -243,10 +291,23 @@ public partial class ImGuiController : IDisposable {
         var cmdList = drawData.CmdLists[i];
         for (int j = 0; j < cmdList.CmdBuffer.Size; j++) {
           var pcmd = cmdList.CmdBuffer[j];
-          SetScissorRect(frameInfo, pcmd);
-          vkCmdDrawIndexed(frameInfo.CommandBuffer, pcmd.ElemCount, 1, indexOffset, vertexOffset, 0);
-          indexOffset += pcmd.ElemCount;
+          SetScissorRect(frameInfo, pcmd, drawData);
+          // vkCmdDrawIndexed(frameInfo.CommandBuffer, pcmd.ElemCount, 1, indexOffset, vertexOffset, 0);
+
+          vkCmdDrawIndexed(
+            frameInfo.CommandBuffer,
+            pcmd.ElemCount,
+            1,
+            pcmd.IdxOffset + indexOffset,
+            (int)pcmd.VtxOffset + vertexOffset,
+            0
+          );
+
+          // vkCmdDraw(frameInfo.CommandBuffer, pcmd.VtxOffset + (uint)vertexOffset, 1, 0, 0);
+          // vkCmdDraw(frameInfo.CommandBuffer, (uint)_vertexCount, 1, 0, 0);
+          // indexOffset += pcmd.ElemCount;
         }
+        indexOffset += (uint)cmdList.IdxBuffer.Size;
         vertexOffset += cmdList.VtxBuffer.Size;
       }
     }

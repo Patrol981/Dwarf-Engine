@@ -103,7 +103,7 @@ public class GenericLoader {
     }
 
     assimpContext.Dispose();
-    return new MeshRenderer(device, renderer, meshes.ToArray());
+    return new MeshRenderer(device, renderer, meshes.ToArray(), path);
   }
 
   public MeshRenderer LoadModel(VulkanDevice device, Renderer renderer, string path) {

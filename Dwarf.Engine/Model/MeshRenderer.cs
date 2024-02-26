@@ -27,6 +27,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private AABB[] _aabbes = [];
   private AABB _mergedAABB = new();
 
+  private string _fileName = "";
+
   private bool _finishedInitialization = false;
 
   public MeshRenderer() { }
@@ -39,6 +41,13 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public MeshRenderer(IDevice device, Renderer renderer, Mesh[] meshes) {
     _device = device;
     _renderer = renderer;
+    Init(meshes);
+  }
+
+  public MeshRenderer(IDevice device, Renderer renderer, Mesh[] meshes, string fileName) {
+    _device = device;
+    _renderer = renderer;
+    _fileName = fileName;
     Init(meshes);
   }
 
@@ -199,6 +208,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   }
   public int MeshsesCount => _meshesCount;
   public Mesh[] Meshes => _meshes;
+  public string FileName => _fileName;
   public float CalculateHeightOfAnModel() {
     var height = 0.0f;
     foreach (var m in _meshes) {

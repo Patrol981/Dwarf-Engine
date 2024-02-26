@@ -8,11 +8,13 @@ namespace Dwarf.Rendering.UI.DirectRPG;
 public class DirectRPG {
   private static float s_menuOffset = 0;
 
-  public static void CreateStyles() {
-
+  public static void CreateMenuStyles() {
+    var colors = ImGui.GetStyle().Colors;
+    var style = ImGui.GetStyle();
   }
 
-  public static void BeginCanvas() {
+  public static void BeginMainMenu() {
+    CreateMenuStyles();
     var io = ImGui.GetIO();
     ImGui.SetNextWindowPos(new(0, 0));
     ImGui.SetNextWindowSize(io.DisplaySize);
@@ -25,7 +27,7 @@ public class DirectRPG {
     );
   }
 
-  public static void EndCanvas() {
+  public static void EndMainMenu() {
     ImGui.End();
     s_menuOffset = 0;
   }

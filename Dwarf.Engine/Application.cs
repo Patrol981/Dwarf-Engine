@@ -18,6 +18,7 @@ using Dwarf.Rendering;
 using ImGuiNET;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Rendering.Lightning;
+using Dwarf.Rendering.UI.DirectRPG;
 
 namespace Dwarf.Engine;
 

@@ -106,6 +106,8 @@ public class Camera : Component {
     }
   }
 
+  public float RawFov => _fov;
+
   public void UpdateVectors() {
     _front.X = MathF.Cos(_pitch) * MathF.Cos(_yaw);
     _front.Y = MathF.Sin(_pitch);
@@ -119,11 +121,6 @@ public class Camera : Component {
 
     _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
     _up = Vector3.Normalize(Vector3.Cross(_right, _front));
-  }
-
-  public void UpdateControls() {
-    Owner!.GetComponent<FreeCameraController>()?.Update();
-    Owner!.GetComponent<ThirdPersonCamera>()?.Update();
   }
 
   public float Aspect {

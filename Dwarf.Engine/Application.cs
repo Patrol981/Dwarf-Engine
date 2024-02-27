@@ -171,7 +171,6 @@ public class Application {
       // Render();
       PerformCalculations();
 
-      _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
       MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
 
@@ -381,6 +380,12 @@ public class Application {
   public List<Entity> GetEntities() {
     lock (_entitiesLock) {
       return _entities;
+    }
+  }
+
+  public Entity? GetEntity(Guid entitiyId) {
+    lock (_entitiesLock) {
+      return _entities.Where(x => x.EntityID == entitiyId).First();
     }
   }
 

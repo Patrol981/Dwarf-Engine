@@ -28,6 +28,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private AABB _mergedAABB = new();
 
   private string _fileName = "";
+  private int _flippedTexture = 1;
 
   private bool _finishedInitialization = false;
 
@@ -209,6 +210,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public int MeshsesCount => _meshesCount;
   public Mesh[] Meshes => _meshes;
   public string FileName => _fileName;
+  public int TextureFlipped {
+    get { return _flippedTexture; }
+    set { _flippedTexture = value; }
+  }
   public float CalculateHeightOfAnModel() {
     var height = 0.0f;
     foreach (var m in _meshes) {

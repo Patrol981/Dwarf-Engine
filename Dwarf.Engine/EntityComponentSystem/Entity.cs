@@ -6,12 +6,18 @@ public class Entity {
 
   private ComponentManager _componentManager;
   private string _name = "Entity";
-  private Guid _guid = Guid.NewGuid();
+  private Guid _guid;
   private bool _isActive = true;
 
   private readonly object _componentLock = new object();
 
   public Entity() {
+    _guid = Guid.NewGuid();
+    _componentManager = new ComponentManager();
+  }
+
+  public Entity(Guid entityId) {
+    _guid = entityId;
     _componentManager = new ComponentManager();
   }
 

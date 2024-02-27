@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,7 +16,7 @@ using Dwarf.GLFW;
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine;
-public class ThirdPersonCamera : Component {
+public class ThirdPersonCamera : DwarfScript {
   private Entity _followTarget;
   private Camera _camera;
   private float _distanceFromTarget = 2.5f;
@@ -29,10 +29,13 @@ public class ThirdPersonCamera : Component {
 
   public void Init(Entity followTarget) {
     _followTarget = followTarget;
+  }
+
+  public override void Awake() {
     _camera = Owner!.GetComponent<Camera>();
   }
 
-  public void Update() {
+  public override void Update() {
     HandleMovement();
   }
   private void CalculateZoom() {

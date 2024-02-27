@@ -30,6 +30,7 @@ public class GLTFLoader {
     }
 
     var resultModel = new MeshRenderer(app.Device, app.Renderer, meshes.ToArray(), path);
+    resultModel.TextureFlipped = flip;
 
     if (!preload) {
       var images = ProcessMaterials(model);

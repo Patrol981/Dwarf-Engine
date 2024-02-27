@@ -266,6 +266,10 @@ public class Rigidbody : Component, IDisposable {
     }
   }
 
+  public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
+  public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);
+  public bool Flipped => _flip;
+
   public PrimitiveType PrimitiveType => _primitiveType;
 
   public void Dispose() {

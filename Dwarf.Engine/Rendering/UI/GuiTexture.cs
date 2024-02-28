@@ -1,28 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
-using System.Numerics;
+using StbImageSharp;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using StbImageSharp;
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Utils;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
   private readonly VulkanDevice _device = null!;
-
-  private Mesh _mesh = null!;
   private bool _hasIndexBuffer = false;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
@@ -40,9 +33,9 @@ public class GuiTexture : Component, IUIElement {
 
     CreateVertexData();
 
-    if (_mesh.Indices.Length > 0) _hasIndexBuffer = true;
-    CreateVertexBuffer(_mesh.Vertices);
-    CreateIndexBuffer(_mesh.Indices);
+    if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
+    CreateVertexBuffer(Mesh.Vertices);
+    CreateIndexBuffer(Mesh.Indices);
   }
 
   public void Bind(IntPtr commandBuffer) {
@@ -106,11 +99,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   public void BindToTexture(TextureManager textureManager, string texturePath, bool useLocalPath = false) {
-    if (useLocalPath) {
-      _textureIdRef = textureManager.GetTextureId($"./Textures/{texturePath}");
-    } else {
-      _textureIdRef = textureManager.GetTextureId(texturePath);
-    }
+    _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       _usesTexture = true;
@@ -139,35 +128,35 @@ public class GuiTexture : Component, IUIElement {
   }
 
   private void CreateVertexData() {
-    _mesh = new();
+    Mesh = new();
 
-    _mesh.Vertices = new Vertex[4];
-    _mesh.Vertices[0] = new Vertex {
+    Mesh.Vertices = new Vertex[4];
+    Mesh.Vertices[0] = new Vertex {
       Position = new Vector3(0.5f, 0.5f, 0.0f),
       Uv = new Vector2(0.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[1] = new Vertex {
+    Mesh.Vertices[1] = new Vertex {
       Position = new Vector3(0.5f, -0.5f, 0.0f),
       Uv = new Vector2(0.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[2] = new Vertex {
+    Mesh.Vertices[2] = new Vertex {
       Position = new Vector3(-0.5f, -0.5f, 0.0f),
       Uv = new Vector2(1.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[3] = new Vertex {
+    Mesh.Vertices[3] = new Vertex {
       Position = new Vector3(-0.5f, 0.5f, 0.0f),
       Uv = new Vector2(1.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
 
-    _mesh.Indices = new uint[] {
+    Mesh.Indices = new uint[] {
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
     };
@@ -232,5 +221,5 @@ public class GuiTexture : Component, IUIElement {
     stagingBuffer.Dispose();
   }
 
-  public Mesh Mesh => _mesh;
+  public Mesh Mesh { get; private set; } = null!;
 }

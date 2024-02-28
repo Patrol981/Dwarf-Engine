@@ -1,18 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Vortice.Vulkan;
+﻿using Vortice.Vulkan;
 
 namespace DwarfEngine.Vulkan;
 public abstract class PipelineProvider {
-  public unsafe virtual VkVertexInputBindingDescription* GetBindingDescsFunc() {
+  public virtual unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     throw new EntryPointNotFoundException("Cannot load non overrided function");
   }
 
-  public unsafe virtual VkVertexInputAttributeDescription* GetAttribDescsFunc() {
+  public virtual unsafe VkVertexInputAttributeDescription* GetAttribDescsFunc() {
     throw new EntryPointNotFoundException("Cannot load non overrided function");
   }
 

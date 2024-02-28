@@ -179,11 +179,7 @@ public class Ray {
     var normal1 = Vector3.Cross(edge1, point - v1.Position);
     var normal2 = Vector3.Cross(edge2, point - v2.Position);
 
-    if (Vector3.Dot(normal0, normal1) > 0.0 && Vector3.Dot(normal1, normal2) > 0.0) {
-      return true;
-    }
-
-    return false;
+    return Vector3.Dot(normal0, normal1) > 0.0 && Vector3.Dot(normal1, normal2) > 0.0;
   }
 
   public static RaycastHitResult OBBIntersection(Entity entity, float maxDistance) {

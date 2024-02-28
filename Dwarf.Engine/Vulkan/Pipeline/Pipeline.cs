@@ -1,19 +1,9 @@
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine;
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
-using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
 
 using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;

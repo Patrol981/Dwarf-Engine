@@ -1,6 +1,3 @@
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -111,7 +108,7 @@ public static class VkUtils {
     return descriptorPoolSize;
   }
 
-  public unsafe static VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo(
+  public static unsafe VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo(
     VkDescriptorPoolSize[] poolSizes,
     uint maxSets
   ) {
@@ -125,7 +122,7 @@ public static class VkUtils {
     return descriptorPoolInfo;
   }
 
-  public unsafe static VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(
+  public static unsafe VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(
     VkDescriptorType type,
     VkShaderStageFlags stageFlags,
     uint binding,
@@ -139,7 +136,7 @@ public static class VkUtils {
     return setLayoutBinding;
   }
 
-  public unsafe static VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo(
+  public static unsafe VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo(
     VkDescriptorSetLayoutBinding[] bindings
   ) {
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = new();
@@ -150,7 +147,7 @@ public static class VkUtils {
     return descriptorSetLayoutCreateInfo;
   }
 
-  public unsafe static VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo(
+  public static unsafe VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo(
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout* pSetLayouts,
     uint descriptorSetCount
@@ -162,7 +159,7 @@ public static class VkUtils {
     return descriptorSetAllocateInfo;
   }
 
-  public unsafe static VkDescriptorImageInfo DescriptorImageInfo(
+  public static unsafe VkDescriptorImageInfo DescriptorImageInfo(
     VkSampler sampler,
     VkImageView imageView,
     VkImageLayout imageLayout
@@ -174,7 +171,7 @@ public static class VkUtils {
     return descriptorImageInfo;
   }
 
-  public unsafe static VkWriteDescriptorSet WriteDescriptorSet(
+  public static unsafe VkWriteDescriptorSet WriteDescriptorSet(
     VkDescriptorSet dstSet,
     VkDescriptorType type,
     uint binding,
@@ -198,7 +195,7 @@ public static class VkUtils {
     return pushConstantRange;
   }
 
-  public unsafe static VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo(
+  public static unsafe VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo(
     VkDescriptorSetLayout* setLayouts,
     uint count
   ) {
@@ -236,7 +233,7 @@ public static class VkUtils {
     return pipelineRasterizationStateCreateInfo;
   }
 
-  public unsafe static VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo(
+  public static unsafe VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo(
     uint count,
     VkPipelineColorBlendAttachmentState* pAttachments
   ) {
@@ -246,7 +243,7 @@ public static class VkUtils {
     return pipelineColorBlendStateCreateInfo;
   }
 
-  public unsafe static VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo(
+  public static unsafe VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo(
     bool depthTestEnable,
     bool depthWriteEnable,
     VkCompareOp depthCompareOp
@@ -259,7 +256,7 @@ public static class VkUtils {
     return pipelineDepthStencilStateCreateInfo;
   }
 
-  public unsafe static VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo(
+  public static unsafe VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo(
     uint viewportCount,
     uint scissorCount,
     VkPipelineViewportStateCreateFlags flags = VkPipelineViewportStateCreateFlags.None
@@ -271,7 +268,7 @@ public static class VkUtils {
     return pipelineViewportStateCreateInfo;
   }
 
-  public unsafe static VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo(
+  public static unsafe VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo(
     VkSampleCountFlags rasterizationSamples,
     VkPipelineMultisampleStateCreateFlags flags = VkPipelineMultisampleStateCreateFlags.None
   ) {
@@ -281,7 +278,7 @@ public static class VkUtils {
     return pipelineMultisampleStateCreateInfo;
   }
 
-  public unsafe static VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo(
+  public static unsafe VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo(
     VkDynamicState[] dynamicStates,
     VkPipelineDynamicStateCreateFlags flags = VkPipelineDynamicStateCreateFlags.None
   ) {
@@ -294,7 +291,7 @@ public static class VkUtils {
     return pipelineDynamicStateCreateInfo;
   }
 
-  public unsafe static VkGraphicsPipelineCreateInfo PipelineCreateInfo(
+  public static unsafe VkGraphicsPipelineCreateInfo PipelineCreateInfo(
     VkPipelineLayout layout,
     VkRenderPass renderPass,
     VkPipelineCreateFlags flags = VkPipelineCreateFlags.None
@@ -308,7 +305,7 @@ public static class VkUtils {
     return pipelineCreateInfo;
   }
 
-  public unsafe static VkVertexInputBindingDescription VertexInputBindingDescription(
+  public static unsafe VkVertexInputBindingDescription VertexInputBindingDescription(
     uint binding,
     uint stride,
     VkVertexInputRate inputRate
@@ -320,7 +317,7 @@ public static class VkUtils {
     return vInputBindDescription;
   }
 
-  public unsafe static VkVertexInputAttributeDescription VertexInputAttributeDescription(
+  public static unsafe VkVertexInputAttributeDescription VertexInputAttributeDescription(
     uint binding,
     uint location,
     VkFormat format,

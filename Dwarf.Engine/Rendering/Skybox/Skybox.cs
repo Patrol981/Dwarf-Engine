@@ -1,17 +1,10 @@
-using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using DwarfEngine.Vulkan;
-
-using OpenTK.Mathematics;
-
-using SharpGLTF.Schema2;
 
 using Vortice.Vulkan;
 

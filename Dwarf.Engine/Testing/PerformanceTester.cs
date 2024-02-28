@@ -1,10 +1,9 @@
 using System.Numerics;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Loaders;
-using Dwarf.Extensions.GLFW;
-using static Vortice.Vulkan.Vulkan;
-using Dwarf.Extensions.Logging;
 using Dwarf.Engine.Physics;
+using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Testing;
 public class PerformanceTester {

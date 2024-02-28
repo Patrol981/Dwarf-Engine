@@ -1,28 +1,17 @@
-using System;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 
-using Dwarf.Engine.Global;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
-
 using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
+using Dwarf.GLFW;
+using Dwarf.GLFW.Core;
+using Dwarf.Utils;
 
 using StbImageSharp;
 
 using Vortice.Vulkan;
 
-using static System.Net.Mime.MediaTypeNames;
-
-using static Vortice.Vulkan.Vulkan;
-
-using Dwarf.GLFW;
-using Dwarf.GLFW.Core;
 using static Dwarf.GLFW.GLFW;
-using Dwarf.Utils;
 
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
@@ -32,12 +21,7 @@ namespace Dwarf.Engine.Windowing;
 public unsafe class Window : IDisposable {
   public VkString AppName = new("Dwarf App");
   public VkString EngineName = new("Dwarf Engine");
-
-  private GLFWwindow* _window;
-  private IntPtr _cursor;
   private DwarfExtent2D _extent;
-  private Vector2I _windowSize;
-  private bool _frambufferWindowResized = false;
   private bool _windowMinimalized = false;
 
   public event EventHandler OnResizedEventDispatcher;
@@ -47,18 +31,18 @@ public unsafe class Window : IDisposable {
   // private static bool EnableValidationLayers = true;
 
   public Window(int width, int height, string windowName) {
-    _windowSize = new Vector2I(width, height);
+    Size = new Vector2I(width, height);
     InitWindow(windowName);
     LoadIcons();
     LoadGamePadInput();
   }
 
   public void ResetWindowResizedFlag() {
-    _frambufferWindowResized = false;
+    FramebufferResized = false;
   }
 
   public unsafe void SetWindowName(string name) {
-    glfwSetWindowTitle(_window, name);
+    glfwSetWindowTitle(GLFWwindow, name);
   }
 
   protected void Clear() {
@@ -69,20 +53,20 @@ public unsafe class Window : IDisposable {
     glfwInit();
     glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
     glfwWindowHint((int)WindowHintBool.Resizable, 1);
-    _window = glfwCreateWindow(_windowSize.X, _windowSize.Y, windowName, null, null);
-    _extent = new DwarfExtent2D(_windowSize.X, _windowSize.Y);
+    GLFWwindow = glfwCreateWindow(Size.X, Size.Y, windowName, null, null);
+    _extent = new DwarfExtent2D(Size.X, Size.Y);
 
     // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
     //var w = this;
     //var ptr = GetWindowPtr(&w);
     //glfwSetWindowUserPointer(_window, ptr);
     WindowState.s_Window = this;
-    glfwSetFramebufferSizeCallback(_window, FrambufferResizedCallback);
-    glfwSetCursorPosCallback(_window, MouseState.MouseCallback);
-    glfwSetScrollCallback(_window, MouseState.ScrollCallback);
-    glfwSetMouseButtonCallback(_window, MouseState.MouseButtonCallback);
-    glfwSetKeyCallback(_window, KeyboardState.KeyCallback);
-    glfwSetWindowIconifyCallback(_window, IconifyCallback);
+    glfwSetFramebufferSizeCallback(GLFWwindow, FrambufferResizedCallback);
+    glfwSetCursorPosCallback(GLFWwindow, MouseState.MouseCallback);
+    glfwSetScrollCallback(GLFWwindow, MouseState.ScrollCallback);
+    glfwSetMouseButtonCallback(GLFWwindow, MouseState.MouseButtonCallback);
+    glfwSetKeyCallback(GLFWwindow, KeyboardState.KeyCallback);
+    glfwSetWindowIconifyCallback(GLFWwindow, IconifyCallback);
 
     WindowState.CenterWindow();
     // WindowState.MaximizeWindow();
@@ -101,7 +85,7 @@ public unsafe class Window : IDisposable {
       Height = engineIco.Height,
       Pixels = (char*)engineIcoPtr
     };
-    glfwSetWindowIcon(_window, 1, &engineImage);
+    glfwSetWindowIcon(GLFWwindow, 1, &engineImage);
     Marshal.FreeHGlobal(engineIcoPtr);
     engineIcoStream.Dispose();
 
@@ -116,8 +100,8 @@ public unsafe class Window : IDisposable {
       Pixels = (char*)cursorPtr
     };
     var cursor = glfwCreateCursor(&cursorImage, 0, 0);
-    _cursor = new IntPtr(cursor);
-    glfwSetCursor(_window, (void*)_cursor);
+    CursorHandle = new IntPtr(cursor);
+    glfwSetCursor(GLFWwindow, (void*)CursorHandle);
     Marshal.FreeHGlobal(cursorPtr);
     cursorIcoStream.Dispose();
   }
@@ -151,11 +135,7 @@ public unsafe class Window : IDisposable {
   }
 
   private static unsafe void IconifyCallback(GLFWwindow* window, int iconified) {
-    if (iconified == 0) {
-      WindowState.s_Window._windowMinimalized = false;
-    } else {
-      WindowState.s_Window._windowMinimalized = true;
-    }
+    WindowState.s_Window._windowMinimalized = iconified != 0;
     Logger.Info($"Window Minimalized: {WindowState.s_Window._windowMinimalized}");
   }
 
@@ -165,22 +145,19 @@ public unsafe class Window : IDisposable {
 
   public void Dispose() {
     // glfwDestroyWindow(_window);
-    glfwDestroyCursor((void*)_cursor);
+    glfwDestroyCursor((void*)CursorHandle);
     glfwTerminate();
   }
 
-  public bool WasWindowResized() => _frambufferWindowResized;
+  public bool WasWindowResized() => FramebufferResized;
   public bool WasWindowMinimalized() => _windowMinimalized;
 
   public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) {
-    return glfwCreateWindowSurface(instance, _window, null, surface);
+    return glfwCreateWindowSurface(instance, GLFWwindow, null, surface);
   }
 
-  public bool ShouldClose => glfwWindowShouldClose(_window);
-  public bool FramebufferResized {
-    get { return _frambufferWindowResized; }
-    private set { _frambufferWindowResized = value; }
-  }
+  public bool ShouldClose => glfwWindowShouldClose(GLFWwindow);
+  public bool FramebufferResized { get; private set; } = false;
 
   public bool IsMinimalized {
     get {
@@ -199,7 +176,7 @@ public unsafe class Window : IDisposable {
     get { return _extent; }
     private set { _extent = value; }
   }
-  public Vector2I Size => _windowSize;
-  public GLFWwindow* GLFWwindow => _window;
-  public nint CursorHandle => _cursor;
+  public Vector2I Size { get; }
+  public GLFWwindow* GLFWwindow { get; private set; }
+  public nint CursorHandle { get; private set; }
 }

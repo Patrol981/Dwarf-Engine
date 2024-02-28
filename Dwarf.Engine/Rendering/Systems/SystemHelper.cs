@@ -1,21 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Dwarf.Vulkan;
+﻿using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine;
-public class SystemHelper
-{
-  public static void CreatePipeline(ref VulkanDevice device, VkRenderPass renderPass, VkPipelineLayout layout, ref Pipeline pipeline, ref PipelineConfigInfo configInfo)
-  {
+public class SystemHelper {
+  public static void CreatePipeline(ref VulkanDevice device, VkRenderPass renderPass, VkPipelineLayout layout, ref Pipeline pipeline, ref PipelineConfigInfo configInfo) {
     pipeline?.Dispose();
-    if (configInfo != null)
-    {
+    if (configInfo != null) {
       configInfo = new PipelineConfigInfo();
     }
     var pipelineConfig = configInfo!.GetConfigInfo();

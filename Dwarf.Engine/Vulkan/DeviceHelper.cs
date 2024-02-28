@@ -5,7 +5,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
-public unsafe static class DeviceHelper {
+public static unsafe class DeviceHelper {
   public static VkPhysicalDevice GetPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     VkPhysicalDevice returnDevice = VkPhysicalDevice.Null;
 
@@ -51,9 +51,7 @@ public unsafe static class DeviceHelper {
       if (result != VkResult.Success)
         return false;
       VkVersion version = vkEnumerateInstanceVersion();
-      if (version < VkVersion.Version_1_3)
-        return false;
-      return true;
+      return version >= VkVersion.Version_1_3;
     } catch {
       return false;
     }

@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 using DwarfEngine.Vulkan;
 
@@ -13,51 +8,44 @@ using FontStashSharp.Interfaces;
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI.FontStash;
-public class PipelineFontStashProvider : PipelineProvider
-{
-    public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc()
-    {
-        var bindingDescriptions = new VkVertexInputBindingDescription[1];
-        bindingDescriptions[0].binding = 0;
-        bindingDescriptions[0].stride = (uint)Unsafe.SizeOf<VertexPositionColorTexture>();
-        bindingDescriptions[0].inputRate = VkVertexInputRate.Vertex;
-        fixed (VkVertexInputBindingDescription* ptr = bindingDescriptions)
-        {
-            return ptr;
-        }
+public class PipelineFontStashProvider : PipelineProvider {
+  public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
+    var bindingDescriptions = new VkVertexInputBindingDescription[1];
+    bindingDescriptions[0].binding = 0;
+    bindingDescriptions[0].stride = (uint)Unsafe.SizeOf<VertexPositionColorTexture>();
+    bindingDescriptions[0].inputRate = VkVertexInputRate.Vertex;
+    fixed (VkVertexInputBindingDescription* ptr = bindingDescriptions) {
+      return ptr;
     }
+  }
 
-    public override unsafe VkVertexInputAttributeDescription* GetAttribDescsFunc()
-    {
-        var attributeDescriptions = new VkVertexInputAttributeDescription[GetAttribsLength()];
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VkFormat.R32G32B32Sfloat;
-        attributeDescriptions[0].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("Position");
+  public override unsafe VkVertexInputAttributeDescription* GetAttribDescsFunc() {
+    var attributeDescriptions = new VkVertexInputAttributeDescription[GetAttribsLength()];
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VkFormat.R32G32B32Sfloat;
+    attributeDescriptions[0].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("Position");
 
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VkFormat.R32G32B32A32Sfloat;
-        attributeDescriptions[1].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("Color");
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VkFormat.R32G32B32A32Sfloat;
+    attributeDescriptions[1].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("Color");
 
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VkFormat.R32G32Sfloat;
-        attributeDescriptions[2].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("TextureCoordinate");
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VkFormat.R32G32Sfloat;
+    attributeDescriptions[2].offset = (uint)Marshal.OffsetOf<VertexPositionColorTexture>("TextureCoordinate");
 
-        fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions)
-        {
-            return ptr;
-        }
+    fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions) {
+      return ptr;
     }
+  }
 
-    public override uint GetAttribsLength()
-    {
-        return 3;
-    }
+  public override uint GetAttribsLength() {
+    return 3;
+  }
 
-    public override uint GetBindingsLength()
-    {
-        return 1;
-    }
+  public override uint GetBindingsLength() {
+    return 1;
+  }
 }

@@ -1,12 +1,12 @@
+using System.Numerics;
+
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
 
-using System.Numerics;
-
 using static Dwarf.Engine.Physics.JoltConfig;
-using Dwarf.Engine.Rendering;
 
 namespace Dwarf.Engine.Physics;
 
@@ -17,9 +17,7 @@ public class Rigidbody : Component, IDisposable {
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
   private MotionQuality _motionQuality = MotionQuality.Discrete;
-  private PrimitiveType _primitiveType = PrimitiveType.None;
   private float _inputRadius = 0.0f;
-  private bool _flip = false;
   private float _sizeX = 1.0f;
   private float _sizeY = 1.0f;
   private float _sizeZ = 1.0f;
@@ -30,10 +28,10 @@ public class Rigidbody : Component, IDisposable {
   public Rigidbody() { }
 
   public Rigidbody(VulkanDevice device, PrimitiveType colliderShape, float inputRadius, bool kinematic = false, bool flip = false) {
-    _primitiveType = colliderShape;
+    PrimitiveType = colliderShape;
     _device = device;
     _inputRadius = inputRadius;
-    _flip = flip;
+    Flipped = flip;
     if (kinematic) {
       _motionType = MotionType.Kinematic;
     }
@@ -49,8 +47,8 @@ public class Rigidbody : Component, IDisposable {
     bool flip
   ) {
     _device = device;
-    _primitiveType = primitiveType;
-    _flip = flip;
+    PrimitiveType = primitiveType;
+    Flipped = flip;
     if (kinematic) {
       _motionType = MotionType.Kinematic;
     }
@@ -72,8 +70,8 @@ public class Rigidbody : Component, IDisposable {
     bool flip
   ) {
     _device = device;
-    _primitiveType = primitiveType;
-    _flip = flip;
+    PrimitiveType = primitiveType;
+    Flipped = flip;
     if (kinematic) {
       _motionType = MotionType.Kinematic;
     }
@@ -86,7 +84,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public unsafe void Init(in BodyInterface bodyInterface) {
-    if (_primitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
+    if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
 
     _bodyInterface = bodyInterface;
@@ -98,7 +96,7 @@ public class Rigidbody : Component, IDisposable {
     Mesh mesh;
     ShapeSettings shapeSettings;
 
-    switch (_primitiveType) {
+    switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
         mesh = Primitives.CreateCylinderPrimitive(1, 1, 20);
         ScaleColliderMesh(mesh);
@@ -106,7 +104,7 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(target.Meshes, _flip);
+        mesh = Primitives.CreateConvex(target.Meshes, Flipped);
         ScaleColliderMesh(mesh);
         AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
@@ -118,7 +116,7 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Torus:
-        mesh = Primitives.CreateConvex(target.Meshes, _flip);
+        mesh = Primitives.CreateConvex(target.Meshes, Flipped);
         ScaleColliderMesh(mesh);
         AdjustColliderMesh(mesh);
         shapeSettings = JoltProgram.CreateTorusMesh(1, 1, 16, 16);
@@ -254,23 +252,18 @@ public class Rigidbody : Component, IDisposable {
 
   public bool Kinematic {
     get {
-      if (_motionType == MotionType.Static) return true;
-      return false;
+      return _motionType == MotionType.Static;
     }
     set {
-      if (value) {
-        _motionType = MotionType.Static;
-      } else {
-        _motionType = MotionType.Dynamic;
-      }
+      _motionType = value ? MotionType.Static : MotionType.Dynamic;
     }
   }
 
   public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
   public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);
-  public bool Flipped => _flip;
+  public bool Flipped { get; } = false;
 
-  public PrimitiveType PrimitiveType => _primitiveType;
+  public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;
 
   public void Dispose() {
     _bodyInterface.DeactivateBody(_bodyId);

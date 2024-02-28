@@ -1,12 +1,15 @@
-using Dwarf.Engine.EntityComponentSystem;
 using System.Numerics;
-using Dwarf.Vulkan;
-using Vortice.Vulkan;
-using static Vortice.Vulkan.Vulkan;
 using System.Runtime.CompilerServices;
-using Dwarf.Extensions.Logging;
+
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
+using Dwarf.Vulkan;
+
+using Vortice.Vulkan;
+
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {

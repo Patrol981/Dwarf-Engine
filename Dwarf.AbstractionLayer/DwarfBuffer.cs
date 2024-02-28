@@ -173,11 +173,7 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   private static ulong GetAlignment(ulong instanceSize, ulong minOffsetAlignment) {
-    if (minOffsetAlignment > 0) {
-      return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
-      // return (instanceSize + minOffsetAlignment - 1) / minOffsetAlignment * minOffsetAlignment;
-    }
-    return instanceSize;
+    return minOffsetAlignment > 0 ? (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1) : instanceSize;
   }
 
   public void FreeMemory() {

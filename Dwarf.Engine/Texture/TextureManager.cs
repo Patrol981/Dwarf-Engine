@@ -1,5 +1,4 @@
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -7,47 +6,45 @@ namespace Dwarf.Engine;
 
 public class TextureManager : IDisposable {
   private readonly VulkanDevice _device;
-  private Dictionary<Guid, ITexture> _loadedTextures;
-  private readonly FreeType _ft;
 
   public TextureManager(VulkanDevice device) {
     _device = device;
-    _loadedTextures = [];
+    LoadedTextures = [];
 
-    _ft = new FreeType(device);
-    _ft.Init();
+    FreeType = new FreeType(device);
+    FreeType.Init();
 
-    foreach (var c in _ft.Characters) {
+    foreach (var c in FreeType.Characters) {
       AddTexture(c.Value.Texture);
     }
   }
 
   public void AddRange(ITexture[] textures) {
     for (int i = 0; i < textures.Length; i++) {
-      _loadedTextures.Add(Guid.NewGuid(), textures[i]);
+      LoadedTextures.Add(Guid.NewGuid(), textures[i]);
     }
   }
 
   public async Task<Task> AddTexture(string texturePath) {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
     var texture = await TextureLoader.LoadFromPath(_device, texturePath, default);
-    _loadedTextures.Add(Guid.NewGuid(), texture);
+    LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
 
   public Task AddTexture(ITexture texture) {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texture.TextureName) {
         Logger.Warn($"Texture [{texture.TextureName}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    _loadedTextures.Add(Guid.NewGuid(), texture);
+    LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
 
@@ -73,16 +70,16 @@ public class TextureManager : IDisposable {
   }
 
   public void RemoveTexture(Guid key) {
-    _loadedTextures[key].Dispose();
-    _loadedTextures.Remove(key);
+    LoadedTextures[key].Dispose();
+    LoadedTextures.Remove(key);
   }
 
   public ITexture GetTexture(Guid key) {
-    return _loadedTextures.GetValueOrDefault(key) ?? null!;
+    return LoadedTextures.GetValueOrDefault(key) ?? null!;
   }
 
   public Guid GetTextureId(string textureName) {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == textureName) {
         return tex.Key;
       }
@@ -90,11 +87,11 @@ public class TextureManager : IDisposable {
     return Guid.Empty;
   }
 
-  public Dictionary<Guid, ITexture> LoadedTextures => _loadedTextures;
-  public FreeType FreeType => _ft;
+  public Dictionary<Guid, ITexture> LoadedTextures { get; }
+  public FreeType FreeType { get; }
 
   public void Dispose() {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       RemoveTexture(tex.Key);
     }
   }

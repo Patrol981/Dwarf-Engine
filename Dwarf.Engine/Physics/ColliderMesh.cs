@@ -18,31 +18,26 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
-
-  private Mesh _mesh = null!;
-  private bool _finishedInitialization = false;
   private bool _hasIndexBuffer = false;
-
-  private bool _enabled = true;
 
   public ColliderMesh() { }
 
   public ColliderMesh(VulkanDevice device, Mesh mesh) {
     _device = device;
-    _mesh = mesh;
+    Mesh = mesh;
 
-    if (_mesh.Indices.Length > 0) _hasIndexBuffer = true;
+    if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
 
     Init();
   }
 
   public async void Init() {
     Task[] tasks = [
-      CreateVertexBuffer(_mesh.Vertices),
-      CreateIndexBuffer(_mesh.Indices)
+      CreateVertexBuffer(Mesh.Vertices),
+      CreateIndexBuffer(Mesh.Indices)
     ];
     await Task.WhenAll(tasks);
-    _finishedInitialization = true;
+    FinishedInitialization = true;
   }
 
   public void Bind(VkCommandBuffer commandBuffer) {
@@ -162,15 +157,15 @@ public class ColliderMesh : Component, IDebugRender3DObject {
 
   public int MeshsesCount => 1;
 
-  public bool FinishedInitialization => _finishedInitialization;
+  public bool FinishedInitialization { get; private set; } = false;
 
-  public Mesh Mesh => _mesh;
+  public Mesh Mesh { get; } = null!;
 
-  public bool Enabled => _enabled;
+  public bool Enabled { get; private set; } = true;
   public void Enable() {
-    _enabled = true;
+    Enabled = true;
   }
   public void Disable() {
-    _enabled = false;
+    Enabled = false;
   }
 }

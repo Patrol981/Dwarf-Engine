@@ -1,18 +1,14 @@
-using Dwarf.GLFW;
-using static Dwarf.GLFW.GLFW;
-
 using Dwarf.Extensions.GLFW;
+
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Globals;
 public static class Input {
-  public unsafe static bool GetKey(Keys key) {
-    if (glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)KeyAction.GLFW_PRESS) {
-      return true;
-    }
-    return false;
+  public static unsafe bool GetKey(Keys key) {
+    return glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)KeyAction.GLFW_PRESS;
   }
 
-  public unsafe static bool GetKeyDown(Keys key) {
+  public static unsafe bool GetKeyDown(Keys key) {
     var keyboardState = KeyboardState.Instance;
 
     bool keyPressed = keyboardState.KeyStates[(int)key].KeyPressed;
@@ -43,10 +39,7 @@ public static class Input {
     }
   }
 
-  public unsafe static bool GetMouseButton(MouseButtonMap.Buttons button) {
-    if (glfwGetMouseButton(WindowState.s_Window.GLFWwindow, (int)button) == (int)MouseButtonMap.Action.GLFW_PRESS) {
-      return true;
-    }
-    return false;
+  public static unsafe bool GetMouseButton(MouseButtonMap.Buttons button) {
+    return glfwGetMouseButton(WindowState.s_Window.GLFWwindow, (int)button) == (int)MouseButtonMap.Action.GLFW_PRESS;
   }
 }

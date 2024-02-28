@@ -2,7 +2,6 @@ namespace Dwarf.Extensions.Lists;
 
 public class PublicList<T> {
   private T[] _data;
-  private int _size = 0;
   private int _capacity;
 
   private readonly object _lock = new object();
@@ -13,8 +12,8 @@ public class PublicList<T> {
     _data = new T[initialCapacity];
   }
 
-  public int Size { get { return _size; } }
-  public bool IsEmpty { get { return _size == 0; } }
+  public int Size { get; private set; } = 0;
+  public bool IsEmpty { get { return Size == 0; } }
 
   public T GetAt(int index) {
     lock (_lock) {
@@ -33,44 +32,44 @@ public class PublicList<T> {
   public void InsertAt(T newElement, int index) {
     lock (_lock) {
       ThrowIfIndexOutOfRange(index);
-      if (_size == _capacity) {
+      if (Size == _capacity) {
         Resize();
       }
 
-      for (int i = _size; i > index; i--) {
+      for (int i = Size; i > index; i--) {
         _data[i] = _data[i - 1];
       }
 
       _data[index] = newElement;
-      _size++;
+      Size++;
     }
   }
 
   public void DeleteAt(int index) {
     lock (_lock) {
       ThrowIfIndexOutOfRange(index);
-      for (int i = index; i < _size - 1; i++) {
+      for (int i = index; i < Size - 1; i++) {
         _data[i] = _data[i + 1];
       }
 
-      _data[_size - 1] = default(T)!;
-      _size--;
+      _data[Size - 1] = default(T)!;
+      Size--;
     }
   }
 
   public void Add(T newElement) {
     lock (_lock) {
-      if (_size == _capacity) {
+      if (Size == _capacity) {
         Resize();
       }
 
-      _data[_size] = newElement;
-      _size++;
+      _data[Size] = newElement;
+      Size++;
     }
   }
 
   public bool Contains(T value) {
-    for (int i = 0; i < _size; i++) {
+    for (int i = 0; i < Size; i++) {
       T currentValue = _data[i];
       if (currentValue!.Equals(value)) {
         return true;
@@ -81,7 +80,7 @@ public class PublicList<T> {
 
   public void Clear() {
     _data = new T[_capacity];
-    _size = 0;
+    Size = 0;
   }
 
   private void Resize() {
@@ -96,8 +95,8 @@ public class PublicList<T> {
   }
 
   private void ThrowIfIndexOutOfRange(int index) {
-    if (index > _size - 1 || index < 0) {
-      throw new ArgumentOutOfRangeException(string.Format("The current size of the array is {0}", _size));
+    if (index > Size - 1 || index < 0) {
+      throw new ArgumentOutOfRangeException(string.Format("The current size of the array is {0}", Size));
     }
   }
 

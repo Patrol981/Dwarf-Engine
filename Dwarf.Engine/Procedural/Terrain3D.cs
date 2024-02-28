@@ -1,10 +1,6 @@
-using Assimp;
-
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
-using Dwarf.Vulkan;
-
 using System.Numerics;
+
+using Dwarf.Engine.Math;
 
 namespace Dwarf.Engine.Procedural;
 public class Terrain3D : MeshRenderer {

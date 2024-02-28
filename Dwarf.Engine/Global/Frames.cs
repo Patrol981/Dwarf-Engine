@@ -1,6 +1,6 @@
-using static Dwarf.GLFW.GLFW;
-
 using Dwarf.Engine.Globals;
+
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Global;
 public static class Frames {

@@ -23,7 +23,7 @@ public class PipelineConfigInfo {
   /// This method is overridable, so there is no need to write all that stuff all over again if want to
   /// make small changes to the pipeline
   /// </summary>
-  public unsafe virtual PipelineConfigInfo GetConfigInfo() {
+  public virtual unsafe PipelineConfigInfo GetConfigInfo() {
     var configInfo = this;
 
     // configInfo.InputAssemblyInfo.sType = VkStructureType.PipelineInputAssemblyStateCreateInfo;

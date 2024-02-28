@@ -1,9 +1,6 @@
-using System.Drawing;
-using System.Net.Mime;
 using System.Runtime.InteropServices;
 
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
@@ -17,7 +14,6 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine;
 
 public class VulkanTexture : ITexture {
-  private readonly string _textureName;
   protected readonly VulkanDevice _device = null!;
 
   internal VkImage _textureImage = VkImage.Null;
@@ -33,7 +29,7 @@ public class VulkanTexture : ITexture {
     _device = device;
     _width = width;
     _height = height;
-    _textureName = textureName;
+    TextureName = textureName;
 
     _size = _width * _height * 4;
   }
@@ -159,7 +155,7 @@ public class VulkanTexture : ITexture {
     return image;
   }
 
-  private unsafe static void CreateImage(
+  private static unsafe void CreateImage(
     VulkanDevice device,
     uint width,
     uint height,
@@ -198,7 +194,7 @@ public class VulkanTexture : ITexture {
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();
   }
 
-  private unsafe static void CopyBufferToImage(VulkanDevice device, VkBuffer buffer, VkImage image, int width, int height) {
+  private static unsafe void CopyBufferToImage(VulkanDevice device, VkBuffer buffer, VkImage image, int width, int height) {
     VkCommandBuffer commandBuffer = device.BeginSingleTimeCommands();
 
     VkBufferImageCopy region = new();
@@ -217,7 +213,7 @@ public class VulkanTexture : ITexture {
     device.EndSingleTimeCommands(commandBuffer);
   }
 
-  private unsafe static void CreateImageTransitions(
+  private static unsafe void CreateImageTransitions(
     VulkanDevice device,
     VkImageLayout oldLayout,
     VkImageLayout newLayout,
@@ -273,7 +269,7 @@ public class VulkanTexture : ITexture {
     imageView = CreateImageView(device, VkFormat.R8G8B8A8Unorm, textureImage);
   }
 
-  private unsafe static VkImageView CreateImageView(VulkanDevice device, VkFormat format, VkImage textureImage) {
+  private static unsafe VkImageView CreateImageView(VulkanDevice device, VkFormat format, VkImage textureImage) {
     VkImageViewCreateInfo viewInfo = new();
     viewInfo.image = textureImage;
     viewInfo.viewType = VkImageViewType.Image2D;
@@ -289,7 +285,7 @@ public class VulkanTexture : ITexture {
     return view;
   }
 
-  private unsafe static void CreateSampler(VulkanDevice device, out VkSampler imageSampler) {
+  private static unsafe void CreateSampler(VulkanDevice device, out VkSampler imageSampler) {
     VkPhysicalDeviceProperties properties = new();
     vkGetPhysicalDeviceProperties(device.PhysicalDevice, &properties);
 
@@ -310,7 +306,7 @@ public class VulkanTexture : ITexture {
     vkCreateSampler(device.LogicalDevice, &samplerInfo, null, out imageSampler).CheckResult();
   }
 
-  public unsafe virtual void Dispose(bool disposing) {
+  public virtual unsafe void Dispose(bool disposing) {
     if (disposing) {
       vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
       vkDestroyImage(_device.LogicalDevice, _textureImage);
@@ -330,5 +326,5 @@ public class VulkanTexture : ITexture {
   public int Width => _width;
   public int Height => _height;
   public int Size => _size;
-  public string TextureName => _textureName;
+  public string TextureName { get; }
 }

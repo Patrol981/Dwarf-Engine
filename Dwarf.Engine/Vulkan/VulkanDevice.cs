@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -418,7 +417,7 @@ public class VulkanDevice : IDevice {
   }
 
   [UnmanagedCallersOnly]
-  private unsafe static uint DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
+  private static unsafe uint DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
     VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* userData
@@ -528,9 +527,7 @@ public class VulkanDevice : IDevice {
     };
 
     var result = vkCreateCommandPool(_logicalDevice, &poolCreateInfo, null, out var commandPool);
-    if (result != VkResult.Success) throw new Exception("Failed to create command pool!");
-
-    return commandPool;
+    return result != VkResult.Success ? throw new Exception("Failed to create command pool!") : (ulong)commandPool;
   }
 
   public unsafe void Dispose() {

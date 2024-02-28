@@ -1,10 +1,9 @@
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Testing;
+using Dwarf.GLFW.Core;
 // using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
-using Dwarf.GLFW;
-using Dwarf.GLFW.Core;
 
 namespace Dwarf.Engine.Globals;
 
@@ -22,19 +21,17 @@ public sealed class KeyboardState {
   private static KeyboardState s_instance = GetInstance();
   private static bool s_debug = true;
 
-  private Dictionary<int, KeyState> _keyStates = [];
-
   public KeyboardState() {
     foreach (var enumValue in Enum.GetValues(typeof(Keys))) {
-      _keyStates.TryAdd((int)enumValue, new());
+      KeyStates.TryAdd((int)enumValue, new());
     }
   }
   public static unsafe void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     switch (action) {
       case (int)KeyAction.GLFW_PRESS:
-        if (s_instance._keyStates.ContainsKey(key)) {
-          s_instance._keyStates[key].KeyDown = true;
-          s_instance._keyStates[key].KeyPressed = true;
+        if (s_instance.KeyStates.ContainsKey(key)) {
+          s_instance.KeyStates[key].KeyDown = true;
+          s_instance.KeyStates[key].KeyPressed = true;
         }
 
         if (key == (int)Keys.GLFW_KEY_F) WindowState.FocusOnWindow();
@@ -45,8 +42,8 @@ public sealed class KeyboardState {
       case (int)KeyAction.GLFW_REPEAT:
         break;
       case (int)KeyAction.GLFW_RELEASE:
-        if (s_instance._keyStates.ContainsKey(key)) {
-          s_instance._keyStates[key].KeyDown = false;
+        if (s_instance.KeyStates.ContainsKey(key)) {
+          s_instance.KeyStates[key].KeyDown = false;
         }
         break;
       default:
@@ -56,11 +53,9 @@ public sealed class KeyboardState {
   }
 
   static void ChangeWireframeMode() {
-    if (Application.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)) {
-      Application.Instance.CurrentPipelineConfig = new VertexDebugPipeline();
-    } else {
-      Application.Instance.CurrentPipelineConfig = new PipelineConfigInfo();
-    }
+    Application.Instance.CurrentPipelineConfig = Application.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)
+      ? new VertexDebugPipeline()
+      : new PipelineConfigInfo();
     Application.Instance.GetSystems().Reload3DRenderSystem = true;
     Application.Instance.GetSystems().Reload2DRenderSystem = true;
   }
@@ -84,7 +79,7 @@ public sealed class KeyboardState {
     return s_instance;
   }
 
-  public Dictionary<int, KeyState> KeyStates => _keyStates;
+  public Dictionary<int, KeyState> KeyStates { get; } = [];
 
   public static KeyboardState Instance => GetInstance();
 }

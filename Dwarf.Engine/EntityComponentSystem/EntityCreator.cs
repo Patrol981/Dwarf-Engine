@@ -1,6 +1,5 @@
 using System.Numerics;
 
-using Dwarf.Engine;
 using Dwarf.Engine.Loader.Providers;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
@@ -80,7 +79,7 @@ public static class EntityCreator {
     entity.AddComponent(new Material(color.Value));
   }
 
-  public async static Task<Entity> Create3DModel(
+  public static async Task<Entity> Create3DModel(
     string entityName,
     string modelPath,
     string[] texturePaths,
@@ -144,7 +143,7 @@ public static class EntityCreator {
     }
   }
 
-  public async static Task<Entity> Create3DPrimitive(
+  public static async Task<Entity> Create3DPrimitive(
     string entityName,
     string texturePath,
     PrimitiveType primitiveType,

@@ -2,8 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Runtime.InteropServices;
 
-using Assimp;
-
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Math;

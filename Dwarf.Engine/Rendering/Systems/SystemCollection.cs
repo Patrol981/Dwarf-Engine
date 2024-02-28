@@ -4,9 +4,7 @@ using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
-using static Vortice.Vulkan.Vulkan;
 using Vortice.Vulkan;
-using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Rendering;
 public class SystemCollection : IDisposable {

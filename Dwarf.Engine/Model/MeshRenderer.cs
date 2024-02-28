@@ -7,7 +7,6 @@ using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
-using Dwarf.Vulkan;
 
 namespace Dwarf.Engine;
 
@@ -20,17 +19,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private bool[] _hasIndexBuffer = [];
   private DwarfBuffer[] _indexBuffers = [];
   private ulong[] _indexCount = [];
-  private int _meshesCount = 0;
   private Guid[] _textureIdRefs = [];
-
-  private Mesh[] _meshes = [];
-  private AABB[] _aabbes = [];
   private AABB _mergedAABB = new();
-
-  private string _fileName = "";
-  private int _flippedTexture = 1;
-
-  private bool _finishedInitialization = false;
 
   public MeshRenderer() { }
 
@@ -48,24 +38,24 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public MeshRenderer(IDevice device, Renderer renderer, Mesh[] meshes, string fileName) {
     _device = device;
     _renderer = renderer;
-    _fileName = fileName;
+    FileName = fileName;
     Init(meshes);
   }
 
   protected void Init(Mesh[] meshes) {
-    _meshesCount = meshes.Length;
-    _indexCount = new ulong[_meshesCount];
-    _indexBuffers = new DwarfBuffer[_meshesCount];
-    _indexCount = new ulong[_meshesCount];
-    _vertexBuffers = new DwarfBuffer[_meshesCount];
-    _vertexCount = new ulong[_meshesCount];
-    _hasIndexBuffer = new bool[_meshesCount];
-    _textureIdRefs = new Guid[_meshesCount];
+    MeshsesCount = meshes.Length;
+    _indexCount = new ulong[MeshsesCount];
+    _indexBuffers = new DwarfBuffer[MeshsesCount];
+    _indexCount = new ulong[MeshsesCount];
+    _vertexBuffers = new DwarfBuffer[MeshsesCount];
+    _vertexCount = new ulong[MeshsesCount];
+    _hasIndexBuffer = new bool[MeshsesCount];
+    _textureIdRefs = new Guid[MeshsesCount];
 
     List<Task> createTasks = new();
 
-    _meshes = meshes;
-    _aabbes = new AABB[_meshesCount];
+    Meshes = meshes;
+    AABBArray = new AABB[MeshsesCount];
 
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
@@ -73,18 +63,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       createTasks.Add(CreateVertexBuffer(meshes[i].Vertices, (uint)i));
       createTasks.Add(CreateIndexBuffer(meshes[i].Indices, (uint)i));
 
-      _aabbes[i] = new();
-      _aabbes[i].Update(meshes[i]);
+      AABBArray[i] = new();
+      AABBArray[i].Update(meshes[i]);
     }
 
-    _mergedAABB.Update(_aabbes);
+    _mergedAABB.Update(AABBArray);
 
     RunTasks(createTasks);
   }
 
   protected async void RunTasks(List<Task> createTasks) {
     await Task.WhenAll(createTasks);
-    _finishedInitialization = true;
+    FinishedInitialization = true;
   }
 
   public Task Bind(IntPtr commandBuffer, uint index) {
@@ -124,7 +114,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   }
 
   public void BindMultipleModelPartsToTexture(TextureManager textureManager, string path) {
-    for (int i = 0; i < _meshesCount; i++) {
+    for (int i = 0; i < MeshsesCount; i++) {
       BindToTexture(textureManager, path, i);
     }
   }
@@ -133,7 +123,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     TextureManager textureManager,
     ReadOnlySpan<string> paths
   ) {
-    for (int i = 0; i < _meshesCount; i++) {
+    for (int i = 0; i < MeshsesCount; i++) {
       BindToTexture(textureManager, paths[i], i);
     }
   }
@@ -207,16 +197,13 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       }
     }
   }
-  public int MeshsesCount => _meshesCount;
-  public Mesh[] Meshes => _meshes;
-  public string FileName => _fileName;
-  public int TextureFlipped {
-    get { return _flippedTexture; }
-    set { _flippedTexture = value; }
-  }
+  public int MeshsesCount { get; private set; } = 0;
+  public Mesh[] Meshes { get; private set; } = [];
+  public string FileName { get; } = "";
+  public int TextureFlipped { get; set; } = 1;
   public float CalculateHeightOfAnModel() {
     var height = 0.0f;
-    foreach (var m in _meshes) {
+    foreach (var m in Meshes) {
       height += m.Height;
     }
     return height;
@@ -224,21 +211,15 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public Guid GetTextureIdReference(int index = 0) {
     return _textureIdRefs[index];
   }
-  public bool FinishedInitialization => _finishedInitialization;
+  public bool FinishedInitialization { get; private set; } = false;
 
-  public AABB[] AABBArray {
-    get {
-      return _aabbes;
-    }
-  }
+  public AABB[] AABBArray { get; private set; } = [];
 
   public AABB AABB {
     get {
-      if (Owner!.HasComponent<ColliderMesh>()) {
-        return AABB.CalculateOnFlyWithMatrix(Owner!.GetComponent<ColliderMesh>().Mesh, Owner!.GetComponent<Transform>());
-      } else {
-        return _mergedAABB;
-      }
+      return Owner!.HasComponent<ColliderMesh>()
+        ? AABB.CalculateOnFlyWithMatrix(Owner!.GetComponent<ColliderMesh>().Mesh, Owner!.GetComponent<Transform>())
+        : _mergedAABB;
     }
   }
 }

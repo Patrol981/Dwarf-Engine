@@ -101,11 +101,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
-    if (len != sets) {
-      return false;
-    }
-
-    return true;
+    return len == sets;
   }
 
   public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {

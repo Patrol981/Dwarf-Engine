@@ -1,22 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-
-using Assimp.Unmanaged;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
 using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
-
-using Dwarf.Engine.Rendering.UI;
-
-using JoltPhysicsSharp;
 
 namespace Dwarf.Engine.Rendering.UI;
 
@@ -114,8 +102,7 @@ public class Canvas : Component, IDisposable {
   }
 
   public Span<Entity> GetUI() {
-    if (_entities.Count < 1) return new Entity[] { };
-    return _entities.ToArray();
+    return _entities.Count < 1 ? (Span<Entity>)(new Entity[] { }) : (Span<Entity>)_entities.ToArray();
   }
 
   public Entity CreateButton(

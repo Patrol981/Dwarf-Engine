@@ -1,14 +1,15 @@
 namespace Dwarf.Engine.Rendering.UI;
 
-using static StbTrueTypeSharp.StbTrueType;
-// using FreeTypeSharp.Native;
-using static FreeTypeSharp.Native.FT;
+using System.Numerics;
+
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
+using Dwarf.Vulkan;
+
 using FreeTypeSharp;
 using FreeTypeSharp.Native;
-using Dwarf.Extensions.Logging;
-using System.Numerics;
-using Dwarf.Vulkan;
-using Dwarf.Utils;
+// using FreeTypeSharp.Native;
+using static FreeTypeSharp.Native.FT;
 
 public struct Character {
   public VulkanTexture Texture;
@@ -19,8 +20,6 @@ public struct Character {
 
 public class FreeType {
   private readonly VulkanDevice _device;
-
-  private Dictionary<char, Character> _characters = [];
 
   public FreeType(VulkanDevice device) {
     _device = device;
@@ -72,12 +71,12 @@ public class FreeType {
         Advance = (uint)targetFace.GlyphMetricHorizontalAdvance
       };
 
-      _characters.Add(c, character);
+      Characters.Add(c, character);
     }
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftLibrary.Native);
   }
 
-  public Dictionary<char, Character> Characters => _characters;
+  public Dictionary<char, Character> Characters { get; } = [];
 }

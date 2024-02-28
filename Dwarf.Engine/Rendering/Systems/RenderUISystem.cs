@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -8,8 +10,6 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using Dwarf.Engine.Rendering.UI;
-using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine.Rendering;
 
@@ -142,11 +142,7 @@ public class RenderUISystem : SystemBase {
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
-    if (len != sets) {
-      return false;
-    }
-
-    return true;
+    return len == sets;
   }
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {

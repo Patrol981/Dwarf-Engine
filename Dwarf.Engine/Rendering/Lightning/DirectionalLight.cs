@@ -1,7 +1,5 @@
 using System.Numerics;
 
-using Dwarf.Engine;
-
 namespace Dwarf.Rendering.Lightning;
 public class DirectionalLight {
   public Vector3 LightPosition = new(0, -5, 0);

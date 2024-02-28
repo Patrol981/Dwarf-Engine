@@ -1,14 +1,9 @@
-using System;
-using System.Xml.Linq;
+using System.Numerics;
 
 using Assimp;
 
-using Dwarf.Engine;
-using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
-
-using System.Numerics;
 using Dwarf.Engine.Rendering;
+using Dwarf.Vulkan;
 
 namespace Dwarf.Engine.Loaders;
 

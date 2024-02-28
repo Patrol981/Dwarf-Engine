@@ -8,7 +8,6 @@ namespace Dwarf.Vulkan;
 
 public class DescriptorSetLayout {
   private readonly IDevice _device = null!;
-  private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
   private VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
   public class Builder {
     private readonly IDevice _device = null!;
@@ -46,7 +45,7 @@ public class DescriptorSetLayout {
 
   public unsafe DescriptorSetLayout(IDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
     _device = device;
-    _bindings = bindings;
+    Bindings = bindings;
 
     VkDescriptorSetLayoutBinding[] setLayoutBindings = new VkDescriptorSetLayoutBinding[bindings.Count];
     for (uint i = 0; i < bindings.Count; i++) {
@@ -67,7 +66,7 @@ public class DescriptorSetLayout {
     return _descriptorSetLayout;
   }
 
-  public Dictionary<uint, VkDescriptorSetLayoutBinding> Bindings => _bindings;
+  public Dictionary<uint, VkDescriptorSetLayoutBinding> Bindings { get; } = new();
 
   public unsafe void Dispose() {
     vkDestroyDescriptorSetLayout(_device.LogicalDevice, _descriptorSetLayout);

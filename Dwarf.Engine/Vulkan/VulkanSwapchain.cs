@@ -1,4 +1,3 @@
-using Dwarf.Engine.Math;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -11,8 +10,6 @@ public class VulkanSwapchain : IDisposable {
   private const int MAX_FRAMES_IN_FLIGHT = 2;
 
   private readonly VulkanDevice _device;
-  private readonly VkExtent2D _extent;
-
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
   private VkImageView[] _swapChainImageViews = null!;
   private VkImage[] _swapchainImages = [];
@@ -37,7 +34,7 @@ public class VulkanSwapchain : IDisposable {
 
   public VulkanSwapchain(VulkanDevice device, VkExtent2D extent) {
     _device = device;
-    _extent = extent;
+    Extent2D = extent;
 
     Init();
   }
@@ -74,10 +71,10 @@ public class VulkanSwapchain : IDisposable {
 
     // TODO : Ducktape solution, prevents from crashing
     if (swapChainSupport.Capabilities.maxImageExtent.width < 1)
-      swapChainSupport.Capabilities.maxImageExtent.width = _extent.width;
+      swapChainSupport.Capabilities.maxImageExtent.width = Extent2D.width;
 
     if (swapChainSupport.Capabilities.maxImageExtent.height < 1)
-      swapChainSupport.Capabilities.maxImageExtent.height = _extent.height;
+      swapChainSupport.Capabilities.maxImageExtent.height = Extent2D.height;
 
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
@@ -467,7 +464,7 @@ public class VulkanSwapchain : IDisposable {
     if (capabilities.currentExtent.width > 0) {
       return capabilities.currentExtent;
     } else {
-      VkExtent2D actualExtent = _extent;
+      VkExtent2D actualExtent = Extent2D;
 
       actualExtent = new VkExtent2D(
         Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
@@ -534,7 +531,7 @@ public class VulkanSwapchain : IDisposable {
   }
 
   public VkSwapchainKHR Handle => _handle;
-  public VkExtent2D Extent2D => _extent;
+  public VkExtent2D Extent2D { get; }
   public VkRenderPass RenderPass => _renderPass;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;

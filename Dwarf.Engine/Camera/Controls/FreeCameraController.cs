@@ -1,16 +1,12 @@
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
+using Dwarf.Extensions.Logging;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.GLFW;
-using Dwarf.GLFW.Core;
+
 using static Dwarf.GLFW.GLFW;
-using Dwarf.Extensions.Logging;
-
 using static Dwarf.Keys;
-
-using Dwarf.Engine.Physics;
-using Assimp;
 
 namespace Dwarf.Engine;
 

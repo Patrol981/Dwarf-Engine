@@ -1,14 +1,15 @@
-using Dwarf.Vulkan;
-using static Vortice.Vulkan.Vulkan;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.Physics;
+using Dwarf.Vulkan;
+
+using FontStashSharp;
 using FontStashSharp.Interfaces;
 
 using Vortice.Vulkan;
-using Dwarf.Engine.Physics;
-using System.Runtime.CompilerServices;
-using System.Numerics;
-using Dwarf.Engine.EntityComponentSystem;
-using FontStashSharp;
+
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI.FontStash;
 public class FontStashSystem : SystemBase, IFontStashRenderer2 {

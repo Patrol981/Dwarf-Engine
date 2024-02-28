@@ -38,7 +38,7 @@ public class SceneAsset {
     File.WriteAllText($"./Resources/Assets/{Name}.scene", yaml);
   }
 
-  public async static Task<SceneAsset> LoadSceneAsset(Application application, string sceneName) {
+  public static async Task<SceneAsset> LoadSceneAsset(Application application, string sceneName) {
     var text = File.ReadAllText($"./Resources/Assets/{sceneName}.scene");
 
     var desrializer = new DeserializerBuilder()

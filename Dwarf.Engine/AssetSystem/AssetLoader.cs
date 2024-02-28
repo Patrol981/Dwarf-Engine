@@ -1,19 +1,14 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 using Dwarf.Engine;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Loaders;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-
-using System.Numerics;
 
 namespace DwarfEngine.AssetSystem;
 public class AssetLoader {

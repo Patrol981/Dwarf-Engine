@@ -1,16 +1,15 @@
 
+using System.Runtime.CompilerServices;
+
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Rendering;
 using Dwarf.Vulkan;
 
-using Dwarf.Engine;
+using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
+
 using static Vortice.Vulkan.Vulkan;
-using System.Runtime.CompilerServices;
-using DwarfEngine.Vulkan;
-using Dwarf.Extensions.Logging;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.AbstractionLayer;
 
 namespace Dwarf.Engine;
 public abstract class SystemBase {

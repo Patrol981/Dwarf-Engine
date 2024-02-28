@@ -173,11 +173,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = CalculateLengthOfPool(entities);
     var sets = GetTextureSetsLength();
-    if (len != sets) {
-      return false;
-    }
-
-    return true;
+    return len == sets;
   }
 
   public void Render(FrameInfo frameInfo, Span<Entity> entities) {

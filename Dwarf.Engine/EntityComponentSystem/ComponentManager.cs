@@ -13,11 +13,7 @@ public class ComponentManager {
 
   public T GetComponent<T>() where T : Component {
     var component = _components!.TryGetValue(typeof(T), out var value);
-    if (component) {
-      return (T)value!;
-    } else {
-      return null!;
-    }
+    return component ? (T)value! : null;
   }
 
   public void RemoveComponent<T>() where T : Component {

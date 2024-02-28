@@ -1,13 +1,15 @@
-using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using System.Runtime.InteropServices;
 
+using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
-using Vortice.Vulkan;
-using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
-using Dwarf.Engine.AbstractionLayer;
+
+using Vortice.Vulkan;
+
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 public class CubeMapTexture : VulkanTexture {
@@ -90,7 +92,7 @@ public class CubeMapTexture : VulkanTexture {
     HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, 1);
   }
 
-  private unsafe static void CreateImage(
+  private static unsafe void CreateImage(
     VulkanDevice device,
     uint width,
     uint height,

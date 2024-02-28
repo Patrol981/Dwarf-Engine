@@ -1,19 +1,15 @@
-using System.Drawing;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
-
-using System.Numerics;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Utils;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
@@ -27,8 +23,6 @@ public class TextField : Component, IUIElement {
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private bool _hasIndexBuffer = false;
-
-  private string _text = "Enter text...";
 
   // debug
   private int _numOfRows = 11;
@@ -85,8 +79,8 @@ public class TextField : Component, IUIElement {
   }
 
   public void DrawText(string text) {
-    if (text == _text) return;
-    _text = text;
+    if (text == Text) return;
+    Text = text;
     CreateQuads();
     RecreateBuffers();
     Owner!.TryGetComponent<RectTransform>()?.SetRequireState();
@@ -103,9 +97,9 @@ public class TextField : Component, IUIElement {
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 
-    for (int i = 0; i < _text.Length; i++) {
+    for (int i = 0; i < Text.Length; i++) {
       var tempMesh = new Mesh();
-      var targetChar = _charactersOnAtlas[_text[i]];
+      var targetChar = _charactersOnAtlas[Text[i]];
       tempMesh.Vertices = new Vertex[6];
 
       var uX = ((targetChar.X * 96.0f) / 1024.0f);
@@ -306,10 +300,10 @@ public class TextField : Component, IUIElement {
   }
 
   public void SetText(string text) {
-    _text = text;
+    Text = text;
   }
 
-  public string Text => _text;
+  public string Text { get; private set; } = "Enter text...";
 
   public Guid GetTextureIdReference() {
     return _textAtlasId;

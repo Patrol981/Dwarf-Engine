@@ -26,29 +26,18 @@ public class Collision2D {
       var aTransform = compA!.Owner!.GetComponent<RectTransform>();
       var bTransform = compB!.Owner!.GetComponent<RectTransform>();
 
-      if (
-      aTransform.Position.X < bTransform.Position.X + b.Size.X &&
+      return aTransform.Position.X < bTransform.Position.X + b.Size.X &&
       aTransform.Position.X + a.Size.X > bTransform.Position.X &&
       aTransform.Position.Y < bTransform.Position.Y + b.Size.Y &&
-      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y
-    ) {
-        return true;
-      }
-      return false;
-
+      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y;
     } else {
       var aTransform = compA!.Owner!.GetComponent<Transform>();
       var bTransform = compB!.Owner!.GetComponent<Transform>();
 
-      if (
-      aTransform.Position.X < bTransform.Position.X + b.Size.X &&
+      return aTransform.Position.X < bTransform.Position.X + b.Size.X &&
       aTransform.Position.X + a.Size.X > bTransform.Position.X &&
       aTransform.Position.Y < bTransform.Position.Y + b.Size.Y &&
-      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y
-    ) {
-        return true;
-      }
-      return false;
+      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y;
     }
   }
 
@@ -56,15 +45,10 @@ public class Collision2D {
     var aTransform = a.Owner!.GetComponent<Transform>();
     var bTransform = b.Owner!.GetComponent<Transform>();
 
-    if (
-      aTransform.Position.X < bTransform.Position.X + b.Size.X &&
+    return aTransform.Position.X < bTransform.Position.X + b.Size.X &&
       aTransform.Position.X + a.Size.X > bTransform.Position.X &&
       aTransform.Position.Y < bTransform.Position.Y + b.Size.Y &&
-      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y
-    ) {
-      return true;
-    }
-    return false;
+      a.Size.Y + aTransform.Position.Y > bTransform.Position.Y;
   }
 
   public static ReadOnlySpan<Sprite> CollidesWithAABB(Entity[] colls2D, Entity target) {

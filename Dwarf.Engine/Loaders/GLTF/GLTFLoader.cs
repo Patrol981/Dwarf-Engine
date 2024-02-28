@@ -1,11 +1,6 @@
-using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
-
-using SharpGLTF.Memory;
-using SharpGLTF.Schema2;
 using System.Numerics;
 
-using StbImageSharp;
+using SharpGLTF.Schema2;
 
 namespace Dwarf.Engine.Loader.Providers;
 

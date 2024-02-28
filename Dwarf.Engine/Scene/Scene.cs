@@ -1,5 +1,4 @@
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Vulkan;
 
 namespace Dwarf.Engine;
 

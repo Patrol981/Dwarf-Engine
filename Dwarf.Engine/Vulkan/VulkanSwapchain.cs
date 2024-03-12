@@ -1,3 +1,4 @@
+using Dwarf.Engine;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -347,76 +348,81 @@ public class VulkanSwapchain : IDisposable {
     return result;
   }
 
+  public List<VkSubmitInfo> SubmitQueue = [];
+
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
-    lock (_swapchainLock) {
-      if (_imagesInFlight[imageIndex] != VkFence.Null) {
-        vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
+    if (_imagesInFlight[imageIndex] != VkFence.Null) {
+      vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
+    }
+    _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+
+    // var waitStages = new VkPipelineStageFlags[1];
+    // waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+
+    VkSubmitInfo submitInfo = new();
+
+    VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
+    waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
+
+    VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
+    waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+
+    submitInfo.waitSemaphoreCount = 1;
+    // fixed (VkSemaphore* waitSemaphoresPtr = _imageAvailableSemaphores)
+    //fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+    // submitInfo.pWaitDstStageMask = null;
+    // }
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = buffers;
+
+    VkSwapchainKHR[] swapchains = [_handle];
+    VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
+
+    //var fenceInfo = new VkFenceCreateInfo();
+    //fenceInfo.flags = VkFenceCreateFlags.None;
+    //vkCreateFence(_device.LogicalDevice, &fenceInfo, null, out var fence).CheckResult();
+
+    fixed (VkSwapchainKHR* swPtr = swapchains)
+    fixed (VkFence* swFlightFencesPtr = _inFlightFences)
+    fixed (VkSemaphore* signalPtr = signalSemaphores) {
+      submitInfo.signalSemaphoreCount = 1;
+      submitInfo.pSignalSemaphores = signalPtr;
+
+      // _device._mutex.WaitOne();
+      // vkWaitForFences(_device.LogicalDevice, 1, &fence, VkBool32.True, 100000000000);
+      // vkWaitForFences(_device.LogicalDevice, 1, swFlightFencesPtr, VkBool32.True, 100000000000);
+      vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+
+      /*
+      lock (_device._queueLock) {
+        vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
       }
-      _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+      */
+      _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
+      // vkDestroyFence(_device.LogicalDevice, fence, null);
+      // _device._mutex.ReleaseMutex();
 
-      // var waitStages = new VkPipelineStageFlags[1];
-      // waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+      VkPresentInfoKHR presentInfo = new() {
+        waitSemaphoreCount = 1,
+        pWaitSemaphores = signalPtr
+      };
 
-      VkSubmitInfo submitInfo = new();
+      presentInfo.swapchainCount = 1;
+      presentInfo.pSwapchains = swPtr;
 
-      VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
-      waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
+      presentInfo.pImageIndices = &imageIndex;
 
-      VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-      waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+      Application.Instance.Mutex.WaitOne();
+      var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
+      Application.Instance.Mutex.ReleaseMutex();
+      _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
-      submitInfo.waitSemaphoreCount = 1;
-      // fixed (VkSemaphore* waitSemaphoresPtr = _imageAvailableSemaphores)
-      //fixed (VkPipelineStageFlags* waitStagesPtr = waitStages) {
-      submitInfo.pWaitSemaphores = waitSemaphores;
-      submitInfo.pWaitDstStageMask = waitStages;
-      // submitInfo.pWaitDstStageMask = null;
-      // }
+      SubmitQueue.Clear();
 
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers = buffers;
-
-      VkSwapchainKHR[] swapchains = [_handle];
-      VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
-
-      //var fenceInfo = new VkFenceCreateInfo();
-      //fenceInfo.flags = VkFenceCreateFlags.None;
-      //vkCreateFence(_device.LogicalDevice, &fenceInfo, null, out var fence).CheckResult();
-
-      fixed (VkSwapchainKHR* swPtr = swapchains)
-      fixed (VkFence* swFlightFencesPtr = _inFlightFences)
-      fixed (VkSemaphore* signalPtr = signalSemaphores) {
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalPtr;
-
-        // _device._mutex.WaitOne();
-        // vkWaitForFences(_device.LogicalDevice, 1, &fence, VkBool32.True, 100000000000);
-        // vkWaitForFences(_device.LogicalDevice, 1, swFlightFencesPtr, VkBool32.True, 100000000000);
-        vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-        _device._mutex.WaitOne();
-        try {
-          vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
-        } finally {
-          _device._mutex.ReleaseMutex();
-        }
-        // vkDestroyFence(_device.LogicalDevice, fence, null);
-        // _device._mutex.ReleaseMutex();
-
-        VkPresentInfoKHR presentInfo = new() {
-          waitSemaphoreCount = 1,
-          pWaitSemaphores = signalPtr
-        };
-
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swPtr;
-
-        presentInfo.pImageIndices = &imageIndex;
-
-        var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
-        _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-        return result;
-      }
+      return result;
     }
   }
 

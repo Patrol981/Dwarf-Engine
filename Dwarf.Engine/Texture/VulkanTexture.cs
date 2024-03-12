@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 
+using Assimp;
+
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
@@ -103,6 +105,15 @@ public class VulkanTexture : ITexture {
       out _textureImageMemory
     );
 
+    HandleTexture(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, _width, _height);
+
+    CreateTextureImageView(_device, _textureImage, out _imageView);
+    CreateSampler(_device, out _imageSampler);
+
+    stagingBuffer.Dispose();
+
+    /*
+
     CreateImageTransitions(
       _device,
       VkImageLayout.Undefined,
@@ -129,6 +140,7 @@ public class VulkanTexture : ITexture {
 
     CreateTextureImageView(_device, _textureImage, out _imageView);
     CreateSampler(_device, out _imageSampler);
+    */
   }
 
   public static async Task<ITexture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
@@ -153,6 +165,55 @@ public class VulkanTexture : ITexture {
     using var stream = new MemoryStream(data);
     var image = ImageResult.FromStream(stream);
     return image;
+  }
+
+  private unsafe void HandleTexture(VkBuffer stagingBuffer, VkFormat format, int width, int height) {
+    var copyCmd = _device.CreateCommandBuffer(VkCommandBufferLevel.Primary, true);
+
+    VkBufferImageCopy region = new();
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VkImageAspectFlags.Color;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = new(0, 0, 0);
+    region.imageExtent = new(width, height, 1);
+
+    var subresourceRange = new VkImageSubresourceRange();
+    subresourceRange.aspectMask = VkImageAspectFlags.Color;
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = 1;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = 1;
+
+    VkUtils.SetImageLayout(
+      copyCmd,
+      _textureImage,
+      VkImageLayout.Undefined,
+      VkImageLayout.TransferDstOptimal,
+      subresourceRange
+    );
+
+    vkCmdCopyBufferToImage(
+      copyCmd,
+      stagingBuffer,
+      _textureImage,
+      VkImageLayout.TransferDstOptimal,
+      1,
+      &region
+    );
+
+    VkUtils.SetImageLayout(
+      copyCmd,
+      _textureImage,
+      VkImageLayout.TransferDstOptimal,
+      VkImageLayout.ShaderReadOnlyOptimal,
+      subresourceRange
+    );
+
+    _device.FlushCommandBuffer(copyCmd, _device.GraphicsQueue, true);
   }
 
   private static unsafe void CreateImage(

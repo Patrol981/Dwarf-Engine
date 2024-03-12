@@ -138,7 +138,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       vertexSize,
       _vertexCount[index],
       BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);
@@ -168,7 +170,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       indexSize,
       _indexCount[index],
       BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);

@@ -1,4 +1,5 @@
 using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
@@ -46,5 +47,15 @@ public class VulkanCommandList : CommandList {
     uint firstInstance
   ) {
     vkCmdDrawIndexed(commandBuffer, (uint)indexCount[meshIndex], instanceCount, firstIndex, vertexOffset, firstInstance);
+  }
+
+  public override void SetViewport(
+    nint commandBuffer,
+    float x, float y,
+    float width, float height,
+    float minDepth, float maxDepth
+  ) {
+    var viewport = VkUtils.Viewport(x, y, width, height, minDepth, maxDepth);
+    vkCmdSetViewport(commandBuffer, viewport);
   }
 }

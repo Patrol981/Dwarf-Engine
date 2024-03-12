@@ -10,6 +10,7 @@ public class TextureManager : IDisposable {
   public TextureManager(VulkanDevice device) {
     _device = device;
     LoadedTextures = [];
+    TextureArray = [];
 
     FreeType = new FreeType(device);
     FreeType.Init();
@@ -23,6 +24,15 @@ public class TextureManager : IDisposable {
     for (int i = 0; i < textures.Length; i++) {
       LoadedTextures.Add(Guid.NewGuid(), textures[i]);
     }
+  }
+
+  public async Task<Task> AddTextureArray(string textureName, params string[] paths) {
+    var baseData = await VulkanTextureArray.LoadDataFromPath(paths[0]);
+    var id = Guid.NewGuid();
+    var texture = new VulkanTextureArray(_device, baseData.Width, baseData.Height, paths, textureName);
+    TextureArray.TryAdd(id, texture);
+
+    return Task.CompletedTask;
   }
 
   public async Task<Task> AddTexture(string texturePath) {
@@ -74,6 +84,11 @@ public class TextureManager : IDisposable {
     LoadedTextures.Remove(key);
   }
 
+  public void RemoveTextureArray(Guid key) {
+    TextureArray[key].Dispose();
+    TextureArray.Remove(key);
+  }
+
   public ITexture GetTexture(Guid key) {
     return LoadedTextures.GetValueOrDefault(key) ?? null!;
   }
@@ -88,11 +103,15 @@ public class TextureManager : IDisposable {
   }
 
   public Dictionary<Guid, ITexture> LoadedTextures { get; }
+  public Dictionary<Guid, VulkanTextureArray> TextureArray { get; }
   public FreeType FreeType { get; }
 
   public void Dispose() {
     foreach (var tex in LoadedTextures) {
       RemoveTexture(tex.Key);
+    }
+    foreach (var tex in TextureArray) {
+      RemoveTextureArray(tex.Key);
     }
   }
 }

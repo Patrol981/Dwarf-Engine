@@ -36,6 +36,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
     .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
     .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
@@ -161,7 +162,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
-    if (entities.Length > (int)_modelBuffer.GetInstanceCount()) {
+    if (_modelBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(entities, ref textureManager);
+    }
+    if (entities.Length > (int)_modelBuffer!.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (int)_modelBuffer.GetInstanceCount()) {
       return true;

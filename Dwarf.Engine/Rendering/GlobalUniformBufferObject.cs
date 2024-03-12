@@ -20,4 +20,5 @@ public struct GlobalUniformBufferObject {
   [FieldOffset(144)] public Vector4 LightColor;
   [FieldOffset(160)] public Vector4 AmientLightColor;
   [FieldOffset(176)] public Vector3 CameraPosition;
+  [FieldOffset(188)] public int Layer;
 }

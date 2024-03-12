@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
 
+using Dwarf.Engine;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
@@ -29,17 +31,20 @@ public class VulkanDevice : IDevice {
 
   private VkQueue _graphicsQueue = VkQueue.Null;
   private VkQueue _presentQueue = VkQueue.Null;
-  private readonly object _graphicsQueueLock = new object();
-  private readonly object _presentQueueLock = new object();
-  private readonly object _deviceLock = new();
+  private VkQueue _transferQueue = VkQueue.Null;
+
+  internal readonly object _queueLock = new object();
+
+  private VkFence _singleTimeFence = VkFence.Null;
+
+  private VkSemaphore _semaphore = VkSemaphore.Null;
+  private ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
   public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
   public List<string> DeviceExtensions { get; private set; }
-
-  internal Mutex _mutex = new();
 
   public VulkanDevice(Window window) {
     _window = window;
@@ -48,6 +53,21 @@ public class VulkanDevice : IDevice {
     PickPhysicalDevice();
     CreateLogicalDevice();
     _commandPool = CreateCommandPool();
+
+    /*
+    VkSemaphoreCreateInfo createInfo = new();
+    VkSemaphoreTypeCreateInfo typeInfo = new() {
+      semaphoreType = VkSemaphoreType.Timeline,
+      initialValue = 0
+    };
+    unsafe {
+      createInfo.pNext = &typeInfo;
+      _timeline = 0;
+
+      vkCreateSemaphore(_logicalDevice, &createInfo, null, out _semaphore).CheckResult();
+    }
+    */
+    // vkCreateSemaphore(_logicalDevice, out _semaphore).CheckResult();
   }
 
   public unsafe void CreateBuffer(
@@ -78,19 +98,23 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe Task CopyBuffer(ulong srcBuffer, ulong dstBuffer, ulong size) {
-    VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+    lock (_queueLock) {
+      VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+      // var commandBuffer = CreateCommandBuffer(VkCommandBufferLevel.Primary, true);
 
-    VkBufferCopy copyRegion = new() {
-      srcOffset = 0,  // Optional
-      dstOffset = 0,  // Optional
-      size = size
-    };
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+      VkBufferCopy copyRegion = new() {
+        srcOffset = 0,  // Optional
+        dstOffset = 0,  // Optional
+        size = size
+      };
+      vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    EndSingleTimeCommands(commandBuffer);
-
-    return Task.CompletedTask;
+      // FlushCommandBuffer(commandBuffer, _presentQueue, true);
+      EndSingleTimeCommands(commandBuffer);
+      return Task.CompletedTask;
+    }
   }
+
 
   public unsafe VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, VkCommandPool commandPool, bool begin) {
     var allocInfo = new VkCommandBufferAllocateInfo();
@@ -126,12 +150,7 @@ public class VulkanDevice : IDevice {
     fenceInfo.flags = VkFenceCreateFlags.None;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     // Submit to the queue
-    _mutex.WaitOne();
-    try {
-      vkQueueSubmit(queue, submitInfo, fence).CheckResult();
-    } finally {
-      _mutex.ReleaseMutex();
-    }
+    vkQueueSubmit(queue, submitInfo, fence).CheckResult();
     vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, 100000000000);
     vkDestroyFence(_logicalDevice, fence, null);
     if (free) {
@@ -209,76 +228,67 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe IntPtr BeginSingleTimeCommands() {
-    VkCommandBufferAllocateInfo allocInfo = new() {
-      level = VkCommandBufferLevel.Primary,
-      commandPool = _commandPool,
-      commandBufferCount = 1
-    };
+    lock (_queueLock) {
+      VkCommandBufferAllocateInfo allocInfo = new() {
+        level = VkCommandBufferLevel.Primary,
+        commandPool = _commandPool,
+        commandBufferCount = 1
+      };
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
+      VkCommandBuffer commandBuffer;
+      vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = new() {
-      flags = VkCommandBufferUsageFlags.OneTimeSubmit
-    };
+      VkCommandBufferBeginInfo beginInfo = new() {
+        flags = VkCommandBufferUsageFlags.OneTimeSubmit
+      };
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    return commandBuffer;
+      vkBeginCommandBuffer(commandBuffer, &beginInfo);
+      return commandBuffer;
+    }
   }
 
   public unsafe void EndSingleTimeCommands(IntPtr commandBuffer) {
-    vkEndCommandBuffer(commandBuffer);
+    lock (_queueLock) {
+      vkEndCommandBuffer(commandBuffer);
 
-    SubmitQueue(commandBuffer);
+      SubmitQueue(commandBuffer);
 
-    // vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
-    vkFreeCommandBuffers(_logicalDevice, _commandPool, commandBuffer);
-  }
-
-  private unsafe VkSemaphore CreateTimelineSemaphore() {
-    var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
-    timelineCreateInfo.pNext = null;
-    timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
-    timelineCreateInfo.initialValue = 0;
-
-    var createInfo = new VkSemaphoreCreateInfo();
-    createInfo.pNext = &timelineCreateInfo;
-    createInfo.flags = VkSemaphoreCreateFlags.None;
-
-    vkCreateSemaphore(_logicalDevice, &createInfo, null, out var semaphore).CheckResult();
-    return semaphore;
+      // vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+      vkFreeCommandBuffers(_logicalDevice, _commandPool, commandBuffer);
+    }
   }
 
   public unsafe void WaitDevice() {
-    _mutex.WaitOne();
-    try {
+    lock (_queueLock) {
       var result = vkDeviceWaitIdle(_logicalDevice);
       if (result == VkResult.ErrorDeviceLost) {
         throw new VkException("Device Lost!");
       }
-    } finally {
-      _mutex.ReleaseMutex();
     }
   }
 
-  private unsafe VkFence CreateFence() {
+  public unsafe VkFence CreateFence(VkFenceCreateFlags flags = VkFenceCreateFlags.None) {
     var fenceInfo = new VkFenceCreateInfo();
-    fenceInfo.flags = VkFenceCreateFlags.None;
+    fenceInfo.flags = flags;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     return fence;
   }
 
   private unsafe void WaitQueue(VkQueue queue) {
-    _mutex.WaitOne();
-    try {
+    lock (_queueLock) {
       vkQueueWaitIdle(queue);
-    } finally {
-      _mutex.ReleaseMutex();
     }
   }
 
   public void WaitQueue() {
     WaitQueue(_graphicsQueue);
+  }
+
+  private void WaitFences(VkFence fence) {
+    vkWaitForFences(_logicalDevice, fence, true, FenceTimeout);
+  }
+  public void WaitFences() {
+    WaitFences(_singleTimeFence);
   }
 
   private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
@@ -287,22 +297,33 @@ public class VulkanDevice : IDevice {
       pCommandBuffers = &commandBuffer,
     };
 
-    // Create fence to ensure that the command buffer has finished executing
-    var fence = CreateFence();
-
-    _mutex.WaitOne();
-    try {
-      vkQueueSubmit(queue, submitInfo, fence);
-    } finally {
-      _mutex.ReleaseMutex();
-    }
-
-    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
-    vkDestroyFence(_logicalDevice, fence);
+    var fence = CreateFence(VkFenceCreateFlags.None);
+    // vkResetFences(_logicalDevice, Application.Instance.Renderer.Swapchain.GetCurrentFence());
+    SubmitQueue(1, &submitInfo, fence, true);
+    // vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+    // vkDestroyFence(_logicalDevice, fence);
   }
 
   private void SubmitQueue(VkCommandBuffer commandBuffer) {
     SubmitQueue(_graphicsQueue, commandBuffer);
+  }
+
+  public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
+    // Logger.Info($"{Thread.CurrentThread.Name} is requesting queue submission");
+    try {
+      Application.Instance.Mutex.WaitOne();
+      // Logger.Info($"{Thread.CurrentThread.Name} is submitting queue");
+      vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+      if (destroy) {
+        vkDestroyFence(_logicalDevice, fence);
+      }
+    } finally {
+      Application.Instance.Mutex.ReleaseMutex();
+      // Logger.Info($"{Thread.CurrentThread.Name} has stopped of use queue");
+    }
+
+
   }
 
   private unsafe void SubmitSemaphore() {
@@ -551,19 +572,11 @@ public class VulkanDevice : IDevice {
   }
 
   public IntPtr GraphicsQueue {
-    get {
-      lock (_graphicsQueueLock) {
-        return _graphicsQueue;
-      }
-    }
+    get { return _graphicsQueue; }
   }
 
   public IntPtr PresentQueue {
-    get {
-      lock (_presentQueueLock) {
-        return _presentQueue;
-      }
-    }
+    get { return _presentQueue; }
   }
 
   public VkInstance VkInstance => _vkInstance;

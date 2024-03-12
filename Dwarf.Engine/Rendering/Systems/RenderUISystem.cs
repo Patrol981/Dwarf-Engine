@@ -129,7 +129,11 @@ public class RenderUISystem : SystemBase {
     }
   }
 
-  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+  public bool CheckSizes(ReadOnlySpan<Entity> entities, Canvas canvas) {
+    if (_uiBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(canvas, ref textureManager);
+    }
     if (entities.Length > (uint)_uiBuffer.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_uiBuffer.GetInstanceCount()) {

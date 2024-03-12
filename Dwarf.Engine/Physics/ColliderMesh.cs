@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -32,11 +33,8 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   }
 
   public async void Init() {
-    Task[] tasks = [
-      CreateVertexBuffer(Mesh.Vertices),
-      CreateIndexBuffer(Mesh.Indices)
-    ];
-    await Task.WhenAll(tasks);
+    await CreateVertexBuffer(Mesh.Vertices);
+    await CreateIndexBuffer(Mesh.Indices);
     FinishedInitialization = true;
   }
 
@@ -94,7 +92,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       vertexSize,
       _vertexCount,
       BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);
@@ -108,7 +108,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       MemoryProperty.DeviceLocal
     );
 
+    Application.Instance.Mutex.WaitOne();
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
+    Application.Instance.Mutex.ReleaseMutex();
     stagingBuffer.Dispose();
     return Task.CompletedTask;
   }
@@ -124,7 +126,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       indexSize,
       _indexCount,
       BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);
@@ -138,12 +142,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
       MemoryProperty.DeviceLocal
     );
 
-    _device._mutex.WaitOne();
-    try {
-      _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
-    } finally {
-      _device._mutex.ReleaseMutex();
-    }
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
 
     stagingBuffer.Dispose();
     return Task.CompletedTask;

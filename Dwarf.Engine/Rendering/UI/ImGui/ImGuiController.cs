@@ -29,15 +29,6 @@ public partial class ImGuiController : IDisposable {
   private VkImage _fontImage = VkImage.Null;
   private VkImageView _fontView = VkImageView.Null;
   private VkPipelineCache _pipelineCache;
-  // private VkPipelineLayout _pipelineLayout;
-  // private VkPipeline _pipeline;
-  // private VkDescriptorPool _descriptorPool;
-  // private VkDescriptorSetLayout _descriptorSetLayout;
-  // private VkDescriptorSet _descriptorSet;
-  // private VkPhysicalDeviceDriverProperties _driverProperties;
-  // private ImGuiStylePtr _vulkanStyle;
-  // private VkShaderModule _vertexModule = VkShaderModule.Null;
-  // private VkShaderModule _fragmentModule = VkShaderModule.Null;
 
   // system based
   protected PipelineConfigInfo _pipelineConfigInfo;
@@ -50,15 +41,15 @@ public partial class ImGuiController : IDisposable {
 
   private VulkanTexture _fontTexture;
 
-  // private int _vertexBufferSize = 0;
-  // private int _indexBufferSize = 0;
-
   private bool _frameBegun = false;
 
   private int _width;
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
   private VkFrontFace _frontFace = VkFrontFace.Clockwise;
+
+  private Keys[] _allKeys = Enum.GetValues<Keys>();
+  private readonly List<char> _pressedChars = new List<char>();
 
   [StructLayout(LayoutKind.Explicit)]
   struct ImGuiPushConstant {
@@ -123,6 +114,58 @@ public partial class ImGuiController : IDisposable {
     _frameBegun = true;
 
     WindowState.s_Window.OnResizedEventDispatcher += WindowResized;
+  }
+
+  private bool TryMapKey(Keys key, out ImGuiKey keyResult) {
+    ImGuiKey KeyToImGuiKeyShortcut(Keys keyToConvert, Keys startKey1, ImGuiKey startKey2) {
+      int changeFromStart1 = (int)keyToConvert - (int)startKey1;
+      return startKey2 + changeFromStart1;
+    }
+
+    keyResult = key switch {
+      >= Keys.GLFW_KEY_F1 and <= Keys.GLFW_KEY_F24 => KeyToImGuiKeyShortcut(key, Keys.GLFW_KEY_F1, ImGuiKey.F1),
+      >= Keys.GLFW_KEY_A and <= Keys.GLFW_KEY_Z => KeyToImGuiKeyShortcut(key, Keys.GLFW_KEY_A, ImGuiKey.A),
+      >= Keys.GLFW_KEY_0 and <= Keys.GLFW_KEY_9 => KeyToImGuiKeyShortcut(key, Keys.GLFW_KEY_0, ImGuiKey._0),
+      Keys.GLFW_KEY_LEFT_SHIFT or Keys.GLFW_KEY_RIGHT_SHIFT => ImGuiKey.ModShift,
+      Keys.GLFW_KEY_LEFT_CONTROL or Keys.GLFW_KEY_RIGHT_CONTROL => ImGuiKey.ModCtrl,
+      Keys.GLFW_KEY_LEFT_ALT or Keys.GLFW_KEY_RIGHT_ALT => ImGuiKey.ModAlt,
+      Keys.GLFW_KEY_LEFT_SUPER or Keys.GLFW_KEY_RIGHT_SUPER => ImGuiKey.ModSuper,
+      Keys.GLFW_KEY_MENU => ImGuiKey.Menu,
+      Keys.GLFW_KEY_UP => ImGuiKey.UpArrow,
+      Keys.GLFW_KEY_DOWN => ImGuiKey.DownArrow,
+      Keys.GLFW_KEY_LEFT => ImGuiKey.LeftArrow,
+      Keys.GLFW_KEY_RIGHT => ImGuiKey.RightArrow,
+      Keys.GLFW_KEY_ENTER => ImGuiKey.Enter,
+      Keys.GLFW_KEY_ESCAPE => ImGuiKey.Escape,
+      Keys.GLFW_KEY_SPACE => ImGuiKey.Space,
+      Keys.GLFW_KEY_TAB => ImGuiKey.Tab,
+      Keys.GLFW_KEY_BACKSPACE => ImGuiKey.Backspace,
+      Keys.GLFW_KEY_INSERT => ImGuiKey.Insert,
+      Keys.GLFW_KEY_DELETE => ImGuiKey.Delete,
+      Keys.GLFW_KEY_PAGE_UP => ImGuiKey.PageUp,
+      Keys.GLFW_KEY_PAGE_DOWN => ImGuiKey.PageDown,
+      Keys.GLFW_KEY_HOME => ImGuiKey.Home,
+      Keys.GLFW_KEY_END => ImGuiKey.End,
+      Keys.GLFW_KEY_CAPS_LOCK => ImGuiKey.CapsLock,
+      Keys.GLFW_KEY_SCROLL_LOCK => ImGuiKey.ScrollLock,
+      Keys.GLFW_KEY_PRINT_SCREEN => ImGuiKey.PrintScreen,
+      Keys.GLFW_KEY_PAUSE => ImGuiKey.Pause,
+      Keys.GLFW_KEY_NUM_LOCK => ImGuiKey.NumLock,
+      Keys.GLFW_KEY_GRAVE_ACCENT => ImGuiKey.GraveAccent,
+      Keys.GLFW_KEY_MINUS => ImGuiKey.Minus,
+      Keys.GLFW_KEY_EQUAL => ImGuiKey.Equal,
+      Keys.GLFW_KEY_LEFT_BRACKET => ImGuiKey.LeftBracket,
+      Keys.GLFW_KEY_RIGHT_BRACKET => ImGuiKey.RightBracket,
+      Keys.GLFW_KEY_SEMICOLON => ImGuiKey.Semicolon,
+      Keys.GLFW_KEY_APOSTROPHE => ImGuiKey.Apostrophe,
+      Keys.GLFW_KEY_COMMA => ImGuiKey.Comma,
+      Keys.GLFW_KEY_PERIOD => ImGuiKey.Period,
+      Keys.GLFW_KEY_SLASH => ImGuiKey.Slash,
+      Keys.GLFW_KEY_BACKSLASH => ImGuiKey.Backslash,
+      _ => ImGuiKey.None
+    };
+
+    return keyResult != ImGuiKey.None;
   }
 
   private void CreateStyles() {
@@ -251,6 +294,36 @@ public partial class ImGuiController : IDisposable {
     io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
     var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
     io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
+
+    // _pressedChars.Clear();
+
+    for (int key = 45; key < 90; key++) {
+      // foreach (int key in Enum.GetValues(typeof(Keys))) {
+      if (key == (int)Keys.GLFW_KEY_UNKNOWN) {
+        continue;
+      }
+
+      // io.InputQueueCharacters.
+
+      if (KeyboardState.Instance.KeyStates.TryGetValue(key, out var state)) {
+        if (Input.GetKeyDown((Keys)key)) {
+          io.AddInputCharacter((char)key);
+        }
+      }
+
+
+      // io.AddInputCharacter((char)key);
+      // io.KeysData[key].Down = Convert.ToByte(Input.GetKeyDown((Keys)key));
+
+      if (TryMapKey((Keys)key, out var imKey)) {
+        // io.AddKeyEvent(imKey, true);
+        io.AddKeyEvent(imKey, Input.GetKey((Keys)key));
+        if (Input.GetKeyDown(Keys.GLFW_KEY_BACKSPACE)) {
+          Logger.Info("ayo");
+
+        }
+      }
+    }
   }
 
   public unsafe void UpdateBuffers(ImDrawDataPtr drawData) {
@@ -272,9 +345,6 @@ public partial class ImGuiController : IDisposable {
         BufferUsage.VertexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
-
-      // _vertexBuffer.Map((ulong)vertexBufferSize);
-      //_vertexBuffer.Map();
     }
 
     if ((_indexBuffer.GetBuffer() == VkBuffer.Null) || (_indexCount < drawData.TotalIdxCount)) {
@@ -288,13 +358,7 @@ public partial class ImGuiController : IDisposable {
         BufferUsage.IndexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
-
-      // _indexBuffer.Map((ulong)indexBufferSize);
-      // _indexBuffer.Map();
     }
-
-    // var vtxDst = _vertexBuffer.GetMappedMemory();
-    // var idxDst = _indexBuffer.GetMappedMemory();
 
     ImDrawVert* vtxDst = null;
     ushort* idxDst = null;
@@ -302,50 +366,18 @@ public partial class ImGuiController : IDisposable {
     vkMapMemory(_device.LogicalDevice, _vertexBuffer.GetVkDeviceMemory(), 0, _vertexBuffer.GetBufferSize(), 0, (void**)&vtxDst);
     vkMapMemory(_device.LogicalDevice, _indexBuffer.GetVkDeviceMemory(), 0, _indexBuffer.GetBufferSize(), 0, (void**)&idxDst);
 
-    var vtxOffset = 0;
-    var idxOffset = 0;
-
-
-    nint totalVtxData = 0;
-    nint totalIdxData = 0;
-
-    var totalVtxSize = drawData.TotalVtxCount * sizeof(ImDrawVert);
-    var totalIdxSize = drawData.TotalIdxCount * sizeof(ushort);
-
     for (int n = 0; n < drawData.CmdListsCount; n++) {
       var cmdList = drawData.CmdLists[n];
-
-      // MemoryUtils.MemCopy(vtxDst, cmdList.VtxBuffer.Data, vertexBufferSize);
-      // MemoryUtils.MemCopy(idxDst, cmdList.IdxBuffer.Data, indexBufferSize);
-      var vtxSize = cmdList.VtxBuffer.Size * sizeof(ImDrawVert);
-      var idxSize = cmdList.IdxBuffer.Size * sizeof(ushort);
-      // _vertexBuffer.WriteToBuffer(cmdList.VtxBuffer.Data, (ulong)vtxSize, (ulong)vtxOffset);
-      //_indexBuffer.WriteToBuffer(cmdList.IdxBuffer.Data, (ulong)idxSize, (ulong)idxOffset);
 
       Unsafe.CopyBlock(vtxDst, cmdList.VtxBuffer.Data.ToPointer(), (uint)cmdList.VtxBuffer.Size * (uint)sizeof(ImDrawVert));
       Unsafe.CopyBlock(idxDst, cmdList.IdxBuffer.Data.ToPointer(), (uint)cmdList.IdxBuffer.Size * sizeof(ushort));
 
-      // _vertexBuffer.WrtieToIndex(cmdList.VtxBuffer.Data, n);
-      // _indexBuffer.WrtieToIndex(cmdList.IdxBuffer.Data, n);
-
-      // totalIdxData += cmdList.IdxBuffer.Data;
-      // totalVtxData += cmdList.VtxBuffer.Data;
-
       vtxDst += cmdList.VtxBuffer.Size;
       idxDst += cmdList.IdxBuffer.Size;
-
-      // vtxOffset += cmdList.VtxBuffer.Size;
-      // idxOffset += cmdList.IdxBuffer.Size;
     }
-
-    // _vertexBuffer.Unmap();
-    // _indexBuffer.Unmap();
 
     vkUnmapMemory(_device.LogicalDevice, _vertexBuffer.GetVkDeviceMemory());
     vkUnmapMemory(_device.LogicalDevice, _indexBuffer.GetVkDeviceMemory());
-
-    // _vertexBuffer.Flush((ulong)vertexBufferSize);
-    // _indexBuffer.Flush((ulong)indexBufferSize);
   }
 
   public unsafe void RenderImDrawData(ImDrawDataPtr drawData, FrameInfo frameInfo) {
@@ -384,10 +416,6 @@ public partial class ImGuiController : IDisposable {
             (int)pcmd.VtxOffset + vertexOffset,
             0
           );
-
-          // vkCmdDraw(frameInfo.CommandBuffer, pcmd.VtxOffset + (uint)vertexOffset, 1, 0, 0);
-          // vkCmdDraw(frameInfo.CommandBuffer, (uint)_vertexCount, 1, 0, 0);
-          // indexOffset += pcmd.ElemCount;
         }
         indexOffset += (uint)cmdList.IdxBuffer.Size;
         vertexOffset += cmdList.VtxBuffer.Size;

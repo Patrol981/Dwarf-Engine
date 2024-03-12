@@ -89,6 +89,10 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+    if (_spriteBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(entities, ref textureManager);
+    }
     if (entities.Length > (uint)_spriteBuffer.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_spriteBuffer.GetInstanceCount()) {

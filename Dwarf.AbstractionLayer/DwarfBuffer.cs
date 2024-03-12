@@ -21,13 +21,16 @@ public unsafe class DwarfBuffer : IDisposable {
   private BufferUsage _usageFlags;
   private MemoryProperty _memoryPropertyFlags;
 
+  private bool _isStagingBuffer = false;
+
   public DwarfBuffer(
     IDevice device,
     ulong instanceSize,
     ulong instanceCount,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
-    ulong minOffsetAlignment = 1
+    ulong minOffsetAlignment = 1,
+    bool stagingBuffer = false
   ) {
     _device = device;
     _instanceSize = instanceSize;
@@ -38,6 +41,8 @@ public unsafe class DwarfBuffer : IDisposable {
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+
+    _isStagingBuffer = stagingBuffer;
   }
 
   public DwarfBuffer(
@@ -45,7 +50,8 @@ public unsafe class DwarfBuffer : IDisposable {
     ulong bufferSize,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
-    ulong minOffsetAlignment = 1
+    ulong minOffsetAlignment = 1,
+    bool stagingBuffer = false
   ) {
     _device = device;
     _instanceSize = bufferSize;
@@ -55,6 +61,8 @@ public unsafe class DwarfBuffer : IDisposable {
     _alignmentSize = bufferSize;
     _bufferSize = bufferSize;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+
+    _isStagingBuffer = stagingBuffer;
   }
 
   public void Map(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -185,8 +193,10 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   public void Dispose() {
-    _device.WaitDevice();
-    _device.WaitQueue();
+    if (!_isStagingBuffer) {
+      _device.WaitDevice();
+      _device.WaitQueue();
+    }
     Unmap();
     DestoryBuffer();
     FreeMemory();

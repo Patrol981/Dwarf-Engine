@@ -91,7 +91,7 @@ public class SystemCollection : IDisposable {
       // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var canvasEntities = _canvas!.GetUI();
       if (canvasEntities.Length < 1) return;
-      var sizes = _renderUISystem.CheckSizes(canvasEntities);
+      var sizes = _renderUISystem.CheckSizes(canvasEntities, _canvas);
       var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {
         ReloadUISystem = false;

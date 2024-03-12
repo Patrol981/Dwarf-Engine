@@ -38,9 +38,19 @@ public class SceneAsset {
     File.WriteAllText($"./Resources/Assets/{Name}.scene", yaml);
   }
 
+  public static async Task<SceneAsset> LoadSceneAssetFromPath(Application application, string scenePath) {
+    var text = File.ReadAllText(scenePath);
+
+    return await ProcessScene(application, text);
+  }
+
   public static async Task<SceneAsset> LoadSceneAsset(Application application, string sceneName) {
     var text = File.ReadAllText($"./Resources/Assets/{sceneName}.scene");
 
+    return await ProcessScene(application, text);
+  }
+
+  private static async Task<SceneAsset> ProcessScene(Application application, string text) {
     var desrializer = new DeserializerBuilder()
       .WithNamingConvention(PascalCaseNamingConvention.Instance)
       .Build();

@@ -7,6 +7,7 @@ using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Procedural;
 using Dwarf.Engine.Rendering.UI;
+using Dwarf.Extensions.Logging;
 
 namespace Dwarf.AssetSystem;
 
@@ -216,6 +217,8 @@ public class GameAsset {
     entity.AddComponent(new Camera(cameraData.Fov, app.Renderer.AspectRatio));
     entity.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
     entity.GetComponent<Camera>().Yaw = cameraData.Yaw;
+
+#if RUNTIME
     if (cameraData.LookAtTarget != Guid.Empty) {
       var target = app.GetEntity(cameraData.LookAtTarget);
       if (target != null) {
@@ -227,5 +230,6 @@ public class GameAsset {
     CameraState.SetCameraEntity(entity);
     CameraState.SetCameraSpeed(cameraData.CameraSpeed);
     app.SetCamera(entity);
+#endif
   }
 }

@@ -63,9 +63,7 @@ public class Application {
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
 
-  private FrameInfo _currentFrameInfo = new();
-
-  private Thread _renderThread;
+  internal Thread _renderThread;
   private Thread _calculationThread;
   private bool _calculationShouldClose = false;
   private bool _renderShouldClose = false;
@@ -74,13 +72,21 @@ public class Application {
   private ImGuiController _imguiController = null!;
   private GlobalUniformBufferObject _ubo = new();
 
+  private FrameInfo _currentFrame = new();
+
   public RenderAPI CurrentAPI { get; private set; }
+  public readonly object ApplicationLock = new object();
 
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool debugMode = true
   ) {
+    var runtimeValue = Environment.GetEnvironmentVariable("IsRuntime");
+    if (runtimeValue == "true") {
+
+    }
+
     CurrentAPI = RenderAPI.Vulkan;
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
@@ -94,6 +100,8 @@ public class Application {
 
     _textureManager = new(Device);
     _systemCreationFlags = systemCreationFlags;
+
+    Mutex = new Mutex(false);
   }
 
   public void SetupScene(Scene scene) {
@@ -144,6 +152,7 @@ public class Application {
     MasterStart(Entity.GetScripts(_entities));
 
     _renderThread = new Thread(RenderLoop);
+    _renderThread.Name = "Render Thread";
     // _calculationThread = new Thread(CalculationLoop);
 
 
@@ -171,14 +180,14 @@ public class Application {
       // Logger.Info($"Render: {_renderShouldClose}");
     }
 
-    Device._mutex.WaitOne();
+    Mutex.WaitOne();
     try {
       var result = vkDeviceWaitIdle(Device.LogicalDevice);
       if (result != VkResult.Success) {
         Logger.Error(result.ToString());
       }
     } finally {
-      Device._mutex.ReleaseMutex();
+      Mutex.ReleaseMutex();
     }
 
 
@@ -201,21 +210,27 @@ public class Application {
   }
 
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Awake();
     }
+#endif
   }
 
   private static void MasterStart(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Start();
     }
+#endif
   }
 
   private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Update();
     }
+#endif
   }
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
@@ -245,20 +260,6 @@ public class Application {
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = Renderer.GetFrameIndex();
-      // FrameInfo frameInfo = new();
-
-      /*
-      GlobalUniformBufferObject ubo = new() {
-        Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
-        View = _camera.GetComponent<Camera>().GetViewMatrix(),
-
-        // LightPosition = _camera.GetComponent<Transform>().Position,
-        LightPosition = new Vector3(0, -5, 0),
-        LightColor = new Vector4(1f, 1f, 1f, 1f),
-        AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
-        CameraPosition = _camera.GetComponent<Transform>().Position
-      };
-      */
 
       _ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
       _ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
@@ -266,28 +267,29 @@ public class Application {
       _ubo.LightColor = DirectionalLight.LightColor;
       _ubo.AmientLightColor = DirectionalLight.AmbientColor;
       _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
+      _ubo.Layer = 5;
 
       fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
         _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
       }
 
-      var currentFrame = new FrameInfo();
-      currentFrame.Camera = _camera.GetComponent<Camera>();
-      currentFrame.CommandBuffer = commandBuffer;
-      currentFrame.FrameIndex = frameIndex;
-      currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      currentFrame.TextureManager = _textureManager;
+      // var currentFrame = new FrameInfo();
+      _currentFrame.Camera = _camera.GetComponent<Camera>();
+      _currentFrame.CommandBuffer = commandBuffer;
+      _currentFrame.FrameIndex = frameIndex;
+      _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      _currentFrame.TextureManager = _textureManager;
 
       // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
       _onRender?.Invoke();
-      _skybox.Render(currentFrame);
-      _systems.UpdateSystems(_entities.ToArray(), currentFrame);
+      _skybox.Render(_currentFrame);
+      _systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
       _imguiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();
-      _imguiController.Render(currentFrame);
+      _imguiController.Render(_currentFrame);
 
       Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
@@ -302,7 +304,7 @@ public class Application {
     _systems.UpdateCalculationSystems(GetEntities().ToArray());
   }
 
-  private unsafe void RenderLoop() {
+  internal unsafe void RenderLoop() {
     var pool = Device.CreateCommandPool();
     var threadInfo = new ThreadInfo() {
       CommandPool = pool,
@@ -361,11 +363,14 @@ public class Application {
 
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
-      Device.WaitDevice();
-      Device.WaitQueue();
+      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
       _entities.Add(entity);
       MasterAwake(Entity.GetScripts(new[] { entity }));
       MasterStart(Entity.GetScripts(new[] { entity }));
+      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      unsafe {
+        vkDestroyFence(Device.LogicalDevice, fence);
+      }
     }
   }
 
@@ -452,6 +457,7 @@ public class Application {
   }
 
   private async Task<Task> LoadTextures() {
+    if (_currentScene == null) return Task.CompletedTask;
     _currentScene.LoadTextures();
     await LoadTexturesAsSeparateThreads(_currentScene.GetTexturePaths());
     return Task.CompletedTask;
@@ -464,6 +470,7 @@ public class Application {
   }
 
   private Task LoadEntities() {
+    if (_currentScene == null) return Task.CompletedTask;
     var startTime = DateTime.UtcNow;
     _currentScene.LoadEntities();
     _entities.AddRange(_currentScene.GetEntities());
@@ -519,9 +526,10 @@ public class Application {
   }
 
   public VulkanDevice Device { get; } = null!;
+  public Mutex Mutex { get; private set; }
   public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer { get; } = null!;
-  public FrameInfo FrameInfo => _currentFrameInfo;
+  public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight { get; } = new();
 }

@@ -154,11 +154,12 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     var entity = await CreateBase(entityName, position, rotation, scale);
+    app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
     var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
-
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    app.Mutex.ReleaseMutex();
 
     return entity;
   }

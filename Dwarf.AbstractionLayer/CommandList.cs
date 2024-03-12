@@ -25,4 +25,11 @@ public abstract class CommandList {
     int vertexOffset,
     uint firstInstance
   );
+
+  public abstract void SetViewport(
+    nint commandBuffer,
+    float x, float y,
+    float width, float height,
+    float minDepth, float maxDepth
+  );
 }

@@ -92,12 +92,14 @@ public static class VkUtils {
     }
   }
 
-  public static VkViewport Viewport(float width, float height, float minDepth, float maxDepth) {
+  public static VkViewport Viewport(float x, float y, float width, float height, float minDepth, float maxDepth) {
     VkViewport viewport = new();
     viewport.width = width;
     viewport.height = height;
     viewport.minDepth = minDepth;
     viewport.maxDepth = maxDepth;
+    viewport.x = x;
+    viewport.y = y;
     return viewport;
   }
 

@@ -32,11 +32,8 @@ public class PerformanceTester {
       new(0, 0, 0),
       new(1, 1, 1)
     );
-    Logger.Info("KLIK");
     entity.AddRigdbody(PrimitiveType.Cylinder, false, 1);
-    Logger.Info("Sep");
     entity.GetComponent<Rigidbody>().Init(Application.Instance.GetSystems().PhysicsSystem.BodyInterface);
-    Logger.Info("Sep");
     app.AddEntity(entity);
   }
 

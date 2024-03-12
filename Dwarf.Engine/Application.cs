@@ -63,7 +63,7 @@ public class Application {
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
 
-  internal Thread _renderThread;
+  private Thread _renderThread;
   private Thread _calculationThread;
   private bool _calculationShouldClose = false;
   private bool _renderShouldClose = false;

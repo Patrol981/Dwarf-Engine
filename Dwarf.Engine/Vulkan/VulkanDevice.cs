@@ -284,13 +284,6 @@ public class VulkanDevice : IDevice {
     WaitQueue(_graphicsQueue);
   }
 
-  private void WaitFences(VkFence fence) {
-    vkWaitForFences(_logicalDevice, fence, true, FenceTimeout);
-  }
-  public void WaitFences() {
-    WaitFences(_singleTimeFence);
-  }
-
   private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
     VkSubmitInfo submitInfo = new() {
       commandBufferCount = 1,
@@ -298,10 +291,7 @@ public class VulkanDevice : IDevice {
     };
 
     var fence = CreateFence(VkFenceCreateFlags.None);
-    // vkResetFences(_logicalDevice, Application.Instance.Renderer.Swapchain.GetCurrentFence());
     SubmitQueue(1, &submitInfo, fence, true);
-    // vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
-    // vkDestroyFence(_logicalDevice, fence);
   }
 
   private void SubmitQueue(VkCommandBuffer commandBuffer) {
@@ -309,10 +299,8 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
-    // Logger.Info($"{Thread.CurrentThread.Name} is requesting queue submission");
     try {
       Application.Instance.Mutex.WaitOne();
-      // Logger.Info($"{Thread.CurrentThread.Name} is submitting queue");
       vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
       vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
       if (destroy) {
@@ -320,10 +308,7 @@ public class VulkanDevice : IDevice {
       }
     } finally {
       Application.Instance.Mutex.ReleaseMutex();
-      // Logger.Info($"{Thread.CurrentThread.Name} has stopped of use queue");
     }
-
-
   }
 
   private unsafe void SubmitSemaphore() {

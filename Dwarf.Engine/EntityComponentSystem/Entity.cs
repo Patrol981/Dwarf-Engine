@@ -5,13 +5,15 @@ public class Entity {
   public bool CanBeDisposed = false;
 
   private ComponentManager _componentManager;
-  private string _name = "Entity";
-  private Guid _guid = Guid.NewGuid();
-  private bool _isActive = true;
-
   private readonly object _componentLock = new object();
 
   public Entity() {
+    EntityID = Guid.NewGuid();
+    _componentManager = new ComponentManager();
+  }
+
+  public Entity(Guid entityId) {
+    EntityID = entityId;
     _componentManager = new ComponentManager();
   }
 
@@ -27,10 +29,7 @@ public class Entity {
   }
 
   public T? TryGetComponent<T>() where T : Component, new() {
-    if (HasComponent<T>()) {
-      return GetComponent<T>();
-    }
-    return null!;
+    return HasComponent<T>() ? GetComponent<T>() : null;
   }
 
   public T GetScript<T>() where T : DwarfScript {
@@ -171,29 +170,15 @@ public class Entity {
     return returnEntities.ToArray();
   }
 
-  public bool Active {
-    get { return _isActive; }
-    set { _isActive = value; }
-  }
+  public bool Active { get; set; } = true;
 
-  public string Name {
-    get { return _name; }
-    set { _name = value; }
-  }
+  public string Name { get; set; } = "Entity";
 
-  public Guid EntityID {
-    get { return _guid; }
-    set { _guid = value; }
-  }
+  public Guid EntityID { get; set; }
 
   internal class Comparer : IComparer<Entity> {
     public int Compare(Entity? x, Entity? y) {
-      if (x?.EntityID < y?.EntityID)
-        return -1;
-      else if (x?.EntityID > y?.EntityID)
-        return 1;
-      else
-        return 0;
+      return x?.EntityID < y?.EntityID ? -1 : x?.EntityID > y?.EntityID ? 1 : 0;
     }
   }
 }

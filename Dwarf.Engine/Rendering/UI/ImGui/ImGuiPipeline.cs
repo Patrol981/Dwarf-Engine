@@ -4,7 +4,7 @@ using Vortice.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class ImGuiPipeline : PipelineConfigInfo {
-  public unsafe override PipelineConfigInfo GetConfigInfo() {
+  public override unsafe PipelineConfigInfo GetConfigInfo() {
     var configInfo = base.GetConfigInfo();
     var frontFace = VkFrontFace.CounterClockwise;
 

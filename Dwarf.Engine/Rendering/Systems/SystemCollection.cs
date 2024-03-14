@@ -4,9 +4,7 @@ using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Vulkan;
 
-using static Vortice.Vulkan.Vulkan;
 using Vortice.Vulkan;
-using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Rendering;
 public class SystemCollection : IDisposable {
@@ -15,6 +13,7 @@ public class SystemCollection : IDisposable {
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
+  private PointLightSystem? _pointLightSystem;
 
   // TODO : More canvases in the future?
   private Canvas? _canvas = null;
@@ -33,6 +32,7 @@ public class SystemCollection : IDisposable {
       _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
       _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
       _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+      _pointLightSystem?.Render(frameInfo);
       _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
     }
   }
@@ -58,7 +58,7 @@ public class SystemCollection : IDisposable {
 
   public void ValidateSystems(
     ReadOnlySpan<Entity> entities,
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
@@ -91,7 +91,7 @@ public class SystemCollection : IDisposable {
       // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var canvasEntities = _canvas!.GetUI();
       if (canvasEntities.Length < 1) return;
-      var sizes = _renderUISystem.CheckSizes(canvasEntities);
+      var sizes = _renderUISystem.CheckSizes(canvasEntities, _canvas);
       var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {
         ReloadUISystem = false;
@@ -101,7 +101,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void ReloadSystems(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     PipelineConfigInfo pipelineConfigInfo,
@@ -143,7 +143,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload3DRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -161,7 +161,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload2DRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -179,7 +179,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void ReloadUIRenderer(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -228,6 +228,11 @@ public class SystemCollection : IDisposable {
     set { _renderDebugSystem = value; }
   }
 
+  public PointLightSystem PointLightSystem {
+    get { return _pointLightSystem ?? null!; }
+    set { _pointLightSystem = value; }
+  }
+
   public Canvas Canvas {
     get { return _canvas ?? null!; }
     set { _canvas = value; }
@@ -240,5 +245,6 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();
+    _pointLightSystem?.Dispose();
   }
 }

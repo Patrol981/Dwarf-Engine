@@ -1,20 +1,23 @@
-using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using System.Runtime.InteropServices;
 
+using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
-using Vortice.Vulkan;
-using static Vortice.Vulkan.Vulkan;
 using StbImageSharp;
 
+using Vortice.Vulkan;
+
+using static Vortice.Vulkan.Vulkan;
+
 namespace Dwarf.Engine;
-public class CubeMapTexture : Texture {
+public class CubeMapTexture : VulkanTexture {
   private string[] _paths = [];
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
-    Device device,
+    VulkanDevice device,
     int width,
     int height,
     string[] paths,
@@ -28,19 +31,19 @@ public class CubeMapTexture : Texture {
   }
 
   public static new async Task<ImageResult> LoadDataFromPath(string path, int flip = 1) {
-    return await Texture.LoadDataFromPath(path, flip);
+    return await TextureLoader.LoadDataFromPath(path, flip);
   }
 
   public void SetTextureData(byte[] data) {
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);
@@ -49,11 +52,11 @@ public class CubeMapTexture : Texture {
   }
 
   public void SetTextureData(nint dataPtr) {
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     var data = new byte[_cubemapPack.Size];
@@ -64,7 +67,7 @@ public class CubeMapTexture : Texture {
     }
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);
@@ -72,7 +75,7 @@ public class CubeMapTexture : Texture {
     stagingBuffer.Dispose();
   }
 
-  private void ProcessTexture(Vulkan.Buffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+  private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();
@@ -89,8 +92,8 @@ public class CubeMapTexture : Texture {
     HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, 1);
   }
 
-  private unsafe static void CreateImage(
-    Device device,
+  private static unsafe void CreateImage(
+    VulkanDevice device,
     uint width,
     uint height,
     VkFormat format,
@@ -120,7 +123,7 @@ public class CubeMapTexture : Texture {
 
     VkMemoryAllocateInfo allocInfo = new();
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, VkMemoryPropertyFlags.DeviceLocal);
+    allocInfo.memoryTypeIndex = device.FindMemoryType(memRequirements.memoryTypeBits, MemoryProperty.DeviceLocal);
 
     vkAllocateMemory(device.LogicalDevice, &allocInfo, null, out textureImageMemory).CheckResult();
     vkBindImageMemory(device.LogicalDevice, textureImage, textureImageMemory, 0).CheckResult();

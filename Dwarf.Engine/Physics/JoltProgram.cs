@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Numerics;
 
 using JoltPhysicsSharp;
@@ -60,11 +59,7 @@ public static class JoltProgram {
 
     // Dynamic body stack
     for (int i = 0; i < 10; ++i) {
-      Quaternion rotation;
-      if ((i & 1) != 0)
-        rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f * (float)System.Math.PI);
-      else
-        rotation = Quaternion.Identity;
+      Quaternion rotation = (i & 1) != 0 ? Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.5f * (float)System.Math.PI) : Quaternion.Identity;
       Body stack = bodyInterface.CreateBody(new BodyCreationSettings(boxShape, new Vector3(10, 1.0f + i * 2.1f, 0), rotation, MotionType.Dynamic, Layers.Moving));
       bodyInterface.AddBody(stack.ID, Activation.Activate);
     }

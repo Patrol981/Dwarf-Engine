@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
@@ -107,7 +107,7 @@ public class Ray {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
 
-    var rayData = GetRayInfo(camera, new(screenSize.width, screenSize.height));
+    var rayData = GetRayInfo(camera, new(screenSize.Width, screenSize.Height));
 
     var hitResult = new RaycastHitResult {
       Present = false,
@@ -120,7 +120,7 @@ public class Ray {
   public static RaycastHitResult MeshIntersection(Entity entity) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
-    var rayData = GetRayInfo(camera, new(screenSize.width, screenSize.height));
+    var rayData = GetRayInfo(camera, new(screenSize.Width, screenSize.Height));
 
     if (!entity.HasComponent<ColliderMesh>()) return new();
     var mesh = entity.GetComponent<ColliderMesh>().Mesh;
@@ -179,17 +179,13 @@ public class Ray {
     var normal1 = Vector3.Cross(edge1, point - v1.Position);
     var normal2 = Vector3.Cross(edge2, point - v2.Position);
 
-    if (Vector3.Dot(normal0, normal1) > 0.0 && Vector3.Dot(normal1, normal2) > 0.0) {
-      return true;
-    }
-
-    return false;
+    return Vector3.Dot(normal0, normal1) > 0.0 && Vector3.Dot(normal1, normal2) > 0.0;
   }
 
   public static RaycastHitResult OBBIntersection(Entity entity, float maxDistance) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
-    var rayData = GetRayInfo(camera, new(screenSize.width, screenSize.height));
+    var rayData = GetRayInfo(camera, new(screenSize.Width, screenSize.Height));
 
     var transform = entity.GetComponent<Transform>();
     var model = entity.GetComponent<MeshRenderer>();
@@ -258,7 +254,7 @@ public class Ray {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
 
-    var rayData = GetRayInfo(camera, new(screenSize.width, screenSize.height));
+    var rayData = GetRayInfo(camera, new(screenSize.Width, screenSize.Height));
 
     var transform = entity.GetComponent<Transform>();
     var model = entity.GetComponent<MeshRenderer>();

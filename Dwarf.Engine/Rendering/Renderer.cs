@@ -1,11 +1,9 @@
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Engine.Math;
+using Dwarf.Engine.Vulkan;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-
-using OpenTK.Mathematics;
 
 using Vortice.Vulkan;
 
@@ -16,28 +14,31 @@ namespace Dwarf.Engine.Rendering;
 
 public unsafe class Renderer : IDisposable {
   private Window _window = null!;
-  private Device _device = null!;
-  private Swapchain _swapchain = null!;
+  // private VulkanDevice _device = null!;
+  private IDevice _device;
   private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
 
   private uint _imageIndex = 0;
   private int _frameIndex = 0;
-  private bool _isFrameStarted = false;
-  public Renderer(Window window, Device device) {
+
+  public Renderer(Window window, VulkanDevice device) {
     _window = window;
     _device = device;
+
+    CommandList = new VulkanCommandList();
+
     // _swapchain = new Swapchain(_device, _window.Extent);
     RecreateSwapchain();
     // CreateCommandBuffers();
   }
 
   public VkCommandBuffer BeginFrame(VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
-    if (_isFrameStarted) {
+    if (IsFrameInProgress) {
       Logger.Error("Cannot start frame while already in progress!");
       return VkCommandBuffer.Null;
     }
 
-    var result = _swapchain.AcquireNextImage(out _imageIndex);
+    var result = Swapchain.AcquireNextImage(out _imageIndex);
 
     if (result == VkResult.ErrorOutOfDateKHR) {
       RecreateSwapchain();
@@ -49,7 +50,7 @@ public unsafe class Renderer : IDisposable {
       return VkCommandBuffer.Null;
     }
 
-    _isFrameStarted = true;
+    IsFrameInProgress = true;
 
     var commandBuffer = GetCurrentCommandBuffer();
 
@@ -66,30 +67,31 @@ public unsafe class Renderer : IDisposable {
   }
 
   public void EndFrame() {
-    if (!_isFrameStarted) {
+    if (!IsFrameInProgress) {
       Logger.Error("Cannot end frame is not in progress!");
     }
 
     var commandBuffer = GetCurrentCommandBuffer();
     vkEndCommandBuffer(commandBuffer).CheckResult();
 
-    var result = _swapchain.SubmitCommandBuffers(&commandBuffer, _imageIndex);
+    var result = Swapchain.SubmitCommandBuffers(&commandBuffer, _imageIndex);
 
     if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || _window.WasWindowResized()) {
+      Logger.Info("Recreate Swapchain Request");
       _window.ResetWindowResizedFlag();
       RecreateSwapchain();
     } else if (result != VkResult.Success) {
       Logger.Error($"Error while submitting Command buffer - {result.ToString()}");
     }
 
-    _isFrameStarted = false;
+    IsFrameInProgress = false;
     // PREV
-    _frameIndex = (_frameIndex + 1) % _swapchain.GetMaxFramesInFlight();
+    _frameIndex = (_frameIndex + 1) % Swapchain.GetMaxFramesInFlight();
     // _frameIndex = (_frameIndex) % _swapchain.GetMaxFramesInFlight();
   }
 
   public void BeginSwapchainRenderPass(VkCommandBuffer commandBuffer) {
-    if (!_isFrameStarted) {
+    if (!IsFrameInProgress) {
       Logger.Error("Cannot start render pass while already in progress!");
       return;
     }
@@ -99,11 +101,11 @@ public unsafe class Renderer : IDisposable {
     }
 
     VkRenderPassBeginInfo renderPassInfo = new();
-    renderPassInfo.renderPass = _swapchain.RenderPass;
-    renderPassInfo.framebuffer = _swapchain.GetFramebuffer((int)_imageIndex);
+    renderPassInfo.renderPass = Swapchain.RenderPass;
+    renderPassInfo.framebuffer = Swapchain.GetFramebuffer((int)_imageIndex);
 
     renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
-    renderPassInfo.renderArea.extent = _swapchain.Extent2D;
+    renderPassInfo.renderArea.extent = Swapchain.Extent2D;
 
     VkClearValue[] values = new VkClearValue[2];
     // VkClearValue* values = stackalloc VkClearValue[2];
@@ -119,18 +121,18 @@ public unsafe class Renderer : IDisposable {
     VkViewport viewport = new();
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = _swapchain.Extent2D.width;
-    viewport.height = _swapchain.Extent2D.height;
+    viewport.width = Swapchain.Extent2D.width;
+    viewport.height = Swapchain.Extent2D.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    VkRect2D scissor = new(0, 0, _swapchain.Extent2D.width, _swapchain.Extent2D.height);
+    VkRect2D scissor = new(0, 0, Swapchain.Extent2D.width, Swapchain.Extent2D.height);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
   }
 
   public void EndSwapchainRenderPass(VkCommandBuffer commandBuffer) {
-    if (!_isFrameStarted) {
+    if (!IsFrameInProgress) {
       Logger.Error("Cannot end render pass on not started frame!");
       return;
     }
@@ -143,16 +145,16 @@ public unsafe class Renderer : IDisposable {
   }
 
   private void RecreateSwapchain() {
-    var extent = _window.Extent;
-    while (extent.width == 0 || extent.height == 0) {
-      extent = _window.Extent;
+    var extent = _window.Extent.ToVkExtent2D();
+    while (extent.width == 0 || extent.height == 0 || _window.IsMinimalized) {
+      extent = _window.Extent.ToVkExtent2D();
       glfwWaitEvents();
     }
 
     _device.WaitDevice();
 
-    if (_swapchain != null) _swapchain.Dispose();
-    _swapchain = new(_device, extent);
+    if (Swapchain != null) Swapchain.Dispose();
+    Swapchain = new((VulkanDevice)_device, extent);
 
     Logger.Info("Recreated Swapchain");
 
@@ -179,7 +181,7 @@ public unsafe class Renderer : IDisposable {
   }
 
   public void CreateCommandBuffers(VkCommandPool commandPool, VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
-    int len = _swapchain.GetMaxFramesInFlight();
+    int len = Swapchain.GetMaxFramesInFlight();
     _commandBuffers = new VkCommandBuffer[len];
 
     VkCommandBufferAllocateInfo allocInfo = new();
@@ -208,10 +210,10 @@ public unsafe class Renderer : IDisposable {
 
   public void Dispose() {
     // FreeCommandBuffers();
-    _swapchain.Dispose();
+    Swapchain.Dispose();
   }
 
-  public bool IsFrameInProgress => _isFrameStarted;
+  public bool IsFrameInProgress { get; private set; } = false;
   public VkCommandBuffer GetCurrentCommandBuffer() {
     return _commandBuffers[_frameIndex];
   }
@@ -219,10 +221,11 @@ public unsafe class Renderer : IDisposable {
   public int GetFrameIndex() {
     return _frameIndex;
   }
-  public VkRenderPass GetSwapchainRenderPass() => _swapchain.RenderPass;
-  public float AspectRatio => _swapchain.ExtentAspectRatio();
-  public VkExtent2D Extent2D => _swapchain.Extent2D;
-  public int MAX_FRAMES_IN_FLIGHT => _swapchain.GetMaxFramesInFlight();
-  public bool IsFrameStarted => _isFrameStarted;
-  public Swapchain Swapchain => _swapchain;
+  public VkRenderPass GetSwapchainRenderPass() => Swapchain.RenderPass;
+  public float AspectRatio => Swapchain.ExtentAspectRatio();
+  public DwarfExtent2D Extent2D => Swapchain.Extent2D.FromVkExtent2D();
+  public int MAX_FRAMES_IN_FLIGHT => Swapchain.GetMaxFramesInFlight();
+  public bool IsFrameStarted => IsFrameInProgress;
+  public VulkanSwapchain Swapchain { get; private set; } = null!;
+  public CommandList CommandList { get; } = null!;
 }

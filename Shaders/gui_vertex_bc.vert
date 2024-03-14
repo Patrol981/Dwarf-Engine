@@ -15,6 +15,7 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec4 lightColor;
   vec4 ambientLightColor;
   vec3 cameraPosition;
+  int layer;
 } globalUBO;
 
 void main() {

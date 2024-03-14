@@ -1,14 +1,15 @@
-using Dwarf.Vulkan;
-using static Vortice.Vulkan.Vulkan;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.Physics;
+using Dwarf.Vulkan;
+
+using FontStashSharp;
 using FontStashSharp.Interfaces;
 
 using Vortice.Vulkan;
-using Dwarf.Engine.Physics;
-using System.Runtime.CompilerServices;
-using System.Numerics;
-using Dwarf.Engine.EntityComponentSystem;
-using FontStashSharp;
+
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI.FontStash;
 public class FontStashSystem : SystemBase, IFontStashRenderer2 {
@@ -29,7 +30,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2 {
   private object _lastTexture = null!;
 
   public FontStashSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -40,7 +41,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2 {
     CreatePipeline(renderer.GetSwapchainRenderPass());
 
     var windowSize = Application.Instance.Window.Extent;
-    _transform = Matrix4x4.CreateOrthographicOffCenter(0, windowSize.width, windowSize.height, 0, 0, -1);
+    _transform = Matrix4x4.CreateOrthographicOffCenter(0, windowSize.Width, windowSize.Height, 0, 0, -1);
 
     _fontSystemSettings = new FontSystemSettings {
       FontResolutionFactor = 2,

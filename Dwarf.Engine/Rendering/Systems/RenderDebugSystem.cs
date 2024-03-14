@@ -11,7 +11,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!

@@ -1,15 +1,10 @@
-using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.Globals;
+using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using DwarfEngine.Vulkan;
-
-using OpenTK.Mathematics;
-
-using SharpGLTF.Schema2;
 
 using Vortice.Vulkan;
 
@@ -21,7 +16,7 @@ public class Skybox : IDisposable {
     public TexturedVertex[] Vertices = [];
   }
 
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly TextureManager _textureManager;
   private readonly Renderer _renderer;
   private readonly float[] _vertices = [
@@ -240,14 +235,14 @@ public class Skybox : IDisposable {
   private DescriptorSetLayout _textureSetLayout = null!;
 
   private VkDescriptorSet _textureSet = VkDescriptorSet.Null;
-  private Vulkan.Buffer _skyboxBuffer = null!;
-  private Vulkan.Buffer _vertexBuffer = null!;
+  private DwarfBuffer _skyboxBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
   private ulong _vertexCount = 0;
 
   private string[] _cubemapNames = new string[6];
   private CubeMapTexture _cubemapTexture = null!;
 
-  public Skybox(Device device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
+  public Skybox(VulkanDevice device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
     _device = device;
     _textureManager = textureManager;
     _renderer = renderer;
@@ -341,7 +336,7 @@ public class Skybox : IDisposable {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
       imageView = _cubemapTexture.GetImageView()
     };
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out VkDescriptorSet set);
     _textureSet = set;
@@ -366,23 +361,23 @@ public class Skybox : IDisposable {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<TexturedVertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<TexturedVertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -402,12 +397,12 @@ public class Skybox : IDisposable {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _skyboxBuffer = new Vulkan.Buffer(
+    _skyboxBuffer = new DwarfBuffer(
       _device,
       (ulong)Unsafe.SizeOf<SkyboxBufferObject>(),
       1,
-      VkBufferUsageFlags.UniformBuffer,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
       _device.Properties.limits.minUniformBufferOffsetAlignment
     );
   }

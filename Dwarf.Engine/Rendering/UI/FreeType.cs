@@ -1,28 +1,27 @@
 namespace Dwarf.Engine.Rendering.UI;
 
-using static StbTrueTypeSharp.StbTrueType;
-// using FreeTypeSharp.Native;
-using static FreeTypeSharp.Native.FT;
+using System.Numerics;
+
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
+using Dwarf.Vulkan;
+
 using FreeTypeSharp;
 using FreeTypeSharp.Native;
-using Dwarf.Extensions.Logging;
-using System.Numerics;
-using Dwarf.Vulkan;
-using Dwarf.Utils;
+// using FreeTypeSharp.Native;
+using static FreeTypeSharp.Native.FT;
 
 public struct Character {
-  public Texture Texture;
+  public VulkanTexture Texture;
   public Vector2 Size;
   public Vector2 Bearing;
   public uint Advance;
 }
 
 public class FreeType {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
 
-  private Dictionary<char, Character> _characters = [];
-
-  public FreeType(Device device) {
+  public FreeType(VulkanDevice device) {
     _device = device;
   }
 
@@ -55,7 +54,7 @@ public class FreeType {
 
       Console.WriteLine(c);
 
-      var texture = new Texture(
+      var texture = new VulkanTexture(
         _device,
         (int)targetFace.GlyphBitmap.width,
         (int)targetFace.GlyphBitmap.rows,
@@ -72,12 +71,12 @@ public class FreeType {
         Advance = (uint)targetFace.GlyphMetricHorizontalAdvance
       };
 
-      _characters.Add(c, character);
+      Characters.Add(c, character);
     }
 
     FT_Done_Face(face);
     FT_Done_FreeType(ftLibrary.Native);
   }
 
-  public Dictionary<char, Character> Characters => _characters;
+  public Dictionary<char, Character> Characters { get; } = [];
 }

@@ -1,29 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
-using System.Numerics;
+using StbImageSharp;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using StbImageSharp;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
-  private readonly Device _device = null!;
-
-  private Mesh _mesh = null!;
+  private readonly VulkanDevice _device = null!;
   private bool _hasIndexBuffer = false;
-  private Dwarf.Vulkan.Buffer _vertexBuffer = null!;
-  private Dwarf.Vulkan.Buffer _indexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private Guid _textureIdRef = Guid.Empty;
@@ -33,21 +28,21 @@ public class GuiTexture : Component, IUIElement {
 
   public GuiTexture() { }
 
-  public GuiTexture(Device device) {
+  public GuiTexture(VulkanDevice device) {
     _device = device;
 
     CreateVertexData();
 
-    if (_mesh.Indices.Length > 0) _hasIndexBuffer = true;
-    CreateVertexBuffer(_mesh.Vertices);
-    CreateIndexBuffer(_mesh.Indices);
+    if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
+    CreateVertexBuffer(Mesh.Vertices);
+    CreateIndexBuffer(Mesh.Indices);
   }
 
-  public void Bind(VkCommandBuffer commandBuffer) {
+  public void Bind(IntPtr commandBuffer) {
     throw new NotImplementedException();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -81,7 +76,7 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -104,11 +99,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   public void BindToTexture(TextureManager textureManager, string texturePath, bool useLocalPath = false) {
-    if (useLocalPath) {
-      _textureIdRef = textureManager.GetTextureId($"./Textures/{texturePath}");
-    } else {
-      _textureIdRef = textureManager.GetTextureId(texturePath);
-    }
+    _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       _usesTexture = true;
@@ -137,35 +128,35 @@ public class GuiTexture : Component, IUIElement {
   }
 
   private void CreateVertexData() {
-    _mesh = new();
+    Mesh = new();
 
-    _mesh.Vertices = new Vertex[4];
-    _mesh.Vertices[0] = new Vertex {
+    Mesh.Vertices = new Vertex[4];
+    Mesh.Vertices[0] = new Vertex {
       Position = new Vector3(0.5f, 0.5f, 0.0f),
       Uv = new Vector2(0.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[1] = new Vertex {
+    Mesh.Vertices[1] = new Vertex {
       Position = new Vector3(0.5f, -0.5f, 0.0f),
       Uv = new Vector2(0.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[2] = new Vertex {
+    Mesh.Vertices[2] = new Vertex {
       Position = new Vector3(-0.5f, -0.5f, 0.0f),
       Uv = new Vector2(1.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
-    _mesh.Vertices[3] = new Vertex {
+    Mesh.Vertices[3] = new Vertex {
       Position = new Vector3(-0.5f, 0.5f, 0.0f),
       Uv = new Vector2(1.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
 
-    _mesh.Indices = new uint[] {
+    Mesh.Indices = new uint[] {
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
     };
@@ -177,23 +168,23 @@ public class GuiTexture : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -206,29 +197,29 @@ public class GuiTexture : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
-    _indexBuffer = new Vulkan.Buffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
   }
 
-  public Mesh Mesh => _mesh;
+  public Mesh Mesh { get; private set; } = null!;
 }

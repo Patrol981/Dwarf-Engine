@@ -1,16 +1,16 @@
-using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Vulkan;
+namespace Dwarf.Engine.AbstractionLayer;
 
-public unsafe class Buffer : IDisposable {
+public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
-  private Device _device;
-  private IntPtr _mapped;
+  private IDevice _device;
+  private nint _mapped;
   private VkBuffer _buffer = VkBuffer.Null;
   private VkDeviceMemory _memory = VkDeviceMemory.Null;
 
@@ -18,16 +18,19 @@ public unsafe class Buffer : IDisposable {
   private ulong _instanceCount;
   private ulong _instanceSize;
   private ulong _alignmentSize;
-  private VkBufferUsageFlags _usageFlags;
-  private VkMemoryPropertyFlags _memoryPropertyFlags;
+  private BufferUsage _usageFlags;
+  private MemoryProperty _memoryPropertyFlags;
 
-  public Buffer(
-    Device device,
+  private bool _isStagingBuffer = false;
+
+  public DwarfBuffer(
+    IDevice device,
     ulong instanceSize,
     ulong instanceCount,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags propertyFlags,
-    ulong minOffsetAlignment = 1
+    BufferUsage usageFlags,
+    MemoryProperty propertyFlags,
+    ulong minOffsetAlignment = 1,
+    bool stagingBuffer = false
   ) {
     _device = device;
     _instanceSize = instanceSize;
@@ -38,23 +41,28 @@ public unsafe class Buffer : IDisposable {
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+
+    _isStagingBuffer = stagingBuffer;
   }
 
-  public Buffer(
-    Device device,
+  public DwarfBuffer(
+    IDevice device,
     ulong bufferSize,
-    VkBufferUsageFlags usageFlags,
-    VkMemoryPropertyFlags propertyFlags,
-    ulong minOffsetAlignment = 1
+    BufferUsage usageFlags,
+    MemoryProperty propertyFlags,
+    ulong minOffsetAlignment = 1,
+    bool stagingBuffer = false
   ) {
     _device = device;
-    _instanceSize = 0;
-    _instanceCount = 0;
+    _instanceSize = bufferSize;
+    _instanceCount = 1;
     _usageFlags = usageFlags;
     _memoryPropertyFlags = propertyFlags;
-    _alignmentSize = 0;
+    _alignmentSize = bufferSize;
     _bufferSize = bufferSize;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+
+    _isStagingBuffer = stagingBuffer;
   }
 
   public void Map(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -63,7 +71,7 @@ public unsafe class Buffer : IDisposable {
     }
   }
 
-  public static void Map(Buffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
+  public static void Map(DwarfBuffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     fixed (void* ptr = &buff._mapped) {
       vkMapMemory(buff._device.LogicalDevice, buff._memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
     }
@@ -74,15 +82,15 @@ public unsafe class Buffer : IDisposable {
   }
 
   public void Unmap() {
-    if (_mapped != IntPtr.Zero) {
+    if (_mapped != nint.Zero) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
-      _mapped = IntPtr.Zero;
+      _mapped = nint.Zero;
     }
   }
 
-  public void WriteToBuffer(IntPtr data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
+  public void WriteToBuffer(nint data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     if (size == VK_WHOLE_SIZE) {
-      VkUtils.MemCopy((IntPtr)_mapped, data, (int)_bufferSize);
+      MemoryUtils.MemCopy(_mapped, data, (int)_bufferSize);
     } else {
       if (size <= 0) {
         // Logger.Warn("[Buffer] Size of an write is less or equal to 0");
@@ -90,7 +98,7 @@ public unsafe class Buffer : IDisposable {
       }
       char* memOffset = (char*)_mapped;
       memOffset += offset;
-      VkUtils.MemCopy((IntPtr)memOffset, data, (int)size);
+      MemoryUtils.MemCopy((nint)memOffset, data, (int)size);
     }
   }
   public VkResult Flush(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -120,7 +128,7 @@ public unsafe class Buffer : IDisposable {
     return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
   }
 
-  public void WrtieToIndex(IntPtr data, int index) {
+  public void WrtieToIndex(nint data, int index) {
     WriteToBuffer(data, _instanceSize, (ulong)index * _alignmentSize);
   }
 
@@ -144,7 +152,7 @@ public unsafe class Buffer : IDisposable {
     return _memory;
   }
 
-  public IntPtr GetMappedMemory() {
+  public nint GetMappedMemory() {
     return _mapped;
   }
 
@@ -160,11 +168,11 @@ public unsafe class Buffer : IDisposable {
     return _alignmentSize;
   }
 
-  public VkBufferUsageFlags GetVkBufferUsageFlags() {
+  public BufferUsage GetVkBufferUsageFlags() {
     return _usageFlags;
   }
 
-  public VkMemoryPropertyFlags GetVkMemoryPropertyFlags() {
+  public MemoryProperty GetVkMemoryPropertyFlags() {
     return _memoryPropertyFlags;
   }
 
@@ -173,11 +181,7 @@ public unsafe class Buffer : IDisposable {
   }
 
   private static ulong GetAlignment(ulong instanceSize, ulong minOffsetAlignment) {
-    if (minOffsetAlignment > 0) {
-      return (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1);
-      // return (instanceSize + minOffsetAlignment - 1) / minOffsetAlignment * minOffsetAlignment;
-    }
-    return instanceSize;
+    return minOffsetAlignment > 0 ? (instanceSize + minOffsetAlignment - 1) & ~(minOffsetAlignment - 1) : instanceSize;
   }
 
   public void FreeMemory() {
@@ -185,11 +189,14 @@ public unsafe class Buffer : IDisposable {
   }
 
   public void DestoryBuffer() {
-    _device.WaitDevice();
     vkDestroyBuffer(_device.LogicalDevice, _buffer);
   }
 
   public void Dispose() {
+    if (!_isStagingBuffer) {
+      _device.WaitDevice();
+      _device.WaitQueue();
+    }
     Unmap();
     DestoryBuffer();
     FreeMemory();

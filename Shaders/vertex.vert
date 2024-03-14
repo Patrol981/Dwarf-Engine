@@ -30,6 +30,7 @@ layout (set = 1, binding = 0) uniform GlobalUbo {
   vec4 lightColor;
   vec4 ambientLightColor;
   vec3 cameraPosition;
+  int layer;
 } ubo;
 
 // 500 FPS on avg

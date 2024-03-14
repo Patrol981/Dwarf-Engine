@@ -1,14 +1,19 @@
-using Dwarf.Engine.EntityComponentSystem;
 using System.Numerics;
-using Dwarf.Vulkan;
-using Vortice.Vulkan;
-using static Vortice.Vulkan.Vulkan;
 using System.Runtime.CompilerServices;
+
+using Dwarf.Engine.AbstractionLayer;
+using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
+using Dwarf.Vulkan;
+
+using Vortice.Vulkan;
+
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {
-  private readonly Device _device;
+  private readonly VulkanDevice _device;
   private readonly FreeType _ft;
 
   private string _text = string.Empty;
@@ -19,14 +24,14 @@ public class FreeTypeText : Component, IUIElement {
   private Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
-  private Vulkan.Buffer _vertexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
 
   public FreeTypeText() {
     _device = null!;
     _ft = null!;
   }
 
-  public FreeTypeText(Device device, FreeType ft, string text, TextureManager textureManager) {
+  public FreeTypeText(VulkanDevice device, FreeType ft, string text, TextureManager textureManager) {
     _device = device;
     _ft = ft;
     _text = text;
@@ -50,7 +55,7 @@ public class FreeTypeText : Component, IUIElement {
     RecreateBuffers();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index) {
     VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
     ulong[] offsets = [0];
     fixed (VkBuffer* buffersPtr = buffers)
@@ -60,7 +65,7 @@ public class FreeTypeText : Component, IUIElement {
     return Task.CompletedTask;
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     return Task.CompletedTask;
   }
@@ -137,7 +142,7 @@ public class FreeTypeText : Component, IUIElement {
   }
 
   private void RecreateBuffers() {
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(_mesh.Vertices);
   }
@@ -148,23 +153,23 @@ public class FreeTypeText : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);

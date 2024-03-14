@@ -1,21 +1,21 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Global;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Rendering;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Lightning;
 using Dwarf.Vulkan;
-using System.Numerics;
 
 using Vortice.Vulkan;
-using static Vortice.Vulkan.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
-using Dwarf.Engine.Global;
-using Dwarf.Rendering;
-using ImGuiNET;
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 
@@ -46,15 +46,11 @@ public class Application {
   private EventCallback? _onRender;
   private EventCallback? _onGUI;
   private EventCallback? _onLoad;
-
-  private Window _window = null!;
-  private Device _device = null!;
-  private Renderer _renderer = null!;
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
   private VkDescriptorSet[] _globalDescriptorSets = [];
-  private Vulkan.Buffer[] _uboBuffers = [];
+  private DwarfBuffer[] _uboBuffers = [];
 
   private List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
@@ -67,8 +63,6 @@ public class Application {
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
 
-  private FrameInfo _currentFrameInfo = new();
-
   private Thread _renderThread;
   private Thread _calculationThread;
   private bool _calculationShouldClose = false;
@@ -76,24 +70,38 @@ public class Application {
 
   private Skybox _skybox = null!;
   private ImGuiController _imguiController = null!;
+  private GlobalUniformBufferObject _ubo = new();
+
+  private FrameInfo _currentFrame = new();
+
+  public RenderAPI CurrentAPI { get; private set; }
+  public readonly object ApplicationLock = new object();
 
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool debugMode = true
   ) {
-    Device.s_EnableValidationLayers = debugMode;
+    var runtimeValue = Environment.GetEnvironmentVariable("IsRuntime");
+    if (runtimeValue == "true") {
 
-    _window = new Window(1200, 900, appName);
-    _device = new Device(_window);
-    _renderer = new Renderer(_window, _device);
+    }
+
+    CurrentAPI = RenderAPI.Vulkan;
+
+    VulkanDevice.s_EnableValidationLayers = debugMode;
+
+    Window = new Window(1200, 900, appName);
+    Device = new VulkanDevice(Window);
+    Renderer = new Renderer(Window, Device);
     _systems = new SystemCollection();
 
     Application.Instance = this;
 
-    _textureManager = new(_device);
-
+    _textureManager = new(Device);
     _systemCreationFlags = systemCreationFlags;
+
+    Mutex = new Mutex(false);
   }
 
   public void SetupScene(Scene scene) {
@@ -101,41 +109,42 @@ public class Application {
   }
 
   public unsafe void Run() {
-    _uboBuffers = new Vulkan.Buffer[_renderer.MAX_FRAMES_IN_FLIGHT];
+    _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
-        _device,
+        Device,
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
         1,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        Device.Properties.limits.minUniformBufferOffsetAlignment
       );
       _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
     }
 
-    _globalSetLayout = new DescriptorSetLayout.Builder(_device)
+    _globalSetLayout = new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
 
-    _globalDescriptorSets = new VkDescriptorSet[_renderer.MAX_FRAMES_IN_FLIGHT];
+    _globalDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _globalDescriptorSets.Length; i++) {
       var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      var writer = new DescriptorWriter(_globalSetLayout, _globalPool)
+      var writer = new VulkanDescriptorWriter(_globalSetLayout, _globalPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out _globalDescriptorSets[i]);
     }
 
-    SetupSystems(_systemCreationFlags, _device, _renderer, _globalSetLayout, null!);
+    SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
     var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
     _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
     _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
     _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
+    _systems.PointLightSystem?.Setup();
     _systems.PhysicsSystem?.Init(objs3D);
 
-    _skybox = new(_device, _textureManager, _renderer, _globalSetLayout.GetDescriptorSetLayout());
-    _imguiController = new(_device, _renderer);
-    _imguiController.Init((int)_window.Extent.width, (int)_window.Extent.height);
+    _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
+    _imguiController = new(Device, Renderer);
+    _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
     MasterAwake(Entity.GetScripts(_entities));
@@ -143,35 +152,42 @@ public class Application {
     MasterStart(Entity.GetScripts(_entities));
 
     _renderThread = new Thread(RenderLoop);
+    _renderThread.Name = "Render Thread";
     // _calculationThread = new Thread(CalculationLoop);
 
 
     _renderThread?.Start();
     // _calculationThread?.Start();
 
-    while (!_window.ShouldClose) {
+    while (!Window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
-      glfwPollEvents();
+      if (Window.IsMinimalized) {
+        glfwWaitEvents();
+      } else {
+        glfwPollEvents();
+      }
+
       Time.Tick();
 
       // Render();
       PerformCalculations();
 
-      _camera.GetComponent<Camera>().UpdateControls();
       _onUpdate?.Invoke();
       MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
+
+      // Logger.Info($"Render: {_renderShouldClose}");
     }
 
-    _device._mutex.WaitOne();
+    Mutex.WaitOne();
     try {
-      var result = vkDeviceWaitIdle(_device.LogicalDevice);
+      var result = vkDeviceWaitIdle(Device.LogicalDevice);
       if (result != VkResult.Success) {
         Logger.Error(result.ToString());
       }
     } finally {
-      _device._mutex.ReleaseMutex();
+      Mutex.ReleaseMutex();
     }
 
 
@@ -194,33 +210,39 @@ public class Application {
   }
 
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Awake();
     }
+#endif
   }
 
   private static void MasterStart(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Start();
     }
+#endif
   }
 
   private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
       entities[i].Update();
     }
+#endif
   }
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
         _entities.ToArray(),
-        _device, _renderer,
+        Device, Renderer,
         _globalSetLayout.GetDescriptorSetLayout(),
         CurrentPipelineConfig,
         ref _textureManager
       );
 
-    float aspect = _renderer.AspectRatio;
+    float aspect = Renderer.AspectRatio;
     if (aspect != _camera.GetComponent<Camera>().Aspect) {
       _camera.GetComponent<Camera>().Aspect = aspect;
       switch (_camera.GetComponent<Camera>().CameraType) {
@@ -235,52 +257,42 @@ public class Application {
       }
     }
 
-
-    // _imguiController.NewFrame();
-    // _imguiController.UpdateBuffers();
-    // _imguiController.UpdateImBuffers()
-
-
-    var commandBuffer = _renderer.BeginFrame();
+    var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
-      int frameIndex = _renderer.GetFrameIndex();
-      // FrameInfo frameInfo = new();
+      int frameIndex = Renderer.GetFrameIndex();
 
-      GlobalUniformBufferObject ubo = new() {
-        Projection = _camera.GetComponent<Camera>().GetProjectionMatrix(),
-        View = _camera.GetComponent<Camera>().GetViewMatrix(),
+      _ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
+      _ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+      _ubo.LightPosition = DirectionalLight.LightPosition;
+      _ubo.LightColor = DirectionalLight.LightColor;
+      _ubo.AmientLightColor = DirectionalLight.AmbientColor;
+      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
+      _ubo.Layer = 5;
 
-        // LightPosition = _camera.GetComponent<Transform>().Position,
-        LightPosition = new Vector3(0, -5, 0),
-        LightColor = new Vector4(1f, 1f, 1f, 1f),
-        AmientLightColor = new Vector4(1f, 1f, 1f, 1f),
-        CameraPosition = _camera.GetComponent<Transform>().Position
-      };
+      fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
+        _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      }
 
-      _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(&ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-
-      var currentFrame = new FrameInfo();
-      currentFrame.Camera = _camera.GetComponent<Camera>();
-      currentFrame.CommandBuffer = commandBuffer;
-      currentFrame.FrameIndex = frameIndex;
-      currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      currentFrame.TextureManager = _textureManager;
+      // var currentFrame = new FrameInfo();
+      _currentFrame.Camera = _camera.GetComponent<Camera>();
+      _currentFrame.CommandBuffer = commandBuffer;
+      _currentFrame.FrameIndex = frameIndex;
+      _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      _currentFrame.TextureManager = _textureManager;
 
       // render
-      _renderer.BeginSwapchainRenderPass(commandBuffer);
+      Renderer.BeginSwapchainRenderPass(commandBuffer);
 
       _onRender?.Invoke();
-      _skybox.Render(currentFrame);
-      _systems.UpdateSystems(_entities.ToArray(), currentFrame);
-
-      // _imguiController.DrawFrame(commandBuffer);
+      _skybox.Render(_currentFrame);
+      _systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
       _imguiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();
-      _imguiController.Render(currentFrame);
+      _imguiController.Render(_currentFrame);
 
-      _renderer.EndSwapchainRenderPass(commandBuffer);
-      _renderer.EndFrame();
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.EndFrame();
 
       Collect();
     }
@@ -292,11 +304,11 @@ public class Application {
     _systems.UpdateCalculationSystems(GetEntities().ToArray());
   }
 
-  private unsafe void RenderLoop() {
-    var pool = _device.CreateCommandPool();
+  internal unsafe void RenderLoop() {
+    var pool = Device.CreateCommandPool();
     var threadInfo = new ThreadInfo() {
       CommandPool = pool,
-      CommandBuffer = [_renderer.MAX_FRAMES_IN_FLIGHT]
+      CommandBuffer = [Renderer.MAX_FRAMES_IN_FLIGHT]
     };
 
     VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
@@ -305,20 +317,27 @@ public class Application {
     secondaryCmdBufAllocateInfo.commandBufferCount = 1;
 
     fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
-      vkAllocateCommandBuffers(_device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
+      vkAllocateCommandBuffers(Device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
     }
 
-    _renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+    Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
 
     while (!_renderShouldClose) {
+      if (Window.IsMinimalized) continue;
+
       Render(threadInfo);
+
+      GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
     fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
-      vkFreeCommandBuffers(_device.LogicalDevice, threadInfo.CommandPool, (uint)_renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
     }
 
-    vkDestroyCommandPool(_device.LogicalDevice, threadInfo.CommandPool, null);
+    Device.WaitQueue();
+    Device.WaitDevice();
+
+    vkDestroyCommandPool(Device.LogicalDevice, threadInfo.CommandPool, null);
   }
 
   private unsafe void CalculationLoop() {
@@ -329,7 +348,7 @@ public class Application {
 
   private void SetupSystems(
     SystemCreationFlags creationFlags,
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     DescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo
@@ -344,9 +363,14 @@ public class Application {
 
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
+      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
       _entities.Add(entity);
       MasterAwake(Entity.GetScripts(new[] { entity }));
       MasterStart(Entity.GetScripts(new[] { entity }));
+      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      unsafe {
+        vkDestroyFence(Device.LogicalDevice, fence);
+      }
     }
   }
 
@@ -356,14 +380,24 @@ public class Application {
     }
   }
 
+  public Entity? GetEntity(Guid entitiyId) {
+    lock (_entitiesLock) {
+      return _entities.Where(x => x.EntityID == entitiyId).First();
+    }
+  }
+
   public void RemoveEntityAt(int index) {
     lock (_entitiesLock) {
+      Device.WaitDevice();
+      Device.WaitQueue();
       _entities.RemoveAt(index);
     }
   }
 
   public void RemoveEntity(Entity entity) {
     lock (_entitiesLock) {
+      Device.WaitDevice();
+      Device.WaitQueue();
       _entities.Remove(entity);
     }
   }
@@ -371,6 +405,8 @@ public class Application {
   public void RemoveEntity(Guid id) {
     lock (_entitiesLock) {
       var target = _entities.Where((x) => x.EntityID == id).First();
+      Device.WaitDevice();
+      Device.WaitQueue();
       _entities.Remove(target);
     }
   }
@@ -388,9 +424,9 @@ public class Application {
   }
 
   public async void Init() {
-    _globalPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets((uint)_renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_renderer.MAX_FRAMES_IN_FLIGHT)
+    _globalPool = new DescriptorPool.Builder(Device)
+      .SetMaxSets((uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .Build();
 
     await LoadTextures();
@@ -404,9 +440,9 @@ public class Application {
     var startTime = DateTime.UtcNow;
     List<Task> tasks = new();
 
-    List<List<Texture>> textures = [];
+    List<List<ITexture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
-      var t = await TextureManager.AddTextures(_device, [.. paths[i]]);
+      var t = await TextureManager.AddTextures(Device, [.. paths[i]]);
       textures.Add([.. t]);
     }
 
@@ -421,6 +457,7 @@ public class Application {
   }
 
   private async Task<Task> LoadTextures() {
+    if (_currentScene == null) return Task.CompletedTask;
     _currentScene.LoadTextures();
     await LoadTexturesAsSeparateThreads(_currentScene.GetTexturePaths());
     return Task.CompletedTask;
@@ -433,6 +470,7 @@ public class Application {
   }
 
   private Task LoadEntities() {
+    if (_currentScene == null) return Task.CompletedTask;
     var startTime = DateTime.UtcNow;
     _currentScene.LoadEntities();
     _entities.AddRange(_currentScene.GetEntities());
@@ -466,25 +504,32 @@ public class Application {
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
     _systems?.Dispose();
-    _renderer?.Dispose();
-    _window?.Dispose();
-    _device?.Dispose();
+    Renderer?.Dispose();
+    Window?.Dispose();
+    Device?.Dispose();
   }
 
   private void Collect() {
-    _device.WaitQueue();
-    _device.WaitDevice();
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
+        Device.WaitDevice();
+        Device.WaitQueue();
+
         _entities[i].DisposeEverything();
         RemoveEntity(_entities[i].EntityID);
+
+        Device.WaitDevice();
+        Device.WaitQueue();
+
       }
     }
   }
 
-  public Device Device => _device;
-  public Window Window => _window;
+  public VulkanDevice Device { get; } = null!;
+  public Mutex Mutex { get; private set; }
+  public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
-  public Renderer Renderer => _renderer;
-  public FrameInfo FrameInfo => _currentFrameInfo;
+  public Renderer Renderer { get; } = null!;
+  public FrameInfo FrameInfo => _currentFrame;
+  public DirectionalLight DirectionalLight { get; } = new();
 }

@@ -1,7 +1,10 @@
 
 using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -10,44 +13,36 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine.Physics;
 public class ColliderMesh : Component, IDebugRender3DObject {
-  private readonly Device _device = null!;
+  private readonly VulkanDevice _device = null!;
 
-  private Vulkan.Buffer _vertexBuffer = null!;
-  private Vulkan.Buffer _indexBuffer = null!;
+  private DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
-
-  private Mesh _mesh = null!;
-  private bool _finishedInitialization = false;
   private bool _hasIndexBuffer = false;
-
-  private bool _enabled = true;
 
   public ColliderMesh() { }
 
-  public ColliderMesh(Device device, Mesh mesh) {
+  public ColliderMesh(VulkanDevice device, Mesh mesh) {
     _device = device;
-    _mesh = mesh;
+    Mesh = mesh;
 
-    if (_mesh.Indices.Length > 0) _hasIndexBuffer = true;
+    if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
 
     Init();
   }
 
   public async void Init() {
-    Task[] tasks = [
-      CreateVertexBuffer(_mesh.Vertices),
-      CreateIndexBuffer(_mesh.Indices)
-    ];
-    await Task.WhenAll(tasks);
-    _finishedInitialization = true;
+    await CreateVertexBuffer(Mesh.Vertices);
+    await CreateIndexBuffer(Mesh.Indices);
+    FinishedInitialization = true;
   }
 
   public void Bind(VkCommandBuffer commandBuffer) {
     throw new NotImplementedException();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index = 0) {
     // _device._mutex.WaitOne();
     VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
     ulong[] offsets = [0];
@@ -76,7 +71,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     }
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     // _device._mutex.WaitOne();
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
@@ -92,26 +87,30 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Vulkan.Buffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
+    Application.Instance.Mutex.WaitOne();
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
+    Application.Instance.Mutex.ReleaseMutex();
     stagingBuffer.Dispose();
     return Task.CompletedTask;
   }
@@ -122,31 +121,28 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     ulong bufferSize = sizeof(uint) * _indexCount;
     ulong indexSize = sizeof(uint);
 
-    var stagingBuffer = new Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
-    _indexBuffer = new Vulkan.Buffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
-    _device._mutex.WaitOne();
-    try {
-      _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
-    } finally {
-      _device._mutex.ReleaseMutex();
-    }
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
 
     stagingBuffer.Dispose();
     return Task.CompletedTask;
@@ -160,15 +156,15 @@ public class ColliderMesh : Component, IDebugRender3DObject {
 
   public int MeshsesCount => 1;
 
-  public bool FinishedInitialization => _finishedInitialization;
+  public bool FinishedInitialization { get; private set; } = false;
 
-  public Mesh Mesh => _mesh;
+  public Mesh Mesh { get; } = null!;
 
-  public bool Enabled => _enabled;
+  public bool Enabled { get; private set; } = true;
   public void Enable() {
-    _enabled = true;
+    Enabled = true;
   }
   public void Disable() {
-    _enabled = false;
+    Enabled = false;
   }
 }

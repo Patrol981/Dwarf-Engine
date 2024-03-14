@@ -1,8 +1,7 @@
-using Dwarf.Engine.EntityComponentSystem;
-
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+using Dwarf.Engine.EntityComponentSystem;
 
 namespace Dwarf.Engine;
 

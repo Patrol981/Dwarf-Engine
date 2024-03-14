@@ -1,7 +1,9 @@
-using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
 
+using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 
@@ -12,7 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class Device : IDisposable {
+public class VulkanDevice : IDevice {
   private readonly string[] VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
   public static bool s_EnableValidationLayers = true;
   private readonly Window _window;
@@ -29,9 +31,14 @@ public class Device : IDisposable {
 
   private VkQueue _graphicsQueue = VkQueue.Null;
   private VkQueue _presentQueue = VkQueue.Null;
-  private readonly object _graphicsQueueLock = new object();
-  private readonly object _presentQueueLock = new object();
-  private readonly object _deviceLock = new();
+  private VkQueue _transferQueue = VkQueue.Null;
+
+  internal readonly object _queueLock = new object();
+
+  private VkFence _singleTimeFence = VkFence.Null;
+
+  private VkSemaphore _semaphore = VkSemaphore.Null;
+  private ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
   public const long FenceTimeout = 100000000000;
@@ -39,27 +46,40 @@ public class Device : IDisposable {
   public VkPhysicalDeviceFeatures Features { get; private set; }
   public List<string> DeviceExtensions { get; private set; }
 
-  internal Mutex _mutex = new();
-
-  public Device(Window window) {
+  public VulkanDevice(Window window) {
     _window = window;
     CreateInstance();
     CreateSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
     _commandPool = CreateCommandPool();
+
+    /*
+    VkSemaphoreCreateInfo createInfo = new();
+    VkSemaphoreTypeCreateInfo typeInfo = new() {
+      semaphoreType = VkSemaphoreType.Timeline,
+      initialValue = 0
+    };
+    unsafe {
+      createInfo.pNext = &typeInfo;
+      _timeline = 0;
+
+      vkCreateSemaphore(_logicalDevice, &createInfo, null, out _semaphore).CheckResult();
+    }
+    */
+    // vkCreateSemaphore(_logicalDevice, out _semaphore).CheckResult();
   }
 
   public unsafe void CreateBuffer(
     ulong size,
-    VkBufferUsageFlags uFlags,
-    VkMemoryPropertyFlags pFlags,
+    BufferUsage uFlags,
+    MemoryProperty pFlags,
     out VkBuffer buffer,
     out VkDeviceMemory bufferMemory
   ) {
     VkBufferCreateInfo bufferInfo = new() {
       size = size,
-      usage = uFlags,
+      usage = (VkBufferUsageFlags)uFlags,
       sharingMode = VkSharingMode.Exclusive
     };
 
@@ -77,20 +97,24 @@ public class Device : IDisposable {
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
   }
 
-  public unsafe Task CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, ulong size) {
-    VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+  public unsafe Task CopyBuffer(ulong srcBuffer, ulong dstBuffer, ulong size) {
+    lock (_queueLock) {
+      VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
+      // var commandBuffer = CreateCommandBuffer(VkCommandBufferLevel.Primary, true);
 
-    VkBufferCopy copyRegion = new() {
-      srcOffset = 0,  // Optional
-      dstOffset = 0,  // Optional
-      size = size
-    };
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+      VkBufferCopy copyRegion = new() {
+        srcOffset = 0,  // Optional
+        dstOffset = 0,  // Optional
+        size = size
+      };
+      vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-    EndSingleTimeCommands(commandBuffer);
-
-    return Task.CompletedTask;
+      // FlushCommandBuffer(commandBuffer, _presentQueue, true);
+      EndSingleTimeCommands(commandBuffer);
+      return Task.CompletedTask;
+    }
   }
+
 
   public unsafe VkCommandBuffer CreateCommandBuffer(VkCommandBufferLevel level, VkCommandPool commandPool, bool begin) {
     var allocInfo = new VkCommandBufferAllocateInfo();
@@ -126,12 +150,7 @@ public class Device : IDisposable {
     fenceInfo.flags = VkFenceCreateFlags.None;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     // Submit to the queue
-    _mutex.WaitOne();
-    try {
-      vkQueueSubmit(queue, submitInfo, fence).CheckResult();
-    } finally {
-      _mutex.ReleaseMutex();
-    }
+    vkQueueSubmit(queue, submitInfo, fence).CheckResult();
     vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, 100000000000);
     vkDestroyFence(_logicalDevice, fence, null);
     if (free) {
@@ -143,14 +162,14 @@ public class Device : IDisposable {
     FlushCommandBuffer(cmdBuffer, queue, _commandPool, free);
   }
 
-  public static unsafe VkSemaphore CreateSemaphore(Device device) {
+  public static unsafe VkSemaphore CreateSemaphore(VulkanDevice device) {
     var semaphoreInfo = new VkSemaphoreCreateInfo();
     var semaphore = new VkSemaphore();
     vkCreateSemaphore(device.LogicalDevice, &semaphoreInfo, null, &semaphore);
     return semaphore;
   }
 
-  public static unsafe void DestroySemaphore(Device device, VkSemaphore semaphore) {
+  public static unsafe void DestroySemaphore(VulkanDevice device, VkSemaphore semaphore) {
     vkDestroySemaphore(device.LogicalDevice, semaphore, null);
   }
 
@@ -168,7 +187,7 @@ public class Device : IDisposable {
     throw new Exception("failed to find candidate!");
   }
 
-  public unsafe void CreateImageWithInfo(
+  internal unsafe void CreateImageWithInfo(
     VkImageCreateInfo imageInfo,
     VkMemoryPropertyFlags properties,
     out VkImage image,
@@ -182,21 +201,21 @@ public class Device : IDisposable {
 
     VkMemoryAllocateInfo allocInfo = new() {
       allocationSize = memRequirements.size,
-      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties)
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, (MemoryProperty)properties)
     };
 
     vkAllocateMemory(_logicalDevice, &allocInfo, null, out imageMemory).CheckResult();
     vkBindImageMemory(_logicalDevice, image, imageMemory, 0);
   }
 
-  public uint FindMemoryType(uint typeFilter, VkMemoryPropertyFlags properties) {
+  public uint FindMemoryType(uint typeFilter, MemoryProperty properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(_physicalDevice, out memProperties);
     for (int i = 0; i < memProperties.memoryTypeCount; i++) {
       // 1 << n is basically an equivalent to 2^n.
       // if ((typeFilter & (1 << i)) &&
 
-      if ((memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+      if (((MemoryProperty)memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
         return (uint)i;
       }
 
@@ -208,71 +227,56 @@ public class Device : IDisposable {
     throw new Exception($"Failed to find suitable memory type");
   }
 
-  public unsafe VkCommandBuffer BeginSingleTimeCommands() {
-    VkCommandBufferAllocateInfo allocInfo = new() {
-      level = VkCommandBufferLevel.Primary,
-      commandPool = _commandPool,
-      commandBufferCount = 1
-    };
+  public unsafe IntPtr BeginSingleTimeCommands() {
+    lock (_queueLock) {
+      VkCommandBufferAllocateInfo allocInfo = new() {
+        level = VkCommandBufferLevel.Primary,
+        commandPool = _commandPool,
+        commandBufferCount = 1
+      };
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
+      VkCommandBuffer commandBuffer;
+      vkAllocateCommandBuffers(_logicalDevice, &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = new() {
-      flags = VkCommandBufferUsageFlags.OneTimeSubmit
-    };
+      VkCommandBufferBeginInfo beginInfo = new() {
+        flags = VkCommandBufferUsageFlags.OneTimeSubmit
+      };
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    return commandBuffer;
+      vkBeginCommandBuffer(commandBuffer, &beginInfo);
+      return commandBuffer;
+    }
   }
 
-  public unsafe void EndSingleTimeCommands(VkCommandBuffer commandBuffer) {
-    vkEndCommandBuffer(commandBuffer);
+  public unsafe void EndSingleTimeCommands(IntPtr commandBuffer) {
+    lock (_queueLock) {
+      vkEndCommandBuffer(commandBuffer);
 
-    SubmitQueue(commandBuffer);
+      SubmitQueue(commandBuffer);
 
-    vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
-  }
-
-  public unsafe VkSemaphore CreateTimelineSemaphore() {
-    var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
-    timelineCreateInfo.pNext = null;
-    timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
-    timelineCreateInfo.initialValue = 0;
-
-    var createInfo = new VkSemaphoreCreateInfo();
-    createInfo.pNext = &timelineCreateInfo;
-    createInfo.flags = VkSemaphoreCreateFlags.None;
-
-    vkCreateSemaphore(_logicalDevice, &createInfo, null, out var semaphore).CheckResult();
-    return semaphore;
+      // vkFreeCommandBuffers(_logicalDevice, _commandPool, 1, &commandBuffer);
+      vkFreeCommandBuffers(_logicalDevice, _commandPool, commandBuffer);
+    }
   }
 
   public unsafe void WaitDevice() {
-    _mutex.WaitOne();
-    try {
+    lock (_queueLock) {
       var result = vkDeviceWaitIdle(_logicalDevice);
       if (result == VkResult.ErrorDeviceLost) {
         throw new VkException("Device Lost!");
       }
-    } finally {
-      _mutex.ReleaseMutex();
     }
   }
 
-  public unsafe VkFence CreateFence() {
+  public unsafe VkFence CreateFence(VkFenceCreateFlags flags = VkFenceCreateFlags.None) {
     var fenceInfo = new VkFenceCreateInfo();
-    fenceInfo.flags = VkFenceCreateFlags.None;
+    fenceInfo.flags = flags;
     vkCreateFence(_logicalDevice, &fenceInfo, null, out var fence).CheckResult();
     return fence;
   }
 
-  public unsafe void WaitQueue(VkQueue queue) {
-    _mutex.WaitOne();
-    try {
+  private unsafe void WaitQueue(VkQueue queue) {
+    lock (_queueLock) {
       vkQueueWaitIdle(queue);
-    } finally {
-      _mutex.ReleaseMutex();
     }
   }
 
@@ -280,31 +284,34 @@ public class Device : IDisposable {
     WaitQueue(_graphicsQueue);
   }
 
-  public unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
+  private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
     VkSubmitInfo submitInfo = new() {
       commandBufferCount = 1,
       pCommandBuffers = &commandBuffer,
     };
 
-    // Create fence to ensure that the command buffer has finished executing
-    var fence = CreateFence();
-
-    _mutex.WaitOne();
-    try {
-      vkQueueSubmit(queue, submitInfo, fence);
-    } finally {
-      _mutex.ReleaseMutex();
-    }
-
-    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
-    vkDestroyFence(_logicalDevice, fence);
+    var fence = CreateFence(VkFenceCreateFlags.None);
+    SubmitQueue(1, &submitInfo, fence, true);
   }
 
-  public void SubmitQueue(VkCommandBuffer commandBuffer) {
+  private void SubmitQueue(VkCommandBuffer commandBuffer) {
     SubmitQueue(_graphicsQueue, commandBuffer);
   }
 
-  public unsafe void SubmitSemaphore() {
+  public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
+    try {
+      Application.Instance.Mutex.WaitOne();
+      vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+      if (destroy) {
+        vkDestroyFence(_logicalDevice, fence);
+      }
+    } finally {
+      Application.Instance.Mutex.ReleaseMutex();
+    }
+  }
+
+  private unsafe void SubmitSemaphore() {
     var timelineCreateInfo = new VkSemaphoreTypeCreateInfo();
     timelineCreateInfo.pNext = null;
     timelineCreateInfo.semaphoreType = VkSemaphoreType.Timeline;
@@ -416,7 +423,7 @@ public class Device : IDisposable {
   }
 
   [UnmanagedCallersOnly]
-  private unsafe static uint DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
+  private static unsafe uint DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageTypes,
     VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* userData
@@ -517,7 +524,7 @@ public class Device : IDisposable {
     vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
   }
 
-  public unsafe VkCommandPool CreateCommandPool() {
+  public unsafe ulong CreateCommandPool() {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
@@ -526,9 +533,7 @@ public class Device : IDisposable {
     };
 
     var result = vkCreateCommandPool(_logicalDevice, &poolCreateInfo, null, out var commandPool);
-    if (result != VkResult.Success) throw new Exception("Failed to create command pool!");
-
-    return commandPool;
+    return result != VkResult.Success ? throw new Exception("Failed to create command pool!") : (ulong)commandPool;
   }
 
   public unsafe void Dispose() {
@@ -539,11 +544,11 @@ public class Device : IDisposable {
     vkDestroyInstance(_vkInstance);
   }
 
-  public VkDevice LogicalDevice => _logicalDevice;
-  public VkPhysicalDevice PhysicalDevice => _physicalDevice;
-  public VkSurfaceKHR Surface => _surface;
+  public IntPtr LogicalDevice => _logicalDevice;
+  public IntPtr PhysicalDevice => _physicalDevice;
+  public ulong Surface => _surface;
 
-  public VkCommandPool CommandPool {
+  public ulong CommandPool {
     get {
       lock (_commandPoolLock) {
         return _commandPool;
@@ -551,20 +556,12 @@ public class Device : IDisposable {
     }
   }
 
-  public VkQueue GraphicsQueue {
-    get {
-      lock (_graphicsQueueLock) {
-        return _graphicsQueue;
-      }
-    }
+  public IntPtr GraphicsQueue {
+    get { return _graphicsQueue; }
   }
 
-  public VkQueue PresentQueue {
-    get {
-      lock (_presentQueueLock) {
-        return _presentQueue;
-      }
-    }
+  public IntPtr PresentQueue {
+    get { return _presentQueue; }
   }
 
   public VkInstance VkInstance => _vkInstance;

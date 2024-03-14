@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Math;
-using Dwarf.Extensions.GLFW;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -34,7 +28,7 @@ public class Button : Component, I2DCollision, IUIElement {
   public void CheckCollision(object sender, EventArgs e) {
     var camera = CameraState.GetCamera();
     var size = WindowState.s_Window.Extent;
-    var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.width, size.height));
+    var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.Width, size.Height));
     if (collResult) {
       Logger.Info("COLL DETECTED");
     }
@@ -80,11 +74,11 @@ public class Button : Component, I2DCollision, IUIElement {
     return _cachedSize;
   }
 
-  public void Bind(VkCommandBuffer commandBuffer) {
+  public void Bind(IntPtr commandBuffer) {
     throw new NotImplementedException();
   }
 
-  public Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Bind(IntPtr commandBuffer, uint index = 0) {
     _guiTexture.Bind(commandBuffer, index);
     return Task.CompletedTask;
   }
@@ -97,7 +91,7 @@ public class Button : Component, I2DCollision, IUIElement {
     _guiTexture.Dispose();
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     _guiTexture.Draw(commandBuffer, index);
     return Task.CompletedTask;
   }

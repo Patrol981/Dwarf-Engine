@@ -1,6 +1,6 @@
-using static Dwarf.GLFW.GLFW;
-
 using Dwarf.Engine.Globals;
+
+using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Global;
 public static class Frames {
@@ -16,7 +16,8 @@ public static class Frames {
   }
 
   public static double GetFrames() {
-    return (s_endTime - s_startTime).TotalMilliseconds;
+    return (s_startTime - s_endTime).TotalMilliseconds;
+    // return Time.DeltaTime;
     // return MathF.Round(, 5, MidpointRounding.ToZero);
   }
 

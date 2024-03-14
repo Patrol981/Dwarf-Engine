@@ -1,5 +1,3 @@
-using System.IO;
-
 using StbImageSharp;
 
 namespace Dwarf.Utils;

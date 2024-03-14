@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
@@ -12,10 +13,10 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 public class Render2DSystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new();
-  private Vulkan.Buffer _spriteBuffer = null!;
+  private DwarfBuffer _spriteBuffer = null!;
 
   public Render2DSystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -45,7 +46,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
     Logger.Info("Recreating Renderer 2D");
 
-    _descriptorPool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -53,19 +54,19 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
     _texturesCount = entities.Length;
 
-    _texturePool = new DescriptorPool.Builder(_device)
+    _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
     .SetMaxSets((uint)_texturesCount)
     .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _spriteBuffer = new Vulkan.Buffer(
+    _spriteBuffer = new DwarfBuffer(
         _device,
         (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
         (uint)entities.Length,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
       );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
@@ -81,13 +82,17 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       }
 
       var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      _ = new DescriptorWriter(_setLayout, _descriptorPool)
+      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+    if (_spriteBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(entities, ref textureManager);
+    }
     if (entities.Length > (uint)_spriteBuffer.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_spriteBuffer.GetInstanceCount()) {
@@ -100,11 +105,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
-    if (len != sets) {
-      return false;
-    }
-
-    return true;
+    return len == sets;
   }
 
   public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
@@ -158,7 +159,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       imageView = texture.GetImageView()
     };
     VkDescriptorSet set;
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out set);
 

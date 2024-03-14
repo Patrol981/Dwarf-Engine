@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -8,16 +10,15 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using Dwarf.Engine.Rendering.UI;
 
 namespace Dwarf.Engine.Rendering;
 
 public class RenderUISystem : SystemBase {
   private PublicList<VkDescriptorSet> _textureSets = new PublicList<VkDescriptorSet>();
-  private Vulkan.Buffer _uiBuffer = null!;
+  private DwarfBuffer _uiBuffer = null!;
 
   public RenderUISystem(
-    Device device,
+    VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
@@ -50,7 +51,7 @@ public class RenderUISystem : SystemBase {
 
     Logger.Info("Recreating UI Renderer");
 
-    _descriptorPool = new DescriptorPool.Builder(_device)
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)entities.Length)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)entities.Length)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
@@ -58,19 +59,19 @@ public class RenderUISystem : SystemBase {
 
     _texturesCount = entities.Length;
 
-    _texturePool = new DescriptorPool.Builder(_device)
+    _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
     .SetMaxSets((uint)_texturesCount)
     .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
     .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
     .Build();
 
-    _uiBuffer = new Vulkan.Buffer(
+    _uiBuffer = new DwarfBuffer(
         _device,
         (ulong)Unsafe.SizeOf<UIUniformObject>(),
         (uint)entities.Length,
-        VkBufferUsageFlags.UniformBuffer,
-        VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-        _device.Properties.limits.minUniformBufferOffsetAlignment
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
       );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
@@ -84,7 +85,7 @@ public class RenderUISystem : SystemBase {
       BindDescriptorTexture(targetUI.Owner!, ref textureManager, i);
 
       var bufferInfo = _uiBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<UIUniformObject>());
-      _ = new DescriptorWriter(_setLayout, _descriptorPool)
+      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
           .WriteBuffer(0, &bufferInfo)
           .Build(out _descriptorSets[i]);
     }
@@ -122,13 +123,17 @@ public class RenderUISystem : SystemBase {
 
       var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
-      Descriptor.BindDescriptorSet(_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
+      Descriptor.BindDescriptorSet((VulkanDevice)_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
       uiComponent?.Bind(frameInfo.CommandBuffer, 0);
       uiComponent?.Draw(frameInfo.CommandBuffer, 0);
     }
   }
 
-  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+  public bool CheckSizes(ReadOnlySpan<Entity> entities, Canvas canvas) {
+    if (_uiBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(canvas, ref textureManager);
+    }
     if (entities.Length > (uint)_uiBuffer.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_uiBuffer.GetInstanceCount()) {
@@ -141,11 +146,7 @@ public class RenderUISystem : SystemBase {
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
-    if (len != sets) {
-      return false;
-    }
-
-    return true;
+    return len == sets;
   }
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
@@ -157,7 +158,7 @@ public class RenderUISystem : SystemBase {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
       imageView = texture.GetImageView()
     };
-    _ = new DescriptorWriter(_textureSetLayout, _texturePool)
+    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
       .Build(out VkDescriptorSet set);
     _textureSets.SetAt(set, index);

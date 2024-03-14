@@ -1,11 +1,6 @@
-using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
-
-using SharpGLTF.Memory;
-using SharpGLTF.Schema2;
 using System.Numerics;
 
-using StbImageSharp;
+using SharpGLTF.Schema2;
 
 namespace Dwarf.Engine.Loader.Providers;
 
@@ -29,7 +24,8 @@ public class GLTFLoader {
 
     }
 
-    var resultModel = new MeshRenderer(app.Device, meshes.ToArray());
+    var resultModel = new MeshRenderer(app.Device, app.Renderer, meshes.ToArray(), path);
+    resultModel.TextureFlipped = flip;
 
     if (!preload) {
       var images = ProcessMaterials(model);

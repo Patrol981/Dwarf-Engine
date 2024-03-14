@@ -1,6 +1,4 @@
-﻿using Dwarf.Extensions.Logging;
-
-namespace Dwarf.Engine.EntityComponentSystem;
+﻿namespace Dwarf.Engine.EntityComponentSystem;
 public class DwarfScript : Component {
   protected bool DidAwake { get; private set; }
   protected bool DidStart { get; private set; }

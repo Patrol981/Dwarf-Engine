@@ -1,12 +1,3 @@
-using System;
-using System.Net.Mail;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-using OpenTK.Compute.OpenCL;
-
-using StbImageSharp;
-
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -19,22 +10,6 @@ public ref struct SwapChainSupportDetails {
   public ReadOnlySpan<VkPresentModeKHR> PresentModes;
 }
 public static class VkUtils {
-  public static unsafe void MemCopy(nint destination, nint source, int byteCount) {
-    if (byteCount <= 0) {
-      throw new Exception("ByteCount is NULL");
-    }
-
-    if (byteCount > 2130702268) {
-      throw new Exception("ByteCount is too big");
-    }
-
-    System.Buffer.MemoryCopy((void*)source, (void*)destination, byteCount, byteCount);
-  }
-
-  public static void MemCopy(ref byte src, ref byte dst, uint byteCount) {
-    Unsafe.CopyBlock(ref dst, ref src, byteCount);
-  }
-
   public static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) {
     SwapChainSupportDetails details = new SwapChainSupportDetails();
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, out details.Capabilities).CheckResult();
@@ -42,38 +17,6 @@ public static class VkUtils {
     details.Formats = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface);
     details.PresentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface);
     return details;
-  }
-
-  public static IntPtr ToIntPtr<T>(T[] arr) where T : struct {
-    int size = Unsafe.SizeOf<T>();
-    IntPtr ptr = IntPtr.Zero;
-    try {
-      ptr = Marshal.AllocHGlobal(size * arr.Length);
-      for (int i = 0; i < arr.Length; i++) {
-        Marshal.StructureToPtr(arr[i], IntPtr.Add(ptr, i * size), true);
-      }
-    } catch {
-      if (ptr != IntPtr.Zero) {
-        Marshal.FreeHGlobal(ptr);
-      }
-      throw;
-    }
-    return ptr;
-  }
-
-  public static IntPtr ToIntPtr<T>(T data) where T : struct {
-    int size = Unsafe.SizeOf<T>();
-    IntPtr ptr = IntPtr.Zero;
-    try {
-      ptr = Marshal.AllocHGlobal(size);
-      Marshal.StructureToPtr(data, ptr, true);
-    } catch {
-      if (ptr != IntPtr.Zero) {
-        Marshal.FreeHGlobal(ptr);
-      }
-      throw;
-    }
-    return ptr;
   }
 
   public static void SetImageLayout(
@@ -149,12 +92,14 @@ public static class VkUtils {
     }
   }
 
-  public static VkViewport Viewport(float width, float height, float minDepth, float maxDepth) {
+  public static VkViewport Viewport(float x, float y, float width, float height, float minDepth, float maxDepth) {
     VkViewport viewport = new();
     viewport.width = width;
     viewport.height = height;
     viewport.minDepth = minDepth;
     viewport.maxDepth = maxDepth;
+    viewport.x = x;
+    viewport.y = y;
     return viewport;
   }
 
@@ -165,7 +110,7 @@ public static class VkUtils {
     return descriptorPoolSize;
   }
 
-  public unsafe static VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo(
+  public static unsafe VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo(
     VkDescriptorPoolSize[] poolSizes,
     uint maxSets
   ) {
@@ -179,7 +124,7 @@ public static class VkUtils {
     return descriptorPoolInfo;
   }
 
-  public unsafe static VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(
+  public static unsafe VkDescriptorSetLayoutBinding DescriptorSetLayoutBinding(
     VkDescriptorType type,
     VkShaderStageFlags stageFlags,
     uint binding,
@@ -193,7 +138,7 @@ public static class VkUtils {
     return setLayoutBinding;
   }
 
-  public unsafe static VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo(
+  public static unsafe VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo(
     VkDescriptorSetLayoutBinding[] bindings
   ) {
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = new();
@@ -204,7 +149,7 @@ public static class VkUtils {
     return descriptorSetLayoutCreateInfo;
   }
 
-  public unsafe static VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo(
+  public static unsafe VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo(
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout* pSetLayouts,
     uint descriptorSetCount
@@ -216,7 +161,7 @@ public static class VkUtils {
     return descriptorSetAllocateInfo;
   }
 
-  public unsafe static VkDescriptorImageInfo DescriptorImageInfo(
+  public static unsafe VkDescriptorImageInfo DescriptorImageInfo(
     VkSampler sampler,
     VkImageView imageView,
     VkImageLayout imageLayout
@@ -228,7 +173,7 @@ public static class VkUtils {
     return descriptorImageInfo;
   }
 
-  public unsafe static VkWriteDescriptorSet WriteDescriptorSet(
+  public static unsafe VkWriteDescriptorSet WriteDescriptorSet(
     VkDescriptorSet dstSet,
     VkDescriptorType type,
     uint binding,
@@ -252,7 +197,7 @@ public static class VkUtils {
     return pushConstantRange;
   }
 
-  public unsafe static VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo(
+  public static unsafe VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo(
     VkDescriptorSetLayout* setLayouts,
     uint count
   ) {
@@ -290,7 +235,7 @@ public static class VkUtils {
     return pipelineRasterizationStateCreateInfo;
   }
 
-  public unsafe static VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo(
+  public static unsafe VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo(
     uint count,
     VkPipelineColorBlendAttachmentState* pAttachments
   ) {
@@ -300,7 +245,7 @@ public static class VkUtils {
     return pipelineColorBlendStateCreateInfo;
   }
 
-  public unsafe static VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo(
+  public static unsafe VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo(
     bool depthTestEnable,
     bool depthWriteEnable,
     VkCompareOp depthCompareOp
@@ -313,7 +258,7 @@ public static class VkUtils {
     return pipelineDepthStencilStateCreateInfo;
   }
 
-  public unsafe static VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo(
+  public static unsafe VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo(
     uint viewportCount,
     uint scissorCount,
     VkPipelineViewportStateCreateFlags flags = VkPipelineViewportStateCreateFlags.None
@@ -325,7 +270,7 @@ public static class VkUtils {
     return pipelineViewportStateCreateInfo;
   }
 
-  public unsafe static VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo(
+  public static unsafe VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo(
     VkSampleCountFlags rasterizationSamples,
     VkPipelineMultisampleStateCreateFlags flags = VkPipelineMultisampleStateCreateFlags.None
   ) {
@@ -335,7 +280,7 @@ public static class VkUtils {
     return pipelineMultisampleStateCreateInfo;
   }
 
-  public unsafe static VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo(
+  public static unsafe VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo(
     VkDynamicState[] dynamicStates,
     VkPipelineDynamicStateCreateFlags flags = VkPipelineDynamicStateCreateFlags.None
   ) {
@@ -348,7 +293,7 @@ public static class VkUtils {
     return pipelineDynamicStateCreateInfo;
   }
 
-  public unsafe static VkGraphicsPipelineCreateInfo PipelineCreateInfo(
+  public static unsafe VkGraphicsPipelineCreateInfo PipelineCreateInfo(
     VkPipelineLayout layout,
     VkRenderPass renderPass,
     VkPipelineCreateFlags flags = VkPipelineCreateFlags.None
@@ -362,7 +307,7 @@ public static class VkUtils {
     return pipelineCreateInfo;
   }
 
-  public unsafe static VkVertexInputBindingDescription VertexInputBindingDescription(
+  public static unsafe VkVertexInputBindingDescription VertexInputBindingDescription(
     uint binding,
     uint stride,
     VkVertexInputRate inputRate
@@ -374,7 +319,7 @@ public static class VkUtils {
     return vInputBindDescription;
   }
 
-  public unsafe static VkVertexInputAttributeDescription VertexInputAttributeDescription(
+  public static unsafe VkVertexInputAttributeDescription VertexInputAttributeDescription(
     uint binding,
     uint location,
     VkFormat format,

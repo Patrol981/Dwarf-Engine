@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Dwarf.Extensions.Logging;
-
-namespace Dwarf.Utils;
+﻿namespace Dwarf.Utils;
 
 [System.Serializable]
 public unsafe struct Node<T> {
@@ -16,7 +8,7 @@ public unsafe struct Node<T> {
 #pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
-  public unsafe static Node<T>* CreateNode(T data) {
+  public static unsafe Node<T>* CreateNode(T data) {
     Node<T> newNode = new();
     newNode.Data = data;
     newNode.Next = null;

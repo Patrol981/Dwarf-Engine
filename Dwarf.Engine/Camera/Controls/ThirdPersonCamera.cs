@@ -1,38 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Globals;
 // using Dwarf.Extensions.GLFW;
-using Dwarf.Extensions.Logging;
 // using static Dwarf.Extensions.GLFW.GLFW;
-using static Dwarf.GLFW.GLFW;
 using Dwarf.GLFW;
 
 using OpenTK.Mathematics;
 
 namespace Dwarf.Engine;
-public class ThirdPersonCamera : Component {
-  private Entity _followTarget;
+public class ThirdPersonCamera : DwarfScript {
   private Camera _camera;
   private float _distanceFromTarget = 2.5f;
   private float _angleAroundTarget = 0f;
 
   public ThirdPersonCamera() {
-    _followTarget = null!;
+    FollowTarget = null!;
     _camera = null!;
   }
 
   public void Init(Entity followTarget) {
-    _followTarget = followTarget;
+    FollowTarget = followTarget;
+  }
+
+  public override void Awake() {
     _camera = Owner!.GetComponent<Camera>();
   }
 
-  public void Update() {
+  public override void Update() {
     HandleMovement();
   }
   private void CalculateZoom() {
@@ -59,14 +52,14 @@ public class ThirdPersonCamera : Component {
   }
 
   private void CalculateCameraPosition(float horizontal, float vertical) {
-    if (_followTarget == null) return;
+    if (FollowTarget == null) return;
 
     float theta = _angleAroundTarget;
     float offectX = (float)(horizontal * MathF.Sin(MathHelper.DegreesToRadians(theta)));
     float offsetZ = (float)(horizontal * MathF.Cos(MathHelper.DegreesToRadians(theta)));
-    Owner!.GetComponent<Transform>().Position.X = _followTarget.GetComponent<Transform>().Position.X - offectX;
-    Owner!.GetComponent<Transform>().Position.Z = _followTarget.GetComponent<Transform>().Position.Z - offsetZ;
-    Owner!.GetComponent<Transform>().Position.Y = _followTarget.GetComponent<Transform>().Position.Y - vertical - 1.3f;
+    Owner!.GetComponent<Transform>().Position.X = FollowTarget.GetComponent<Transform>().Position.X - offectX;
+    Owner!.GetComponent<Transform>().Position.Z = FollowTarget.GetComponent<Transform>().Position.Z - offsetZ;
+    Owner!.GetComponent<Transform>().Position.Y = FollowTarget.GetComponent<Transform>().Position.Y - vertical - 1.3f;
   }
 
   private unsafe void HandleMovement() {
@@ -91,9 +84,6 @@ public class ThirdPersonCamera : Component {
     }
   }
 
-  public Entity FollowTarget {
-    get { return _followTarget; }
-    set { _followTarget = value; }
-  }
+  public Entity FollowTarget { get; set; }
 
 }

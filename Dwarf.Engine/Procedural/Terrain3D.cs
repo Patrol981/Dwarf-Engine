@@ -1,10 +1,6 @@
-using Assimp;
-
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
-using Dwarf.Vulkan;
-
 using System.Numerics;
+
+using Dwarf.Engine.Math;
 
 namespace Dwarf.Engine.Procedural;
 public class Terrain3D : MeshRenderer {
@@ -18,7 +14,7 @@ public class Terrain3D : MeshRenderer {
 
   public Terrain3D() { }
 
-  public Terrain3D(Application app) : base(app.Device) {
+  public Terrain3D(Application app) : base(app.Device, app.Renderer) {
     _app = app;
     _points = new double[HEIGHT, WIDTH];
   }
@@ -121,8 +117,8 @@ public class Terrain3D : MeshRenderer {
   }
 
   private async void SetupTexture(Application app) {
-    var data = await Texture.LoadDataFromPath("./Resources/Textures/base/no_texture.png");
-    var texture = new Texture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
+    var data = await TextureLoader.LoadDataFromPath("./Resources/Textures/base/no_texture.png");
+    var texture = new VulkanTexture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
     texture.SetTextureData(data.Data);
     await app.TextureManager.AddTexture(texture);
   }

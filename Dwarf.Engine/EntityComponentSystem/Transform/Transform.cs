@@ -1,7 +1,7 @@
+using System.Numerics;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Math;
-
-using System.Numerics;
 
 namespace Dwarf.Engine;
 

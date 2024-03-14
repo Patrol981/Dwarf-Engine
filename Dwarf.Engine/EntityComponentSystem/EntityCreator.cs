@@ -1,6 +1,5 @@
 using System.Numerics;
 
-using Dwarf.Engine;
 using Dwarf.Engine.Loader.Providers;
 using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
@@ -80,7 +79,7 @@ public static class EntityCreator {
     entity.AddComponent(new Material(color.Value));
   }
 
-  public async static Task<Entity> Create3DModel(
+  public static async Task<Entity> Create3DModel(
     string entityName,
     string modelPath,
     string[] texturePaths,
@@ -114,7 +113,7 @@ public static class EntityCreator {
         }
       }
     } else {
-      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, modelPath));
+      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, modelPath));
 
       if (texturePaths.Length > 1) {
         entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
@@ -144,7 +143,7 @@ public static class EntityCreator {
     }
   }
 
-  public async static Task<Entity> Create3DPrimitive(
+  public static async Task<Entity> Create3DPrimitive(
     string entityName,
     string texturePath,
     PrimitiveType primitiveType,
@@ -155,11 +154,12 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     var entity = await CreateBase(entityName, position, rotation, scale);
+    app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
-
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    app.Mutex.ReleaseMutex();
 
     return entity;
   }
@@ -168,14 +168,14 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
     await app.TextureManager.AddTexture(texturePath);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float radius,
@@ -188,7 +188,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
@@ -203,7 +203,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    Device device,
+    VulkanDevice device,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,

@@ -1,10 +1,9 @@
+using System.Numerics;
+
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
 
 using JoltPhysicsSharp;
-
-using System.Numerics;
 
 using static Dwarf.Engine.Physics.JoltConfig;
 

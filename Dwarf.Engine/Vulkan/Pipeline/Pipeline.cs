@@ -1,18 +1,9 @@
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine;
-using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.GLFW;
-using Dwarf.Extensions.Logging;
-using Dwarf.Vulkan;
+using Dwarf.Engine.AbstractionLayer;
 
 using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -35,7 +26,7 @@ public struct PipelineConfigInfoStruct {
 }
 
 public class Pipeline : IDisposable {
-  private readonly Device _device;
+  private readonly IDevice _device;
 
   private VkPipeline _graphicsPipeline;
   private VkShaderModule _vertexShaderModule;
@@ -44,7 +35,7 @@ public class Pipeline : IDisposable {
 
   private readonly object _pipelineLock = new();
 
-  public Pipeline(Device device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
+  public Pipeline(IDevice device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
     _device = device;
     _pipelineProvider = pipelineProvider;
     CreateGraphicsPipeline(vertexName, fragmentName, configInfo);

@@ -1,13 +1,9 @@
-using System;
-using System.Xml.Linq;
+using System.Numerics;
 
 using Assimp;
 
-using Dwarf.Engine;
-using Dwarf.Extensions.Logging;
+using Dwarf.Engine.Rendering;
 using Dwarf.Vulkan;
-
-using System.Numerics;
 
 namespace Dwarf.Engine.Loaders;
 
@@ -66,7 +62,7 @@ public class GenericLoader {
     return Task.FromResult(meshes);
   }
 
-  public async Task<MeshRenderer> LoadModelOptimized(Device device, string path) {
+  public async Task<MeshRenderer> LoadModelOptimized(VulkanDevice device, Renderer renderer, string path) {
     var processingStart = DateTime.Now;
     var assimpContext = new AssimpContext();
 
@@ -102,10 +98,10 @@ public class GenericLoader {
     }
 
     assimpContext.Dispose();
-    return new MeshRenderer(device, meshes.ToArray());
+    return new MeshRenderer(device, renderer, meshes.ToArray(), path);
   }
 
-  public MeshRenderer LoadModel(Device device, string path) {
+  public MeshRenderer LoadModel(VulkanDevice device, Renderer renderer, string path) {
     var assimpContext = new AssimpContext();
 
     var scene = assimpContext.ImportFile($"{path}",
@@ -178,7 +174,7 @@ public class GenericLoader {
     assimpContext.Dispose();
     //mesh.Vertices = verts.ToArray();
     //mesh.Indices = inds.ToArray();
-    return new MeshRenderer(device, meshes.ToArray());
+    return new MeshRenderer(device, renderer, meshes.ToArray());
 
     //for (int i = 0; i < node.ChildCount; i++) {
     //ProcessNode(node.Children[i], scene, ref mesh);

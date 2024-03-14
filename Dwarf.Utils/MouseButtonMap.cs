@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Dwarf.Extensions.GLFW;
+﻿namespace Dwarf.Extensions.GLFW;
 public static class MouseButtonMap {
   public enum Buttons {
     GLFW_MOUSE_BUTTON_1 = 0,

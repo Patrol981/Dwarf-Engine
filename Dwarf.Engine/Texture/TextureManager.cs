@@ -1,86 +1,100 @@
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-using Vortice.Vulkan;
-
 namespace Dwarf.Engine;
 
 public class TextureManager : IDisposable {
-  private readonly Device _device;
-  private Dictionary<Guid, Texture> _loadedTextures;
-  private readonly FreeType _ft;
+  private readonly VulkanDevice _device;
 
-  public TextureManager(Device device) {
+  public TextureManager(VulkanDevice device) {
     _device = device;
-    _loadedTextures = [];
+    LoadedTextures = [];
+    TextureArray = [];
 
-    _ft = new FreeType(device);
-    _ft.Init();
+    FreeType = new FreeType(device);
+    FreeType.Init();
 
-    foreach (var c in _ft.Characters) {
+    foreach (var c in FreeType.Characters) {
       AddTexture(c.Value.Texture);
     }
   }
 
-  public void AddRange(Texture[] textures) {
+  public void AddRange(ITexture[] textures) {
     for (int i = 0; i < textures.Length; i++) {
-      _loadedTextures.Add(Guid.NewGuid(), textures[i]);
+      LoadedTextures.Add(Guid.NewGuid(), textures[i]);
     }
   }
 
-  public async Task<Task> AddTexture(string texturePath, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    foreach (var tex in _loadedTextures) {
+  public async Task<Task> AddTextureArray(string textureName, params string[] paths) {
+    var baseData = await VulkanTextureArray.LoadDataFromPath(paths[0]);
+    var id = Guid.NewGuid();
+    var texture = new VulkanTextureArray(_device, baseData.Width, baseData.Height, paths, textureName);
+    TextureArray.TryAdd(id, texture);
+
+    return Task.CompletedTask;
+  }
+
+  public async Task<Task> AddTexture(string texturePath) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    var texture = await Texture.LoadFromPath(_device, texturePath, default, createFlags);
-    _loadedTextures.Add(Guid.NewGuid(), texture);
+    var texture = await TextureLoader.LoadFromPath(_device, texturePath, default);
+    LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
 
-  public Task AddTexture(Texture texture) {
-    foreach (var tex in _loadedTextures) {
+  public Task AddTexture(ITexture texture) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texture.TextureName) {
         Logger.Warn($"Texture [{texture.TextureName}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    _loadedTextures.Add(Guid.NewGuid(), texture);
+    LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
 
-  public static async Task<Texture[]> AddTextures(Device device, string[] paths, int flip = 1) {
-    var textures = new Texture[paths.Length];
+  public static async Task<ITexture[]> AddTextures(IDevice device, string[] paths, int flip = 1) {
+    var textures = new ITexture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {
-      textures[i] = await Texture.LoadFromPath(device, paths[i], flip);
+      textures[i] = await TextureLoader.LoadFromPath(device, paths[i], flip);
     }
     return textures;
   }
 
-  public static Texture[] AddTextures(Device device, List<byte[]> bytes, string[] nameTags) {
-    var textures = new Texture[bytes.Count];
+  public static ITexture[] AddTextures(IDevice device, List<byte[]> bytes, string[] nameTags) {
+    var textures = new ITexture[bytes.Count];
     for (int i = 0; i < bytes.Count; i++) {
-      var imgData = Texture.LoadDataFromBytes(bytes[i]);
-      textures[i] = new Texture(device, imgData.Width, imgData.Height, nameTags[i]);
+      var imgData = TextureLoader.LoadDataFromBytes(bytes[i]);
+      _ = Application.Instance.CurrentAPI switch {
+        RenderAPI.Vulkan => textures[i] = new VulkanTexture((VulkanDevice)device, imgData.Width, imgData.Height, nameTags[i]),
+        _ => throw new NotImplementedException(),
+      };
       textures[i].SetTextureData(imgData.Data);
     }
     return textures;
   }
 
   public void RemoveTexture(Guid key) {
-    _loadedTextures[key].Dispose();
-    _loadedTextures.Remove(key);
+    LoadedTextures[key].Dispose();
+    LoadedTextures.Remove(key);
   }
 
-  public Texture GetTexture(Guid key) {
-    return _loadedTextures.GetValueOrDefault(key) ?? null!;
+  public void RemoveTextureArray(Guid key) {
+    TextureArray[key].Dispose();
+    TextureArray.Remove(key);
+  }
+
+  public ITexture GetTexture(Guid key) {
+    return LoadedTextures.GetValueOrDefault(key) ?? null!;
   }
 
   public Guid GetTextureId(string textureName) {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == textureName) {
         return tex.Key;
       }
@@ -88,12 +102,16 @@ public class TextureManager : IDisposable {
     return Guid.Empty;
   }
 
-  public Dictionary<Guid, Texture> LoadedTextures => _loadedTextures;
-  public FreeType FreeType => _ft;
+  public Dictionary<Guid, ITexture> LoadedTextures { get; }
+  public Dictionary<Guid, VulkanTextureArray> TextureArray { get; }
+  public FreeType FreeType { get; }
 
   public void Dispose() {
-    foreach (var tex in _loadedTextures) {
+    foreach (var tex in LoadedTextures) {
       RemoveTexture(tex.Key);
+    }
+    foreach (var tex in TextureArray) {
+      RemoveTextureArray(tex.Key);
     }
   }
 }

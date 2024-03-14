@@ -1,10 +1,9 @@
 using System.Numerics;
+
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Loaders;
-using Dwarf.Extensions.GLFW;
-using static Vortice.Vulkan.Vulkan;
-using Dwarf.Extensions.Logging;
 using Dwarf.Engine.Physics;
+using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Testing;
 public class PerformanceTester {
@@ -91,7 +90,7 @@ public class PerformanceTester {
 
     var en = new Entity();
     var startModelTime = DateTime.Now;
-    var model = await new GenericLoader().LoadModelOptimized(app.Device, "./Textures/Models/dwarf_test_model.obj");
+    var model = await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, "./Textures/Models/dwarf_test_model.obj");
     en.AddComponent(model);
     var endModelTime = DateTime.Now;
     en.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturesToLoad);

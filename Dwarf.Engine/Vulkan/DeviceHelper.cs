@@ -5,7 +5,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
-public unsafe static class DeviceHelper {
+public static unsafe class DeviceHelper {
   public static VkPhysicalDevice GetPhysicalDevice(VkInstance instance, VkSurfaceKHR surface) {
     VkPhysicalDevice returnDevice = VkPhysicalDevice.Null;
 
@@ -51,9 +51,7 @@ public unsafe static class DeviceHelper {
       if (result != VkResult.Success)
         return false;
       VkVersion version = vkEnumerateInstanceVersion();
-      if (version < VkVersion.Version_1_3)
-        return false;
-      return true;
+      return version >= VkVersion.Version_1_3;
     } catch {
       return false;
     }
@@ -92,8 +90,8 @@ public unsafe static class DeviceHelper {
     // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
     List<string> validationLayers = new()
     {
-            "VK_LAYER_KHRONOS_validation"
-        };
+       "VK_LAYER_KHRONOS_validation"
+    };
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -101,10 +99,9 @@ public unsafe static class DeviceHelper {
     }
 
     // Otherwise we fallback to using the LunarG meta layer
-    validationLayers = new()
-    {
-            "VK_LAYER_LUNARG_standard_validation"
-        };
+    validationLayers = new() {
+       "VK_LAYER_LUNARG_standard_validation"
+    };
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);

@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using DwarfEngine.Vulkan;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Engine;

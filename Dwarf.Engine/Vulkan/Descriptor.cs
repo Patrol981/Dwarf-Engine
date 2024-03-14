@@ -1,5 +1,4 @@
 using Dwarf.Engine;
-using Dwarf.Utils;
 
 using Vortice.Vulkan;
 
@@ -8,15 +7,15 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 public static class Descriptor {
   public static unsafe void BindDescriptorSet(
-    Device device,
+    VulkanDevice device,
     VkDescriptorSet textureSet,
     FrameInfo frameInfo,
     ref VkPipelineLayout pipelineLayout,
     uint firstSet,
     uint setCount
   ) {
-    device.WaitDevice();
-    device.WaitQueue();
+    // device.WaitDevice();
+    // device.WaitQueue();
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,

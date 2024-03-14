@@ -1,13 +1,11 @@
-using System.Drawing;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering.UI;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
-
-using System.Numerics;
 
 using Vortice.Vulkan;
 
@@ -17,16 +15,14 @@ namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
-  private readonly Device _device;
-  private Vulkan.Buffer _vertexBuffer = null!;
-  private Vulkan.Buffer _indexBuffer = null!;
+  private readonly VulkanDevice _device;
+  private DwarfBuffer _vertexBuffer = null!;
+  private DwarfBuffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
   private Guid _textAtlasId = Guid.Empty;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private bool _hasIndexBuffer = false;
-
-  private string _text = "Enter text...";
 
   // debug
   private int _numOfRows = 11;
@@ -73,7 +69,7 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public Task Draw(VkCommandBuffer commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -83,8 +79,8 @@ public class TextField : Component, IUIElement {
   }
 
   public void DrawText(string text) {
-    if (text == _text) return;
-    _text = text;
+    if (text == Text) return;
+    Text = text;
     CreateQuads();
     RecreateBuffers();
     Owner!.TryGetComponent<RectTransform>()?.SetRequireState();
@@ -101,9 +97,9 @@ public class TextField : Component, IUIElement {
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 
-    for (int i = 0; i < _text.Length; i++) {
+    for (int i = 0; i < Text.Length; i++) {
       var tempMesh = new Mesh();
-      var targetChar = _charactersOnAtlas[_text[i]];
+      var targetChar = _charactersOnAtlas[Text[i]];
       tempMesh.Vertices = new Vertex[6];
 
       var uX = ((targetChar.X * 96.0f) / 1024.0f);
@@ -147,13 +143,13 @@ public class TextField : Component, IUIElement {
   private void CheckBuffers(Vertex[] vertices) {
     if (_vertexCount == (ulong)vertices.Length) return;
 
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(vertices);
   }
 
   private void RecreateBuffers() {
-    _device.WaitDevice();
+    // _device.WaitDevice();
     Dispose();
     CreateVertexBuffer(_textMesh.Vertices);
   }
@@ -204,23 +200,23 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(vertices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
-    _vertexBuffer = new Dwarf.Vulkan.Buffer(
+    _vertexBuffer = new DwarfBuffer(
       _device,
       vertexSize,
       _vertexCount,
-      VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
@@ -234,24 +230,24 @@ public class TextField : Component, IUIElement {
     ulong bufferSize = (ulong)sizeof(uint) * _indexCount;
     ulong indexSize = (ulong)sizeof(uint);
 
-    var stagingBuffer = new Dwarf.Vulkan.Buffer(
+    var stagingBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.TransferSrc,
-      VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(VkUtils.ToIntPtr(indices), bufferSize);
+    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
-    _indexBuffer = new Dwarf.Vulkan.Buffer(
+    _indexBuffer = new DwarfBuffer(
       _device,
       indexSize,
       _indexCount,
-      VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst,
-      VkMemoryPropertyFlags.DeviceLocal
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
     );
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
@@ -286,7 +282,7 @@ public class TextField : Component, IUIElement {
     throw new NotImplementedException();
   }
 
-  public unsafe Task Bind(VkCommandBuffer commandBuffer, uint index = 0) {
+  public unsafe Task Bind(IntPtr commandBuffer, uint index = 0) {
     VkBuffer[] buffers = new VkBuffer[] { _vertexBuffer.GetBuffer() };
     ulong[] offsets = { 0 };
     fixed (VkBuffer* buffersPtr = buffers)
@@ -304,10 +300,10 @@ public class TextField : Component, IUIElement {
   }
 
   public void SetText(string text) {
-    _text = text;
+    Text = text;
   }
 
-  public string Text => _text;
+  public string Text { get; private set; } = "Enter text...";
 
   public Guid GetTextureIdReference() {
     return _textAtlasId;

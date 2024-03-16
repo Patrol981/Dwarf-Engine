@@ -2,6 +2,8 @@ using System.Numerics;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Rendering;
+using Dwarf.Extensions.Logging;
+using Dwarf.Math;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
@@ -175,19 +177,19 @@ public class Rigidbody : Component, IDisposable {
 
   public void Update() {
     var pos = _bodyInterface.GetPosition(_bodyId);
-    var rot = _bodyInterface.GetRotation(_bodyId);
     var transform = Owner!.GetComponent<Transform>();
 
     transform.Position = pos;
+    var quat = Quaternion.CreateFromRotationMatrix(transform.AngleYMatrix);
 
     if (_bodyInterface.GetMotionType(_bodyId) != _motionType) {
       _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
     }
 
-    // freeze rigidbody to X an Z axis
-    _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
+    _bodyInterface.SetRotation(_bodyId, quat, Activation.Activate);
 
-    // Console.WriteLine(pos);
+    // freeze rigidbody to X an Z axis
+    // _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
   }
 
   public void AddForce(Vector3 vec3) {
@@ -215,6 +217,14 @@ public class Rigidbody : Component, IDisposable {
     rot.X += vec3.X;
     rot.Y += vec3.Y;
     rot.Z += vec3.Z;
+    _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
+  }
+
+  public void SetRotation(Vector3 vec3) {
+    var rot = _bodyInterface.GetRotation(_bodyId);
+    rot.X = vec3.X;
+    rot.Y = vec3.Y;
+    rot.Z = vec3.Z;
     _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
   }
 
@@ -261,6 +271,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
   public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);
+  public Quaternion Rotation => _bodyInterface.GetRotation(_bodyId);
   public bool Flipped { get; } = false;
 
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;

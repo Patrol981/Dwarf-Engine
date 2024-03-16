@@ -49,8 +49,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
         // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
 
         ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
-          entities[i].GetComponent<Transform>().Matrix4 :
-          entities[i].GetComponent<Transform>().MatrixWithoutRotation
+          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
+          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
       };
 
       vkCmdPushConstants(

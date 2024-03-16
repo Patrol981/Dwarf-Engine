@@ -198,7 +198,7 @@ public class GameAsset {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
       entity.GetComponent<Terrain3D>().Setup();
-      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic);
+      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic, false);
     }
   }
 

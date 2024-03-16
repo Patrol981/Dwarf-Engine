@@ -24,14 +24,12 @@ public class PerformanceTester {
   public static async void CreateNewModel(Application app, bool addTexture = false) {
     if (!addTexture) return; ;
 
-    var entity = await EntityCreator.Create3DPrimitive(
-      "test",
-      "./Resources/gigachad.png",
-      PrimitiveType.Cylinder,
-      new(-5, 0, 0),
-      new(0, 0, 0),
-      new(1, 1, 1)
-    );
+    var entity = new Entity();
+    entity.Name = "test";
+    entity.AddTransform(new(-5, 0, 0), new(90, 0, 0));
+    entity.AddMaterial();
+    entity.AddPrimitive("./Resources/gigachad.png", PrimitiveType.Cylinder);
+    // entity.AddModel("./Resources/tks.glb");
     entity.AddRigdbody(PrimitiveType.Cylinder, false, 1);
     entity.GetComponent<Rigidbody>().Init(Application.Instance.GetSystems().PhysicsSystem.BodyInterface);
     app.AddEntity(entity);

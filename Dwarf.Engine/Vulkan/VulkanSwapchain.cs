@@ -473,8 +473,8 @@ public class VulkanSwapchain : IDisposable {
       VkExtent2D actualExtent = Extent2D;
 
       actualExtent = new VkExtent2D(
-        Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
-        Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
+        System.Math.Max(capabilities.minImageExtent.width, System.Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
+        System.Math.Max(capabilities.minImageExtent.height, System.Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
       );
 
       return actualExtent;

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Security.Cryptography;
 
 using Dwarf.Engine.Loader.Providers;
 using Dwarf.Engine.Loaders;
@@ -167,11 +168,13 @@ public static class EntityCreator {
   public static async void AddPrimitive(this Entity entity, string texturePath, PrimitiveType primitiveType = PrimitiveType.Cylinder) {
     var app = Application.Instance;
 
+    app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
     var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
     await app.TextureManager.AddTexture(texturePath);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    app.Mutex.ReleaseMutex();
   }
 
   public static void AddRigdbody(
@@ -252,5 +255,15 @@ public static class EntityCreator {
   ) {
     var device = Application.Instance.Device;
     AddRigdbody(device, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, kinematic, flip);
+  }
+
+  public static void AddRigdbody(
+    this Entity entity,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    var device = Application.Instance.Device;
+    AddRigdbody(device, ref entity, primitiveType, default, kinematic, flip);
   }
 }

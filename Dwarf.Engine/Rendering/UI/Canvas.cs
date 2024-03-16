@@ -249,8 +249,9 @@ public class Canvas : Component, IDisposable {
     }
 
     var pos = Ray.ScreenPointToWorld2D(CameraState.GetCamera(), point, new Vector2(extent.Width, extent.Height));
-    rect.Position.X = pos.X;
-    rect.Position.Y = pos.Y;
+
+    rect.Position = new(pos.X, pos.Y, rect.Position.Z);
+
 
     return Task.CompletedTask;
   }

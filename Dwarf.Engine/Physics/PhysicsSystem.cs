@@ -1,6 +1,7 @@
 using System.Numerics;
 
 using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
 
 using JoltPhysicsSharp;
@@ -101,7 +102,7 @@ public class PhysicsSystem : IDisposable {
     }
 
     // _physicsSystem.OptimizeBroadPhase();
-    _physicsSystem.Step(DeltaTime, CollisionSteps);
+    _physicsSystem.Step(Time.DeltaTime * 10, CollisionSteps);
     return Task.CompletedTask;
 
     // Console.WriteLine(entities.Length);

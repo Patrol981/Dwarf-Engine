@@ -232,6 +232,14 @@ public class Application {
     }
 #endif
   }
+
+  private static void MasterRenderUpdate(ReadOnlySpan<DwarfScript> entities) {
+#if RUNTIME
+    for (short i = 0; i < entities.Length; i++) {
+      entities[i].RenderUpdate();
+    }
+#endif
+  }
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
@@ -289,6 +297,7 @@ public class Application {
 
       _imguiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();
+      MasterRenderUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
       _imguiController.Render(_currentFrame);
 
       Renderer.EndSwapchainRenderPass(commandBuffer);

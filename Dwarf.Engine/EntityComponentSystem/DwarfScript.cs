@@ -13,6 +13,7 @@ public class DwarfScript : Component {
   }
   public virtual void Update() { }
   public virtual void FixedUpdate() { }
+  public virtual void RenderUpdate() { }
 
   public virtual void CollisionEnter(Entity entity) { }
 

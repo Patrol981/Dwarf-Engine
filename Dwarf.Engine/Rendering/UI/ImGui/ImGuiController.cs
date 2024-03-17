@@ -97,6 +97,7 @@ public partial class ImGuiController : IDisposable {
 
     IntPtr context = ImGui.CreateContext();
     ImGui.SetCurrentContext(context);
+
     var io = ImGui.GetIO();
     io.Fonts.AddFontDefault();
 
@@ -448,8 +449,8 @@ public partial class ImGuiController : IDisposable {
     /*
     vkDestroyShaderModule(_device.LogicalDevice, _vertexModule, null);
     vkDestroyShaderModule(_device.LogicalDevice, _fragmentModule, null);
-    
-    
+
+
     vkDestroyPipeline(_device.LogicalDevice, _pipeline, null);
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout, null);
     vkDestroyDescriptorPool(_device.LogicalDevice, _descriptorPool, null);

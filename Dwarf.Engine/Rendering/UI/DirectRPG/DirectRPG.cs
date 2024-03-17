@@ -5,7 +5,7 @@ using Dwarf.Extensions.Logging;
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
-public class DirectRPG {
+public partial class DirectRPG {
   private static float s_menuOffset = 0;
 
   public static void CreateMenuStyles() {

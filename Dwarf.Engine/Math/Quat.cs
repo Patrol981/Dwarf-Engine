@@ -25,4 +25,29 @@ public static class Quat {
 
     return q;
   }
+
+  public static Vector3 ToEuler(Quaternion quaternion) {
+    float yaw;
+    float pitch;
+    float roll;
+
+    // Roll (x-axis rotation)
+    float sinr_cosp = 2 * (quaternion.W * quaternion.X + quaternion.Y * quaternion.Z);
+    float cosr_cosp = 1 - 2 * (quaternion.X * quaternion.X + quaternion.Y * quaternion.Y);
+    roll = (float)System.Math.Atan2(sinr_cosp, cosr_cosp);
+
+    // Pitch (y-axis rotation)
+    float sinp = 2 * (quaternion.W * quaternion.Y - quaternion.Z * quaternion.X);
+    if (System.Math.Abs(sinp) >= 1)
+      pitch = (float)System.Math.CopySign(System.Math.PI / 2, sinp); // use 90 degrees if out of range
+    else
+      pitch = (float)System.Math.Asin(sinp);
+
+    // Yaw (z-axis rotation)
+    float siny_cosp = 2 * (quaternion.W * quaternion.Z + quaternion.X * quaternion.Y);
+    float cosy_cosp = 1 - 2 * (quaternion.Y * quaternion.Y + quaternion.Z * quaternion.Z);
+    yaw = (float)System.Math.Atan2(siny_cosp, cosy_cosp);
+
+    return new Vector3(pitch, yaw, roll);
+  }
 }

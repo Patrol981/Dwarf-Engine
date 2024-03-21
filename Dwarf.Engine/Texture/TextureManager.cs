@@ -11,13 +11,6 @@ public class TextureManager : IDisposable {
     _device = device;
     LoadedTextures = [];
     TextureArray = [];
-
-    FreeType = new FreeType(device);
-    FreeType.Init();
-
-    foreach (var c in FreeType.Characters) {
-      AddTexture(c.Value.Texture);
-    }
   }
 
   public void AddRange(ITexture[] textures) {

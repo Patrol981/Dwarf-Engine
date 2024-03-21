@@ -36,6 +36,10 @@ public class Application {
     _onGUI = eventCallback;
   }
 
+  public void SetAppLoaderCallback(EventCallback eventCallback) {
+    _onAppLoading = eventCallback;
+  }
+
   public void SetOnLoadCallback(EventCallback eventCallback) {
     _onLoad = eventCallback;
   }
@@ -45,6 +49,7 @@ public class Application {
   private EventCallback? _onUpdate;
   private EventCallback? _onRender;
   private EventCallback? _onGUI;
+  private EventCallback? _onAppLoading;
   private EventCallback? _onLoad;
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = null!;
@@ -64,8 +69,6 @@ public class Application {
   private readonly SystemCreationFlags _systemCreationFlags;
 
   private Thread _renderThread;
-  private Thread _calculationThread;
-  private bool _calculationShouldClose = false;
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
@@ -109,6 +112,17 @@ public class Application {
   }
 
   public unsafe void Run() {
+    Logger.Info("[APPLICATION] Application started");
+
+    WindowState.SetCursorMode(GLFW.InputValue.GLFW_CURSOR_NORMAL);
+
+    _imguiController = new(Device, Renderer);
+    _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+
+    _renderThread = new Thread(LoaderLoop);
+    _renderThread.Name = "App Loading Frontend Thread";
+    _renderThread.Start();
+
     _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
@@ -143,21 +157,25 @@ public class Application {
     _systems.PhysicsSystem?.Init(objs3D);
 
     _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
-    _imguiController = new(Device, Renderer);
-    _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
     MasterAwake(Entity.GetScripts(_entities));
     _onLoad?.Invoke();
     MasterStart(Entity.GetScripts(_entities));
 
+    _renderShouldClose = true;
+    while (_renderShouldClose) {
+      Logger.Info("Waiting for render process to close...");
+    }
+    _renderThread.Join();
     _renderThread = new Thread(RenderLoop);
     _renderThread.Name = "Render Thread";
+    _renderThread.Start();
     // _calculationThread = new Thread(CalculationLoop);
 
-
-    _renderThread?.Start();
-    // _calculationThread?.Start();
+    Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
+    WindowState.FocusOnWindow();
 
     while (!Window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
@@ -176,8 +194,6 @@ public class Application {
       MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
-
-      // Logger.Info($"Render: {_renderShouldClose}");
     }
 
     Mutex.WaitOne();
@@ -191,13 +207,10 @@ public class Application {
     }
 
 
-    _calculationShouldClose = true;
     _renderShouldClose = true;
 
     if (_renderThread != null && _renderThread.IsAlive)
       _renderThread?.Join();
-    if (_calculationThread != null && _calculationThread.IsAlive)
-      _calculationThread?.Join();
 
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i].Dispose();
@@ -309,8 +322,71 @@ public class Application {
     Frames.TickEnd();
   }
 
+  internal unsafe void RenderLoader() {
+    Frames.TickStart();
+
+    var commandBuffer = Renderer.BeginFrame();
+    if (commandBuffer != VkCommandBuffer.Null) {
+      int frameIndex = Renderer.GetFrameIndex();
+
+      // var currentFrame = new FrameInfo();
+      // _currentFrame.Camera = _camera.GetComponent<Camera>();
+      _currentFrame.CommandBuffer = commandBuffer;
+      _currentFrame.FrameIndex = frameIndex;
+      // _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      // _currentFrame.TextureManager = _textureManager;
+
+      // render
+      Renderer.BeginSwapchainRenderPass(commandBuffer);
+
+      _imguiController.Update(Time.DeltaTime);
+      _onAppLoading?.Invoke();
+      _imguiController.Render(_currentFrame);
+
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.EndFrame();
+    }
+
+
+    Frames.TickEnd();
+  }
+
   private void PerformCalculations() {
     _systems.UpdateCalculationSystems(GetEntities().ToArray());
+  }
+
+  internal unsafe void LoaderLoop() {
+    var pool = Device.CreateCommandPool();
+    var threadInfo = new ThreadInfo() {
+      CommandPool = pool,
+      CommandBuffer = [Renderer.MAX_FRAMES_IN_FLIGHT]
+    };
+
+    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
+    secondaryCmdBufAllocateInfo.level = VkCommandBufferLevel.Primary;
+    secondaryCmdBufAllocateInfo.commandPool = threadInfo.CommandPool;
+    secondaryCmdBufAllocateInfo.commandBufferCount = 1;
+
+    fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
+      vkAllocateCommandBuffers(Device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
+    }
+
+    Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+
+    while (!_renderShouldClose) {
+      RenderLoader();
+    }
+
+    fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
+      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+    }
+
+    Device.WaitQueue();
+    Device.WaitDevice();
+
+    vkDestroyCommandPool(Device.LogicalDevice, threadInfo.CommandPool, null);
+
+    _renderShouldClose = false;
   }
 
   internal unsafe void RenderLoop() {
@@ -347,12 +423,8 @@ public class Application {
     Device.WaitDevice();
 
     vkDestroyCommandPool(Device.LogicalDevice, threadInfo.CommandPool, null);
-  }
 
-  private unsafe void CalculationLoop() {
-    while (!_calculationShouldClose) {
-      PerformCalculations();
-    }
+    _renderShouldClose = false;
   }
 
   private void SetupSystems(

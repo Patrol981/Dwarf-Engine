@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -16,12 +15,12 @@ public class FreeTypeText : Component, IUIElement {
   private readonly VulkanDevice _device;
   private readonly FreeType _ft;
 
-  private string _text = string.Empty;
+  private readonly string _text = string.Empty;
   private Vector2 _pos = Vector2.Zero;
-  private Mesh _mesh = new() {
+  private readonly Mesh _mesh = new() {
     Vertices = [],
   };
-  private Dictionary<char, Guid> _ids = [];
+  private readonly Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
   private DwarfBuffer _vertexBuffer = null!;
@@ -162,7 +161,12 @@ public class FreeTypeText : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (Vertex* verticesPtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)verticesPtr);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,

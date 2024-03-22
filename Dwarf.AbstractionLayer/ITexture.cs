@@ -12,6 +12,8 @@ public interface ITexture : IDisposable {
   public ulong GetSampler();
   public ulong GetImageView();
   public ulong GetTextureImage();
+  public ulong GetTextureDescriptor();
+  public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool);
   public int Width { get; }
   public int Height { get; }
   public int Size { get; }

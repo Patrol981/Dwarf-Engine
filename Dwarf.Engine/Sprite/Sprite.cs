@@ -5,7 +5,6 @@ using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Math;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -21,7 +20,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private Guid _textureIdRef = Guid.Empty;
-  private bool _hasIndexBuffer = false;
+  private readonly bool _hasIndexBuffer = false;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
 
@@ -248,7 +247,10 @@ public class Sprite : Component, IDisposable, I2DCollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -277,7 +279,10 @@ public class Sprite : Component, IDisposable, I2DCollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(

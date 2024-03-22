@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
@@ -20,10 +19,10 @@ public class FontStashObject : IDisposable {
   private readonly VulkanDevice _device = null!;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
-  private ulong _vertexCount = 0;
+  private readonly ulong _vertexCount = 0;
   private ulong _indexCount = 0;
 
-  private FontMesh _fontMesh;
+  private readonly FontMesh _fontMesh;
 
   public FontStashObject(VulkanDevice device) {
     _device = device;
@@ -73,7 +72,12 @@ public class FontStashObject : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (VertexPositionColorTexture* vertexColorTexturePtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)vertexColorTexturePtr, bufferSize);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
@@ -106,7 +110,12 @@ public class FontStashObject : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    unsafe {
+      fixed (uint* indicesPtr = indices) {
+        stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffer = new DwarfBuffer(
       _device,

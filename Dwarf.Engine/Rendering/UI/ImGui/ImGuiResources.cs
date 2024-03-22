@@ -160,7 +160,9 @@ public partial class ImGuiController {
       VkPipelineStageFlags.FragmentShader
     );
 
+    Application.Instance.Mutex.WaitOne();
     _device.FlushCommandBuffer(copyCmd, copyQueue, true);
+    Application.Instance.Mutex.ReleaseMutex();
     stagingBuffer.Dispose();
 
     // font texture sampler

@@ -1,6 +1,6 @@
-using System.Numerics;
+using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Extensions.Logging;
+
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
@@ -35,5 +35,9 @@ public partial class DirectRPG {
     if (ImGui.Button(label)) {
       buttonClicked.Invoke();
     }
+  }
+
+  public static void CanvasImage(ITexture texture) {
+    // ImGui.Image()
   }
 }

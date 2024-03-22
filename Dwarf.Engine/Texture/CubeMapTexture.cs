@@ -1,7 +1,4 @@
-using System.Runtime.InteropServices;
-
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -13,7 +10,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Engine;
 public class CubeMapTexture : VulkanTexture {
-  private string[] _paths = [];
+  private readonly string[] _paths = [];
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
@@ -43,7 +40,12 @@ public class CubeMapTexture : VulkanTexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    unsafe {
+      fixed (byte* textureDataPointer = data) {
+        stagingBuffer.WriteToBuffer((nint)textureDataPointer, (ulong)_cubemapPack.Size);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);
@@ -59,15 +61,18 @@ public class CubeMapTexture : VulkanTexture {
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
+    /*
     var data = new byte[_cubemapPack.Size];
     Marshal.Copy(dataPtr, data, 0, data.Length);
     if (MemoryUtils.IsNull(data)) {
       Logger.Warn($"[Texture Bytes] Memory is null");
       return;
     }
+    */
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(dataPtr, (ulong)_cubemapPack.Size);
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);

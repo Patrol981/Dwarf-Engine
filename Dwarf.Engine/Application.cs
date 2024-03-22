@@ -57,7 +57,7 @@ public class Application {
   private VkDescriptorSet[] _globalDescriptorSets = [];
   private DwarfBuffer[] _uboBuffers = [];
 
-  private List<Entity> _entities = new();
+  private readonly List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
 
   private Entity _camera = new();
@@ -111,58 +111,19 @@ public class Application {
     _currentScene = scene;
   }
 
-  public unsafe void Run() {
+  public async void Run() {
     Logger.Info("[APPLICATION] Application started");
 
     WindowState.SetCursorMode(GLFW.InputValue.GLFW_CURSOR_NORMAL);
 
     _imguiController = new(Device, Renderer);
-    _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    await _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
 
     _renderThread = new Thread(LoaderLoop);
     _renderThread.Name = "App Loading Frontend Thread";
     _renderThread.Start();
 
-    _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
-    for (int i = 0; i < _uboBuffers.Length; i++) {
-      _uboBuffers[i] = new(
-        Device,
-        (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
-        1,
-        BufferUsage.UniformBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        Device.Properties.limits.minUniformBufferOffsetAlignment
-      );
-      _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-    }
-
-    _globalSetLayout = new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
-      .Build();
-
-    _globalDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
-    for (int i = 0; i < _globalDescriptorSets.Length; i++) {
-      var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      var writer = new VulkanDescriptorWriter(_globalSetLayout, _globalPool)
-        .WriteBuffer(0, &bufferInfo)
-        .Build(out _globalDescriptorSets[i]);
-    }
-
-    SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
-    var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
-    _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
-    _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
-    _systems.PointLightSystem?.Setup();
-    _systems.PhysicsSystem?.Init(objs3D);
-
-    _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
-
-    // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
-
-    MasterAwake(Entity.GetScripts(_entities));
-    _onLoad?.Invoke();
-    MasterStart(Entity.GetScripts(_entities));
+    InitResources();
 
     _renderShouldClose = true;
     while (_renderShouldClose) {
@@ -220,6 +181,49 @@ public class Application {
 
   public void SetCamera(Entity camera) {
     _camera = camera;
+  }
+
+  private unsafe void InitResources() {
+    _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < _uboBuffers.Length; i++) {
+      _uboBuffers[i] = new(
+        Device,
+        (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
+        1,
+        BufferUsage.UniformBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        Device.Properties.limits.minUniformBufferOffsetAlignment
+      );
+      _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+    }
+
+    _globalSetLayout = new DescriptorSetLayout.Builder(Device)
+      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .Build();
+
+    _globalDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
+    for (int i = 0; i < _globalDescriptorSets.Length; i++) {
+      var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+      _ = new VulkanDescriptorWriter(_globalSetLayout, _globalPool)
+        .WriteBuffer(0, &bufferInfo)
+        .Build(out _globalDescriptorSets[i]);
+    }
+
+    SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
+    var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
+    _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
+    _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
+    _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
+    _systems.PointLightSystem?.Setup();
+    _systems.PhysicsSystem?.Init(objs3D);
+
+    _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
+
+    // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
+
+    MasterAwake(Entity.GetScripts(_entities));
+    _onLoad?.Invoke();
+    MasterStart(Entity.GetScripts(_entities));
   }
 
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
@@ -329,22 +333,19 @@ public class Application {
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = Renderer.GetFrameIndex();
 
-      // var currentFrame = new FrameInfo();
-      // _currentFrame.Camera = _camera.GetComponent<Camera>();
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
-      // _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      // _currentFrame.TextureManager = _textureManager;
 
-      // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
       _imguiController.Update(Time.DeltaTime);
       _onAppLoading?.Invoke();
       _imguiController.Render(_currentFrame);
 
+      Mutex.WaitOne();
       Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
+      Mutex.ReleaseMutex();
     }
 
 

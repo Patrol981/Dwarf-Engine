@@ -1,3 +1,5 @@
+using Dwarf.Utils;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -9,6 +11,16 @@ public class VulkanDescriptorWriter {
   private readonly DescriptorPool _pool;
   private VkWriteDescriptorSet[] _writes = [];
   public VulkanDescriptorWriter(DescriptorSetLayout setLayout, DescriptorPool pool) {
+    _setLayout = setLayout;
+    _pool = pool;
+  }
+
+  public VulkanDescriptorWriter(nint setLayoutPtr, nint poolPtr) {
+    var setLayout = MemoryUtils.FromIntPtr<DescriptorSetLayout>(setLayoutPtr);
+    var pool = MemoryUtils.FromIntPtr<DescriptorPool>(poolPtr);
+
+    if (setLayout == null || pool == null) throw new NullReferenceException("All arguments must not be null!");
+
     _setLayout = setLayout;
     _pool = pool;
   }

@@ -1,10 +1,4 @@
-using System.Runtime.InteropServices;
-
-using Assimp;
-
 using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -27,6 +21,8 @@ public class VulkanTexture : ITexture {
   protected int _height = 0;
   protected int _size = 0;
 
+  protected VkDescriptorSet _textureDescriptor = VkDescriptorSet.Null;
+
   public VulkanTexture(VulkanDevice device, int width, int height, string textureName = "") {
     _device = device;
     _width = width;
@@ -47,15 +43,18 @@ public class VulkanTexture : ITexture {
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
+    /*
     var data = new byte[_size];
     Marshal.Copy(dataPtr, data, 0, data.Length);
     if (MemoryUtils.IsNull(data)) {
       Logger.Warn($"[Texture Bytes] Memory is null");
       return;
     }
+    */
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
+    stagingBuffer.WriteToBuffer(dataPtr, (ulong)_size);
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer, createFlags);
@@ -63,6 +62,32 @@ public class VulkanTexture : ITexture {
 
   public void SetTextureData(byte[] data) {
     SetTextureData(data, VkImageCreateFlags.None);
+  }
+
+  public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
+    VkDescriptorImageInfo imageInfo = new() {
+      sampler = _imageSampler,
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = _imageView
+    };
+    unsafe {
+      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+      .WriteImage(0, &imageInfo)
+      .Build(out _textureDescriptor);
+    }
+  }
+
+  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    VkDescriptorImageInfo imageInfo = new() {
+      sampler = _imageSampler,
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = _imageView
+    };
+    unsafe {
+      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+      .WriteImage(0, &imageInfo)
+      .Build(out _textureDescriptor);
+    }
   }
 
   private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
@@ -74,7 +99,12 @@ public class VulkanTexture : ITexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
+    unsafe {
+      fixed (byte* dataPtr = data) {
+        stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_size);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer, createFlags);
@@ -313,6 +343,7 @@ public class VulkanTexture : ITexture {
   public ulong GetSampler() => _imageSampler;
   public ulong GetImageView() => _imageView;
   public ulong GetTextureImage() => _textureImage;
+  public ulong GetTextureDescriptor() => _textureDescriptor;
   public int Width => _width;
   public int Height => _height;
   public int Size => _size;

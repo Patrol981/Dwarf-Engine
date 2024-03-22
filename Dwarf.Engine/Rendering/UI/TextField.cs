@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -25,16 +24,16 @@ public class TextField : Component, IUIElement {
   private bool _hasIndexBuffer = false;
 
   // debug
-  private int _numOfRows = 11;
-  private Dictionary<char, Vector2> _charactersOnAtlas = new();
+  private readonly int _numOfRows = 11;
+  private readonly Dictionary<char, Vector2> _charactersOnAtlas = new();
 
   private Vector2 _startPos = Vector2.Zero;
   private Vector2 _startPosUpdated = Vector2.Zero;
 
-  float _cursorX = 96.0f; // size of an glyph
-  float _cursorY = 96.0f; // size of an glyph
+  readonly float _cursorX = 96.0f; // size of an glyph
+  readonly float _cursorY = 96.0f; // size of an glyph
 
-  float _glyphOffset;
+  readonly float _glyphOffset;
 
   public TextField() { }
 
@@ -209,7 +208,12 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (Vertex* verticesPtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -239,7 +243,10 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(

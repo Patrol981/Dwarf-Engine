@@ -63,7 +63,7 @@ public partial class ImGuiController : IDisposable {
     ImGui.CreateContext();
   }
 
-  public unsafe void InitResources() {
+  public unsafe Task InitResources() {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
     _systemDescriptorPool = new DescriptorPool.Builder(_device)
@@ -87,9 +87,11 @@ public partial class ImGuiController : IDisposable {
 
     CreatePipelineLayout(descriptorSetLayouts);
     CreatePipeline(_renderer.GetSwapchainRenderPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+
+    return Task.CompletedTask;
   }
 
-  public void Init(int width, int height) {
+  public async Task<Task> Init(int width, int height) {
     _width = width;
     _height = height;
 
@@ -106,7 +108,7 @@ public partial class ImGuiController : IDisposable {
     io.DisplayFramebufferScale = new(1.0f, 1.0f);
 
     // InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
-    InitResources();
+    await InitResources();
 
     SetPerFrameImGuiData(1f / 60f);
     CreateStyles();
@@ -115,6 +117,8 @@ public partial class ImGuiController : IDisposable {
     _frameBegun = true;
 
     WindowState.s_Window.OnResizedEventDispatcher += WindowResized;
+
+    return Task.CompletedTask;
   }
 
   private bool TryMapKey(Keys key, out ImGuiKey keyResult) {

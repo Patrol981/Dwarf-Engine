@@ -6,7 +6,6 @@ using Dwarf.Engine.Math;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 
 namespace Dwarf.Engine;
 
@@ -20,7 +19,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private DwarfBuffer[] _indexBuffers = [];
   private ulong[] _indexCount = [];
   private Guid[] _textureIdRefs = [];
-  private AABB _mergedAABB = new();
+  private readonly AABB _mergedAABB = new();
 
   public MeshRenderer() { }
 
@@ -144,7 +143,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffers[index] = new DwarfBuffer(
       _device,
@@ -176,7 +178,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffers[index] = new DwarfBuffer(
       _device,

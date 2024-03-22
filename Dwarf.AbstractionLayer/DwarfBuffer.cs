@@ -9,19 +9,19 @@ namespace Dwarf.Engine.AbstractionLayer;
 public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
-  private IDevice _device;
+  private readonly IDevice _device;
   private nint _mapped;
-  private VkBuffer _buffer = VkBuffer.Null;
-  private VkDeviceMemory _memory = VkDeviceMemory.Null;
+  private readonly VkBuffer _buffer = VkBuffer.Null;
+  private readonly VkDeviceMemory _memory = VkDeviceMemory.Null;
 
-  private ulong _bufferSize;
-  private ulong _instanceCount;
-  private ulong _instanceSize;
-  private ulong _alignmentSize;
-  private BufferUsage _usageFlags;
-  private MemoryProperty _memoryPropertyFlags;
+  private readonly ulong _bufferSize;
+  private readonly ulong _instanceCount;
+  private readonly ulong _instanceSize;
+  private readonly ulong _alignmentSize;
+  private readonly BufferUsage _usageFlags;
+  private readonly MemoryProperty _memoryPropertyFlags;
 
-  private bool _isStagingBuffer = false;
+  private readonly bool _isStagingBuffer = false;
 
   public DwarfBuffer(
     IDevice device,
@@ -101,6 +101,7 @@ public unsafe class DwarfBuffer : IDisposable {
       MemoryUtils.MemCopy((nint)memOffset, data, (int)size);
     }
   }
+
   public VkResult Flush(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     VkMappedMemoryRange mappedRange = new() {
       memory = _memory,

@@ -1,5 +1,9 @@
-using Dwarf.Engine.AbstractionLayer;
+using System.Numerics;
+
+using Dwarf.Engine;
 using Dwarf.Engine.Rendering.UI;
+using Dwarf.Utils;
+using Dwarf.Vulkan;
 
 using ImGuiNET;
 
@@ -37,7 +41,43 @@ public partial class DirectRPG {
     }
   }
 
-  public static void CanvasImage(ITexture texture) {
-    // ImGui.Image()
+  public static unsafe void CanvasImage(VulkanTexture texture, Vector2 size, Anchor anchor = Anchor.Middle) {
+    var textureDescriptor = texture.GetTextureDescriptor();
+    nint descPtr = MemoryUtils.ToIntPtr(textureDescriptor);
+
+    if (textureDescriptor == 0) {
+      // texture.BuildDescriptor()
+      var controller = Application.Instance.GuiController;
+      texture.AddDescriptor(controller.GetDescriptorSetLayout(), controller.GetDescriptorPool());
+      var drawData = ImGuiNative.igGetDrawData();
+      var drawList = ImGuiNative.igGetWindowDrawList();
+      // descPtr = MemoryUtils.ToIntPtr(textureDescriptor);
+
+      // ImGui.GetForegroundDrawList().AddImage(descPtr, new(0, 0), new(500, 500));
+      // Marshal.FreeHGlobal(descPtr);
+
+      return;
+    }
+
+
+    // ImGui.GetForegroundDrawList().AddCircle(new(0, 0), 25, 0);
+    // ImGui.GetForegroundDrawList().
+
+    var app = Application.Instance;
+    var layout = app.GuiController.GetPipelineLayout();
+    Descriptor.BindDescriptorSet(
+      app.Device,
+      texture.GetTextureDescriptor(),
+      app.FrameInfo,
+      ref layout,
+      0,
+      1
+    );
+    // ImGui.GetForegroundDrawList().AddImage(descPtr, new(0, 500), new(500, 0));
+    ImGui.ShowMetricsWindow();
+    ValidateAnchor("", anchor);
+    ImGui.ImageButton("imgbtn", descPtr, new(100, 100));
+    // ImGui.Image(MemoryUtils.ToIntPtr(textureDescriptor), new(500, 500));
+    // ImGui.Image((nint)textureDescriptor, size);
   }
 }

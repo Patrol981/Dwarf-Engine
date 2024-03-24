@@ -90,6 +90,33 @@ public class VulkanTexture : ITexture {
     }
   }
 
+  public unsafe void AddDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    VkDescriptorSet descriptorSet = new();
+
+    var allocInfo = new VkDescriptorSetAllocateInfo();
+    allocInfo.descriptorPool = descriptorPool.GetVkDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    var setLayout = descriptorSetLayout.GetDescriptorSetLayout();
+    allocInfo.pSetLayouts = &setLayout;
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo descImage = new();
+    VkWriteDescriptorSet writeDesc = new();
+
+    descImage.sampler = _imageSampler;
+    descImage.imageView = _imageView;
+    descImage.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+
+    writeDesc.dstSet = descriptorSet;
+    writeDesc.descriptorCount = 1;
+    writeDesc.descriptorType = VkDescriptorType.CombinedImageSampler;
+    writeDesc.pImageInfo = &descImage;
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, writeDesc);
+
+    _textureDescriptor = descriptorSet;
+  }
+
   private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     var stagingBuffer = new DwarfBuffer(
       _device,
@@ -111,6 +138,7 @@ public class VulkanTexture : ITexture {
   }
 
   private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+    Application.Instance.Mutex.WaitOne();
     unsafe {
       if (_textureImage.IsNotNull) {
         _device.WaitDevice();
@@ -122,6 +150,7 @@ public class VulkanTexture : ITexture {
         vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
       }
     }
+
 
     CreateImage(
       _device,
@@ -135,42 +164,16 @@ public class VulkanTexture : ITexture {
       out _textureImageMemory
     );
 
+
     HandleTexture(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, _width, _height);
 
     CreateTextureImageView(_device, _textureImage, out _imageView);
+
+
     CreateSampler(_device, out _imageSampler);
 
     stagingBuffer.Dispose();
-
-    /*
-
-    CreateImageTransitions(
-      _device,
-      VkImageLayout.Undefined,
-      VkImageLayout.TransferDstOptimal,
-      _textureImage
-    );
-
-    CopyBufferToImage(
-      _device,
-      stagingBuffer.GetBuffer(),
-      _textureImage,
-      _width,
-      _height
-    );
-
-    CreateImageTransitions(
-      _device,
-      VkImageLayout.TransferDstOptimal,
-      VkImageLayout.ShaderReadOnlyOptimal,
-      _textureImage
-    );
-
-    stagingBuffer.Dispose();
-
-    CreateTextureImageView(_device, _textureImage, out _imageView);
-    CreateSampler(_device, out _imageSampler);
-    */
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static async Task<ITexture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {

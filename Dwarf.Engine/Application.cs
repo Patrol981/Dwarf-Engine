@@ -10,6 +10,7 @@ using Dwarf.Engine.Windowing;
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
+using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -72,7 +73,6 @@ public class Application {
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
-  private ImGuiController _imguiController = null!;
   private GlobalUniformBufferObject _ubo = new();
 
   private FrameInfo _currentFrame = new();
@@ -85,11 +85,6 @@ public class Application {
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool debugMode = true
   ) {
-    var runtimeValue = Environment.GetEnvironmentVariable("IsRuntime");
-    if (runtimeValue == "true") {
-
-    }
-
     CurrentAPI = RenderAPI.Vulkan;
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
@@ -105,10 +100,28 @@ public class Application {
     _systemCreationFlags = systemCreationFlags;
 
     Mutex = new Mutex(false);
+
+    _onAppLoading = () => {
+      DirectRPG.BeginCanvas();
+      DirectRPG.CanvasText("Loading...");
+      DirectRPG.EndCanvas();
+    };
   }
 
-  public void SetupScene(Scene scene) {
+  public void SetCurrentScene(Scene scene) {
     _currentScene = scene;
+  }
+
+  public async Task<Task> SetupScene() {
+    if (_currentScene == null) return Task.CompletedTask;
+
+    await LoadTextures();
+    await LoadEntities();
+
+    Logger.Info($"Loaded entities: {_entities.Count}");
+    Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
+
+    return Task.CompletedTask;
   }
 
   public async void Run() {
@@ -116,14 +129,14 @@ public class Application {
 
     WindowState.SetCursorMode(GLFW.InputValue.GLFW_CURSOR_NORMAL);
 
-    _imguiController = new(Device, Renderer);
-    await _imguiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    GuiController = new(Device, Renderer);
+    await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
 
     _renderThread = new Thread(LoaderLoop);
     _renderThread.Name = "App Loading Frontend Thread";
     _renderThread.Start();
 
-    InitResources();
+    await Init();
 
     _renderShouldClose = true;
     while (_renderShouldClose) {
@@ -182,8 +195,13 @@ public class Application {
   public void SetCamera(Entity camera) {
     _camera = camera;
   }
+  #region RESOURCES
+  private unsafe Task InitResources() {
+    _globalPool = new DescriptorPool.Builder(Device)
+      .SetMaxSets((uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .Build();
 
-  private unsafe void InitResources() {
     _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
@@ -209,6 +227,7 @@ public class Application {
         .Build(out _globalDescriptorSets[i]);
     }
 
+    Mutex.WaitOne();
     SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
     var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
     _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
@@ -218,14 +237,89 @@ public class Application {
     _systems.PhysicsSystem?.Init(objs3D);
 
     _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
-
+    Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
     MasterAwake(Entity.GetScripts(_entities));
     _onLoad?.Invoke();
     MasterStart(Entity.GetScripts(_entities));
+
+    return Task.CompletedTask;
   }
 
+  private void SetupSystems(
+    SystemCreationFlags creationFlags,
+    VulkanDevice device,
+    Renderer renderer,
+    DescriptorSetLayout globalSetLayout,
+    PipelineConfigInfo configInfo
+  ) {
+    SystemCreator.CreateSystems(ref _systems, creationFlags, device, renderer, globalSetLayout, configInfo);
+  }
+
+  public SystemCollection GetSystems() {
+    return _systems;
+  }
+
+  private async Task<Task> Init() {
+    var tasks = new Task[] {
+      SetupScene(),
+      InitResources(),
+    };
+
+    // await SetupScene();
+    // InitResources();
+    await Task.WhenAll(tasks);
+
+    return Task.CompletedTask;
+  }
+
+  private async Task<Task> LoadTextures() {
+    if (_currentScene == null) return Task.CompletedTask;
+    _currentScene.LoadTextures();
+    var paths = _currentScene.GetTexturePaths();
+
+    var startTime = DateTime.UtcNow;
+    List<Task> tasks = [];
+
+    List<List<ITexture>> textures = [];
+    for (int i = 0; i < paths.Count; i++) {
+      var t = await TextureManager.AddTextures(Device, [.. paths[i]]);
+      textures.Add([.. t]);
+    }
+
+    for (int i = 0; i < paths.Count; i++) {
+      _textureManager.AddRange([.. textures[i]]);
+    }
+
+    var endTime = DateTime.Now;
+    Logger.Info($"[TEXTURE] Load Time {endTime - startTime}");
+
+
+    return Task.CompletedTask;
+  }
+
+  private Task LoadEntities() {
+    if (_currentScene == null) return Task.CompletedTask;
+    var startTime = DateTime.UtcNow;
+
+    Mutex.WaitOne();
+    _currentScene.LoadEntities();
+    _entities.AddRange(_currentScene.GetEntities());
+    Mutex.ReleaseMutex();
+
+    var targetCnv = Entity.Distinct<Canvas>(_entities);
+    if (targetCnv.Length > 0) {
+      _systems.Canvas = targetCnv[0].GetComponent<Canvas>();
+    }
+
+    var endTime = DateTime.Now;
+    Logger.Info($"[Entities] Load Time {endTime - startTime}");
+    return Task.CompletedTask;
+  }
+
+  #endregion RESOURCES
+  #region ENTITY_FLOW
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
@@ -257,6 +351,70 @@ public class Application {
     }
 #endif
   }
+
+  public void AddEntity(Entity entity) {
+    lock (_entitiesLock) {
+      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
+      _entities.Add(entity);
+      MasterAwake(Entity.GetScripts(new[] { entity }));
+      MasterStart(Entity.GetScripts(new[] { entity }));
+      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      unsafe {
+        vkDestroyFence(Device.LogicalDevice, fence);
+      }
+    }
+  }
+
+  public List<Entity> GetEntities() {
+    lock (_entitiesLock) {
+      return _entities;
+    }
+  }
+
+  public Entity? GetEntity(Guid entitiyId) {
+    lock (_entitiesLock) {
+      return _entities.Where(x => x.EntityID == entitiyId).First();
+    }
+  }
+
+  public void RemoveEntityAt(int index) {
+    lock (_entitiesLock) {
+      Device.WaitDevice();
+      Device.WaitQueue();
+      _entities.RemoveAt(index);
+    }
+  }
+
+  public void RemoveEntity(Entity entity) {
+    lock (_entitiesLock) {
+      Device.WaitDevice();
+      Device.WaitQueue();
+      _entities.Remove(entity);
+    }
+  }
+
+  public void RemoveEntity(Guid id) {
+    lock (_entitiesLock) {
+      var target = _entities.Where((x) => x.EntityID == id).First();
+      Device.WaitDevice();
+      Device.WaitQueue();
+      _entities.Remove(target);
+    }
+  }
+
+  public void DestroyEntity(Entity entity) {
+    lock (_entitiesLock) {
+      entity.CanBeDisposed = true;
+    }
+  }
+
+  public void RemoveEntityRange(int index, int count) {
+    lock (_entitiesLock) {
+      _entities.RemoveRange(index, count);
+    }
+  }
+  #endregion ENTITY_FLOW
+  #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
     _systems.ValidateSystems(
@@ -312,10 +470,10 @@ public class Application {
       _skybox.Render(_currentFrame);
       _systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
-      _imguiController.Update(Time.DeltaTime);
+      GuiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();
       MasterRenderUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
-      _imguiController.Render(_currentFrame);
+      GuiController.Render(_currentFrame);
 
       Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
@@ -338,9 +496,9 @@ public class Application {
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
-      _imguiController.Update(Time.DeltaTime);
+      GuiController.Update(Time.DeltaTime);
       _onAppLoading?.Invoke();
-      _imguiController.Render(_currentFrame);
+      GuiController.Render(_currentFrame);
 
       Mutex.WaitOne();
       Renderer.EndSwapchainRenderPass(commandBuffer);
@@ -427,149 +585,11 @@ public class Application {
 
     _renderShouldClose = false;
   }
-
-  private void SetupSystems(
-    SystemCreationFlags creationFlags,
-    VulkanDevice device,
-    Renderer renderer,
-    DescriptorSetLayout globalSetLayout,
-    PipelineConfigInfo configInfo
-  ) {
-    SystemCreator.CreateSystems(ref _systems, creationFlags, device, renderer, globalSetLayout, configInfo);
-  }
-
-  public SystemCollection GetSystems() {
-    return _systems;
-  }
-
-
-  public void AddEntity(Entity entity) {
-    lock (_entitiesLock) {
-      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      _entities.Add(entity);
-      MasterAwake(Entity.GetScripts(new[] { entity }));
-      MasterStart(Entity.GetScripts(new[] { entity }));
-      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
-      unsafe {
-        vkDestroyFence(Device.LogicalDevice, fence);
-      }
-    }
-  }
-
-  public List<Entity> GetEntities() {
-    lock (_entitiesLock) {
-      return _entities;
-    }
-  }
-
-  public Entity? GetEntity(Guid entitiyId) {
-    lock (_entitiesLock) {
-      return _entities.Where(x => x.EntityID == entitiyId).First();
-    }
-  }
-
-  public void RemoveEntityAt(int index) {
-    lock (_entitiesLock) {
-      Device.WaitDevice();
-      Device.WaitQueue();
-      _entities.RemoveAt(index);
-    }
-  }
-
-  public void RemoveEntity(Entity entity) {
-    lock (_entitiesLock) {
-      Device.WaitDevice();
-      Device.WaitQueue();
-      _entities.Remove(entity);
-    }
-  }
-
-  public void RemoveEntity(Guid id) {
-    lock (_entitiesLock) {
-      var target = _entities.Where((x) => x.EntityID == id).First();
-      Device.WaitDevice();
-      Device.WaitQueue();
-      _entities.Remove(target);
-    }
-  }
-
-  public void DestroyEntity(Entity entity) {
-    lock (_entitiesLock) {
-      entity.CanBeDisposed = true;
-    }
-  }
-
-  public void RemoveEntityRange(int index, int count) {
-    lock (_entitiesLock) {
-      _entities.RemoveRange(index, count);
-    }
-  }
-
-  public async void Init() {
-    _globalPool = new DescriptorPool.Builder(Device)
-      .SetMaxSets((uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .Build();
-
-    await LoadTextures();
-    await LoadEntities();
-
-    Logger.Info($"Loaded entities: {_entities.Count}");
-    Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
-  }
-
-  public async Task<Task> MultiThreadedTextureLoad(List<List<string>> paths) {
-    var startTime = DateTime.UtcNow;
-    List<Task> tasks = new();
-
-    List<List<ITexture>> textures = [];
-    for (int i = 0; i < paths.Count; i++) {
-      var t = await TextureManager.AddTextures(Device, [.. paths[i]]);
-      textures.Add([.. t]);
-    }
-
-    for (int i = 0; i < paths.Count; i++) {
-      _textureManager.AddRange(textures[i].ToArray());
-    }
-
-    var endTime = DateTime.Now;
-    Logger.Info($"[TEXTURE] Load Time {endTime - startTime}");
-
-    return Task.CompletedTask;
-  }
-
-  private async Task<Task> LoadTextures() {
-    if (_currentScene == null) return Task.CompletedTask;
-    _currentScene.LoadTextures();
-    await LoadTexturesAsSeparateThreads(_currentScene.GetTexturePaths());
-    return Task.CompletedTask;
-  }
-
-  public async Task<Task> LoadTexturesAsSeparateThreads(List<List<string>> paths) {
-    await MultiThreadedTextureLoad(paths);
-    Logger.Info("Done Loading Textures");
-    return Task.CompletedTask;
-  }
-
-  private Task LoadEntities() {
-    if (_currentScene == null) return Task.CompletedTask;
-    var startTime = DateTime.UtcNow;
-    _currentScene.LoadEntities();
-    _entities.AddRange(_currentScene.GetEntities());
-
-    var targetCnv = Entity.Distinct<Canvas>(_entities);
-    if (targetCnv.Length > 0) {
-      _systems.Canvas = targetCnv[0].GetComponent<Canvas>();
-    }
-
-    var endTime = DateTime.Now;
-    Logger.Info($"[Entities] Load Time {endTime - startTime}");
-    return Task.CompletedTask;
-  }
+  #endregion APPLICATION_LOOP
 
   private void Cleanup() {
     _skybox?.Dispose();
-    _imguiController?.Dispose();
+    GuiController?.Dispose();
 
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
@@ -595,14 +615,9 @@ public class Application {
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
         Device.WaitDevice();
-        Device.WaitQueue();
 
         _entities[i].DisposeEverything();
         RemoveEntity(_entities[i].EntityID);
-
-        Device.WaitDevice();
-        Device.WaitQueue();
-
       }
     }
   }
@@ -614,4 +629,5 @@ public class Application {
   public Renderer Renderer { get; } = null!;
   public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight { get; } = new();
+  public ImGuiController GuiController { get; private set; } = null!;
 }

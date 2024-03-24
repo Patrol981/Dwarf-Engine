@@ -46,9 +46,9 @@ public partial class ImGuiController : IDisposable {
   private int _width;
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
-  private VkFrontFace _frontFace = VkFrontFace.Clockwise;
+  private readonly VkFrontFace _frontFace = VkFrontFace.Clockwise;
 
-  private Keys[] _allKeys = Enum.GetValues<Keys>();
+  private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
   private readonly List<char> _pressedChars = new List<char>();
 
   [StructLayout(LayoutKind.Explicit)]
@@ -460,5 +460,21 @@ public partial class ImGuiController : IDisposable {
     vkDestroyDescriptorPool(_device.LogicalDevice, _descriptorPool, null);
     vkDestroyDescriptorSetLayout(_device.LogicalDevice, _descriptorSetLayout, null);
     */
+  }
+
+  public DescriptorPool GetDescriptorPool() {
+    return _systemDescriptorPool;
+  }
+
+  public DescriptorSetLayout GetDescriptorSetLayout() {
+    return _systemSetLayout;
+  }
+
+  public VkPipelineLayout GetPipelineLayout() {
+    return _systemPipelineLayout;
+  }
+
+  public VkDescriptorSet GetDescriptorSet() {
+    return _systemDescriptorSet;
   }
 }

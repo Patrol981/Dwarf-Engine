@@ -8,10 +8,10 @@ namespace Dwarf.Vulkan;
 
 public class DescriptorSetLayout {
   private readonly IDevice _device = null!;
-  private VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
+  private readonly VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
   public class Builder {
     private readonly IDevice _device = null!;
-    private Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
+    private readonly Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
     public Builder(IDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
       _device = device;
       _bindings = bindings;

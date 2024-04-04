@@ -1,47 +1,58 @@
 using System.Numerics;
+
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Extensions.Logging;
+
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
 
 public partial class DirectRPG {
   private static void ValidateAnchor(string text, Anchor anchor) {
+    var textSize = ImGui.CalcTextSize(text);
+    ValidateAnchor(textSize, anchor);
+  }
+
+  private static void ValidateAnchor(string text, Vector2 offset, Anchor anchor) {
+    var textSize = ImGui.CalcTextSize(text);
+    ValidateAnchor(textSize + offset, anchor);
+  }
+
+  private static void ValidateAnchor(Vector2 size, Anchor anchor) {
     var io = ImGui.GetIO();
 
     switch (anchor) {
       case Anchor.Right:
-        ImGui.SetCursorPos(GetMiddleRight(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleRight(io, size));
         break;
       case Anchor.Left:
-        ImGui.SetCursorPos(GetMiddleLeft(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleLeft(io, size));
         break;
       case Anchor.Middle:
-        ImGui.SetCursorPos(GetCenter(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetCenter(io, size));
         break;
       case Anchor.Bottom:
-        ImGui.SetCursorPos(GetMiddleBottom(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleBottom(io, size));
         break;
       case Anchor.Top:
-        ImGui.SetCursorPos(GetMiddleTop(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleTop(io, size));
         break;
       case Anchor.RightTop:
-        ImGui.SetCursorPos(GetRightTop(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetRightTop(io, size));
         break;
       case Anchor.RightBottom:
-        ImGui.SetCursorPos(GetRightBottom(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetRightBottom(io, size));
         break;
       case Anchor.LeftTop:
-        ImGui.SetCursorPos(GetLeftTop(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetLeftTop(io, size));
         break;
       case Anchor.LeftBottom:
-        ImGui.SetCursorPos(GetLeftBottom(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetLeftBottom(io, size));
         break;
       case Anchor.MiddleTop:
-        ImGui.SetCursorPos(GetMiddleTop(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleTop(io, size));
         break;
       case Anchor.MiddleBottom:
-        ImGui.SetCursorPos(GetMiddleBottom(io, ImGui.CalcTextSize(text)));
+        ImGui.SetCursorPos(GetMiddleBottom(io, size));
         break;
       default:
         break;

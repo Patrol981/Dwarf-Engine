@@ -28,14 +28,14 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public async Task<Task> AddTexture(string texturePath) {
+  public async Task<Task> AddTexture(string texturePath, int flip = 1) {
     foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    var texture = await TextureLoader.LoadFromPath(_device, texturePath, default);
+    var texture = await TextureLoader.LoadFromPath(_device, texturePath, flip);
     LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using ImGuiNET;
@@ -51,6 +52,8 @@ public partial class ImGuiController : IDisposable {
   private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
   private readonly List<char> _pressedChars = new List<char>();
 
+  private readonly IntPtr _fontAtlasId = -1;
+
   [StructLayout(LayoutKind.Explicit)]
   struct ImGuiPushConstant {
     [FieldOffset(0)] public Matrix4x4 Projection;
@@ -67,8 +70,8 @@ public partial class ImGuiController : IDisposable {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
     _systemDescriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(100)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 100)
+      .SetMaxSets(1000)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
       .Build();
 
@@ -101,7 +104,8 @@ public partial class ImGuiController : IDisposable {
     ImGui.SetCurrentContext(context);
 
     var io = ImGui.GetIO();
-    io.Fonts.AddFontDefault();
+    // var font = io.Fonts.AddFontDefault();
+    io.Fonts.SetTexID(_fontAtlasId);
 
     io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
     io.DisplaySize = new(width, height);
@@ -390,7 +394,7 @@ public partial class ImGuiController : IDisposable {
 
     UpdateBuffers(drawData);
 
-    BindTexture(frameInfo);
+
     BindShaderData(frameInfo);
 
     int vertexOffset = 0;
@@ -410,6 +414,29 @@ public partial class ImGuiController : IDisposable {
         var cmdList = drawData.CmdLists[i];
         for (int j = 0; j < cmdList.CmdBuffer.Size; j++) {
           var pcmd = cmdList.CmdBuffer[j];
+
+          if (pcmd.TextureId == 0) {
+            BindTexture(frameInfo);
+          } else {
+            /*
+            // var target = _userTextures.Where(x => x.Value = pcmd.TextureId)
+            foreach (var userTex in _userTextures) {
+              if (userTex.Value == pcmd.TextureId) {
+                Logger.Error($"{userTex.Key.TextureName} {_userTextures.Count}");
+                BindTexture(frameInfo, userTex.Key.TextureDescriptor);
+                break;
+              }
+            }
+            */
+
+            var target = _userTextures.TryGetValue(pcmd.TextureId, out var texture);
+            if (target) {
+              BindTexture(frameInfo, texture!.TextureDescriptor);
+            }
+
+          }
+
+
           SetScissorRect(frameInfo, pcmd, drawData);
           // vkCmdDrawIndexed(frameInfo.CommandBuffer, pcmd.ElemCount, 1, indexOffset, vertexOffset, 0);
 
@@ -429,11 +456,11 @@ public partial class ImGuiController : IDisposable {
 
   }
 
-  private unsafe void CreateShaderModule(byte[] data, out VkShaderModule module) {
-    vkCreateShaderModule(_device.LogicalDevice, data, null, out module).CheckResult();
-  }
-
   public unsafe void Dispose() {
+    foreach (var userTex in _userTextures) {
+      MemoryUtils.FreeIntPtr(userTex.Key);
+    }
+
     ImGui.DestroyContext();
     _vertexBuffer?.Dispose();
     _indexBuffer?.Dispose();

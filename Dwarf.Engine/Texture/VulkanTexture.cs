@@ -343,10 +343,11 @@ public class VulkanTexture : ITexture {
     GC.SuppressFinalize(this);
   }
 
-  public ulong GetSampler() => _imageSampler;
-  public ulong GetImageView() => _imageView;
-  public ulong GetTextureImage() => _textureImage;
-  public ulong GetTextureDescriptor() => _textureDescriptor;
+  public ulong Sampler => _imageSampler;
+  public ulong ImageView => _imageView;
+  public ulong TextureImage => _textureImage;
+  public ulong TextureDescriptor => _textureDescriptor;
+  public VkDescriptorSet VkTextureDescriptor => _textureDescriptor;
   public int Width => _width;
   public int Height => _height;
   public int Size => _size;

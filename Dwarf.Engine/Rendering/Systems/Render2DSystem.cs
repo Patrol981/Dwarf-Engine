@@ -154,9 +154,9 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     var id = entity.GetComponent<Sprite>().GetTextureIdReference();
     var texture = textureManager.GetTexture(id);
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = texture.GetSampler(),
+      sampler = texture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = texture.GetImageView()
+      imageView = texture.ImageView
     };
     VkDescriptorSet set;
     _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)

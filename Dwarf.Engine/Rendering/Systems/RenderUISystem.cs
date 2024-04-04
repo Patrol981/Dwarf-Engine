@@ -154,9 +154,9 @@ public class RenderUISystem : SystemBase {
     var texture = textureManager.GetTexture(id!.GetTextureIdReference());
 
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = texture.GetSampler(),
+      sampler = texture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = texture.GetImageView()
+      imageView = texture.ImageView
     };
     _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)

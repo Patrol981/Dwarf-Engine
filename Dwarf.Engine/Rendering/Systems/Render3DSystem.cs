@@ -288,7 +288,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
           if (i == _texturesCount) continue;
           var targetTexture = frameInfo.TextureManager.GetTexture(targetEntity.GetTextureIdReference((int)x));
-          Descriptor.BindDescriptorSet((VulkanDevice)_device, targetTexture.GetTextureDescriptor(), frameInfo, ref _pipelineLayout, 0, 1);
+          Descriptor.BindDescriptorSet((VulkanDevice)_device, targetTexture.TextureDescriptor, frameInfo, ref _pipelineLayout, 0, 1);
 
 
           if (targetEntity != lastModel)

@@ -53,7 +53,7 @@ public partial class ImGuiController {
     _fontTexture = new VulkanTexture(_device, texWidth, texHeight, "im_gui_texture");
     _fontTexture.SetTextureData(fontData);
 
-    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.GetSampler(), _fontTexture.GetImageView(), VkImageLayout.ShaderReadOnlyOptimal);
+    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.Sampler, _fontTexture.ImageView, VkImageLayout.ShaderReadOnlyOptimal);
     _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
     _descriptorWriter.WriteImage(0, &fontDescriptor);
     _descriptorWriter.Build(out _systemDescriptorSet);
@@ -248,6 +248,19 @@ public partial class ImGuiController {
         null
       );
     }
+  }
+
+  public unsafe void BindTexture(FrameInfo frameInfo, VkDescriptorSet texId) {
+    vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _systemPipelineLayout,
+        0,
+        1,
+        &texId,
+        0,
+        null
+      );
   }
 
   public unsafe void SetScissorRect(FrameInfo frameInfo, ImDrawCmdPtr pcmd, ImDrawDataPtr drawData) {

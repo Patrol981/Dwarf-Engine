@@ -348,8 +348,6 @@ public class VulkanSwapchain : IDisposable {
     return result;
   }
 
-  public List<VkSubmitInfo> SubmitQueue = [];
-
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     if (_imagesInFlight[imageIndex] != VkFence.Null) {
       vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
@@ -391,19 +389,9 @@ public class VulkanSwapchain : IDisposable {
       submitInfo.signalSemaphoreCount = 1;
       submitInfo.pSignalSemaphores = signalPtr;
 
-      // _device._mutex.WaitOne();
-      // vkWaitForFences(_device.LogicalDevice, 1, &fence, VkBool32.True, 100000000000);
-      // vkWaitForFences(_device.LogicalDevice, 1, swFlightFencesPtr, VkBool32.True, 100000000000);
       vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
 
-      /*
-      lock (_device._queueLock) {
-        vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
-      }
-      */
       _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
-      // vkDestroyFence(_device.LogicalDevice, fence, null);
-      // _device._mutex.ReleaseMutex();
 
       VkPresentInfoKHR presentInfo = new() {
         waitSemaphoreCount = 1,
@@ -419,8 +407,6 @@ public class VulkanSwapchain : IDisposable {
       var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
       Application.Instance.Mutex.ReleaseMutex();
       _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-      SubmitQueue.Clear();
 
       return result;
     }

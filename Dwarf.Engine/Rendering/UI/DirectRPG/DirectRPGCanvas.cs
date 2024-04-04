@@ -2,8 +2,6 @@ using System.Numerics;
 
 using Dwarf.Engine;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Utils;
-using Dwarf.Vulkan;
 
 using ImGuiNET;
 
@@ -29,8 +27,12 @@ public partial class DirectRPG {
     ImGui.End();
   }
 
-  public static void CanvasText(string text, Anchor anchor = Anchor.Middle) {
-    ValidateAnchor(text, anchor);
+  public static void CanvasText(
+    string text,
+    Anchor anchor = Anchor.Middle,
+    Vector2 offset = default
+  ) {
+    ValidateAnchor(text, offset, anchor);
     ImGui.Text(text);
   }
 
@@ -41,43 +43,15 @@ public partial class DirectRPG {
     }
   }
 
-  public static unsafe void CanvasImage(VulkanTexture texture, Vector2 size, Anchor anchor = Anchor.Middle) {
-    var textureDescriptor = texture.GetTextureDescriptor();
-    nint descPtr = MemoryUtils.ToIntPtr(textureDescriptor);
-
-    if (textureDescriptor == 0) {
-      // texture.BuildDescriptor()
-      var controller = Application.Instance.GuiController;
-      texture.AddDescriptor(controller.GetDescriptorSetLayout(), controller.GetDescriptorPool());
-      var drawData = ImGuiNative.igGetDrawData();
-      var drawList = ImGuiNative.igGetWindowDrawList();
-      // descPtr = MemoryUtils.ToIntPtr(textureDescriptor);
-
-      // ImGui.GetForegroundDrawList().AddImage(descPtr, new(0, 0), new(500, 500));
-      // Marshal.FreeHGlobal(descPtr);
-
-      return;
-    }
-
-
-    // ImGui.GetForegroundDrawList().AddCircle(new(0, 0), 25, 0);
-    // ImGui.GetForegroundDrawList().
-
-    var app = Application.Instance;
-    var layout = app.GuiController.GetPipelineLayout();
-    Descriptor.BindDescriptorSet(
-      app.Device,
-      texture.GetTextureDescriptor(),
-      app.FrameInfo,
-      ref layout,
-      0,
-      1
-    );
-    // ImGui.GetForegroundDrawList().AddImage(descPtr, new(0, 500), new(500, 0));
-    ImGui.ShowMetricsWindow();
-    ValidateAnchor("", anchor);
-    ImGui.ImageButton("imgbtn", descPtr, new(100, 100));
-    // ImGui.Image(MemoryUtils.ToIntPtr(textureDescriptor), new(500, 500));
-    // ImGui.Image((nint)textureDescriptor, size);
+  public static unsafe void CanvasImage(
+    ref VulkanTexture texture,
+    Vector2 size,
+    Anchor anchor = Anchor.Middle,
+    Vector2 offset = default
+  ) {
+    ValidateAnchor(size + offset, anchor);
+    var controller = Application.Instance.GuiController;
+    var binding = controller.GetOrCreateImGuiBinding(texture);
+    ImGui.Image(binding, size, new(0, 1), new(1, 0));
   }
 }

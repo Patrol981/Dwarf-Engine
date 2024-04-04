@@ -41,6 +41,10 @@ public class Application {
     _onAppLoading = eventCallback;
   }
 
+  public void SetOnLoadPrimaryCallback(EventCallback eventCallback) {
+    _onLoadPrimaryResources = eventCallback;
+  }
+
   public void SetOnLoadCallback(EventCallback eventCallback) {
     _onLoad = eventCallback;
   }
@@ -52,6 +56,7 @@ public class Application {
   private EventCallback? _onGUI;
   private EventCallback? _onAppLoading;
   private EventCallback? _onLoad;
+  private EventCallback? _onLoadPrimaryResources;
   private TextureManager _textureManager = null!;
   private SystemCollection _systems = null!;
   private DescriptorPool _globalPool = null!;
@@ -128,6 +133,8 @@ public class Application {
     Logger.Info("[APPLICATION] Application started");
 
     WindowState.SetCursorMode(GLFW.InputValue.GLFW_CURSOR_NORMAL);
+
+    _onLoadPrimaryResources?.Invoke();
 
     GuiController = new(Device, Renderer);
     await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);

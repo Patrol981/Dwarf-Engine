@@ -331,9 +331,9 @@ public class Skybox : IDisposable {
 
   private unsafe void BindDescriptorTexture() {
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = _cubemapTexture.GetSampler(),
+      sampler = _cubemapTexture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _cubemapTexture.GetImageView()
+      imageView = _cubemapTexture.ImageView
     };
     _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)

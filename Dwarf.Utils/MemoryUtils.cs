@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using Dwarf.Extensions.Logging;
+
 namespace Dwarf.Utils;
 
 public static class MemoryUtils {
@@ -81,6 +83,11 @@ public static class MemoryUtils {
       throw;
     }
     return ptr;
+  }
+
+  public static void FreeIntPtr(IntPtr ptr) {
+    Logger.Info($"Freeing {ptr}");
+    Marshal.FreeHGlobal(ptr);
   }
 
   public static T? FromIntPtr<T>(nint ptr) {

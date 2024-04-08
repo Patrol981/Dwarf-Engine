@@ -2,6 +2,7 @@ using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Rendering.Systems;
 using Dwarf.Engine.Rendering.UI;
+using Dwarf.Rendering.Systems;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -14,13 +15,12 @@ public class SystemCollection : IDisposable {
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
   private PointLightSystem? _pointLightSystem;
+  private GuizmoRenderSystem? _guizmoRenderSystem;
 
-  // TODO : More canvases in the future?
   private Canvas? _canvas = null;
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
-  private Thread? _physicsThread;
   private readonly object _renderLock = new object();
 
   public bool Reload3DRenderSystem = false;
@@ -33,7 +33,8 @@ public class SystemCollection : IDisposable {
       _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
       _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
       _pointLightSystem?.Render(frameInfo);
-      _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
+      _guizmoRenderSystem?.Render(frameInfo);
+      _renderUISystem?.DrawUI(frameInfo, _canvas);
     }
   }
 
@@ -42,18 +43,6 @@ public class SystemCollection : IDisposable {
       _physicsSystem!.Tick(entities);
     }
     return Task.CompletedTask;
-  }
-
-  private void RenderThread() {
-    lock (_renderLock) {
-      var frameInfo = Application.Instance.FrameInfo;
-      var entities = Application.Instance.GetEntities();
-
-      _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
-      _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-      _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
-      _renderUISystem?.DrawUI(frameInfo, _canvas ?? throw new Exception("Canvas cannot be null"));
-    }
   }
 
   public void ValidateSystems(
@@ -87,8 +76,6 @@ public class SystemCollection : IDisposable {
     }
 
     if (_renderUISystem != null) {
-      // var uiEntities = Entity.Distinct<TextField>(entities).ToArray();
-      // var uiEntities = Entity.DistinctInterface<IUIElement>(entities).ToArray();
       var canvasEntities = _canvas!.GetUI();
       if (canvasEntities.Length < 1) return;
       var sizes = _renderUISystem.CheckSizes(canvasEntities, _canvas);
@@ -192,7 +179,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _renderUISystem?.Setup(_canvas ?? throw new Exception("Canvas cannot be null"), ref textureManager);
+    _renderUISystem?.Setup(_canvas, ref textureManager);
   }
 
   public Render3DSystem Render3DSystem {
@@ -214,13 +201,7 @@ public class SystemCollection : IDisposable {
     get { return _physicsSystem ?? null!; }
     set {
       _physicsSystem = value;
-      // _physicsThread = new Thread(new ParameterizedThreadStart(PhysicsSystem.Calculate!));
     }
-  }
-
-  public Thread PhysicsThread {
-    set { _physicsThread = value; }
-    get { return _physicsThread ?? null!; }
   }
 
   public RenderDebugSystem RenderDebugSystem {
@@ -231,6 +212,11 @@ public class SystemCollection : IDisposable {
   public PointLightSystem PointLightSystem {
     get { return _pointLightSystem ?? null!; }
     set { _pointLightSystem = value; }
+  }
+
+  public GuizmoRenderSystem GuizmoRenderSystem {
+    get { return _guizmoRenderSystem ?? null!; }
+    set { _guizmoRenderSystem = value; }
   }
 
   public Canvas Canvas {
@@ -245,6 +231,7 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();
+    _guizmoRenderSystem?.Dispose();
     _pointLightSystem?.Dispose();
   }
 }

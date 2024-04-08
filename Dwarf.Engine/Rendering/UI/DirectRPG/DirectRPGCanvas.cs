@@ -9,8 +9,12 @@ namespace Dwarf.Rendering.UI.DirectRPG;
 
 public partial class DirectRPG {
   public delegate void ButtonClickedDelegate();
+
+  private static Vector2 s_canvasSize = Vector2.Zero;
+
   public static void BeginCanvas() {
     var io = ImGui.GetIO();
+    s_canvasSize = io.DisplaySize;
 
     ImGui.SetNextWindowPos(new(0, 0));
     ImGui.SetNextWindowSize(io.DisplaySize);

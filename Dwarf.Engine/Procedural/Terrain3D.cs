@@ -21,6 +21,7 @@ public class Terrain3D : MeshRenderer {
 
   public void Setup() {
     var mesh = Generate(_app);
+    // var mesh = Primitives.CreatePlanePrimitive()
     base.Init(new Mesh[] { mesh });
     SetupTexture(_app);
     base.BindToTexture(_app.TextureManager, Owner!.EntityID.ToString());

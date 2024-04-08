@@ -83,14 +83,18 @@ public class Application {
   private FrameInfo _currentFrame = new();
 
   public RenderAPI CurrentAPI { get; private set; }
+  public bool VSync { get; init; } = false;
   public readonly object ApplicationLock = new object();
 
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
+    bool vsync = false,
     bool debugMode = true
   ) {
+    Application.Instance = this;
     CurrentAPI = RenderAPI.Vulkan;
+    VSync = vsync;
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
@@ -98,8 +102,6 @@ public class Application {
     Device = new VulkanDevice(Window);
     Renderer = new Renderer(Window, Device);
     _systems = new SystemCollection();
-
-    Application.Instance = this;
 
     _textureManager = new(Device);
     _systemCreationFlags = systemCreationFlags;

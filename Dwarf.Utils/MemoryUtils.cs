@@ -86,8 +86,12 @@ public static class MemoryUtils {
   }
 
   public static void FreeIntPtr(IntPtr ptr) {
-    Logger.Info($"Freeing {ptr}");
-    Marshal.FreeHGlobal(ptr);
+    try {
+      Logger.Info($"Freeing {ptr}");
+      Marshal.FreeHGlobal(ptr);
+    } catch {
+      throw;
+    }
   }
 
   public static T? FromIntPtr<T>(nint ptr) {

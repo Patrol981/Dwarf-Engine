@@ -59,6 +59,48 @@ public partial class DirectRPG {
     }
   }
 
+  private static void SetWindowAlignment(Vector2 size, Anchor anchor) {
+    var io = ImGui.GetIO();
+
+    switch (anchor) {
+      case Anchor.Right:
+        ImGui.SetNextWindowPos(GetMiddleRight(io, size));
+        break;
+      case Anchor.Left:
+        ImGui.SetNextWindowPos(GetMiddleLeft(io, size));
+        break;
+      case Anchor.Middle:
+        ImGui.SetNextWindowPos(GetCenter(io, size));
+        break;
+      case Anchor.Bottom:
+        ImGui.SetNextWindowPos(GetMiddleBottom(io, size));
+        break;
+      case Anchor.Top:
+        ImGui.SetNextWindowPos(GetMiddleTop(io, size));
+        break;
+      case Anchor.RightTop:
+        ImGui.SetNextWindowPos(GetRightTop(io, size));
+        break;
+      case Anchor.RightBottom:
+        ImGui.SetNextWindowPos(GetRightBottom(io, size));
+        break;
+      case Anchor.LeftTop:
+        ImGui.SetNextWindowPos(GetLeftTop(io, size));
+        break;
+      case Anchor.LeftBottom:
+        ImGui.SetNextWindowPos(GetLeftBottom(io, size));
+        break;
+      case Anchor.MiddleTop:
+        ImGui.SetNextWindowPos(GetMiddleTop(io, size));
+        break;
+      case Anchor.MiddleBottom:
+        ImGui.SetNextWindowPos(GetMiddleBottom(io, size));
+        break;
+      default:
+        break;
+    }
+  }
+
   private static Vector2 GetCenter(ImGuiIOPtr io, Vector2 offset) {
     var displaySize = (io.DisplaySize / 2) - (offset / 2);
     return displaySize;

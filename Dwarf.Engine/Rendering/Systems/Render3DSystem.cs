@@ -1,8 +1,10 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -12,7 +14,6 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Engine.Rendering;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
-  // private PublicList<PublicList<VkDescriptorSet>> _textureSets = new();
   private DwarfBuffer _modelBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
@@ -22,6 +23,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private readonly DwarfBuffer _indirectCommandBuffer = null!;
 
   private ModelUniformBufferObject _modelUbo = new();
+  private readonly unsafe SimplePushConstantData* _pushConstantData =
+    (SimplePushConstantData*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimplePushConstantData>());
 
   public Render3DSystem(
     IDevice device,
@@ -61,41 +64,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return count;
   }
 
-  /*
-  private int GetTextureSetsLength() {
-    int count = 0;
-    for (int i = 0; i < _textureSets.Size; i++) {
-      count += _textureSets.GetAt(i).Size;
-    }
-    return count;
-  }
-  */
-
-  /*
-  private void BindDescriptorTexture(Entity entity, ref TextureManager textures, int index, int modelPart = 0) {
-    var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
-    var id = target!.GetTextureIdReference(modelPart);
-    var texture = textures.GetTexture(id);
-    if (texture == null) {
-      var nid = textures.GetTextureId("./Resources/Textures/base/no_texture.png");
-      texture = textures.GetTexture(nid);
-    }
-    VkDescriptorImageInfo imageInfo = new() {
-      sampler = texture.GetSampler(),
-      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = texture.GetImageView()
-    };
-    VkDescriptorSet set;
-    unsafe {
-      _ = new VulkanDescriptorWriter(_textureSetLayout, _descriptorPool)
-      .WriteImage(0, &imageInfo)
-      .Build(out set);
-    }
-
-    _textureSets.GetAt(index).SetAt(set, modelPart);
-  }
-  */
-
   private void BuildTargetDescriptorTexture(Entity entity, ref TextureManager textures, int modelPart = 0) {
     var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
     var id = target!.GetTextureIdReference(modelPart);
@@ -105,15 +73,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       texture = (VulkanTexture)textures.GetTexture(nid);
     }
 
-
-    // texture.BuildDescriptor(MemoryUtils.ToIntPtr(_textureSetLayout), MemoryUtils.ToIntPtr(_descriptorPool));
     texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
     _device.WaitQueue();
     var startTime = DateTime.Now;
-    // TODO: Reuse data from diffrent renders?
 
     if (entities.Length < 1) {
       Logger.Warn("Entities that are capable of using 3D renderer are less than 1, thus 3D Render System won't be recreated");
@@ -131,18 +96,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _texturesCount = CalculateLengthOfPool(entities);
 
-    /*
-    _textureSets = new();
-
-    for (int x = 0; x < entities.Length; x++) {
-      var en = entities[x].GetDrawable<IRender3DElement>() as IRender3DElement;
-      _textureSets.Add(new());
-      for (int y = 0; y < en!.MeshsesCount; y++) {
-        _textureSets.GetAt(x).Add(new());
-      }
-    }
-    */
-
     // entities.length before, param no.3
     _modelBuffer = new(
       _device,
@@ -157,11 +110,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
       if (targetModel!.MeshsesCount > 1) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
-          // BindDescriptorTexture(entities[i], ref textures, i, x);
           BuildTargetDescriptorTexture(entities[i], ref textures, x);
         }
       } else {
-        // BindDescriptorTexture(entities[i], ref textures, i, 0);
         BuildTargetDescriptorTexture(entities[i], ref textures);
       }
     }
@@ -174,8 +125,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _dynamicWriter.Build(out _dynamicSet);
 
     }
-
-    // PrepareIndirect(entities);
 
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
@@ -197,8 +146,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   public bool CheckTextures(ReadOnlySpan<Entity> entities) {
     var len = CalculateLengthOfPool(entities);
-    // var sets = GetTextureSetsLength();
-    // return len == sets;
     return len == _texturesCount;
   }
 
@@ -229,11 +176,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (entities[i].CanBeDisposed) continue;
 
       var materialData = entities[i].GetComponent<Material>().Data;
-      /*
-      var modelUBO = new ModelUniformBufferObject {
-        Material = materialData
-      };
-      */
 
       _modelUbo.Material = materialData;
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
@@ -249,19 +191,18 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       }
 
       var transform = entities[i].GetComponent<Transform>();
-      var pushConstantData = new SimplePushConstantData {
-        ModelMatrix = transform.Matrix4,
-        NormalMatrix = transform.NormalMatrix
-      };
 
       unsafe {
+        _pushConstantData->ModelMatrix = transform.Matrix4;
+        _pushConstantData->NormalMatrix = transform.NormalMatrix;
+
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
           _pipelineLayout,
           VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
           0,
           (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-          &pushConstantData
+          _pushConstantData
         );
 
         fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
@@ -281,10 +222,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (!entities[i].CanBeDisposed && entities[i].Active) {
         for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
-          // targetEntity.BindDescriptorSet(_textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout);
-
-          // if (i == _textureSets.Size) continue;
-          // Descriptor.BindDescriptorSet((VulkanDevice)_device, _textureSets.GetAt(i).GetAt((int)x), frameInfo, ref _pipelineLayout, 0, 1);
 
           if (i == _texturesCount) continue;
           var targetTexture = frameInfo.TextureManager.GetTexture(targetEntity.GetTextureIdReference((int)x));
@@ -294,7 +231,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           if (targetEntity != lastModel)
             targetEntity.Bind(frameInfo.CommandBuffer, x);
 
-          // targetEntity.DrawIndirect(frameInfo.CommandBuffer, _modelBuffer.GetBuffer(), offset, 1,)
           targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }
@@ -302,31 +238,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       lastModel = targetEntity;
     }
 
-    /*
-    uint inId = 0;
-    foreach (var cmd in _indirectCommands) {
-      vkCmdDrawIndexedIndirect(
-        frameInfo.CommandBuffer,
-        _indirectCommandBuffer.GetBuffer(),
-        inId * (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
-        1,
-        (uint)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>()
-      );
-      inId++;
-    }
-    */
-
     _modelBuffer.Unmap();
   }
 
   public override unsafe void Dispose() {
     _device.WaitQueue();
     _device.WaitDevice();
+
+    MemoryUtils.FreeIntPtr((nint)_pushConstantData);
+
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
-    // _texturePool?.FreeDescriptors(_textureSets);
-
-    // _indirectCommandBuffer?.Dispose();
 
     base.Dispose();
   }

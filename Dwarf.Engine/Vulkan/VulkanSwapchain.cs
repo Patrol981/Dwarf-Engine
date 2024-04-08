@@ -154,8 +154,8 @@ public class VulkanSwapchain : IDisposable {
 
     SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
-    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
-    var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
+    // VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+    // var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
 
     for (int i = 0; i < swapChainImages.Length; i++) {
       var viewCreateInfo = new VkImageViewCreateInfo(
@@ -442,13 +442,23 @@ public class VulkanSwapchain : IDisposable {
   }
 
   private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
+    if (Application.Instance.VSync) {
+      Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
+      return VkPresentModeKHR.Fifo;
+    }
+
     foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
       // render mode
-      if (availablePresentMode == VkPresentModeKHR.Mailbox || availablePresentMode == VkPresentModeKHR.Immediate) {
+      if (
+        availablePresentMode == VkPresentModeKHR.Mailbox ||
+        availablePresentMode == VkPresentModeKHR.Immediate
+      ) {
+        Logger.Info($"[SWAPCHAIN] Present Mode is set to: {availablePresentMode}");
         return availablePresentMode;
       }
     }
 
+    Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
     return VkPresentModeKHR.Fifo;
   }
 

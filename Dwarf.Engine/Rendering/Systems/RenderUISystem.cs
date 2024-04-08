@@ -41,7 +41,9 @@ public class RenderUISystem : SystemBase {
     CreatePipeline(_renderer.GetSwapchainRenderPass(), "gui_vertex", "gui_fragment", new PipelineUIProvider());
   }
 
-  public unsafe void Setup(Canvas canvas, ref TextureManager textureManager) {
+  public unsafe void Setup(Canvas? canvas, ref TextureManager textureManager) {
+    if (canvas == null) return;
+
     var entities = canvas.GetUI();
 
     if (entities.Length < 1) {
@@ -91,7 +93,9 @@ public class RenderUISystem : SystemBase {
     }
   }
 
-  public unsafe void DrawUI(FrameInfo frameInfo, Canvas canvas) {
+  public unsafe void DrawUI(FrameInfo frameInfo, Canvas? canvas) {
+    if (canvas == null) return;
+
     _pipeline.Bind(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(

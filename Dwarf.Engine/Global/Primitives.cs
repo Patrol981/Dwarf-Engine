@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dwarf.Engine.Globals;
 namespace Dwarf.Engine;
 
 public enum PrimitiveType {
@@ -8,6 +9,7 @@ public enum PrimitiveType {
   Convex,
   Sphere,
   Torus,
+  Plane,
   None
 }
 
@@ -28,10 +30,106 @@ public static class Primitives {
         mesh = CreateSpherePrimitve(128, 128);
         break;
       default:
+      case PrimitiveType.Plane:
+        // mesh = CreatePlanePrimitive(16, 64);
+        mesh = CreatePlanePrimitive(
+          new(0, 0, 0),
+          new(50, 50),
+          new(15, 15),
+          new(15, 15)
+        );
         break;
     }
 
     return mesh;
+  }
+
+  public static Mesh CreatePlanePrimitive(
+    Vector3 bottomLeft,
+    Vector2 numVertices,
+    Vector2 worldSize,
+    Vector2 textureRepetition
+  ) {
+    var numVerts = (int)(numVertices.X * numVertices.Y);
+    var numFaces = (int)((numVertices.X - 1) * (numVertices.Y - 1));
+    var numIndices = numFaces * 6;
+
+    var xStep = worldSize.X / (numVertices.X - 1);
+    var yStep = worldSize.Y / (numVertices.Y - 1);
+    var zStep = worldSize.Y / (numVertices.Y - 1);
+
+    var uStep = textureRepetition.X / (numVertices.X - 1);
+    var vStep = textureRepetition.Y / (numVertices.Y - 1);
+
+    var vertices = new Vertex[numVerts];
+    var indices = new uint[numIndices];
+
+    for (int y = 0; y < numVertices.Y; y++) {
+      for (int x = 0; x < numVertices.X; x++) {
+        vertices[x + (int)(y * numVertices.X)] = new() {
+          Position = new(
+            bottomLeft.X + (xStep * x),
+            bottomLeft.Y,
+            bottomLeft.Z + (zStep * y)
+          ),
+          Color = Vector3.One,
+          Normal = -Vector3.UnitY
+        };
+
+        vertices[(int)(y * numVertices.X + x)].Uv = new(uStep * x, vStep * y);
+      }
+    }
+
+    int offset = 0;
+    for (int i = 0; i < numIndices; i++) {
+      var cornerIndex = i / 6 + offset;
+
+      if ((cornerIndex + 1) % numVertices.X == 0) {
+        offset++;
+        cornerIndex++;
+      }
+
+      indices[i] = (uint)cornerIndex + (uint)numVertices.X;
+      i++;
+      indices[i] = (uint)cornerIndex;
+      i++;
+      indices[i] = (uint)cornerIndex + (uint)numVertices.X + 1;
+      i++;
+
+      indices[i] = (uint)cornerIndex;
+      i++;
+      indices[i] = (uint)cornerIndex + 1;
+      i++;
+      indices[i] = (uint)cornerIndex + (uint)numVertices.X + 1;
+    }
+
+    return new Mesh() {
+      Vertices = vertices,
+      Indices = indices
+    };
+  }
+
+  public static Mesh CreatePlanePrimitive(int numOfDivs, float width) {
+    Mesh plane = new();
+    List<Vertex> vertices = [];
+
+    var triangleSide = width / numOfDivs;
+    for (int row = 0; row < numOfDivs + 1; row++) {
+      for (int col = 0; col < numOfDivs + 1; col++) {
+        var currentVec = new Vector3(
+          col * triangleSide,
+          0.0f,
+          row * -triangleSide
+        );
+        vertices.Add(new() {
+          Position = currentVec,
+          Color = Vector3.One,
+          Normal = Vector3.Zero,
+        });
+      }
+    }
+    plane.Vertices = [.. vertices];
+    return plane;
   }
 
   public static Mesh CreateConvex(Mesh inputMesh) {

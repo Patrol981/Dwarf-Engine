@@ -10,8 +10,8 @@ using static Dwarf.Keys;
 
 namespace Dwarf.Engine;
 
-public class FreeCameraController : Component {
-  public unsafe void Update() {
+public class FreeCameraController : DwarfScript {
+  public override void Update() {
     var useController = glfwJoystickIsGamepad(0);
     if (useController == 1) {
       MoveByController();

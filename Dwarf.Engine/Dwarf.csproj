@@ -37,7 +37,7 @@
     <PackageReference Include="ImGui.NET" Version="1.90.1.1" />
     <PackageReference Include="JoltPhysicsSharp" Version="2.2.1" />
     <PackageReference Include="SharpGLTF.Core" Version="1.0.0-alpha0030" />
-    <PackageReference Include="Vortice.Vulkan" Version="1.8.5" />
+    <PackageReference Include="Vortice.Vulkan" Version="1.8.7" />
     <PackageReference Include="OpenTK" Version="4.7.7" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
 	  <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />

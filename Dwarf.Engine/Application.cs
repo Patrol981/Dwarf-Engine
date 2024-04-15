@@ -148,8 +148,9 @@ public class Application {
     await Init();
 
     _renderShouldClose = true;
+    Logger.Info("Waiting for render process to close...");
     while (_renderShouldClose) {
-      Logger.Info("Waiting for render process to close...");
+
     }
     _renderThread.Join();
     _renderThread = new Thread(RenderLoop);

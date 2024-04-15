@@ -29,6 +29,18 @@ public static class MemoryUtils {
     System.Buffer.MemoryCopy((void*)source, (void*)destination, byteCount, byteCount);
   }
 
+  public static unsafe void MemCopy(void* destination, void* source, int byteCount) {
+    if (byteCount <= 0) {
+      throw new Exception("ByteCount is NULL");
+    }
+
+    if (byteCount > 2130702268) {
+      throw new Exception("ByteCount is too big");
+    }
+
+    System.Buffer.MemoryCopy(source, destination, byteCount, byteCount);
+  }
+
   public static void MemCopy(ref byte src, ref byte dst, uint byteCount) {
     Unsafe.CopyBlock(ref dst, ref src, byteCount);
   }

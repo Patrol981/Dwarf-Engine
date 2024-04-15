@@ -7,6 +7,9 @@ layout (location = 0) out vec4 outColor;
 layout (push_constant) uniform Push {
   mat4 transform;
   int guizmoType;
+  float colorX;
+  float colorY;
+  float colorZ;
 } push;
 
 layout (set = 0, binding = 0) uniform GlobalUbo {
@@ -24,5 +27,8 @@ void main() {
     float dis = sqrt(dot(fragOffset, fragOffset));
     if(dis > 1.0) discard;
   }
-  outColor = vec4(ubo.lightColor.xyz, 1.0);
+
+  // vec3 result = ubo.lightColor.xyz * vec3(push.guizmoColor.x,1,1);
+  vec3 result = vec3(push.colorX, push.colorY, push.colorZ);
+  outColor = vec4(result, 1.0);
 }

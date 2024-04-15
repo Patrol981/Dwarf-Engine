@@ -7,7 +7,6 @@ using Dwarf.Engine.Loaders;
 using Dwarf.Engine.Physics;
 using Dwarf.Engine.Procedural;
 using Dwarf.Engine.Rendering.UI;
-using Dwarf.Extensions.Logging;
 
 namespace Dwarf.AssetSystem;
 
@@ -197,7 +196,7 @@ public class GameAsset {
     if (AssetType == typeof(Terrain3D).FullName) {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
-      entity.GetComponent<Terrain3D>().Setup();
+      entity.GetComponent<Terrain3D>().Setup(new(150, 150), default);
       entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic, false);
     }
   }

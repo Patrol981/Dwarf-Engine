@@ -3,8 +3,9 @@ namespace Dwarf.Engine.EntityComponentSystem;
 
 public class Entity {
   public bool CanBeDisposed = false;
+  public EntityLayer Layer = EntityLayer.Default;
 
-  private ComponentManager _componentManager;
+  private readonly ComponentManager _componentManager;
   private readonly object _componentLock = new object();
 
   public Entity() {
@@ -79,7 +80,7 @@ public class Entity {
       }
     }
 
-    return list.ToArray();
+    return [.. list];
   }
 
   public void DisposeEverything() {
@@ -102,7 +103,7 @@ public class Entity {
       }
     }
 
-    return list.ToArray();
+    return [.. list];
   }
 
   public bool HasComponent<T>() where T : Component {

@@ -10,7 +10,8 @@ public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
   private readonly IDevice _device;
-  private nint _mapped;
+  // private nint _mapped;
+  private void* _mapped;
   private readonly VkBuffer _buffer = VkBuffer.Null;
   private readonly VkDeviceMemory _memory = VkDeviceMemory.Null;
 
@@ -66,31 +67,35 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   public void Map(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    fixed (void* ptr = &_mapped) {
+    fixed (void** ptr = &_mapped) {
       vkMapMemory(_device.LogicalDevice, _memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
     }
   }
 
   public static void Map(DwarfBuffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
-    fixed (void* ptr = &buff._mapped) {
+    fixed (void** ptr = &buff._mapped) {
       vkMapMemory(buff._device.LogicalDevice, buff._memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
     }
   }
 
-  public void AddToMapped(int value) {
-    _mapped += value;
-  }
-
   public void Unmap() {
-    if (_mapped != nint.Zero) {
+    // Logger.Info($"Mapped NULL : {_mapped == null}");
+    if (_mapped != null) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
+      _mapped = null;
+    }
+
+    /*
+    if (_mapped != nint.Zero) {
+      
       _mapped = nint.Zero;
     }
+    */
   }
 
   public void WriteToBuffer(nint data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     if (size == VK_WHOLE_SIZE) {
-      MemoryUtils.MemCopy(_mapped, data, (int)_bufferSize);
+      MemoryUtils.MemCopy(_mapped, (void*)data, (int)_bufferSize);
     } else {
       if (size <= 0) {
         // Logger.Warn("[Buffer] Size of an write is less or equal to 0");
@@ -153,7 +158,7 @@ public unsafe class DwarfBuffer : IDisposable {
     return _memory;
   }
 
-  public nint GetMappedMemory() {
+  public void* GetMappedMemory() {
     return _mapped;
   }
 

@@ -5,6 +5,7 @@ using Dwarf.Engine;
 using Dwarf.Engine.AbstractionLayer;
 using Dwarf.Engine.Globals;
 using Dwarf.Engine.Rendering;
+using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -52,10 +53,25 @@ public class GuizmoRenderSystem : SystemBase {
     }
 
     var guizmos = Guizmos.Data;
+    var perFrameGuizmos = Guizmos.PerFrameGuizmos;
+
+    Draw(frameInfo, guizmos);
+
+    if (perFrameGuizmos != null && perFrameGuizmos.Length > 0) {
+      Draw(frameInfo, perFrameGuizmos);
+      Guizmos.Free();
+    }
+  }
+
+  private void Draw(FrameInfo frameInfo, Span<Guizmo> guizmos) {
     for (int i = 0; i < guizmos.Length; i++) {
       unsafe {
+        var color = guizmos[i].Color;
         _bufferObject->ModelMatrix = guizmos[i].Transform.Matrix4;
         _bufferObject->GuizmoType = (int)guizmos[i].GuizmoType;
+        _bufferObject->ColorX = color.X;
+        _bufferObject->ColorY = color.Y;
+        _bufferObject->ColorZ = color.Z;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,

@@ -14,6 +14,9 @@ layout (location = 0) out vec2 fragOffset;
 layout (push_constant) uniform Push {
   mat4 transform;
   int guizmoType;
+  float colorX;
+  float colorY;
+  float colorZ;
 } push;
 
 layout (set = 0, binding = 0) uniform GlobalUbo {

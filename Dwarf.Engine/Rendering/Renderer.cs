@@ -144,11 +144,11 @@ public unsafe class Renderer : IDisposable {
     vkCmdEndRenderPass(commandBuffer);
   }
 
-  private void RecreateSwapchain() {
+  public void RecreateSwapchain() {
     var extent = _window.Extent.ToVkExtent2D();
     while (extent.width == 0 || extent.height == 0 || _window.IsMinimalized) {
       extent = _window.Extent.ToVkExtent2D();
-      glfwWaitEvents();
+      // glfwWaitEvents();
     }
 
     _device.WaitDevice();

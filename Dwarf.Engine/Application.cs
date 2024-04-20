@@ -84,21 +84,24 @@ public class Application {
 
   public RenderAPI CurrentAPI { get; private set; }
   public bool VSync { get; init; } = false;
+  public bool Fullscreen { get; init; } = false;
   public readonly object ApplicationLock = new object();
 
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
     bool vsync = false,
+    bool fullscreen = false,
     bool debugMode = true
   ) {
     Application.Instance = this;
     CurrentAPI = RenderAPI.Vulkan;
     VSync = vsync;
+    Fullscreen = fullscreen;
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
-    Window = new Window(1200, 900, appName);
+    Window = new Window(1200, 900, appName, Fullscreen);
     Device = new VulkanDevice(Window);
     Renderer = new Renderer(Window, Device);
     _systems = new SystemCollection();

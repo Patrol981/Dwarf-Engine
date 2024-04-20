@@ -171,6 +171,29 @@ public class Entity {
     return returnEntities.ToArray();
   }
 
+  public static T? FindComponentOfType<T>() where T : Component, new() {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.HasComponent<T>())
+      .FirstOrDefault();
+    if (target == null) return null;
+    return target.GetComponent<T>();
+  }
+
+  public static T? FindComponentByName<T>(string name) where T : Component, new() {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.Name == name)
+      .FirstOrDefault();
+    if (target == null) return null;
+    return target.GetComponent<T>();
+  }
+
+  public static Entity? FindEntityByName(string name) {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.Name == name)
+      .FirstOrDefault();
+    return target ?? null!;
+  }
+
   public bool Active { get; set; } = true;
 
   public string Name { get; set; } = "Entity";

@@ -18,42 +18,56 @@ public sealed class CoroutineRunner {
     }
   }
 
-  public void StopCoroutine(IEnumerator coroutine) {
+  public async Task<Task> StopCoroutine(IEnumerator coroutine) {
     foreach (var item in _tasks) {
       if (item.Key.GetType() == coroutine.GetType()) {
-        item.Value.TokenSource.Cancel();
+        await Task.Run(() => StopWork(item.Value));
+
+        break;
       }
     }
+
+    return Task.CompletedTask;
   }
 
-  public void StopAllCoroutines() {
+  private static void StopWork(CoroutineItem coroutineItem) {
+    Logger.Warn("Cancelling");
+    coroutineItem.TokenSource.Cancel();
+    coroutineItem.CoroutineTask.Wait();
+    Logger.Warn("Cancelled");
+  }
+
+  public Task StopAllCoroutines() {
+    var tasks = new List<Task>();
+
     foreach (var item in _tasks) {
-      item.Value.TokenSource.Cancel();
+      tasks.Add(Task.Run(() => StopWork(item.Value)));
     }
+
+    return Task.WhenAll(tasks);
   }
 
   public async Task StartCoroutineAsync(IEnumerator coroutine, CancellationToken cancellationToken) {
     try {
-      await ExecuteAsync(coroutine, cancellationToken);
-
       cancellationToken.ThrowIfCancellationRequested();
+      await ExecuteAsync(coroutine, cancellationToken);
     } catch (OperationCanceledException) {
       Logger.Info($"Task cancelled");
     }
-
   }
 
   private async Task ExecuteAsync(IEnumerator coroutine, CancellationToken cancellationToken) {
     try {
+      cancellationToken.ThrowIfCancellationRequested();
       while (coroutine.MoveNext()) {
         var current = coroutine.Current;
+        cancellationToken.ThrowIfCancellationRequested();
         if (current is WaitForSeconds) {
           var waitForSeconds = (WaitForSeconds)current;
           await Task.Delay(TimeSpan.FromSeconds(waitForSeconds.Seconds));
         } else if (current == null || current is YieldInstruction) {
           await Task.Yield();
         }
-        cancellationToken.ThrowIfCancellationRequested();
       }
     } catch (OperationCanceledException) {
       Logger.Info($"Coroutine Exec cancelled");

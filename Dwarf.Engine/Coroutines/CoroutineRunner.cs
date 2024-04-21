@@ -5,36 +5,42 @@ using Dwarf.Extensions.Logging;
 namespace Dwarf.Engine.Coroutines;
 
 public sealed class CoroutineRunner {
-  private readonly Dictionary<IEnumerator, CoroutineItem> _tasks = [];
+  private readonly Dictionary<Type, CoroutineItem> _tasks = [];
 
   public async void StartCoroutine(IEnumerator coroutine) {
-    if (!_tasks.ContainsKey(coroutine)) {
+    if (!_tasks.ContainsKey(coroutine.GetType())) {
       var item = new CoroutineItem();
       item.CoroutineTask = StartCoroutineAsync(coroutine, item.TokenSource.Token);
-      _tasks.Add(coroutine, item);
-      await Task.Run(() => Task.WaitAll(_tasks[coroutine].CoroutineTask), item.TokenSource.Token);
+      _tasks.Add(coroutine.GetType(), item);
+      await Task.Run(() => Task.WaitAll(_tasks[coroutine.GetType()].CoroutineTask), item.TokenSource.Token);
+      _tasks.Remove(coroutine.GetType());
     } else {
-      throw new InvalidOperationException("Coroutine is already running.");
+      Logger.Warn("Coroutine is already running; Ignoring current request.");
     }
   }
 
   public async Task<Task> StopCoroutine(IEnumerator coroutine) {
-    foreach (var item in _tasks) {
-      if (item.Key.GetType() == coroutine.GetType()) {
-        await Task.Run(() => StopWork(item.Value));
+    var tasks = new List<Task>();
+    var itemsToRemove = new List<Type>();
 
+    foreach (var item in _tasks) {
+      if (item.Key == coroutine.GetType()) {
+        tasks.Add(Task.Run(() => StopWork(item.Value)));
+        itemsToRemove.Add(item.Key);
         break;
       }
     }
 
+    await Task.WhenAll(tasks);
+    foreach (var item in itemsToRemove) {
+      _tasks.Remove(item);
+    }
     return Task.CompletedTask;
   }
 
   private static void StopWork(CoroutineItem coroutineItem) {
-    Logger.Warn("Cancelling");
     coroutineItem.TokenSource.Cancel();
     coroutineItem.CoroutineTask.Wait();
-    Logger.Warn("Cancelled");
   }
 
   public Task StopAllCoroutines() {

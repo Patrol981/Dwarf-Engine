@@ -1,10 +1,18 @@
 using System.Numerics;
+using Dwarf.Engine.EntityComponentSystem;
 
 namespace Dwarf.Engine.Pathfinding.AStar;
 
-public sealed class PathRequestManager {
+public class PathRequestManager : DwarfScript {
   private readonly Queue<PathRequest> _pathRequestQueue = new Queue<PathRequest>();
   private PathRequest _currentPathRequest;
+  private bool _isProcessingPath = false;
+
+  private Pathfinder _pathfinder = null!;
+
+  public override void Awake() {
+    _pathfinder = Owner!.GetComponent<Pathfinder>()!;
+  }
 
   public static void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<Vector3[], bool> callback) {
     var newRequest = new PathRequest(pathStart, pathEnd, callback);
@@ -12,8 +20,18 @@ public sealed class PathRequestManager {
     Instance.TryProcessNext();
   }
 
-  private void TryProcessNext() {
+  public void FinishedProcessingPath(Vector3[] path, bool success) {
+    _currentPathRequest.Callback(path, success);
+    _isProcessingPath = false;
+    TryProcessNext();
+  }
 
+  private void TryProcessNext() {
+    if (_isProcessingPath && _pathRequestQueue.Count < 1) return;
+
+    _currentPathRequest = _pathRequestQueue.Dequeue();
+    _isProcessingPath = true;
+    _pathfinder.StartFindPath(_currentPathRequest.PathStart, _currentPathRequest.PathEnd);
   }
 
   public static PathRequestManager Instance { get; } = new();

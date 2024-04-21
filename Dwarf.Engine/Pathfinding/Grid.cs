@@ -16,7 +16,6 @@ public class Grid : DwarfScript {
   private float _nodeDiameter;
   private int _gridSizeX;
   private int _gridSizeY;
-  public List<Node> Path = [];
 
   public override void Start() {
     _nodeDiameter = NodeRadius * 2;
@@ -34,12 +33,17 @@ public class Grid : DwarfScript {
   public void PaintGuizmos() {
     foreach (var node in _grid) {
       GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
+    }
+    /*
+    foreach (var node in _grid) {
+      GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
       if (Path != null) {
         if (Path.Contains(node)) {
           GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = new(1.0f, 1.0f, 0.0f);
         }
       }
     }
+    */
   }
 
   public List<Node> GetNeighbours(Node node) {

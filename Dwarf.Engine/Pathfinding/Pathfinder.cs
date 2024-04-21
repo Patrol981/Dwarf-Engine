@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Numerics;
+using Dwarf.Engine.Coroutines;
 
 using Dwarf.Engine.EntityComponentSystem;
 using Dwarf.Utils;
@@ -6,49 +8,75 @@ using Dwarf.Utils;
 namespace Dwarf.Engine.Pathfinding.AStar;
 
 public class Pathfinder : DwarfScript {
-  private Grid? _grid;
+  private Grid _grid = null!;
+
+  public static Entity Create(Vector2 WorldSize = default) {
+    var pathfindingManager = new Entity() {
+      Name = "PathfindingManager"
+    };
+    pathfindingManager.AddTransform();
+    pathfindingManager.AddComponent(new Grid());
+    pathfindingManager.AddComponent(new Pathfinder());
+    pathfindingManager.AddComponent(new PathRequestManager());
+    if (WorldSize != default) {
+      pathfindingManager.GetComponent<Grid>().GridSizeWorld = WorldSize;
+    }
+    return pathfindingManager;
+  }
 
   public override void Awake() {
     _grid = Owner!.GetComponent<Grid>();
   }
 
-  public void FindPath(Vector3 start, Vector3 end) {
-    if (_grid == null) return;
+  public void StartFindPath(Vector3 start, Vector3 end) {
+    CoroutineRunner.Instance.StartCoroutine(FindPath(start, end));
+  }
 
-    var startNode = _grid.NodeFromWorldPoint(start);
+  public IEnumerator FindPath(Vector3 start, Vector3 end) {
+    var waypoints = new Vector3[0];
+    var pathSuccess = false;
+
+    var startNode = _grid!.NodeFromWorldPoint(start);
     var endNode = _grid.NodeFromWorldPoint(end);
 
-    Heap<Node> openSet = new Heap<Node>(_grid.MaxSize);
-    HashSet<Node> closedSet = new HashSet<Node>();
+    if (startNode.Walkable && endNode.Walkable) {
+      Heap<Node> openSet = new Heap<Node>(_grid.MaxSize);
+      HashSet<Node> closedSet = new HashSet<Node>();
 
-    openSet.Add(startNode);
-    while (openSet.Count > 0) {
-      var currentNode = openSet.RemoveFirst();
-      closedSet.Add(currentNode);
+      openSet.Add(startNode);
+      while (openSet.Count > 0) {
+        var currentNode = openSet.RemoveFirst();
+        closedSet.Add(currentNode);
 
-      if (currentNode == endNode) {
-        RetracePath(startNode, endNode);
-        return;
-      }
-
-      foreach (var neighbourNode in _grid.GetNeighbours(currentNode)) {
-        if (!neighbourNode.Walkable || closedSet.Contains(neighbourNode)) {
-          continue;
+        if (currentNode == endNode) {
+          pathSuccess = true;
+          break;
         }
 
-        var newCost = currentNode.GCost + GetDistance(currentNode, neighbourNode);
-        if (newCost < neighbourNode.GCost || !openSet.Contains(neighbourNode)) {
-          neighbourNode.GCost = newCost;
-          neighbourNode.HCost = GetDistance(neighbourNode, endNode);
-          neighbourNode.Parent = currentNode;
+        foreach (var neighbourNode in _grid.GetNeighbours(currentNode)) {
+          if (!neighbourNode.Walkable || closedSet.Contains(neighbourNode)) {
+            continue;
+          }
 
-          if (!openSet.Contains(neighbourNode)) openSet.Add(neighbourNode);
+          var newCost = currentNode.GCost + GetDistance(currentNode, neighbourNode);
+          if (newCost < neighbourNode.GCost || !openSet.Contains(neighbourNode)) {
+            neighbourNode.GCost = newCost;
+            neighbourNode.HCost = GetDistance(neighbourNode, endNode);
+            neighbourNode.Parent = currentNode;
+
+            if (!openSet.Contains(neighbourNode)) openSet.Add(neighbourNode);
+          }
         }
       }
     }
+    yield return null;
+    if (pathSuccess) {
+      waypoints = RetracePath(startNode, endNode);
+    }
+    PathRequestManager.Instance.FinishedProcessingPath(waypoints, pathSuccess);
   }
 
-  private void RetracePath(Node startNode, Node endNode) {
+  private Vector3[] RetracePath(Node startNode, Node endNode) {
     var path = new List<Node>();
     var currentNode = endNode;
 
@@ -56,9 +84,26 @@ public class Pathfinder : DwarfScript {
       path.Add(currentNode);
       currentNode = currentNode.Parent;
     }
-    path.Reverse();
+    var waypoints = SimplifyPath(path.ToArray());
+    waypoints.Reverse();
+    return waypoints;
+  }
 
-    _grid!.Path = path;
+  private Vector3[] SimplifyPath(ReadOnlySpan<Node> path) {
+    IList<Vector3> waypoints = [];
+    var oldDir = Vector2.Zero;
+
+    for (int i = 1; i < path.Length; i++) {
+      var newDir = new Vector2(
+        path[i - 1].GridPosition.X - path[i].GridPosition.X,
+        path[i - 1].GridPosition.Y - path[i].GridPosition.Y
+      );
+      if (newDir != oldDir) {
+        waypoints.Add(path[i].WorldPosition);
+      }
+      oldDir = newDir;
+    }
+    return [.. waypoints];
   }
 
   private int GetDistance(Node a, Node b) {

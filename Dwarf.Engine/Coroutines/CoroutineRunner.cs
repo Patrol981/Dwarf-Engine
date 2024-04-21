@@ -4,8 +4,6 @@ using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Coroutines;
 public sealed class CoroutineRunner {
-  private IEnumerator _coroutine = null!;
-
   private readonly Dictionary<IEnumerator, CoroutineItem> _tasks = [];
   private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
@@ -36,8 +34,7 @@ public sealed class CoroutineRunner {
 
   public async Task StartCoroutineAsync(IEnumerator coroutine, CancellationToken cancellationToken) {
     try {
-      _coroutine = coroutine;
-      await ExecuteAsync(cancellationToken);
+      await ExecuteAsync(coroutine, cancellationToken);
 
       cancellationToken.ThrowIfCancellationRequested();
     } catch (OperationCanceledException) {
@@ -46,10 +43,10 @@ public sealed class CoroutineRunner {
 
   }
 
-  private async Task ExecuteAsync(CancellationToken cancellationToken) {
+  private async Task ExecuteAsync(IEnumerator coroutine, CancellationToken cancellationToken) {
     try {
-      while (_coroutine.MoveNext()) {
-        var current = _coroutine.Current;
+      while (coroutine.MoveNext()) {
+        var current = coroutine.Current;
         if (current is WaitForSeconds) {
           var waitForSeconds = (WaitForSeconds)current;
           await Task.Delay(TimeSpan.FromSeconds(waitForSeconds.Seconds));

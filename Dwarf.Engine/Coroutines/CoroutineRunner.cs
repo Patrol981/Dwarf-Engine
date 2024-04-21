@@ -3,6 +3,7 @@ using System.Collections;
 using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Engine.Coroutines;
+
 public sealed class CoroutineRunner {
   private readonly Dictionary<IEnumerator, CoroutineItem> _tasks = [];
 

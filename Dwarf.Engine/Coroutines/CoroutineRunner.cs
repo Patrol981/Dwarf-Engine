@@ -5,14 +5,13 @@ using Dwarf.Extensions.Logging;
 namespace Dwarf.Engine.Coroutines;
 public sealed class CoroutineRunner {
   private readonly Dictionary<IEnumerator, CoroutineItem> _tasks = [];
-  private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
   public async void StartCoroutine(IEnumerator coroutine) {
     if (!_tasks.ContainsKey(coroutine)) {
       var item = new CoroutineItem();
       item.CoroutineTask = StartCoroutineAsync(coroutine, item.TokenSource.Token);
       _tasks.Add(coroutine, item);
-      await Task.Run(() => Task.WaitAll(_tasks[coroutine].CoroutineTask), _tokenSource.Token);
+      await Task.Run(() => Task.WaitAll(_tasks[coroutine].CoroutineTask), item.TokenSource.Token);
     } else {
       throw new InvalidOperationException("Coroutine is already running.");
     }

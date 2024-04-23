@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.Loaders;
+﻿namespace Dwarf.Loaders;
 public class DataLoader {
   public void Load<T>() {
 

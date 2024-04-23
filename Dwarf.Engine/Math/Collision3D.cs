@@ -1,8 +1,8 @@
 using System.Numerics;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public static class Collision3D {
   public static bool CollidesWith(this Entity entity, Entity targetEntity) {
     throw new NotImplementedException();

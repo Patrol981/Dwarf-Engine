@@ -1,10 +1,8 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Vulkan;
 
 using ImGuiNET;
 
@@ -12,7 +10,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public partial class ImGuiController {
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
     var pipelineInfo = new VkPipelineLayoutCreateInfo() {

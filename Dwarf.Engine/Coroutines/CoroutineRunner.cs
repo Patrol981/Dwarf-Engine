@@ -2,7 +2,7 @@ using System.Collections;
 
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Coroutines;
+namespace Dwarf.Coroutines;
 
 public sealed class CoroutineRunner {
   private readonly Dictionary<Type, CoroutineItem> _tasks = [];

@@ -1,14 +1,14 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Physics;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.Systems;
+namespace Dwarf.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
     VulkanDevice device,

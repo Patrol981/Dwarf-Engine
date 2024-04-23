@@ -1,5 +1,5 @@
-using Dwarf.Engine.Rendering;
-namespace Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Rendering;
+namespace Dwarf.EntityComponentSystem;
 
 public class Entity {
   public bool CanBeDisposed = false;

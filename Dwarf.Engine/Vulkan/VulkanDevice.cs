@@ -1,10 +1,9 @@
 using System.Diagnostics;
-using System.Drawing;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine;
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Windowing;
+using Dwarf;
+using Dwarf.AbstractionLayer;
+using Dwarf.Windowing;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;

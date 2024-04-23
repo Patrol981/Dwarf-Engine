@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.EntityComponentSystem;
+namespace Dwarf.EntityComponentSystem;
 public enum EntityLayer {
   Default = 0,
   Collision = 1,

@@ -5,7 +5,7 @@ using Dwarf.GLFW.Core;
 
 using static Dwarf.Extensions.GLFW.MouseButtonMap;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 
 public class MouseButtons {
   public bool Left { get; set; }

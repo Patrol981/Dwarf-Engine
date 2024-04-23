@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Coroutines;
+namespace Dwarf.Coroutines;
 public class CoroutineItem {
   public Task CoroutineTask { get; set; }
   public CancellationTokenSource TokenSource { get; private set; }

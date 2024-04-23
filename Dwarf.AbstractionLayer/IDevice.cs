@@ -1,6 +1,6 @@
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 
 public interface IDevice : IDisposable {
   public void CreateBuffer(

@@ -1,6 +1,6 @@
 ﻿using Vortice.Vulkan;
 
-namespace DwarfEngine.Vulkan;
+namespace Dwarf.Vulkan;
 public abstract class PipelineProvider {
   public virtual unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     throw new EntryPointNotFoundException("Cannot load non overrided function");

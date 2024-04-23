@@ -1,4 +1,4 @@
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -8,7 +8,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class CubeMapTexture : VulkanTexture {
   private readonly string[] _paths = [];
   private PackedTexture _cubemapPack;

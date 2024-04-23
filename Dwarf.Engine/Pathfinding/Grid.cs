@@ -1,18 +1,16 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
-using Dwarf.Engine.Rendering;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Math;
+using Dwarf.Rendering;
 
-namespace Dwarf.Engine.Pathfinding.AStar;
+namespace Dwarf.Pathfinding.AStar;
 
 public class Grid : DwarfScript {
   public Vector2 GridSizeWorld = new(15, 15);
   public float NodeRadius = 0.5f;
   public EntityLayer UnwalkableLayer = EntityLayer.Collision;
-
-  private Node[,] _grid = new Node[0, 0];
   private float _nodeDiameter;
   private int _gridSizeX;
   private int _gridSizeY;
@@ -25,13 +23,13 @@ public class Grid : DwarfScript {
   }
 
   public override void Update() {
-    if (_grid != null) {
+    if (GridData != null) {
 
     }
   }
 
   public void PaintGuizmos() {
-    foreach (var node in _grid) {
+    foreach (var node in GridData) {
       GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
     }
     /*
@@ -57,7 +55,7 @@ public class Grid : DwarfScript {
         var checkY = node.GridPosition.Y + y;
 
         if (checkX >= 0 && checkX < _gridSizeX && checkY >= 0 && checkY < _gridSizeY) {
-          neighbours.Add(_grid[checkX, checkY]);
+          neighbours.Add(GridData[checkX, checkY]);
         }
       }
     }
@@ -74,11 +72,11 @@ public class Grid : DwarfScript {
     var x = (int)System.Math.Round((_gridSizeX - 1) * percentX);
     var y = (int)System.Math.Round((_gridSizeY - 1) * percentY);
 
-    return _grid[x, y];
+    return GridData[x, y];
   }
 
   private void CreateGrid() {
-    _grid = new Node[_gridSizeX, _gridSizeY];
+    GridData = new Node[_gridSizeX, _gridSizeY];
     GridGuizmos = new Guizmo[_gridSizeX, _gridSizeY];
     var worldBottomLeft =
       Owner!.GetComponent<Transform>().Position -
@@ -91,7 +89,7 @@ public class Grid : DwarfScript {
           worldBottomLeft + Vector3.UnitX * (x * _nodeDiameter + NodeRadius) +
           Vector3.UnitZ * (y * _nodeDiameter + NodeRadius);
         bool walkable = !Collision3D.CheckSphere(worldPoint, NodeRadius, UnwalkableLayer);
-        _grid[x, y] = new Node(walkable, worldPoint, x, y);
+        GridData[x, y] = new Node(walkable, worldPoint, x, y);
         GridGuizmos[x, y] = walkable
           ? Guizmos.AddCircular(worldPoint, new(0.25f, 0.25f, 0.25f), new(0.2f, 0.7f, 0.2f))
           : Guizmos.AddCube(worldPoint, new(0.25f, 0.25f, 0.25f), new(1.0f, 0.0f, 0.0f));
@@ -100,6 +98,6 @@ public class Grid : DwarfScript {
   }
 
   public Guizmo[,] GridGuizmos { get; private set; } = new Guizmo[0, 0];
-  public Node[,] GridData => _grid;
+  public Node[,] GridData { get; private set; } = new Node[0, 0];
   public int MaxSize => _gridSizeX * _gridSizeY;
 }

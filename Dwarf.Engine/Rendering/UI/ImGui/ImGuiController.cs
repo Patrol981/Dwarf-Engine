@@ -2,8 +2,8 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Globals;
+using Dwarf.AbstractionLayer;
+using Dwarf.Globals;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
@@ -14,7 +14,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly Renderer _renderer;

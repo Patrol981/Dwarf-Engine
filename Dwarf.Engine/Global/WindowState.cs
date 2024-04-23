@@ -1,11 +1,11 @@
-using Dwarf.Engine.Windowing;
+using Dwarf.Windowing;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.GLFW;
 
 using static Dwarf.GLFW.GLFW;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 public static class WindowState {
   public static Window s_Window = null!;
   public static InputValue s_MouseCursorState = InputValue.GLFW_CURSOR_NORMAL;

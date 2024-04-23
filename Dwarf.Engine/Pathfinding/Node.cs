@@ -1,9 +1,9 @@
 using System.Numerics;
 
-using Dwarf.Engine.Math;
+using Dwarf.Math;
 using Dwarf.Utils;
 
-namespace Dwarf.Engine.Pathfinding.AStar;
+namespace Dwarf.Pathfinding.AStar;
 
 public class Node : IHeapItem<Node> {
   public bool Walkable { get; private set; }

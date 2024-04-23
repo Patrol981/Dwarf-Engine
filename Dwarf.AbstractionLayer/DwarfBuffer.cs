@@ -4,7 +4,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 
 public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;

@@ -1,13 +1,12 @@
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Rendering.Systems;
-using Dwarf.Engine.Rendering.UI;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
 using Dwarf.Rendering.Systems;
+using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public class SystemCollection : IDisposable {
   // Render Systems
   private Render3DSystem? _render3DSystem;

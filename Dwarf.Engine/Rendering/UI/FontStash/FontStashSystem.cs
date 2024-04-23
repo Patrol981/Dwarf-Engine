@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.Physics;
+using Dwarf.Physics;
 using Dwarf.Vulkan;
 
 using FontStashSharp;
@@ -11,7 +11,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI.FontStash;
+namespace Dwarf.Rendering.UI.FontStash;
 public class FontStashSystem : SystemBase, IFontStashRenderer2 {
   private const int MAX_SPRITES = 2048;
   private const int MAX_VERTICES = MAX_SPRITES * 4;

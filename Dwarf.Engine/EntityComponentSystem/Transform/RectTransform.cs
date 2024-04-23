@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-using Dwarf.Engine.Rendering.UI;
+using Dwarf.Rendering.UI;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class RectTransform : Transform {
   public Anchor Anchor { get; set; }
   public Vector2 OffsetFromVector { get; set; }

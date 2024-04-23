@@ -1,6 +1,4 @@
-using Dwarf.Engine.AbstractionLayer;
-
-using DwarfEngine.Vulkan;
+using Dwarf.AbstractionLayer;
 
 using Vortice.Vulkan;
 

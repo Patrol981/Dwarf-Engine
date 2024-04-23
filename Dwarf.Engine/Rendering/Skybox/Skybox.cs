@@ -1,15 +1,13 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public class Skybox : IDisposable {
   protected class SkyboxMesh {
     public TexturedVertex[] Vertices = [];

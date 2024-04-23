@@ -1,7 +1,7 @@
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 
 [Flags]
 public enum SystemCreationFlags {

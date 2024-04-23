@@ -1,12 +1,12 @@
 using System.Numerics;
 using System.Security.Cryptography;
 
-using Dwarf.Engine.Loader.Providers;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
+using Dwarf.Loader.Providers;
+using Dwarf.Loaders;
+using Dwarf.Physics;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Engine.EntityComponentSystem;
+namespace Dwarf.EntityComponentSystem;
 public static class EntityCreator {
 
   /// <summary>

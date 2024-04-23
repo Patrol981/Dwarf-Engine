@@ -1,6 +1,6 @@
 using System.Numerics;
 
-using Dwarf.Engine.Globals;
+using Dwarf.Globals;
 
 using ImGuiNET;
 

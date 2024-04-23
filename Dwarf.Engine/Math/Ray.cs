@@ -1,11 +1,9 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Physics;
-using Dwarf.Extensions.Logging;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public class Ray {
   public class RayResult {
     public Vector3 RayOrigin { get; set; }

@@ -1,24 +1,22 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Global;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Rendering;
-using Dwarf.Engine.Rendering.UI;
-using Dwarf.Engine.Windowing;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
+using Dwarf.Rendering.UI;
 using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Vulkan;
+using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class Application {
   public static Application Instance { get; private set; } = null!;

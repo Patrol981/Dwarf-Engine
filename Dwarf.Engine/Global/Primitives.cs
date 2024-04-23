@@ -1,6 +1,6 @@
 using System.Numerics;
-using Dwarf.Engine.Globals;
-namespace Dwarf.Engine;
+
+namespace Dwarf;
 
 public enum PrimitiveType {
   Cylinder,

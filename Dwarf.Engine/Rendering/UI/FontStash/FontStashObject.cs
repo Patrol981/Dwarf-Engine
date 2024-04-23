@@ -1,11 +1,11 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
 
-namespace Dwarf.Engine.Rendering.UI.FontStash;
+namespace Dwarf.Rendering.UI.FontStash;
 public class FontStashObject : IDisposable {
   public class FontMesh {
     public VertexPositionColorTexture[] Vertices = new VertexPositionColorTexture[0];

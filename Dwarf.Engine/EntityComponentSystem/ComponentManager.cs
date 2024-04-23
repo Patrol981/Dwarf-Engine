@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.EntityComponentSystem;
+namespace Dwarf.EntityComponentSystem;
 
 public class ComponentManager {
   private Dictionary<Type, Component> _components;

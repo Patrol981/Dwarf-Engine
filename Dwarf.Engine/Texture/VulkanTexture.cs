@@ -1,4 +1,4 @@
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -7,7 +7,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class VulkanTexture : ITexture {
   protected readonly VulkanDevice _device = null!;

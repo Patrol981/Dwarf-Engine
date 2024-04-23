@@ -1,4 +1,4 @@
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class Mesh {
   public Vertex[] Vertices = [];

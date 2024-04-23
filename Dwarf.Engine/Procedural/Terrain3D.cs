@@ -1,10 +1,10 @@
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 using System.Numerics;
 
-using Dwarf.Engine.Math;
+using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Procedural;
+namespace Dwarf.Procedural;
 public class Terrain3D : Component {
   const int HEIGHT = 512;
   const int WIDTH = 512;

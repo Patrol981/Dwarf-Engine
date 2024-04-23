@@ -1,17 +1,15 @@
 
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Rendering;
+using Dwarf.AbstractionLayer;
+using Dwarf.Rendering;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public abstract class SystemBase {
   protected readonly IDevice _device = null!;
   protected readonly Renderer _renderer = null!;

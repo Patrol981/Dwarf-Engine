@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.Rendering.UI;
+﻿namespace Dwarf.Rendering.UI;
 public interface IUIElement : IDrawable {
   public void Update();
   public Guid GetTextureIdReference();

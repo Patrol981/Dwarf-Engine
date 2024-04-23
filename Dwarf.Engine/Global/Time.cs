@@ -1,6 +1,6 @@
 using static Dwarf.GLFW.GLFW;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 
 public static class Time {
   private static double s_LastFrame = 0.0;

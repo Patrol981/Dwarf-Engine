@@ -1,10 +1,10 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine;
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Rendering;
+using Dwarf;
+using Dwarf.AbstractionLayer;
+using Dwarf.Globals;
+using Dwarf.Rendering;
 using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;

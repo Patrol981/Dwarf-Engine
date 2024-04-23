@@ -1,9 +1,9 @@
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class TextureLoader {
   public static async Task<ITexture> LoadFromPath(IDevice device, string path, int flip = 1) {
     return Application.Instance.CurrentAPI switch {

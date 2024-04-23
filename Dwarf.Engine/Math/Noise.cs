@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public static class Noise {
   private static readonly Random s_random = new();
 

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
-using Dwarf.Engine.Rendering;
+using Dwarf.Rendering;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 public static class Guizmos {
   private static readonly List<Guizmo> s_guizmos = [];
   private static readonly List<Guizmo> s_perFrameGuizmos = [];

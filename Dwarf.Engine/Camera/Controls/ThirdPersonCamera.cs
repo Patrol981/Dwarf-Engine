@@ -1,12 +1,12 @@
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.GLFW;
 
 using OpenTK.Mathematics;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class ThirdPersonCamera : DwarfScript {
   private Camera _camera;
   private float _distanceFromTarget = 2.5f;

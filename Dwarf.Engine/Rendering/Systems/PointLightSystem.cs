@@ -1,12 +1,12 @@
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Rendering.Lightning;
+using Dwarf.AbstractionLayer;
+using Dwarf.Rendering.Lightning;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.Systems;
+namespace Dwarf.Rendering.Systems;
 
 public class PointLightSystem : SystemBase {
   public PointLightSystem(

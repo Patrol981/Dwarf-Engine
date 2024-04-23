@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public interface IRender3DElement : IDrawable {
   public int MeshsesCount { get; }
   public Mesh[] Meshes { get; }

@@ -1,3 +1,3 @@
-namespace Dwarf.Engine.Coroutines;
+namespace Dwarf.Coroutines;
 public abstract class YieldInstruction {
 }

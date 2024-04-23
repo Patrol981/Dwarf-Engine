@@ -1,11 +1,11 @@
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Testing;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
+using Dwarf.Testing;
 using Dwarf.GLFW.Core;
 // using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 
 public class KeyState {
   public bool KeyDown { get; set; }

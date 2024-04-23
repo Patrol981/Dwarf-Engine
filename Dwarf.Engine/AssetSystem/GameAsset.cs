@@ -1,12 +1,12 @@
 using System.Numerics;
 
-using Dwarf.Engine;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Procedural;
-using Dwarf.Engine.Rendering.UI;
+using Dwarf;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Loaders;
+using Dwarf.Physics;
+using Dwarf.Procedural;
+using Dwarf.Rendering.UI;
 
 namespace Dwarf.AssetSystem;
 

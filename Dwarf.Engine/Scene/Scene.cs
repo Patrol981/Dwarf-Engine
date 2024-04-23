@@ -1,6 +1,6 @@
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public abstract class Scene {
   protected readonly Application _app;

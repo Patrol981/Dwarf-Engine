@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public struct Vertex {
   public Vector3 Position;

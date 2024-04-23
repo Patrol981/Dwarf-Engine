@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct ColliderMeshPushConstant {

@@ -1,8 +1,8 @@
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Rendering.UI;
+using Dwarf.AbstractionLayer;
+using Dwarf.Rendering.UI;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class TextureManager : IDisposable {
   private readonly VulkanDevice _device;

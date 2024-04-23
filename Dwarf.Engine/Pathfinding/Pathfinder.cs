@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Numerics;
-using Dwarf.Engine.Coroutines;
+using Dwarf.Coroutines;
 
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Utils;
 
-namespace Dwarf.Engine.Pathfinding.AStar;
+namespace Dwarf.Pathfinding.AStar;
 
 public class Pathfinder : DwarfScript {
   private Grid _grid = null!;

@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public enum GuizmoType {
   Circular,
   Cubic,

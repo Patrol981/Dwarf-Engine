@@ -1,11 +1,11 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Loaders;
+using Dwarf.Physics;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Testing;
+namespace Dwarf.Testing;
 public class PerformanceTester {
   public static void KeyHandler(int action, int key) {
     switch (action) {

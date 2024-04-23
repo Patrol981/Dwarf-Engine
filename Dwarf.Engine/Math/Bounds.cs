@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 
 public struct Bounds2D {
   public Vector2 Min;

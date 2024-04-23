@@ -1,9 +1,9 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
@@ -13,7 +13,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class Sprite : Component, IDisposable, I2DCollision {
   private readonly VulkanDevice _device = null!;
 

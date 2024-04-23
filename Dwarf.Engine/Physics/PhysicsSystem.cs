@@ -1,14 +1,14 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 
 using JoltPhysicsSharp;
 
-using static Dwarf.Engine.Physics.JoltConfig;
+using static Dwarf.Physics.JoltConfig;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public delegate void PhysicsSystemCallback();
 

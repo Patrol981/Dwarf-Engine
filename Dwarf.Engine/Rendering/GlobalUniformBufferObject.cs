@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 
 [StructLayout(LayoutKind.Explicit)]
 // [StructLayout(LayoutKind.Sequential)]

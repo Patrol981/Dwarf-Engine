@@ -1,6 +1,6 @@
 using Dwarf.Utils;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public partial class ImGuiController {
   // private readonly Dictionary<VulkanTexture, VkImageView> _autoViewsByTexture;
   private readonly List<string> _addedTextures = new List<string>();

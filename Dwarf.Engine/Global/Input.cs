@@ -2,7 +2,7 @@ using Dwarf.Extensions.GLFW;
 
 using static Dwarf.GLFW.GLFW;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 public static class Input {
   public static unsafe bool GetKey(Keys key) {
     return glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)KeyAction.GLFW_PRESS;

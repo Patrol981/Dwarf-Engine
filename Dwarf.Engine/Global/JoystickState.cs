@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.Globals;
+﻿namespace Dwarf.Globals;
 public sealed class JoystickState {
   private static JoystickState s_instance = null!;
   public static unsafe void JoystickCallback(int jid, int j_event) {

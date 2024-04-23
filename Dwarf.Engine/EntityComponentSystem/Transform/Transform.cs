@@ -1,9 +1,9 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class Transform : Component {
   private Vector3 _position;

@@ -1,5 +1,5 @@
 
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 public enum RenderAPI {
   Vulkan,
   // Metal

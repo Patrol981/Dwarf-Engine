@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 public interface ITexture : IDisposable {
   public string TextureName { get; }
 

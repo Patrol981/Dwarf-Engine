@@ -1,8 +1,6 @@
-using Dwarf.Engine.Globals;
-
 using static Dwarf.GLFW.GLFW;
 
-namespace Dwarf.Engine.Global;
+namespace Dwarf.Globals;
 public static class Frames {
   // private static int s_frameCount = 0;
   // private static double s_prevTime = glfwGetTime();

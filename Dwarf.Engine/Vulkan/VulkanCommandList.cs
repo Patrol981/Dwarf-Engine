@@ -1,11 +1,11 @@
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Vulkan;
+namespace Dwarf.Vulkan;
 public class VulkanCommandList : CommandList {
   public override void BindVertex(
     nint commandBuffer,

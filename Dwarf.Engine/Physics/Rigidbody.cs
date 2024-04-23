@@ -1,16 +1,16 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering;
-using Dwarf.Extensions.Logging;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 using Dwarf.Math;
+using Dwarf.Rendering;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
 
-using static Dwarf.Engine.Physics.JoltConfig;
+using static Dwarf.Physics.JoltConfig;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
   private readonly VulkanDevice _device = null!;
@@ -18,15 +18,15 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private MotionQuality _motionQuality = MotionQuality.Discrete;
-  private bool _physicsControlRotation = false;
-  private float _inputRadius = 0.0f;
-  private float _sizeX = 1.0f;
-  private float _sizeY = 1.0f;
-  private float _sizeZ = 1.0f;
-  private float _offsetX = 0.0f;
-  private float _offsetY = 0.0f;
-  private float _offsetZ = 0.0f;
+  private readonly MotionQuality _motionQuality = MotionQuality.Discrete;
+  private readonly bool _physicsControlRotation = false;
+  private readonly float _inputRadius = 0.0f;
+  private readonly float _sizeX = 1.0f;
+  private readonly float _sizeY = 1.0f;
+  private readonly float _sizeZ = 1.0f;
+  private readonly float _offsetX = 0.0f;
+  private readonly float _offsetY = 0.0f;
+  private readonly float _offsetZ = 0.0f;
 
   public Rigidbody() { }
 

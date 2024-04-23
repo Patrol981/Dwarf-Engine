@@ -1,9 +1,9 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct MaterialData {

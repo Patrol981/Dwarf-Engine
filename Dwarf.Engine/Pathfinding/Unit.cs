@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Numerics;
-using Dwarf.Engine.Coroutines;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Pathfinding.AStar;
+using Dwarf.Coroutines;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Pathfinding.AStar;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Pathfinding;
+namespace Dwarf.Pathfinding;
 public class Unit : DwarfScript {
   private float _speed = .1f;
   private Vector3[] _path = [];

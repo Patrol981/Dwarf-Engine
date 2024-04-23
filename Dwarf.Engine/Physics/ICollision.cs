@@ -1,6 +1,6 @@
-﻿using Dwarf.Engine.Math;
+﻿using Dwarf.Math;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 public interface ICollision {
   public AABB[] AABBArray { get; }
   public AABB AABB { get; }

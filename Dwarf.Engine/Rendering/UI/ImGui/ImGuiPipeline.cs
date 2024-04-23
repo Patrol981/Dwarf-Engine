@@ -2,7 +2,7 @@ using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class ImGuiPipeline : PipelineConfigInfo {
   public override unsafe PipelineConfigInfo GetConfigInfo() {
     var configInfo = base.GetConfigInfo();

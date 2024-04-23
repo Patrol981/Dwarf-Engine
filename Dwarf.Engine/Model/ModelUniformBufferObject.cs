@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct ModelUniformBufferObject {

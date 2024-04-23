@@ -1,8 +1,8 @@
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 
 using OpenTK.Mathematics;
 
-namespace Dwarf.Engine.Globals;
+namespace Dwarf.Globals;
 
 public static class CameraState {
   private static Camera? _camera;

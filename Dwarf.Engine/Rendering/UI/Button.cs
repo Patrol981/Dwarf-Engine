@@ -1,13 +1,13 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class Button : Component, I2DCollision, IUIElement {
   private readonly Application _application = null!;
 

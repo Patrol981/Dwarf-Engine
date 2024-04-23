@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 
 public static class DwarfExtentExtensions {
   public static DwarfExtent2D FromVkExtent2D(this VkExtent2D vkExtent2D) {

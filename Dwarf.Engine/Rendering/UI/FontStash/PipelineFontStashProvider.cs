@@ -1,13 +1,13 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using DwarfEngine.Vulkan;
+using Dwarf.Vulkan;
 
 using FontStashSharp.Interfaces;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI.FontStash;
+namespace Dwarf.Rendering.UI.FontStash;
 public class PipelineFontStashProvider : PipelineProvider {
   public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     var bindingDescriptions = new VkVertexInputBindingDescription[1];

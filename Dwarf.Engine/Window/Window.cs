@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 using Dwarf.GLFW;
 using Dwarf.GLFW.Core;
@@ -16,7 +16,7 @@ using static Dwarf.GLFW.GLFW;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 
-namespace Dwarf.Engine.Windowing;
+namespace Dwarf.Windowing;
 
 public unsafe class Window : IDisposable {
   public VkString AppName = new("Dwarf App");

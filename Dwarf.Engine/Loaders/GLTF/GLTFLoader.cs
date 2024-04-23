@@ -2,12 +2,12 @@ using System.Numerics;
 
 using SharpGLTF.Schema2;
 
-namespace Dwarf.Engine.Loader.Providers;
+namespace Dwarf.Loader.Providers;
 
 public class GLTFLoader {
   public static async Task<MeshRenderer> Load(Application app, string path, bool preload = false, int flip = 1) {
     var model = ModelRoot.Load(path);
-    var meshes = new List<Dwarf.Engine.Mesh>();
+    var meshes = new List<Dwarf.Mesh>();
 
     foreach (var mesh in model.LogicalMeshes) {
       var resultMesh = ProcessMesh(mesh);
@@ -63,7 +63,7 @@ public class GLTFLoader {
     var joints = skin.Skeleton;
   }
 
-  private static Dwarf.Engine.Mesh ProcessMesh(SharpGLTF.Schema2.Mesh mesh) {
+  private static Dwarf.Mesh ProcessMesh(SharpGLTF.Schema2.Mesh mesh) {
     if (mesh == null) return null!;
 
     List<Vertex> vertices = new List<Vertex>();

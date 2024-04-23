@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 
 public static class Converter {
   public static float DegreesToRadians(float deg) {

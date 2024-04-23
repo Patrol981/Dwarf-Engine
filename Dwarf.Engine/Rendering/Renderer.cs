@@ -1,16 +1,15 @@
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Math;
-using Dwarf.Engine.Vulkan;
-using Dwarf.Engine.Windowing;
-using Dwarf.Extensions.Logging;
+using Dwarf.AbstractionLayer;
+using Dwarf.Math;
 using Dwarf.Vulkan;
+using Dwarf.Windowing;
+using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 
 public unsafe class Renderer : IDisposable {
   private Window _window = null!;

@@ -1,8 +1,8 @@
 using System.Numerics;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Pathfinding.AStar;
+namespace Dwarf.Pathfinding.AStar;
 
 public class PathRequestManager : DwarfScript {
   private readonly Queue<PathRequest> _pathRequestQueue = new Queue<PathRequest>();

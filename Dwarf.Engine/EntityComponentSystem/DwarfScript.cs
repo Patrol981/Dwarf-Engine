@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.EntityComponentSystem;
+﻿namespace Dwarf.EntityComponentSystem;
 public class DwarfScript : Component {
   protected bool DidAwake { get; private set; }
   protected bool DidStart { get; private set; }

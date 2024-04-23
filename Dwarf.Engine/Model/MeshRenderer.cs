@@ -1,13 +1,13 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Rendering;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
+using Dwarf.Physics;
+using Dwarf.Rendering;
 using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
   private readonly IDevice _device = null!;

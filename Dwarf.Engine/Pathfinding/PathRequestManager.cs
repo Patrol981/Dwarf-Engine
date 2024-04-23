@@ -53,13 +53,10 @@ public class PathRequestManager : DwarfScript {
 
   private void TryProcessNext() {
     if (_currentPathRequest != null) return;
-
-    _currentPathRequest = _pathRequestQueue.Dequeue();
-    _isProcessingPath = true;
-    _pathfinder.StartFindPath(_currentPathRequest.PathStart, _currentPathRequest.PathEnd);
-
     if (!_isProcessingPath && _pathRequestQueue.Count > 0) {
-
+      _currentPathRequest = _pathRequestQueue.Dequeue();
+      _isProcessingPath = true;
+      _pathfinder.StartFindPath(_currentPathRequest.PathStart, _currentPathRequest.PathEnd);
     }
   }
 

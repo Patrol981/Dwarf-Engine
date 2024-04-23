@@ -12,6 +12,7 @@ public class Unit : DwarfScript {
   private Vector3[] _path = [];
   private int _targetIndex;
   private Transform _transform = null!;
+  private bool _isMoving = false;
 
   public override void Awake() {
     var hasTransform = Owner!.HasComponent<Transform>();
@@ -29,9 +30,10 @@ public class Unit : DwarfScript {
   }
 
   public async void OnPathFound(Vector3[] newPath, bool pathSuccess) {
-    if (pathSuccess) {
+    if (pathSuccess && !_isMoving) {
       _path = newPath;
       _targetIndex = 0;
+      _isMoving = true;
       await CoroutineRunner.Instance.StopCoroutine(FollowPath());
       CoroutineRunner.Instance.StartCoroutine(FollowPath());
     }
@@ -50,6 +52,7 @@ public class Unit : DwarfScript {
         _targetIndex += 1;
         if (_targetIndex >= _path.Length) {
           _path = null!;
+          _isMoving = false;
           yield break;
         }
         currentWaypoint = _path[_targetIndex];

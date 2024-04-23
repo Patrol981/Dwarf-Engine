@@ -8,19 +8,18 @@ public sealed class CoroutineRunner {
   private readonly Dictionary<Type, CoroutineItem> _tasks = [];
 
   public async void StartCoroutine(IEnumerator coroutine) {
-    Logger.Info(_tasks.Count);
     if (!_tasks.ContainsKey(coroutine.GetType())) {
       var item = new CoroutineItem();
       item.CoroutineTask = StartCoroutineAsync(coroutine, item.TokenSource.Token);
       _tasks.Add(coroutine.GetType(), item);
-      await Task.Run(() => Task.WaitAll(_tasks[coroutine.GetType()].CoroutineTask), item.TokenSource.Token);
+      await Task.Run(() => item.CoroutineTask.Wait(), item.TokenSource.Token);
       _tasks.Remove(coroutine.GetType());
     } else {
       Logger.Warn("Coroutine is already running; Ignoring current request.");
     }
   }
 
-  public async Task<Task> StopCoroutine(IEnumerator coroutine) {
+  public async Task<Task> StopCoroutine_Old(IEnumerator coroutine) {
     var tasks = new List<Task>();
     var itemsToRemove = new List<Type>();
 
@@ -35,6 +34,17 @@ public sealed class CoroutineRunner {
     await Task.WhenAll(tasks);
     foreach (var item in itemsToRemove) {
       _tasks.Remove(item);
+    }
+    return Task.CompletedTask;
+  }
+
+  public async Task<Task> StopCoroutine(IEnumerator coroutine) {
+    foreach (var item in _tasks) {
+      if (item.Key == coroutine.GetType()) {
+        await Task.Run(() => StopWork(item.Value));
+        _tasks.Remove(item.Key);
+        break;
+      }
     }
     return Task.CompletedTask;
   }
@@ -56,8 +66,8 @@ public sealed class CoroutineRunner {
 
   public async Task StartCoroutineAsync(IEnumerator coroutine, CancellationToken cancellationToken) {
     try {
-      cancellationToken.ThrowIfCancellationRequested();
       await ExecuteAsync(coroutine, cancellationToken);
+      cancellationToken.ThrowIfCancellationRequested();
     } catch (OperationCanceledException) {
       Logger.Info($"Task cancelled");
     }

@@ -24,7 +24,7 @@ public unsafe class Window : IDisposable {
   private DwarfExtent2D _extent;
   private bool _windowMinimalized = false;
 
-  public event EventHandler OnResizedEventDispatcher;
+  public event EventHandler? OnResizedEventDispatcher;
 
   private readonly object _windowLock = new();
 

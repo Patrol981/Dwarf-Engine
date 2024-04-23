@@ -138,7 +138,7 @@ public class RenderUISystem : SystemBase {
       var textureManager = Application.Instance.TextureManager;
       Setup(canvas, ref textureManager);
     }
-    if (entities.Length > (uint)_uiBuffer.GetInstanceCount()) {
+    if (entities.Length > (uint)_uiBuffer!.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_uiBuffer.GetInstanceCount()) {
       return true;

@@ -21,7 +21,6 @@ public class GuiTexture : Component, IUIElement {
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private Guid _textureIdRef = Guid.Empty;
-  private bool _usesTexture = false;
 
   private Vector2 _baseTextureSize = Vector2.Zero;
 
@@ -101,7 +100,6 @@ public class GuiTexture : Component, IUIElement {
     _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
-      _usesTexture = true;
       if (useLocalPath) {
         GetTextureSize($"./Textures/{texturePath}");
       } else {

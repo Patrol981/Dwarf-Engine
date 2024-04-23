@@ -29,10 +29,11 @@ public class Pathfinder : DwarfScript {
   }
 
   public void StartFindPath(Vector3 start, Vector3 end) {
-    CoroutineRunner.Instance.StartCoroutine(FindPath(start, end));
+    // CoroutineRunner.Instance.StartCoroutine(FindPath(start, end));
+    FindPath(start, end);
   }
 
-  public IEnumerator FindPath(Vector3 start, Vector3 end) {
+  public void FindPath(Vector3 start, Vector3 end) {
     var waypoints = new Vector3[0];
     var pathSuccess = false;
 
@@ -69,7 +70,6 @@ public class Pathfinder : DwarfScript {
         }
       }
     }
-    yield return null;
     if (pathSuccess) {
       waypoints = RetracePath(startNode, endNode);
     }
@@ -85,7 +85,8 @@ public class Pathfinder : DwarfScript {
       currentNode = currentNode.Parent;
     }
     var waypoints = SimplifyPath(path.ToArray());
-    waypoints.Reverse();
+    // var waypoints = ConvertPath(path.ToArray());
+    Array.Reverse(waypoints);
     return waypoints;
   }
 
@@ -102,6 +103,14 @@ public class Pathfinder : DwarfScript {
         waypoints.Add(path[i].WorldPosition);
       }
       oldDir = newDir;
+    }
+    return [.. waypoints];
+  }
+
+  private Vector3[] ConvertPath(ReadOnlySpan<Node> path) {
+    IList<Vector3> waypoints = [];
+    foreach (var p in path) {
+      waypoints.Add(p.WorldPosition);
     }
     return [.. waypoints];
   }

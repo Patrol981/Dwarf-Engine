@@ -29,10 +29,10 @@ public struct CameraAssetData {
 
 public class GameAsset {
   public Guid AssetId { get; set; }
-  public string Name { get; set; }
+  public string Name { get; set; } = default!;
   public List<string>? AssetResourcePaths { get; set; }
   public List<string>? AssetScripts { get; set; }
-  public string AssetType { get; set; }
+  public string AssetType { get; set; } = default!;
   public Vector3 Position { get; set; }
   public Vector3 Rotation { get; set; }
   public Vector3 Scale { get; set; }
@@ -183,7 +183,7 @@ public class GameAsset {
 
     foreach (var script in AssetScripts) {
       Type componentType = Type.GetType(script)!;
-      Component component = (Component)Activator.CreateInstance(componentType);
+      Component component = (Component)Activator.CreateInstance(componentType)!;
       entity.AddComponent(component);
     }
   }

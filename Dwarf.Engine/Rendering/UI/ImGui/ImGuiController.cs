@@ -19,38 +19,37 @@ public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly Renderer _renderer;
 
-  private DwarfBuffer _vertexBuffer;
-  private DwarfBuffer _indexBuffer;
+  private DwarfBuffer _vertexBuffer = default!;
+  private DwarfBuffer _indexBuffer = default!;
   private int _vertexCount;
   private int _indexCount;
 
   // custom
-  private VkSampler _sampler;
+  private VkSampler _sampler = VkSampler.Null;
   private VkDeviceMemory _fontMemory = VkDeviceMemory.Null;
   private VkImage _fontImage = VkImage.Null;
   private VkImageView _fontView = VkImageView.Null;
-  private VkPipelineCache _pipelineCache;
+  private VkPipelineCache _pipelineCache = VkPipelineCache.Null;
 
   // system based
-  protected PipelineConfigInfo _pipelineConfigInfo;
-  protected VkPipelineLayout _systemPipelineLayout;
+  protected PipelineConfigInfo _pipelineConfigInfo = default!;
+  protected VkPipelineLayout _systemPipelineLayout = VkPipelineLayout.Null;
   protected Pipeline _systemPipeline = null!;
   protected DescriptorPool _systemDescriptorPool = null!;
   protected DescriptorSetLayout _systemSetLayout = null!;
-  protected VkDescriptorSet _systemDescriptorSet;
-  protected VulkanDescriptorWriter _descriptorWriter;
+  protected VkDescriptorSet _systemDescriptorSet = VkDescriptorSet.Null;
+  protected VulkanDescriptorWriter _descriptorWriter = null!;
 
-  private VulkanTexture _fontTexture;
+  private VulkanTexture _fontTexture = default!;
 
   private bool _frameBegun = false;
 
   private int _width;
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
-  private readonly VkFrontFace _frontFace = VkFrontFace.Clockwise;
 
-  private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
-  private readonly List<char> _pressedChars = new List<char>();
+  // private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
+  // private readonly List<char> _pressedChars = new List<char>();
 
   private readonly IntPtr _fontAtlasId = -1;
 

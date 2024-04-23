@@ -74,7 +74,7 @@ public class Application {
   private DescriptorSetLayout _globalSetLayout = null!;
   private readonly SystemCreationFlags _systemCreationFlags;
 
-  private Thread _renderThread;
+  private Thread? _renderThread;
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;

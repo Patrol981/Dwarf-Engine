@@ -224,7 +224,6 @@ public class Skybox : IDisposable {
   private readonly Transform _transform;
   private readonly Material _material;
 
-  private readonly VkDescriptorSetLayout _globalDescriptorSetLayout;
   private PipelineConfigInfo _pipelineConfigInfo = null!;
   private VkPipelineLayout _pipelineLayout;
   private Pipeline _pipeline = null!;

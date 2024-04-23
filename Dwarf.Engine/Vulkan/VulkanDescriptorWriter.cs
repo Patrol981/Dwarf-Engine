@@ -14,6 +14,9 @@ public class VulkanDescriptorWriter {
   }
 
   public unsafe VulkanDescriptorWriter(nint setLayout, nint pool) {
+    _setLayout = null!;
+    _pool = null!;
+    throw new NotImplementedException();
     // _setLayout = &setLayout;
     // _pool = pool;
   }

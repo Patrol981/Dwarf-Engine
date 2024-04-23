@@ -88,6 +88,16 @@ public class Transform : Component {
     }
   }
 
+  public static Vector3 MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
+    var vec = target - current;
+    var mag = Vector3.Distance(current, target);
+
+    if (mag <= maxDistanceDelta || mag == 0.0f) {
+      return target;
+    }
+    return current + Vector3.Normalize(vec) * maxDistanceDelta;
+  }
+
   private Matrix4x4 GetMatrix() {
     var modelPos = _position;
     var angleX = Converter.DegreesToRadians(_rotation.X);

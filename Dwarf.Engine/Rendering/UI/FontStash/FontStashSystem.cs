@@ -93,7 +93,7 @@ public class FontStashSystem : SystemBase, IFontStashRenderer2 {
     );
   }
 
-  public unsafe void Dispose() {
+  public new unsafe void Dispose() {
     _device.WaitQueue();
     _pipeline?.Dispose();
     vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);

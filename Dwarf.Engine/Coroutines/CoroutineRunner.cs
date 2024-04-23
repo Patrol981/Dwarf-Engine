@@ -8,6 +8,7 @@ public sealed class CoroutineRunner {
   private readonly Dictionary<Type, CoroutineItem> _tasks = [];
 
   public async void StartCoroutine(IEnumerator coroutine) {
+    Logger.Info(_tasks.Count);
     if (!_tasks.ContainsKey(coroutine.GetType())) {
       var item = new CoroutineItem();
       item.CoroutineTask = StartCoroutineAsync(coroutine, item.TokenSource.Token);

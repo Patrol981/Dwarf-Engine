@@ -19,8 +19,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private VulkanDescriptorWriter _dynamicWriter = null!;
 
-  private readonly List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
-  private readonly DwarfBuffer _indirectCommandBuffer = null!;
+  // private readonly List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
+  // private readonly DwarfBuffer _indirectCommandBuffer = null!;
 
   private ModelUniformBufferObject _modelUbo = new();
   private readonly unsafe SimplePushConstantData* _pushConstantData =

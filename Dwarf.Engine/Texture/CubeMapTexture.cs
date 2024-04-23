@@ -31,7 +31,7 @@ public class CubeMapTexture : VulkanTexture {
     return await TextureLoader.LoadDataFromPath(path, flip);
   }
 
-  public void SetTextureData(byte[] data) {
+  public new void SetTextureData(byte[] data) {
     var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
@@ -53,7 +53,7 @@ public class CubeMapTexture : VulkanTexture {
     stagingBuffer.Dispose();
   }
 
-  public void SetTextureData(nint dataPtr) {
+  public new void SetTextureData(nint dataPtr) {
     var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,

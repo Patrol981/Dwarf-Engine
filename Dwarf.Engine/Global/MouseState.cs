@@ -16,7 +16,7 @@ public class MouseButtons {
 public sealed class MouseState {
   private static MouseState s_instance = null!;
 
-  public event EventHandler ClickEvent;
+  public event EventHandler? ClickEvent;
 
   private OpenTK.Mathematics.Vector2d _lastMousePositionFromCallback = new(0, 0);
 

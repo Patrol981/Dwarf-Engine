@@ -14,7 +14,7 @@ namespace Dwarf.Engine.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
-  private readonly VulkanDevice _device;
+  private readonly VulkanDevice _device = null!;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
@@ -31,7 +31,7 @@ public class TextField : Component, IUIElement {
   private Vector2 _startPosUpdated = Vector2.Zero;
 
   readonly float _cursorX = 96.0f; // size of an glyph
-  readonly float _cursorY = 96.0f; // size of an glyph
+  // readonly float _cursorY = 96.0f; // size of an glyph
 
   readonly float _glyphOffset;
 

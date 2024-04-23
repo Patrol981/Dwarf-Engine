@@ -38,13 +38,13 @@ public class VulkanDevice : IDevice {
   private VkFence _singleTimeFence = VkFence.Null;
 
   private VkSemaphore _semaphore = VkSemaphore.Null;
-  private ulong _timeline = 0;
+  // private readonly ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
   public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
-  public List<string> DeviceExtensions { get; private set; }
+  public List<string> DeviceExtensions { get; private set; } = [];
 
   public VulkanDevice(Window window) {
     _window = window;

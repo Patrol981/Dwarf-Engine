@@ -181,7 +181,7 @@ public class Canvas : Component, IDisposable {
     return Task.CompletedTask;
   }
 
-  private async Task<Task> CheckAnchor(RectTransform rect) {
+  private Task CheckAnchor(RectTransform rect) {
     // await Task.Delay(50);
 
     // var extent = _window.Extent;

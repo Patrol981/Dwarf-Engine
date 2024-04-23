@@ -97,7 +97,7 @@ public class TextureManager : IDisposable {
 
   public Dictionary<Guid, ITexture> LoadedTextures { get; }
   public Dictionary<Guid, VulkanTextureArray> TextureArray { get; }
-  public FreeType FreeType { get; }
+  public FreeType FreeType { get; } = default!;
 
   public void Dispose() {
     foreach (var tex in LoadedTextures) {

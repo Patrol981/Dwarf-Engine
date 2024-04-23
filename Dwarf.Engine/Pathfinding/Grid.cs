@@ -17,7 +17,7 @@ public class Grid : DwarfScript {
   private int _gridSizeX;
   private int _gridSizeY;
 
-  public override void Start() {
+  public override void Awake() {
     _nodeDiameter = NodeRadius * 2;
     _gridSizeX = (int)(GridSizeWorld.X / _nodeDiameter);
     _gridSizeY = (int)(GridSizeWorld.Y / _nodeDiameter);
@@ -100,5 +100,6 @@ public class Grid : DwarfScript {
   }
 
   public Guizmo[,] GridGuizmos { get; private set; } = new Guizmo[0, 0];
+  public Node[,] GridData => _grid;
   public int MaxSize => _gridSizeX * _gridSizeY;
 }

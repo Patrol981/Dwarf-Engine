@@ -17,7 +17,7 @@ public class PhysicsSystem : IDisposable {
   public const float DeltaTime = 1.0f / 600.0f;
   public const int CollisionSteps = 1;
 
-  private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
+  private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem = null!;
   public PhysicsSystem() {
     if (!Foundation.Init(0u, false)) {
       return;

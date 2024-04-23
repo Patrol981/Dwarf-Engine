@@ -93,7 +93,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       var textureManager = Application.Instance.TextureManager;
       Setup(entities, ref textureManager);
     }
-    if (entities.Length > (uint)_spriteBuffer.GetInstanceCount()) {
+    if (entities.Length > (uint)_spriteBuffer!.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_spriteBuffer.GetInstanceCount()) {
       return true;

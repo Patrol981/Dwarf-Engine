@@ -4,11 +4,11 @@ using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Engine.Global;
 public static class Frames {
-  private static int s_frameCount = 0;
-  private static double s_prevTime = glfwGetTime();
+  // private static int s_frameCount = 0;
+  // private static double s_prevTime = glfwGetTime();
   private static DateTime s_startTime;
   private static DateTime s_endTime;
-  private static double s_frameRate = 0.0f;
+  // private static double s_frameRate = 0.0f;
 
   public static float GetFramesDelta() {
     var lastUpdate = Time.DeltaTime;

@@ -52,8 +52,22 @@ layout (set = 2, binding = 0) uniform ModelUBO {
 
 } modelUBO;
 
+layout (std430, set = 3, binding = 0) readonly buffer JointBuffer {
+  mat4 jointMatrices[];
+};
+
 void main() {
-  vec4 positionWorld = push.transform * vec4(position, 1.0);
+  mat4 skinMat =
+    jointWeights.x * jointMatrices[int(jointIndices.x)] +
+    jointWeights.y * jointMatrices[int(jointIndices.y)] +
+    jointWeights.z * jointMatrices[int(jointIndices.z)] +
+    jointWeights.w * jointMatrices[int(jointIndices.w)];
+
+  vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
+
+  // vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
+
+  // vec4 positionWorld =  totalPosition;
   gl_Position = ubo.projection * ubo.view * positionWorld;
 
   fragNormalWorld = normalize(mat3(push.normalMatrix) * normal);

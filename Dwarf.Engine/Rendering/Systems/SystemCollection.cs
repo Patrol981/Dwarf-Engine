@@ -28,7 +28,12 @@ public class SystemCollection : IDisposable {
 
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     lock (_renderLock) {
-      _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
+      // _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
+      _render3DSystem?.Render(
+        frameInfo,
+        Entity.Get3DElements(entities.ToArray())
+      // Entity.DistinctInterface<IRender3DElement>(entities).ToArray() as IRender3DElement[]
+      );
       _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
       _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
       _pointLightSystem?.Render(frameInfo);

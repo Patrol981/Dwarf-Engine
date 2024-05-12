@@ -34,15 +34,15 @@ public class Pathfinder : DwarfScript {
   }
 
   public void FindPath(Vector3 start, Vector3 end) {
-    var waypoints = new Vector3[0];
+    var waypoints = Array.Empty<Vector3>();
     var pathSuccess = false;
 
     var startNode = _grid!.NodeFromWorldPoint(start);
     var endNode = _grid.NodeFromWorldPoint(end);
 
     if (startNode.Walkable && endNode.Walkable) {
-      Heap<Node> openSet = new Heap<Node>(_grid.MaxSize);
-      HashSet<Node> closedSet = new HashSet<Node>();
+      var openSet = new Heap<Node>(_grid.MaxSize);
+      var closedSet = new HashSet<Node>();
 
       openSet.Add(startNode);
       while (openSet.Count > 0) {
@@ -84,13 +84,13 @@ public class Pathfinder : DwarfScript {
       path.Add(currentNode);
       currentNode = currentNode.Parent;
     }
-    // var waypoints = SimplifyPath(path.ToArray());
-    var waypoints = ConvertPath(path.ToArray());
+    var waypoints = SimplifyPath(path.ToArray());
+    // var waypoints = ConvertPath(path.ToArray());
     Array.Reverse(waypoints);
     return waypoints;
   }
 
-  private Vector3[] SimplifyPath(ReadOnlySpan<Node> path) {
+  private static Vector3[] SimplifyPath(ReadOnlySpan<Node> path) {
     IList<Vector3> waypoints = [];
     var oldDir = Vector2.Zero;
 
@@ -104,10 +104,11 @@ public class Pathfinder : DwarfScript {
       }
       oldDir = newDir;
     }
+    // waypoints.Add(path[path.Length - 1].WorldPosition);
     return [.. waypoints];
   }
 
-  private Vector3[] ConvertPath(ReadOnlySpan<Node> path) {
+  private static Vector3[] ConvertPath(ReadOnlySpan<Node> path) {
     IList<Vector3> waypoints = [];
     foreach (var p in path) {
       waypoints.Add(p.WorldPosition);
@@ -115,7 +116,7 @@ public class Pathfinder : DwarfScript {
     return [.. waypoints];
   }
 
-  private int GetDistance(Node a, Node b) {
+  private static int GetDistance(Node a, Node b) {
     var distX = MathF.Abs(a.GridPosition.X - b.GridPosition.X);
     var distY = MathF.Abs(a.GridPosition.Y - b.GridPosition.Y);
 

@@ -10,7 +10,6 @@ public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
   private readonly IDevice _device;
-  // private nint _mapped;
   private void* _mapped;
   private readonly VkBuffer _buffer = VkBuffer.Null;
   private readonly VkDeviceMemory _memory = VkDeviceMemory.Null;
@@ -51,7 +50,6 @@ public unsafe class DwarfBuffer : IDisposable {
     ulong bufferSize,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
-    ulong minOffsetAlignment = 1,
     bool stagingBuffer = false
   ) {
     _device = device;
@@ -79,18 +77,10 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   public void Unmap() {
-    // Logger.Info($"Mapped NULL : {_mapped == null}");
     if (_mapped != null) {
       vkUnmapMemory(_device.LogicalDevice, _memory);
       _mapped = null;
     }
-
-    /*
-    if (_mapped != nint.Zero) {
-      
-      _mapped = nint.Zero;
-    }
-    */
   }
 
   public void WriteToBuffer(nint data, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -98,7 +88,6 @@ public unsafe class DwarfBuffer : IDisposable {
       MemoryUtils.MemCopy(_mapped, (void*)data, (int)_bufferSize);
     } else {
       if (size <= 0) {
-        // Logger.Warn("[Buffer] Size of an write is less or equal to 0");
         return;
       }
       char* memOffset = (char*)_mapped;

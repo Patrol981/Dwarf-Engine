@@ -1,10 +1,9 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-using Dwarf;
 using Dwarf.AbstractionLayer;
-using Dwarf.Windowing;
 using Dwarf.Extensions.Logging;
+using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
@@ -25,18 +24,18 @@ public class VulkanDevice : IDevice {
   private VkPhysicalDevice _physicalDevice = VkPhysicalDevice.Null;
   private VkDevice _logicalDevice = VkDevice.Null;
 
-  private VkCommandPool _commandPool = VkCommandPool.Null;
+  private readonly VkCommandPool _commandPool = VkCommandPool.Null;
   private readonly object _commandPoolLock = new object();
 
   private VkQueue _graphicsQueue = VkQueue.Null;
   private VkQueue _presentQueue = VkQueue.Null;
-  private VkQueue _transferQueue = VkQueue.Null;
+  private readonly VkQueue _transferQueue = VkQueue.Null;
 
   internal readonly object _queueLock = new object();
 
-  private VkFence _singleTimeFence = VkFence.Null;
+  private readonly VkFence _singleTimeFence = VkFence.Null;
 
-  private VkSemaphore _semaphore = VkSemaphore.Null;
+  private readonly VkSemaphore _semaphore = VkSemaphore.Null;
   // private readonly ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
@@ -81,6 +80,8 @@ public class VulkanDevice : IDevice {
       usage = (VkBufferUsageFlags)uFlags,
       sharingMode = VkSharingMode.Exclusive
     };
+
+    // Logger.Info($"Allocating Size: {size}");
 
     vkCreateBuffer(_logicalDevice, &bufferInfo, null, out buffer).CheckResult();
 

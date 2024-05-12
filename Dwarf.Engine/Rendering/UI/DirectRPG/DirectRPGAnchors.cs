@@ -7,9 +7,10 @@ using ImGuiNET;
 namespace Dwarf.Rendering.UI.DirectRPG;
 
 public partial class DirectRPG {
-  private static void ValidateAnchor(string text, Anchor anchor) {
+  private static Vector2 ValidateAnchor(string text, Anchor anchor) {
     var textSize = ImGui.CalcTextSize(text);
     ValidateAnchor(textSize, anchor);
+    return textSize;
   }
 
   private static void ValidateAnchor(string text, Vector2 offset, Anchor anchor) {

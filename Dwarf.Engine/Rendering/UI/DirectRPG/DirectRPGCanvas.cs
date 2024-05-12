@@ -12,6 +12,9 @@ public partial class DirectRPG {
 
   private static Vector2 s_canvasSize = Vector2.Zero;
 
+  private static ImGuiWindowFlags s_subWindowFlags = ImGuiWindowFlags.ChildWindow;
+  private static ImGuiChildFlags s_subWidnowChildFlags = ImGuiChildFlags.None;
+
   public static void BeginCanvas() {
     var io = ImGui.GetIO();
     s_canvasSize = io.DisplaySize;
@@ -23,7 +26,10 @@ public partial class DirectRPG {
       ImGuiWindowFlags.NoDecoration |
       ImGuiWindowFlags.NoMove |
       ImGuiWindowFlags.NoResize |
-      ImGuiWindowFlags.NoBringToFrontOnFocus
+      ImGuiWindowFlags.NoBringToFrontOnFocus |
+      ImGuiWindowFlags.NoBackground |
+      ImGuiWindowFlags.NoSavedSettings |
+      ImGuiWindowFlags.NoMouseInputs
     );
   }
 
@@ -41,10 +47,13 @@ public partial class DirectRPG {
   }
 
   public static void CanvasButton(string label, ButtonClickedDelegate buttonClicked, Anchor anchor = Anchor.Middle) {
-    ValidateAnchor(label, anchor);
-    if (ImGui.Button(label)) {
+    var size = ImGui.CalcTextSize(label) * 2;
+    ValidateAnchor(size, anchor);
+    ImGui.BeginChild("btn_child", size, s_subWidnowChildFlags, s_subWindowFlags);
+    if (ImGui.Button(label, size)) {
       buttonClicked.Invoke();
     }
+    ImGui.EndChild();
   }
 
   public static unsafe void CanvasImage(

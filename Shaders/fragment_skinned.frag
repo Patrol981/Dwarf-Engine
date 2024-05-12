@@ -15,6 +15,10 @@ struct Material {
   float shininess;
 };
 
+struct SkinData {
+  int isSkinned;
+};
+
 layout (push_constant) uniform Push {
   mat4 transform;
   mat4 normalMatrix;

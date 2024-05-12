@@ -43,18 +43,8 @@ public class VulkanTexture : ITexture {
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
-    /*
-    var data = new byte[_size];
-    Marshal.Copy(dataPtr, data, 0, data.Length);
-    if (MemoryUtils.IsNull(data)) {
-      Logger.Warn($"[Texture Bytes] Memory is null");
-      return;
-    }
-    */
-
     stagingBuffer.Map();
     stagingBuffer.WriteToBuffer(dataPtr, (ulong)_size);
-    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer, createFlags);
@@ -126,14 +116,14 @@ public class VulkanTexture : ITexture {
     );
 
     stagingBuffer.Map();
+
     unsafe {
       fixed (byte* dataPtr = data) {
         stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_size);
       }
     }
-    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_size);
-    stagingBuffer.Unmap();
 
+    stagingBuffer.Unmap();
     ProcessTexture(stagingBuffer, createFlags);
   }
 
@@ -180,6 +170,19 @@ public class VulkanTexture : ITexture {
     var textureData = await LoadDataFromPath(path, flip);
     var texture = new VulkanTexture(device, textureData.Width, textureData.Height, path);
     texture.SetTextureData(textureData.Data, imageCreateFlags);
+    return texture;
+  }
+
+  public static ITexture LoadFromBytes(
+    VulkanDevice device,
+    byte[] data,
+    string textureName,
+    int flip = 1,
+    VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None
+  ) {
+    var texInfo = LoadDataFromBytes(data, flip);
+    var texture = new VulkanTexture(device, texInfo.Width, texInfo.Height, textureName);
+    texture.SetTextureData(texInfo.Data, imageCreateFlags);
     return texture;
   }
 
@@ -313,8 +316,8 @@ public class VulkanTexture : ITexture {
     vkGetPhysicalDeviceProperties(device.PhysicalDevice, &properties);
 
     VkSamplerCreateInfo samplerInfo = new();
-    samplerInfo.magFilter = VkFilter.Linear;
-    samplerInfo.minFilter = VkFilter.Linear;
+    samplerInfo.magFilter = VkFilter.Nearest;
+    samplerInfo.minFilter = VkFilter.Nearest;
     samplerInfo.addressModeU = VkSamplerAddressMode.Repeat;
     samplerInfo.addressModeV = VkSamplerAddressMode.Repeat;
     samplerInfo.addressModeW = VkSamplerAddressMode.Repeat;
@@ -324,7 +327,7 @@ public class VulkanTexture : ITexture {
     samplerInfo.unnormalizedCoordinates = false;
     samplerInfo.compareEnable = false;
     samplerInfo.compareOp = VkCompareOp.Always;
-    samplerInfo.mipmapMode = VkSamplerMipmapMode.Linear;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode.Nearest;
 
     vkCreateSampler(device.LogicalDevice, &samplerInfo, null, out imageSampler).CheckResult();
   }

@@ -12,7 +12,6 @@ public class Unit : DwarfScript {
   private Vector3[] _path = [];
   private int _targetIndex;
   private Transform _transform = null!;
-  private bool _isMoving = false;
 
   public override void Awake() {
     var hasTransform = Owner!.HasComponent<Transform>();
@@ -30,29 +29,32 @@ public class Unit : DwarfScript {
   }
 
   public async void OnPathFound(Vector3[] newPath, bool pathSuccess) {
-    if (pathSuccess && !_isMoving) {
+    if (pathSuccess && !IsMoving) {
       _path = newPath;
       _targetIndex = 0;
-      _isMoving = true;
+      IsMoving = true;
       await CoroutineRunner.Instance.StopCoroutine(FollowPath());
       CoroutineRunner.Instance.StartCoroutine(FollowPath());
     }
   }
 
   private IEnumerator FollowPath() {
-    if (_path == null) yield break;
-    if (_path!.Length <= 0) yield break;
+    if (_path == null) { IsMoving = false; yield break; }
+    if (_path!.Length <= 0) { IsMoving = false; yield break; }
 
     var currentWaypoint = _path[0];
 
-    if (currentWaypoint == _transform.Position) yield break;
+    if (currentWaypoint == _transform.Position) {
+      IsMoving = false;
+      yield break;
+    }
 
     while (true) {
       if (_transform.Position == currentWaypoint) {
         _targetIndex += 1;
         if (_targetIndex >= _path.Length) {
           _path = null!;
-          _isMoving = false;
+          IsMoving = false;
           yield break;
         }
         currentWaypoint = _path[_targetIndex];
@@ -62,5 +64,7 @@ public class Unit : DwarfScript {
       yield return null;
     }
   }
+
+  public bool IsMoving { get; private set; } = false;
 }
 

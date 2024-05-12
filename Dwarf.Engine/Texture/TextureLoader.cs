@@ -23,4 +23,11 @@ public class TextureLoader {
       _ => throw new NotImplementedException("Other apis are not currently supported"),
     };
   }
+
+  public static ITexture LoadFromBytes(IDevice device, byte[] data, string textureName, int flip = 1) {
+    return Application.Instance.CurrentAPI switch {
+      RenderAPI.Vulkan => VulkanTexture.LoadFromBytes((VulkanDevice)device, data, textureName, flip),
+      _ => throw new NotImplementedException("Other apis are not currently supported"),
+    };
+  }
 }

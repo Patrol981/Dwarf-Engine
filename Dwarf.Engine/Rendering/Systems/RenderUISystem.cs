@@ -2,9 +2,9 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
-using Dwarf.Rendering.UI;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -37,8 +37,16 @@ public class RenderUISystem : SystemBase {
       _textureSetLayout.GetDescriptorSetLayout(),
     ];
 
-    CreatePipelineLayout<UIUniformObject>(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetSwapchainRenderPass(), "gui_vertex", "gui_fragment", new PipelineUIProvider());
+    AddPipelineData<UIUniformObject>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "gui_vertex",
+      FragmentName = "gui_fragment",
+      PipelineProvider = new PipelineUIProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    // CreatePipelineLayout<UIUniformObject>(descriptorSetLayouts);
+    // CreatePipeline(_renderer.GetSwapchainRenderPass(), "gui_vertex", "gui_fragment", new PipelineUIProvider());
   }
 
   public unsafe void Setup(Canvas? canvas, ref TextureManager textureManager) {
@@ -96,12 +104,13 @@ public class RenderUISystem : SystemBase {
   public unsafe void DrawUI(FrameInfo frameInfo, Canvas? canvas) {
     if (canvas == null) return;
 
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
+      PipelineLayout,
       0,
       1,
       &frameInfo.GlobalDescriptorSet,
@@ -118,7 +127,7 @@ public class RenderUISystem : SystemBase {
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
-        _pipelineLayout,
+        PipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
         (uint)Unsafe.SizeOf<UIUniformObject>(),
@@ -127,7 +136,7 @@ public class RenderUISystem : SystemBase {
 
       var uiComponent = entities[i].GetDrawable<IUIElement>() as IUIElement;
       uiComponent?.Update();
-      Descriptor.BindDescriptorSet((VulkanDevice)_device, _textureSets.GetAt(i), frameInfo, ref _pipelineLayout, 2, 1);
+      Descriptor.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, PipelineLayout, 2, 1);
       uiComponent?.Bind(frameInfo.CommandBuffer, 0);
       uiComponent?.Draw(frameInfo.CommandBuffer, 0);
     }
@@ -166,33 +175,6 @@ public class RenderUISystem : SystemBase {
       .WriteImage(0, &imageInfo)
       .Build(out VkDescriptorSet set);
     _textureSets.SetAt(set, index);
-  }
-
-  private void CreatePipeline(VkRenderPass renderPass) {
-    _pipeline?.Dispose();
-    _pipelineConfigInfo ??= new UIPipeline();
-    var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
-    pipelineConfig.RenderPass = renderPass;
-    pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, "gui_vertex", "gui_fragment", pipelineConfig, new PipelineUIProvider());
-  }
-
-  private unsafe void CreatePipelineLayout_Old(VkDescriptorSetLayout[] layouts) {
-    VkPushConstantRange pushConstantRange = new() {
-      stageFlags = VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-      offset = 0,
-      size = (uint)Unsafe.SizeOf<UIUniformObject>()
-    };
-
-    VkPipelineLayoutCreateInfo pipelineInfo = new() {
-      setLayoutCount = (uint)layouts.Length
-    };
-    fixed (VkDescriptorSetLayout* ptr = layouts) {
-      pipelineInfo.pSetLayouts = ptr;
-    }
-    pipelineInfo.pushConstantRangeCount = 1;
-    pipelineInfo.pPushConstantRanges = &pushConstantRange;
-    vkCreatePipelineLayout(_device.LogicalDevice, &pipelineInfo, null, out _pipelineLayout).CheckResult();
   }
 
   public override unsafe void Dispose() {

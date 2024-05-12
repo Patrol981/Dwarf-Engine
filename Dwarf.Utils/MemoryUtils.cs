@@ -97,13 +97,17 @@ public static class MemoryUtils {
     return ptr;
   }
 
-  public static void FreeIntPtr(IntPtr ptr) {
+  public static void FreeIntPtr<T>(IntPtr ptr) {
     try {
-      Logger.Info($"Freeing {ptr}");
+      Logger.Info($"Freeing {typeof(T)} - {ptr}");
       Marshal.FreeHGlobal(ptr);
     } catch {
       throw;
     }
+  }
+
+  public static nint AllocateMemory(int size) {
+    return Marshal.AllocHGlobal(size);
   }
 
   public static T? FromIntPtr<T>(nint ptr) {

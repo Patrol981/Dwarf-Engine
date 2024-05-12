@@ -1,5 +1,5 @@
 using Dwarf.Extensions.GLFW;
-
+using Dwarf.Rendering.UI;
 using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Globals;
@@ -41,5 +41,9 @@ public static class Input {
 
   public static unsafe bool GetMouseButton(MouseButtonMap.Buttons button) {
     return glfwGetMouseButton(WindowState.s_Window.GLFWwindow, (int)button) == (int)MouseButtonMap.Action.GLFW_PRESS;
+  }
+
+  public static bool MouseOverUI() {
+    return ImGuiController.MouseOverUI();
   }
 }

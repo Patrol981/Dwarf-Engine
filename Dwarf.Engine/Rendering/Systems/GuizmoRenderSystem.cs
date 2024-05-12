@@ -1,11 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Dwarf;
 using Dwarf.AbstractionLayer;
 using Dwarf.Globals;
-using Dwarf.Rendering;
-using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -28,6 +25,15 @@ public class GuizmoRenderSystem : SystemBase {
       globalSetLayout,
     ];
 
+    AddPipelineData<GuizmoBufferObject>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "guizmo_vertex",
+      FragmentName = "guizmo_fragment",
+      PipelineProvider = new GuizmoPipelineProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    /*
     CreatePipelineLayout<GuizmoBufferObject>(descriptorSetLayouts);
     CreatePipeline(
       renderer.GetSwapchainRenderPass(),
@@ -35,15 +41,17 @@ public class GuizmoRenderSystem : SystemBase {
       "guizmo_fragment",
       new GuizmoPipelineProvider()
    );
+    */
   }
 
   public void Render(FrameInfo frameInfo) {
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
-        _pipelineLayout,
+        PipelineLayout,
         0,
         1,
         &frameInfo.GlobalDescriptorSet,
@@ -75,7 +83,7 @@ public class GuizmoRenderSystem : SystemBase {
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
-          _pipelineLayout,
+          PipelineLayout,
           VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
           0,
           (uint)Unsafe.SizeOf<GuizmoBufferObject>(),
@@ -88,7 +96,7 @@ public class GuizmoRenderSystem : SystemBase {
   }
 
   public override unsafe void Dispose() {
-    MemoryUtils.FreeIntPtr((nint)_bufferObject);
+    MemoryUtils.FreeIntPtr<GuizmoBufferObject>((nint)_bufferObject);
 
     base.Dispose();
   }

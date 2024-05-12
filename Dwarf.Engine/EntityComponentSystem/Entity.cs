@@ -163,6 +163,17 @@ public class Entity {
     return entities.Where(e => e.IsDrawable<T>()).ToArray();
   }
 
+  public static Span<IRender3DElement> Get3DElements(ReadOnlySpan<Entity> entities) {
+    var drawables3D = new List<IRender3DElement>();
+    for (int i = 0; i < entities.Length; i++) {
+      var target = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+      if (target != null) {
+        drawables3D.Add(target);
+      }
+    }
+    return drawables3D.ToArray();
+  }
+
   public static ReadOnlySpan<Entity> DistinctInterface<T>(ReadOnlySpan<Entity> entities) where T : IDrawable {
     var returnEntities = new List<Entity>();
     for (int i = 0; i < entities.Length; i++) {
@@ -175,16 +186,14 @@ public class Entity {
     var entities = Application.Instance.GetEntities();
     var target = entities.Where(x => x.HasComponent<T>())
       .FirstOrDefault();
-    if (target == null) return null;
-    return target.GetComponent<T>();
+    return target == null ? null : target.GetComponent<T>();
   }
 
   public static T? FindComponentByName<T>(string name) where T : Component, new() {
     var entities = Application.Instance.GetEntities();
     var target = entities.Where(x => x.Name == name)
       .FirstOrDefault();
-    if (target == null) return null;
-    return target.GetComponent<T>();
+    return target == null ? null : target.GetComponent<T>();
   }
 
   public static Entity? FindEntityByName(string name) {

@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
-using Dwarf.Math;
 using Dwarf.Extensions.Logging;
+using Dwarf.Math;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -41,7 +41,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     CreateIndexBuffer(_spriteMesh.Indices);
   }
 
-  public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, ref VkPipelineLayout pipelineLayout) {
+  public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, VkPipelineLayout pipelineLayout) {
     vkCmdBindDescriptorSets(
      frameInfo.CommandBuffer,
      VkPipelineBindPoint.Graphics,

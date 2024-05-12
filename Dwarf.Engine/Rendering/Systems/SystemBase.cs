@@ -10,15 +10,49 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf;
+
+public class PipelineData {
+  public VkPipelineLayout PipelineLayout;
+  public Pipeline Pipeline = null!;
+
+  public unsafe void Dispose(IDevice device) {
+    Pipeline.Dispose();
+
+    if (PipelineLayout.IsNotNull) {
+      vkDestroyPipelineLayout(device.LogicalDevice, PipelineLayout);
+    }
+  }
+}
+
+public class PipelineInputData<T> where T : struct {
+  public T PushConstantType { get; } = default;
+  public string PipelineName { get; set; } = SystemBase.DefaultPipelineName;
+  public VkDescriptorSetLayout[] DescriptorSetLayouts = [];
+  public string VertexName = string.Empty;
+  public string FragmentName = string.Empty;
+  public PipelineProvider PipelineProvider { get; set; } = null!;
+  public VkRenderPass RenderPass { get; set; } = VkRenderPass.Null;
+}
+
+public class PipelineInputData {
+  public string PipelineName { get; set; } = SystemBase.DefaultPipelineName;
+  public VkDescriptorSetLayout[] DescriptorSetLayouts = [];
+  public string VertexName = string.Empty;
+  public string FragmentName = string.Empty;
+  public PipelineProvider PipelineProvider { get; set; } = null!;
+  public VkRenderPass RenderPass { get; set; } = VkRenderPass.Null;
+}
+
+
 public abstract class SystemBase {
+  public const string DefaultPipelineName = "main";
+
   protected readonly IDevice _device = null!;
   protected readonly Renderer _renderer = null!;
   protected VkDescriptorSetLayout _globalDescriptorSetLayout;
   protected PipelineConfigInfo _pipelineConfigInfo;
-  protected VkPipelineLayout _pipelineLayout;
-  protected Pipeline _pipeline = null!;
+  protected Dictionary<string, PipelineData> _pipelines = [];
 
-  // protected Vulkan.Buffer[] _buffer = new Vulkan.Buffer[0];
   protected DescriptorPool _descriptorPool = null!;
   protected DescriptorPool _texturePool = null!;
   protected DescriptorSetLayout _setLayout = null!;
@@ -36,29 +70,35 @@ public abstract class SystemBase {
     _device = device;
     _renderer = renderer;
     _globalDescriptorSetLayout = globalSetLayout;
-    _pipelineConfigInfo = configInfo;
-  }
 
-  public void BindBuffer(FrameInfo frameInfo) {
-    // vkCmdBindVertexBuffers(frameInfo.CommandBuffer, 0, 1, )
+    _pipelineConfigInfo = configInfo ?? null!;
   }
 
   #region Pipeline
 
-  protected unsafe void CreatePipelineLayout<T>(VkDescriptorSetLayout[] layouts) {
+  protected unsafe void CreatePipelineLayout<T>(
+    VkDescriptorSetLayout[] layouts,
+    out VkPipelineLayout pipelineLayout
+  ) {
     CreatePipelineLayoutBase(layouts, out var pipelineInfo);
     var push = CreatePushConstants<T>();
     pipelineInfo.pushConstantRangeCount = 1;
     pipelineInfo.pPushConstantRanges = &push;
-    FinalizePipelineLayout(&pipelineInfo);
+    FinalizePipelineLayout(&pipelineInfo, out pipelineLayout);
   }
 
-  protected unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
+  protected unsafe void CreatePipelineLayout(
+    VkDescriptorSetLayout[] layouts,
+    out VkPipelineLayout pipelineLayout
+  ) {
     CreatePipelineLayoutBase(layouts, out var pipelineInfo);
-    FinalizePipelineLayout(&pipelineInfo);
+    FinalizePipelineLayout(&pipelineInfo, out pipelineLayout);
   }
 
-  protected unsafe void CreatePipelineLayoutBase(VkDescriptorSetLayout[] layouts, out VkPipelineLayoutCreateInfo pipelineInfo) {
+  protected unsafe void CreatePipelineLayoutBase(
+    VkDescriptorSetLayout[] layouts,
+    out VkPipelineLayoutCreateInfo pipelineInfo
+  ) {
     pipelineInfo = new() {
       setLayoutCount = (uint)layouts.Length
     };
@@ -67,8 +107,16 @@ public abstract class SystemBase {
     }
   }
 
-  protected unsafe void FinalizePipelineLayout(VkPipelineLayoutCreateInfo* pipelineInfo) {
-    vkCreatePipelineLayout(_device.LogicalDevice, pipelineInfo, null, out _pipelineLayout).CheckResult();
+  protected unsafe void FinalizePipelineLayout(
+    VkPipelineLayoutCreateInfo* pipelineInfo,
+    out VkPipelineLayout pipelineLayout
+  ) {
+    vkCreatePipelineLayout(
+      _device.LogicalDevice,
+      pipelineInfo,
+      null,
+      out pipelineLayout
+    ).CheckResult();
   }
 
   protected unsafe VkPushConstantRange CreatePushConstants<T>() {
@@ -85,14 +133,61 @@ public abstract class SystemBase {
     VkRenderPass renderPass,
     string vertexName,
     string fragmentName,
-    PipelineProvider pipelineProvider
+    PipelineProvider pipelineProvider,
+    VkPipelineLayout pipelineLayout,
+    out Pipeline pipeline
   ) {
-    _pipeline?.Dispose();
     _pipelineConfigInfo ??= new PipelineConfigInfo();
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
-    pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+    pipelineConfig.PipelineLayout = pipelineLayout;
+    pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+  }
+
+  protected void AddPipelineData<T>(PipelineInputData<T> pipelineInput) where T : struct {
+    _pipelines.TryAdd(
+      pipelineInput.PipelineName,
+      new()
+    );
+
+    CreatePipelineLayout<T>(
+      pipelineInput.DescriptorSetLayouts,
+      out _pipelines[pipelineInput.PipelineName].PipelineLayout
+    );
+
+    CreatePipeline(
+      pipelineInput.RenderPass,
+      pipelineInput.VertexName,
+      pipelineInput.FragmentName,
+      pipelineInput.PipelineProvider,
+      _pipelines[pipelineInput.PipelineName].PipelineLayout,
+      out _pipelines[pipelineInput.PipelineName].Pipeline
+    );
+  }
+
+  protected void AddPipelineData(PipelineInputData pipelineInput) {
+    _pipelines.TryAdd(
+      pipelineInput.PipelineName,
+      new()
+    );
+
+    CreatePipelineLayout(
+      pipelineInput.DescriptorSetLayouts,
+      out _pipelines[pipelineInput.PipelineName].PipelineLayout
+    );
+
+    CreatePipeline(
+      pipelineInput.RenderPass,
+      pipelineInput.VertexName,
+      pipelineInput.FragmentName,
+      pipelineInput.PipelineProvider,
+      _pipelines[pipelineInput.PipelineName].PipelineLayout,
+      out _pipelines[pipelineInput.PipelineName].Pipeline
+    );
+  }
+
+  protected void BindPipeline(VkCommandBuffer commandBuffer, string pipelineName = DefaultPipelineName) {
+    _pipelines[pipelineName].Pipeline?.Bind(commandBuffer);
   }
 
   #endregion
@@ -103,7 +198,11 @@ public abstract class SystemBase {
     _textureSetLayout?.Dispose();
     _descriptorPool?.Dispose();
     _texturePool?.Dispose();
-    _pipeline?.Dispose();
-    vkDestroyPipelineLayout(_device.LogicalDevice, _pipelineLayout);
+    foreach (var p in _pipelines) {
+      p.Value.Dispose(_device);
+    }
+    _pipelines.Clear();
   }
+
+  public VkPipelineLayout PipelineLayout => _pipelines.FirstOrDefault().Value.PipelineLayout;
 }

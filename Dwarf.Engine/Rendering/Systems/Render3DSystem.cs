@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -14,10 +15,15 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
+  public const string Simple3D = "simple3D";
+  public const string Skinned3D = "skinned3D";
+
   private DwarfBuffer _modelBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private VulkanDescriptorWriter _dynamicWriter = null!;
+
+  private readonly DescriptorSetLayout _jointDescriptorLayout = null!;
 
   // private readonly List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
   // private readonly DwarfBuffer _indirectCommandBuffer = null!;
@@ -36,19 +42,42 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .AddBinding(0, VkDescriptorType.UniformBufferDynamic, VkShaderStageFlags.AllGraphics)
       .Build();
 
+    _jointDescriptorLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .Build();
+
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
     .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-    .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
     .Build();
 
-    VkDescriptorSetLayout[] descriptorSetLayouts = [
+    VkDescriptorSetLayout[] basicLayouts = [
       _textureSetLayout.GetDescriptorSetLayout(),
       globalSetLayout,
-      _setLayout.GetDescriptorSetLayout()
+      _setLayout.GetDescriptorSetLayout(),
     ];
 
-    CreatePipelineLayout<SimplePushConstantData>(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass(), "vertex", "fragment", new PipelineModelProvider());
+    VkDescriptorSetLayout[] complexLayouts = [
+      .. basicLayouts,
+      _jointDescriptorLayout.GetDescriptorSetLayout(),
+    ];
+
+    AddPipelineData<SimplePushConstantData>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "vertex",
+      FragmentName = "fragment",
+      PipelineProvider = new PipelineModelProvider(),
+      DescriptorSetLayouts = basicLayouts,
+      PipelineName = Simple3D
+    });
+
+    AddPipelineData<SimplePushConstantData>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "vertex_skinned",
+      FragmentName = "fragment_skinned",
+      PipelineProvider = new PipelineModelProvider(),
+      DescriptorSetLayouts = complexLayouts,
+      PipelineName = Skinned3D
+    });
   }
 
   private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
@@ -76,6 +105,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
   }
 
+  private void BuildTargetDescriptorJointBuffer(Mesh mesh) {
+    if (mesh.Skin == null) return;
+
+    mesh.Skin.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+  }
+
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
     _device.WaitQueue();
     var startTime = DateTime.Now;
@@ -88,9 +123,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     Logger.Info("Recreating Renderer 3D");
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
-      .SetMaxSets(2000)
+      .SetMaxSets(3000)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
+      .AddPoolSize(VkDescriptorType.StorageBuffer, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
@@ -111,9 +147,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (targetModel!.MeshsesCount > 1) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
           BuildTargetDescriptorTexture(entities[i], ref textures, x);
+          BuildTargetDescriptorJointBuffer(targetModel.Meshes[x]);
         }
       } else {
         BuildTargetDescriptorTexture(entities[i], ref textures);
+        BuildTargetDescriptorJointBuffer(targetModel.Meshes[0]);
       }
     }
 
@@ -123,7 +161,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _dynamicWriter = new VulkanDescriptorWriter(_setLayout, _descriptorPool);
       _dynamicWriter.WriteBuffer(0, &range);
       _dynamicWriter.Build(out _dynamicSet);
-
     }
 
     var endTime = DateTime.Now;
@@ -149,15 +186,23 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len == _texturesCount;
   }
 
-  public void Render(FrameInfo frameInfo, Span<Entity> entities) {
+  public void Render(FrameInfo frameInfo, Span<IRender3DElement> entities) {
     if (entities.Length < 1) return;
 
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
+    var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
+
+    RenderSimple(frameInfo, notSkinnedEntities.ToArray());
+    RenderComplex(frameInfo, skinnedEntities.ToArray(), notSkinnedEntities.Count());
+  }
+
+  private void RenderSimple(FrameInfo frameInfo, Span<IRender3DElement> entities) {
+    BindPipeline(frameInfo.CommandBuffer, Simple3D);
     unsafe {
       vkCmdBindDescriptorSets(
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
-        _pipelineLayout,
+        _pipelines[Simple3D].PipelineLayout,
         1,
         1,
         &frameInfo.GlobalDescriptorSet,
@@ -172,12 +217,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     IRender3DElement lastModel = null!;
 
     for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].GetDrawable<IRender3DElement>() is not IRender3DElement targetEntity) continue;
-      if (entities[i].CanBeDisposed) continue;
+      if (entities[i].GetOwner().CanBeDisposed) continue;
 
-      var materialData = entities[i].GetComponent<Material>().Data;
+      var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
 
-      _modelUbo.Material = materialData;
+      // _modelUbo.Material = materialData;
+      _modelUbo.Color = materialData.Color;
+      _modelUbo.Specular = materialData.Specular;
+      _modelUbo.Shininess = materialData.Shininess;
+      _modelUbo.Diffuse = materialData.Diffuse;
+      _modelUbo.Ambient = materialData.Ambient;
+
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
       ulong offset = 0;
@@ -190,7 +240,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      var transform = entities[i].GetComponent<Transform>();
+      var transform = entities[i].GetOwner().GetComponent<Transform>();
 
       unsafe {
         _pushConstantData->ModelMatrix = transform.Matrix4;
@@ -198,7 +248,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
-          _pipelineLayout,
+          _pipelines[Simple3D].PipelineLayout,
           VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
           0,
           (uint)Unsafe.SizeOf<SimplePushConstantData>(),
@@ -209,7 +259,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           vkCmdBindDescriptorSets(
             frameInfo.CommandBuffer,
             VkPipelineBindPoint.Graphics,
-            _pipelineLayout,
+            _pipelines[Simple3D].PipelineLayout,
             2,
             1,
             descPtr,
@@ -219,23 +269,149 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      if (!entities[i].CanBeDisposed && entities[i].Active) {
-        for (uint x = 0; x < targetEntity.MeshsesCount; x++) {
-          if (!targetEntity.FinishedInitialization) continue;
+      if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
+        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
+          if (!entities[i].FinishedInitialization) continue;
 
           if (i == _texturesCount) continue;
-          var targetTexture = frameInfo.TextureManager.GetTexture(targetEntity.GetTextureIdReference((int)x));
-          Descriptor.BindDescriptorSet((VulkanDevice)_device, targetTexture.TextureDescriptor, frameInfo, ref _pipelineLayout, 0, 1);
+          var targetTexture = frameInfo.TextureManager.GetTexture(entities[i].GetTextureIdReference((int)x));
+          Descriptor.BindDescriptorSet(
+            targetTexture.TextureDescriptor,
+            frameInfo,
+            _pipelines[Simple3D].PipelineLayout,
+            0,
+            1
+          );
 
+          if (entities[i] != lastModel)
+            entities[i].Bind(frameInfo.CommandBuffer, x);
 
-          if (targetEntity != lastModel)
-            targetEntity.Bind(frameInfo.CommandBuffer, x);
+          entities[i].Draw(frameInfo.CommandBuffer, x);
 
-          targetEntity.Draw(frameInfo.CommandBuffer, x);
+          entities[i].Meshes[x].Skin?.Ssbo.Unmap();
         }
       }
 
-      lastModel = targetEntity;
+      lastModel = entities[i];
+    }
+
+    _modelBuffer.Unmap();
+  }
+
+  private void RenderComplex(FrameInfo frameInfo, Span<IRender3DElement> entities, int prevIdx) {
+    BindPipeline(frameInfo.CommandBuffer, Skinned3D);
+    unsafe {
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Skinned3D].PipelineLayout,
+        1,
+        1,
+        &frameInfo.GlobalDescriptorSet,
+        0,
+        null
+      );
+    }
+
+    _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
+    _modelBuffer.Flush();
+
+    IRender3DElement lastModel = null!;
+
+    for (int i = 0; i < entities.Length; i++) {
+      if (entities[i].GetOwner().CanBeDisposed) continue;
+
+      var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
+
+      // _modelUbo.Material = materialData;
+      _modelUbo.Color = materialData.Color;
+      _modelUbo.Specular = materialData.Specular;
+      _modelUbo.Shininess = materialData.Shininess;
+      _modelUbo.Diffuse = materialData.Diffuse;
+      _modelUbo.Ambient = materialData.Ambient;
+
+      uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * ((uint)i + (uint)prevIdx);
+
+      ulong offset = 0;
+      unsafe {
+        var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
+
+        offset = fixedSize * (ulong)(i + prevIdx);
+        fixed (ModelUniformBufferObject* modelUboPtr = &_modelUbo) {
+          _modelBuffer.WriteToBuffer((IntPtr)(modelUboPtr), _modelBuffer.GetInstanceSize(), offset);
+        }
+      }
+
+      var transform = entities[i].GetOwner().GetComponent<Transform>();
+
+      unsafe {
+        _pushConstantData->ModelMatrix = transform.Matrix4;
+        _pushConstantData->NormalMatrix = transform.NormalMatrix;
+
+        vkCmdPushConstants(
+          frameInfo.CommandBuffer,
+          _pipelines[Skinned3D].PipelineLayout,
+          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+          0,
+          (uint)Unsafe.SizeOf<SimplePushConstantData>(),
+          _pushConstantData
+        );
+
+        fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
+          vkCmdBindDescriptorSets(
+            frameInfo.CommandBuffer,
+            VkPipelineBindPoint.Graphics,
+            _pipelines[Skinned3D].PipelineLayout,
+            2,
+            1,
+            descPtr,
+            1,
+            &dynamicOffset
+          );
+        }
+      }
+
+      if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
+        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
+          if (!entities[i].FinishedInitialization) continue;
+
+          if (entities[i].IsSkinned) {
+            for (int y = 0; y < entities[i].Meshes[x].Skin!.InverseBindMatrices.Length; y++) {
+              var target = entities[i].Meshes[x].Skin!.InverseBindMatrices[y];
+              entities[i].Meshes[x].Skin?.Ssbo.Map(
+                (ulong)Unsafe.SizeOf<Matrix4x4>(),
+                (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
+              );
+              entities[i].Meshes[x].Skin?.Write(
+                target,
+                (ulong)Unsafe.SizeOf<Matrix4x4>(),
+                (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
+              );
+            }
+
+            Descriptor.BindDescriptorSet(
+              entities[i].Meshes[x].Skin!.DescriptorSet,
+              frameInfo,
+              _pipelines[Skinned3D].PipelineLayout,
+              3,
+              1
+            );
+          }
+
+          if (i == _texturesCount) continue;
+          var targetTexture = frameInfo.TextureManager.GetTexture(entities[i].GetTextureIdReference((int)x));
+          Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+
+          if (entities[i] != lastModel)
+            entities[i].Bind(frameInfo.CommandBuffer, x);
+
+          entities[i].Draw(frameInfo.CommandBuffer, x);
+
+          entities[i].Meshes[x].Skin?.Ssbo.Unmap();
+        }
+      }
+
+      lastModel = entities[i];
     }
 
     _modelBuffer.Unmap();
@@ -245,10 +421,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _device.WaitQueue();
     _device.WaitDevice();
 
-    MemoryUtils.FreeIntPtr((nint)_pushConstantData);
+    MemoryUtils.FreeIntPtr<SimplePushConstantData>((nint)_pushConstantData);
 
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
+
+    _jointDescriptorLayout?.Dispose();
 
     base.Dispose();
   }

@@ -1,9 +1,13 @@
+using Dwarf.EntityComponentSystem;
+
 namespace Dwarf.Rendering;
 public interface IRender3DElement : IDrawable {
-  public int MeshsesCount { get; }
-  public Mesh[] Meshes { get; }
-  public bool FinishedInitialization { get; }
-  public Guid GetTextureIdReference(int index = 0);
-  public float CalculateHeightOfAnModel();
+  int MeshsesCount { get; }
+  Mesh[] Meshes { get; }
+  bool FinishedInitialization { get; }
+  bool IsSkinned { get; }
+  Entity GetOwner();
+  Guid GetTextureIdReference(int index = 0);
+  float CalculateHeightOfAnModel();
   // public void DrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, ulong offset, uint drawCount, uint stride);
 }

@@ -566,15 +566,6 @@ public class Application {
       CommandBuffer = [Renderer.MAX_FRAMES_IN_FLIGHT]
     };
 
-    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
-    secondaryCmdBufAllocateInfo.level = VkCommandBufferLevel.Primary;
-    secondaryCmdBufAllocateInfo.commandPool = threadInfo.CommandPool;
-    secondaryCmdBufAllocateInfo.commandBufferCount = 1;
-
-    fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
-      vkAllocateCommandBuffers(Device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
-    }
-
     Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
 
     while (!_renderShouldClose) {
@@ -583,10 +574,6 @@ public class Application {
       Render(threadInfo);
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
-    }
-
-    fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
-      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
     }
 
     Device.WaitQueue();

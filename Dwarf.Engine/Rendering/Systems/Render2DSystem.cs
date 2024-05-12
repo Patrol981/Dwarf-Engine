@@ -34,8 +34,17 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       _setLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout()
     ];
-    CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
+
+    AddPipelineData<SpriteUniformBufferObject>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "sprite_vertex",
+      FragmentName = "sprite_fragment",
+      PipelineProvider = new PipelineSpriteProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    //CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
+    //CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
   }
 
   public unsafe void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
@@ -109,12 +118,13 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   }
 
   public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
+      PipelineLayout,
       0,
       1,
       &frameInfo.GlobalDescriptorSet,
@@ -133,7 +143,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
-        _pipelineLayout,
+        PipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
         (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
@@ -143,7 +153,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       var sprite = entities[i].GetComponent<Sprite>();
       if (!sprite.Owner!.CanBeDisposed && sprite.Owner!.Active) {
         if (sprite.UsesTexture)
-          sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipelineLayout);
+          // sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipeline.PipelineLayout);
+          sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, _pipelines["main"].PipelineLayout);
         sprite.Bind(frameInfo.CommandBuffer);
         sprite.Draw(frameInfo.CommandBuffer);
       }

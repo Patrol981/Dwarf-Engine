@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Dwarf.AbstractionLayer;
-using Dwarf.Globals;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -457,7 +457,7 @@ public partial class ImGuiController : IDisposable {
 
   public unsafe void Dispose() {
     foreach (var userTex in _userTextures) {
-      MemoryUtils.FreeIntPtr(userTex.Key);
+      MemoryUtils.FreeIntPtr<VulkanTexture>(userTex.Key);
     }
 
     ImGui.DestroyContext();
@@ -486,6 +486,12 @@ public partial class ImGuiController : IDisposable {
     vkDestroyDescriptorPool(_device.LogicalDevice, _descriptorPool, null);
     vkDestroyDescriptorSetLayout(_device.LogicalDevice, _descriptorSetLayout, null);
     */
+  }
+
+  public static bool MouseOverUI() {
+    return ImGui.IsWindowHovered(
+      ImGuiHoveredFlags.AnyWindow
+    );
   }
 
   public DescriptorPool GetDescriptorPool() {

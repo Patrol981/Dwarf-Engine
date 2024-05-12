@@ -323,7 +323,7 @@ public class Skybox : IDisposable {
   }
 
   private unsafe void BindTexture(FrameInfo frameInfo) {
-    Descriptor.BindDescriptorSet(_device, _textureSet, frameInfo, ref _pipelineLayout, 0, 1);
+    Descriptor.BindDescriptorSet(_textureSet, frameInfo, _pipelineLayout, 0, 1);
   }
 
   private unsafe void BindDescriptorTexture() {

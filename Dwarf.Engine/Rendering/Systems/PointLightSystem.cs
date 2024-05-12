@@ -19,6 +19,15 @@ public class PointLightSystem : SystemBase {
       globalSetLayout,
     ];
 
+    AddPipelineData(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "point_light_vertex",
+      FragmentName = "point_light_fragment",
+      PipelineProvider = new PipelinePointLightProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    /*
     CreatePipelineLayout(descriptorSetLayouts);
     CreatePipeline(
       renderer.GetSwapchainRenderPass(),
@@ -26,6 +35,7 @@ public class PointLightSystem : SystemBase {
       "point_light_fragment",
       new PipelinePointLightProvider()
    );
+    */
   }
 
   public void Setup() {
@@ -35,12 +45,13 @@ public class PointLightSystem : SystemBase {
   public void Render(FrameInfo frameInfo) {
     // if (lights.Length < 1) return;
 
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
-        _pipelineLayout,
+        PipelineLayout,
         0,
         1,
         &frameInfo.GlobalDescriptorSet,

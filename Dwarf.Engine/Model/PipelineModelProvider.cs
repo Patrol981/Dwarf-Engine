@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using Dwarf.Vulkan;
@@ -39,13 +39,23 @@ public class PipelineModelProvider : PipelineProvider {
     attributeDescriptions[3].format = VkFormat.R32G32Sfloat;
     attributeDescriptions[3].offset = (uint)Marshal.OffsetOf<Vertex>("Uv");
 
+    attributeDescriptions[4].binding = 0;
+    attributeDescriptions[4].location = 4;
+    attributeDescriptions[4].format = VkFormat.R32G32B32A32Sfloat;
+    attributeDescriptions[4].offset = (uint)Marshal.OffsetOf<Vertex>("JointIndices");
+
+    attributeDescriptions[5].binding = 0;
+    attributeDescriptions[5].location = 5;
+    attributeDescriptions[5].format = VkFormat.R32G32B32A32Sfloat;
+    attributeDescriptions[5].offset = (uint)Marshal.OffsetOf<Vertex>("JointWeights");
+
     fixed (VkVertexInputAttributeDescription* ptr = attributeDescriptions) {
       return ptr;
     }
   }
 
   public override uint GetAttribsLength() {
-    return 4;
+    return 6;
   }
 
   public override uint GetBindingsLength() {

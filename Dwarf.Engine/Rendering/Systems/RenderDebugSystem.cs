@@ -21,17 +21,26 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       globalSetLayout,
     ];
 
-    CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
+    AddPipelineData<ColliderMeshPushConstant>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "debug_vertex",
+      FragmentName = "debug_fragment",
+      PipelineProvider = new PipelineModelProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    // CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
+    // CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
   }
 
   public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
-    _pipeline.Bind(frameInfo.CommandBuffer);
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
+      PipelineLayout,
       0,
       1,
       &frameInfo.GlobalDescriptorSet,
@@ -55,7 +64,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
-        _pipelineLayout,
+        PipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
         (uint)Unsafe.SizeOf<ColliderMeshPushConstant>(),

@@ -1,6 +1,6 @@
 using System.Numerics;
-using System.Security.Cryptography;
 
+using Dwarf.Extensions.Logging;
 using Dwarf.Loader.Providers;
 using Dwarf.Loaders;
 using Dwarf.Physics;
@@ -96,7 +96,7 @@ public static class EntityCreator {
     if (modelPath.Contains("glb")) {
       var preload = texturePaths != null;
 
-      entity.AddComponent(await GLTFLoader.Load(app, modelPath, preload, flip));
+      entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
 
       if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
         throw new Exception("Mesh is empty");
@@ -137,7 +137,8 @@ public static class EntityCreator {
       throw new Exception("This method does not support formats other than .glb");
     }
 
-    entity.AddComponent(await GLTFLoader.Load(app, modelPath, false, flip));
+    Logger.Info($"{entity.Name} Mesh init");
+    entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
 
     if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
       throw new Exception("Mesh is empty");

@@ -2,10 +2,10 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Dwarf.Physics;
 using Dwarf.Rendering;
-using Dwarf.Extensions.Logging;
 
 namespace Dwarf;
 
@@ -55,6 +55,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
     Meshes = meshes;
     AABBArray = new AABB[MeshsesCount];
+
+    if (MeshsesCount < 1) throw new ArgumentOutOfRangeException(nameof(MeshsesCount));
 
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
@@ -205,6 +207,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
         _indexBuffers[i]?.Dispose();
       }
     }
+    foreach (var mesh in Meshes) {
+      mesh?.Dispose();
+    }
   }
   public int MeshsesCount { get; private set; } = 0;
   public Mesh[] Meshes { get; private set; } = [];
@@ -221,6 +226,14 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return _textureIdRefs[index];
   }
   public bool FinishedInitialization { get; private set; } = false;
+
+  public bool IsSkinned {
+    get {
+      return Meshes.Where(x => x.Skin != null).Count() > 0;
+    }
+  }
+
+  public Entity GetOwner() => Owner!;
 
   public AABB[] AABBArray { get; private set; } = [];
 

@@ -1,10 +1,10 @@
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 using Dwarf.EntityComponentSystem;
 
 namespace Dwarf;
 
+/*
 [StructLayout(LayoutKind.Explicit)]
 public struct MaterialData {
   [FieldOffset(0)] public Vector3 Color;
@@ -12,6 +12,15 @@ public struct MaterialData {
   [FieldOffset(32)] public Vector3 Diffuse;
   [FieldOffset(48)] public Vector3 Specular;
   [FieldOffset(60)] public float Shininess;
+}
+*/
+
+public struct MaterialData {
+  public Vector3 Color;
+  public Vector3 Ambient;
+  public Vector3 Diffuse;
+  public Vector3 Specular;
+  public float Shininess;
 }
 
 public class Material : Component {

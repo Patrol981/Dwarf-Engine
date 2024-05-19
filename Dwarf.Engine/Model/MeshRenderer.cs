@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
@@ -6,6 +7,9 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Dwarf.Physics;
 using Dwarf.Rendering;
+using Dwarf.Vulkan;
+
+using Vortice.Vulkan;
 
 namespace Dwarf;
 
@@ -20,6 +24,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private ulong[] _indexCount = [];
   private Guid[] _textureIdRefs = [];
   private readonly AABB _mergedAABB = new();
+
+  private VkDescriptorSet _skinDescriptor = VkDescriptorSet.Null;
 
   public MeshRenderer() { }
 
@@ -129,6 +135,17 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
+  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    unsafe {
+      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
+      range.range = Ssbo.GetAlignmentSize();
+
+      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+      .WriteBuffer(0, &range)
+      .Build(out _skinDescriptor);
+    }
+  }
+
   protected unsafe Task CreateVertexBuffer(Vertex[] vertices, uint index) {
     _vertexCount[index] = (ulong)vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount[index];
@@ -207,12 +224,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
         _indexBuffers[i]?.Dispose();
       }
     }
+
     foreach (var mesh in Meshes) {
       mesh?.Dispose();
     }
+
+    Ssbo?.Dispose();
   }
   public int MeshsesCount { get; private set; } = 0;
   public Mesh[] Meshes { get; private set; } = [];
+  public DwarfBuffer Ssbo { get; set; } = null!;
+  public Matrix4x4[] InverseMatrices { get; set; } = [];
+  public VkDescriptorSet SkinDescriptor => _skinDescriptor;
   public string FileName { get; } = "";
   public int TextureFlipped { get; set; } = 1;
   public float CalculateHeightOfAnModel() {

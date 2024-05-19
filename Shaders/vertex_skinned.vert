@@ -64,6 +64,7 @@ void main() {
     jointWeights.w * jointMatrices[int(jointIndices.w)];
 
   vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
+  // vec4 positionWorld = skinMat * vec4(position, 1.0);
 
   // vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
 

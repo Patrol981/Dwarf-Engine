@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
@@ -21,9 +22,10 @@ public partial class GLTFLoader {
 
     var materials = new Dictionary<int, SharpGLTF.Schema2.Material>();
     var meshMaterialPair = new Dictionary<Mesh, SharpGLTF.Schema2.MaterialChannel>();
+    var inverseList = new List<Matrix4x4>();
 
     var modelRoot = ModelRoot.Load(path);
-    ProcessGLTF(app, modelRoot, ref meshMaterialPair, path);
+    ProcessGLTF(app, modelRoot, ref meshMaterialPair, ref inverseList, path);
 
     meshRenderer = new(app.Device, app.Renderer, [.. meshMaterialPair.Keys]);
 
@@ -41,21 +43,39 @@ public partial class GLTFLoader {
         byte[] imageData = memoryStream.ToArray();
 
         File.WriteAllBytes($"./Resources/{tags[i]}.png", imageData);
-        // images[i].Texture.PrimaryImage.Content.SaveToFile($"./Resources/{tags[i]}.png");
         paths[i] = $"./Resources/{tags[i]}.png";
-
-        /*
-        var tex = TextureLoader.LoadFromBytes(
-          app.Device,
-          imageData,
-          paths[i],
-          flip
-        );
-        */
       }
 
       var textures = await TextureManager.AddTextures(app.Device, paths, flip);
       app.TextureManager.AddRange([.. textures]);
+
+      if (path == "./Resources/astolfo.glb") {
+        Logger.Info($"Meshes Count : {meshRenderer.MeshsesCount}");
+      }
+
+      if (meshRenderer.IsSkinned) {
+        meshRenderer.InverseMatrices = [.. inverseList];
+        for (int i = 0; i < meshRenderer.InverseMatrices.Length; i++) {
+          // meshRenderer.InverseMatrices[i] = Matrix4x4.CreateTranslation(new Vector3(i, 0, 0));
+        }
+
+        meshRenderer.Ssbo = new DwarfBuffer(
+          app.Device,
+          (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)inverseList.Count,
+          BufferUsage.StorageBuffer,
+          MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+        );
+        unsafe {
+          meshRenderer.Ssbo.Map();
+          fixed (Matrix4x4* inverseMatricesPtr = meshRenderer.InverseMatrices) {
+            meshRenderer.Ssbo.WriteToBuffer(
+              (nint)inverseMatricesPtr,
+              meshRenderer.Ssbo.GetAlignmentSize()
+           );
+          }
+          meshRenderer.Ssbo.Unmap();
+        }
+      }
 
       if (meshRenderer.MeshsesCount == images.Length || images.Length > meshRenderer.MeshsesCount) {
         meshRenderer.BindMultipleModelPartsToTextures(app.TextureManager, paths);
@@ -73,6 +93,7 @@ public partial class GLTFLoader {
     Application app,
     ModelRoot modelRoot,
     ref Dictionary<Mesh, SharpGLTF.Schema2.MaterialChannel> meshMaterialPair,
+    ref List<Matrix4x4> inverseMatrices,
     string path
   ) {
     // var idMeshPair = new Dictionary<int, SharpGLTF.Schema2.Mesh>();
@@ -83,22 +104,25 @@ public partial class GLTFLoader {
     // Logger.Info($"{path} nodes : {modelRoot.LogicalNodes.Count}");
 
     foreach (var node in modelRoot.LogicalNodes) {
-      // Logger.Info($"{path} : {node.Name}");
 
       if (node.IsSkinSkeleton) {
         // ProcessArmatureData(app, modelRoot, node, ref meshMaterialPair, path);
       }
 
       if (node.Mesh != null) {
-        ProcessMeshData(app, modelRoot, node, ref meshMaterialPair, path);
+        ProcessMeshData(app, modelRoot, node, ref meshMaterialPair, ref inverseMatrices, path);
       }
     }
+
+    ProcessAnimationData(app, modelRoot, path);
 
     if (path == "./Resources/astolfo.glb") {
       var test = modelRoot.GetJsonPreview();
       // Logger.Info($"{test.ToString()}");
 
       // Logger.Info(meshMaterialPair.Count);
+
+
     }
   }
 
@@ -112,11 +136,23 @@ public partial class GLTFLoader {
     Dwarf.Model.Animation.Skin skin = null!;
   }
 
+  private static void ProcessAnimationData(
+    Application app,
+    ModelRoot modelRoot,
+    string path
+  ) {
+
+    if (modelRoot.LogicalAnimations.Count < 1) {
+      Logger.Warn($"Model {path} does not have animations");
+    }
+  }
+
   private static void ProcessMeshData(
     Application app,
     ModelRoot modelRoot,
     Node node,
     ref Dictionary<Mesh, SharpGLTF.Schema2.MaterialChannel> meshMaterialPair,
+    ref List<Matrix4x4> inverseMatrices,
     string path
   ) {
     MaterialChannel baseColor = default;
@@ -149,7 +185,8 @@ public partial class GLTFLoader {
 
       var vertex = new Vertex();
       for (int i = 0; i < positions.Count; i++) {
-        vertex.Position = positions[i];
+        // vertex.Position = positions[i];
+        vertex.Position = Vector3.Transform(positions[i], GetNodeMatrix(node));
         vertex.Color = new Vector3(1, 1, 1);
         vertex.Normal = normals.Count > 0 ? normals[i] : new Vector3(1, 1, 1);
         vertex.Uv = textureCoords.Count > 0 ? textureCoords[i] : new Vector2(0, 0);
@@ -174,10 +211,10 @@ public partial class GLTFLoader {
     Dwarf.Model.Animation.Skin skin = null!;
 
     if (node.Skin != null) {
-      Logger.Info(node.Skin.GetInverseBindMatricesAccessor().LogicalIndex);
-
       unsafe {
         Matrix4x4[] inverseBindMatrices = [.. node.Skin.GetInverseBindMatricesAccessor().AsMatrix4x4Array()];
+
+        inverseMatrices.AddRange([.. inverseBindMatrices]);
 
         /*
         Accessor? accessor = modelRoot.LogicalAccessors
@@ -216,71 +253,15 @@ public partial class GLTFLoader {
     meshMaterialPair.Add(meshData, baseColor);
   }
 
-  private static void ProcessGLTF_Old(
-    ModelRoot modelRoot,
-    ref Dictionary<Mesh, SharpGLTF.Schema2.MaterialChannel> meshMaterialPair
-  ) {
-    foreach (var mesh in modelRoot.LogicalMeshes) {
-      MaterialChannel baseColor = default;
+  private static Matrix4x4 GetNodeMatrix(Node node) {
+    var translation = node.LocalTransform.Translation;
+    var rotation = node.LocalTransform.Rotation;
+    var scale = node.LocalTransform.Scale;
 
-      if (mesh == null) continue;
+    var transform = Matrix4x4.CreateScale(scale) *
+                    Matrix4x4.CreateFromQuaternion(rotation) *
+                    Matrix4x4.CreateTranslation(translation);
 
-      var vertices = new List<Vertex>();
-      var indices = new List<uint>();
-
-      foreach (var primitive in mesh.Primitives) {
-        // init
-
-        var textureCoords = new List<Vector2>();
-        var normals = new List<Vector3>();
-
-        var material = primitive.Material;
-        if (material == null) continue;
-
-        // material
-
-        baseColor = material.FindChannel("BaseColor")!.Value;
-
-        // position
-
-        var positions = primitive.GetVertexAccessor("POSITION").AsVector3Array();
-        if (primitive.GetVertexAccessor("TEXCOORD_0") != null) {
-          textureCoords = primitive.GetVertexAccessor("TEXCOORD_0").AsVector2Array().ToList();
-        }
-        if (primitive.GetVertexAccessor("NORMAL") != null) {
-          normals = primitive.GetVertexAccessor("NORMAL").AsVector3Array().ToList();
-        }
-        var indexes = primitive.GetIndexAccessor().AsIndicesArray();
-        indices.AddRange(indexes.ToArray());
-
-        var vertex = new Vertex();
-        for (int i = 0; i < positions.Count; i++) {
-          vertex.Position = positions[i];
-          vertex.Color = new Vector3(1, 1, 1);
-          vertex.Normal = normals.Count > 0 ? normals[i] : new Vector3(1, 1, 1);
-          vertex.Uv = textureCoords.Count > 0 ? textureCoords[i] : new Vector2(0, 0);
-
-          vertices.Add(vertex);
-        }
-
-
-      }
-
-      if (vertices.Count < 1) {
-        continue;
-      }
-
-      var meshData = new Mesh {
-        Vertices = [.. vertices],
-        Indices = [.. indices]
-      };
-
-      meshMaterialPair.Add(meshData, baseColor);
-    }
-
-    foreach (var skin in modelRoot.LogicalSkins) {
-
-    }
+    return transform;
   }
-
 }

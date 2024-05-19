@@ -144,6 +144,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
+      if (targetModel!.IsSkinned) {
+        targetModel.BuildDescriptors(_jointDescriptorLayout, _descriptorPool);
+      }
+
       if (targetModel!.MeshsesCount > 1) {
         for (int x = 0; x < targetModel.MeshsesCount; x++) {
           BuildTargetDescriptorTexture(entities[i], ref textures, x);
@@ -376,21 +380,41 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           if (!entities[i].FinishedInitialization) continue;
 
           if (entities[i].IsSkinned) {
+            // Logger.Info($"Inv Len : {entities[i].Meshes[x].Skin!.InverseBindMatrices.Length}");
+            // Logger.Info($"Mesh Len : {entities[i].Meshes.Length}");
             for (int y = 0; y < entities[i].Meshes[x].Skin!.InverseBindMatrices.Length; y++) {
               var target = entities[i].Meshes[x].Skin!.InverseBindMatrices[y];
+
+              // entities[i].Meshes[x].Skin?.Ssbo.Flush();
               entities[i].Meshes[x].Skin?.Ssbo.Map(
                 (ulong)Unsafe.SizeOf<Matrix4x4>(),
                 (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
               );
+
+              var test = Matrix4x4.CreateTranslation(new Vector3(0, -y, 0));
+
               entities[i].Meshes[x].Skin?.Write(
-                target,
+                test,
                 (ulong)Unsafe.SizeOf<Matrix4x4>(),
                 (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
               );
+
+              // Ssbo.WriteToBuffer((nint)(&data), size, offset);
+              /*
+              unsafe {
+                fixed (Matrix4x4* inverseMatricesPtr = entities[i].InverseMatrices) {
+                  entities[i].Ssbo.WriteToBuffer(
+                    (nint)inverseMatricesPtr,
+                    entities[i].Ssbo.GetAlignmentSize()
+                  );
+                }
+              }
+              */
+
             }
 
             Descriptor.BindDescriptorSet(
-              entities[i].Meshes[x].Skin!.DescriptorSet,
+              entities[i].SkinDescriptor,
               frameInfo,
               _pipelines[Skinned3D].PipelineLayout,
               3,

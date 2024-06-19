@@ -30,7 +30,7 @@ fn main() {
   println!("dst dir -> {dst_dir}");
 
   // list all structures in src directory
-  let combined_path = cur_dir.join(src_dir).join("./structs");
+  let combined_path = cur_dir.join(src_dir).join("structs");
   let struct_paths = match fs::read_dir(combined_path) {
     Ok(result) => result,
     Err(err) => {
@@ -80,10 +80,6 @@ fn main() {
     let dst_path = cur_dir.join(dst_dir).join(sc.file_name_ext.clone());
     write_file(&dst_path, &sc.data);
   }
-
-  for shader_struct in shader_structs {
-    println!("{}", shader_struct.token);
-  }
 }
 
 fn read_file(path: &PathBuf) -> String {
@@ -121,8 +117,17 @@ fn edit_shader_code(shader_code: &mut ShaderCode, shader_structs: &Vec<ShaderStr
 }
 
 fn write_file(path: &PathBuf, data: &str) {
-  let mut file = File::create(path).expect("Unable to create file");
-  file
-    .write_all(data.as_bytes())
-    .expect("Unable to write file");
+  let mut file = match File::create(path) {
+    Ok(result) => result,
+    Err(err) => {
+      panic!("{err}");
+    }
+  };
+
+  match file.write_all(data.as_bytes()) {
+    Ok(result) => result,
+    Err(err) => {
+      panic!("{err}");
+    }
+  };
 }

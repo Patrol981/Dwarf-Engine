@@ -30,7 +30,7 @@ public partial class GLTFLoader {
     meshRenderer = new(app.Device, app.Renderer, [.. meshMaterialPair.Keys]);
 
     if (!preload) {
-      var images = meshMaterialPair.Values.ToArray();
+      var images = meshMaterialPair.Values.Where(x => x.Texture != null).ToArray();
       string[] tags = GetFileNames(path, images.Length);
       string[] paths = new string[tags.Length];
 
@@ -55,9 +55,6 @@ public partial class GLTFLoader {
 
       if (meshRenderer.IsSkinned) {
         meshRenderer.InverseMatrices = [.. inverseList];
-        for (int i = 0; i < meshRenderer.InverseMatrices.Length; i++) {
-          // meshRenderer.InverseMatrices[i] = Matrix4x4.CreateTranslation(new Vector3(i, 0, 0));
-        }
 
         meshRenderer.Ssbo = new DwarfBuffer(
           app.Device,
@@ -205,7 +202,10 @@ public partial class GLTFLoader {
       var material = primitive.Material;
       if (material == null) continue;
 
-      baseColor = material.FindChannel("BaseColor")!.Value;
+      var channel = material.FindChannel("BaseColor")!.Value;
+      if (channel.Texture == null) continue;
+
+      baseColor = channel;
     }
 
     Dwarf.Model.Animation.Skin skin = null!;

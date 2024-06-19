@@ -58,6 +58,10 @@ public static class Guizmos {
     s_perFrameGuizmos?.Clear();
   }
 
+  public static void Clear() {
+    s_guizmos.Clear();
+  }
+
   public static Span<Guizmo> Data => s_guizmos.ToArray();
   public static Span<Guizmo> PerFrameGuizmos => s_perFrameGuizmos.ToArray();
 }

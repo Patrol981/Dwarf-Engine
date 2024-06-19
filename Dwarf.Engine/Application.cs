@@ -461,7 +461,7 @@ public class Application {
       _ubo.LightColor = DirectionalLight.LightColor;
       _ubo.AmientLightColor = DirectionalLight.AmbientColor;
       _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
-      _ubo.Layer = 5;
+      _ubo.Layer = 1;
 
       fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
         _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());

@@ -75,13 +75,15 @@ public class Grid : DwarfScript {
     return GridData[x, y];
   }
 
-  private void CreateGrid() {
+  internal void CreateGrid() {
     GridData = new Node[_gridSizeX, _gridSizeY];
     GridGuizmos = new Guizmo[_gridSizeX, _gridSizeY];
     var worldBottomLeft =
       Owner!.GetComponent<Transform>().Position -
       Vector3.UnitX * GridSizeWorld.X / 2 -
       Vector3.UnitZ * GridSizeWorld.Y / 2;
+
+    Guizmos.Clear();
 
     for (int x = 0; x < _gridSizeX; x++) {
       for (int y = 0; y < _gridSizeY; y++) {

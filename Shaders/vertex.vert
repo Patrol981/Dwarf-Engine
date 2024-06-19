@@ -25,32 +25,11 @@ layout (push_constant) uniform Push {
   mat4 normalMatrix;
 } push;
 
-layout (set = 1, binding = 0) uniform GlobalUbo {
-  mat4 view;
-  mat4 projection;
-  vec3 lightPosition;
-  vec4 lightColor;
-  vec4 ambientLightColor;
-  vec3 cameraPosition;
-  int layer;
-} ubo;
+layout (set = 1, binding = 0) #include global_ubo
 
 // 500 FPS on avg
 // TODO: optimize set, so its reusable across all models?
-layout (set = 2, binding = 0) uniform ModelUBO {
-  // vec3 material_color;
-  // mat4 bonesMatrix;
-  // Material material;
-
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-
-  // int isSkinned;
-
-} modelUBO;
+layout (set = 2, binding = 0) #include model_ubo
 
 void main() {
   vec4 positionWorld = push.transform * vec4(position, 1.0);

@@ -12,45 +12,18 @@ layout (location = 1) out vec3 fragPositionWorld;
 layout (location = 2) out vec3 fragNormalWorld;
 layout (location = 3) out vec2 texCoord;
 
-struct Material {
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-};
+#include material
 
 layout (push_constant) uniform Push {
   mat4 transform;
   mat4 normalMatrix;
 } push;
 
-layout (set = 1, binding = 0) uniform GlobalUbo {
-  mat4 view;
-  mat4 projection;
-  vec3 lightPosition;
-  vec4 lightColor;
-  vec4 ambientLightColor;
-  vec3 cameraPosition;
-  int layer;
-} ubo;
+layout (set = 1, binding = 0) #include global_ubo
 
 // 500 FPS on avg
 // TODO: optimize set, so its reusable across all models?
-layout (set = 2, binding = 0) uniform ModelUBO {
-  // vec3 material_color;
-  // mat4 bonesMatrix;
-  // Material material;
-
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-
-  // int isSkinned;
-
-} modelUBO;
+layout (set = 2, binding = 0) #include skinned_model_ubo
 
 layout (std430, set = 3, binding = 0) readonly buffer JointBuffer {
   mat4 jointMatrices[];
@@ -65,8 +38,6 @@ void main() {
 
   vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
   // vec4 positionWorld = skinMat * vec4(position, 1.0);
-
-  // vec4 positionWorld = push.transform * skinMat * vec4(position, 1.0);
 
   // vec4 positionWorld =  totalPosition;
   gl_Position = ubo.projection * ubo.view * positionWorld;

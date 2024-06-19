@@ -1,0 +1,9 @@
+uniform GlobalUbo {
+  mat4 view;
+  mat4 projection;
+  vec3 lightPosition;
+  vec4 lightColor;
+  vec4 ambientLightColor;
+  vec3 cameraPosition;
+  int layer;
+} ubo;

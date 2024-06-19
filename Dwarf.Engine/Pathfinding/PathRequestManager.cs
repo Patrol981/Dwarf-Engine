@@ -38,6 +38,7 @@ public class PathRequestManager : DwarfScript {
   }
 
   public static void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<Vector3[], bool> callback) {
+    Instance._grid.CreateGrid();
     var newRequest = new PathRequest(pathStart, pathEnd, callback);
     Instance._pathRequestQueue.Enqueue(newRequest);
     Instance.TryProcessNext();

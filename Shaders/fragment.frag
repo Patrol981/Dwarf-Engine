@@ -7,13 +7,7 @@ layout (location = 3) in vec2 texCoord;
 
 layout (location = 0) out vec4 outColor;
 
-struct Material {
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-};
+#include material
 
 layout (push_constant) uniform Push {
   mat4 transform;
@@ -23,30 +17,9 @@ layout (push_constant) uniform Push {
 layout (set = 0, binding = 0) uniform sampler2D textureSampler;
 layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
-layout (set = 1, binding = 0) uniform GlobalUbo {
-  mat4 view;
-  mat4 projection;
-  vec3 lightPosition;
-  vec4 lightColor;
-  vec4 ambientLightColor;
-  vec3 cameraPosition;
-  int layer;
-} ubo;
+layout (set = 1, binding = 0) #include global_ubo
 
-layout (set = 2, binding = 0) uniform ModelUBO {
-  // vec3 material;
-  // mat4 bonesMatrix;
-  // Material material;
-
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-
-  // int isSkinned;
-
-} modelUBO;
+layout (set = 2, binding = 0) #include model_ubo
 
 vec3 sobel_filter(sampler2D tex, vec2 texCoords) {
   vec2 texelSize = 1.0 / textureSize(tex, 0);
@@ -134,7 +107,7 @@ void main() {
 
   if(ubo.layer == 0) {
     outColor = vec4(result, 1.0);
-  } else if(ubo.layer == 5) {
+  } else if(ubo.layer == 1) {
     outColor = texture(textureSampler, texCoord) * vec4(result, 1.0);
   }
 

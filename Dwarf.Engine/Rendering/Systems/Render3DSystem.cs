@@ -379,25 +379,25 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         for (uint x = 0; x < entities[i].MeshsesCount; x++) {
           if (!entities[i].FinishedInitialization) continue;
 
-          if (entities[i].IsSkinned) {
+          if (entities[i].IsSkinned & entities[i].Meshes[x].Skin != null) {
             // Logger.Info($"Inv Len : {entities[i].Meshes[x].Skin!.InverseBindMatrices.Length}");
             // Logger.Info($"Mesh Len : {entities[i].Meshes.Length}");
             for (int y = 0; y < entities[i].Meshes[x].Skin!.InverseBindMatrices.Length; y++) {
               var target = entities[i].Meshes[x].Skin!.InverseBindMatrices[y];
 
               // entities[i].Meshes[x].Skin?.Ssbo.Flush();
-              entities[i].Meshes[x].Skin?.Ssbo.Map(
-                (ulong)Unsafe.SizeOf<Matrix4x4>(),
-                (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
-              );
+              //entities[i].Meshes[x].Skin?.Ssbo.Unmap();
+              // entities[i].Meshes[x].Skin?.Ssbo.Map();
 
-              var test = Matrix4x4.CreateTranslation(new Vector3(0, -y, 0));
+              var test = Matrix4x4.CreateTranslation(new Vector3(0, 0, 0));
 
+              /*
               entities[i].Meshes[x].Skin?.Write(
                 test,
                 (ulong)Unsafe.SizeOf<Matrix4x4>(),
                 (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
               );
+              */
 
               // Ssbo.WriteToBuffer((nint)(&data), size, offset);
               /*
@@ -414,6 +414,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             }
 
             Descriptor.BindDescriptorSet(
+              // entities[i].Meshes[x].Skin!.DescriptorSet,
               entities[i].SkinDescriptor,
               frameInfo,
               _pipelines[Skinned3D].PipelineLayout,
@@ -431,7 +432,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
           entities[i].Draw(frameInfo.CommandBuffer, x);
 
-          entities[i].Meshes[x].Skin?.Ssbo.Unmap();
+          // entities[i].Meshes[x].Skin?.Ssbo.Unmap();
         }
       }
 

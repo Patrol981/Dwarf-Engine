@@ -75,7 +75,6 @@ fn main() {
   }
 
   for mut sc in shader_codes {
-    // println!("{} ::", sc.file_name_ext);
     edit_shader_code(&mut sc, &shader_structs);
     let dst_path = cur_dir.join(dst_dir).join(sc.file_name_ext.clone());
     write_file(&dst_path, &sc.data);

@@ -1,14 +1,7 @@
 uniform ModelUBO {
-  // vec3 material;
-  // mat4 bonesMatrix;
-  // Material material;
-
   vec3 color;
   vec3 ambient;
   vec3 diffuse;
   vec3 specular;
   float shininess;
-
-  // int isSkinned;
-
 } modelUBO;

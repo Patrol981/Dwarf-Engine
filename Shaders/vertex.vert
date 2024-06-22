@@ -25,6 +25,10 @@ layout (push_constant) uniform Push {
   mat4 normalMatrix;
 } push;
 
+#include directional_light
+#include point_light
+
+
 layout (set = 1, binding = 0) #include global_ubo
 
 // 500 FPS on avg

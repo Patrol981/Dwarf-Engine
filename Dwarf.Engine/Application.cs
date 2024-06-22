@@ -76,7 +76,7 @@ public class Application {
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
-  private GlobalUniformBufferObject _ubo = new();
+  private GlobalUniformBufferObject _ubo;
 
   private FrameInfo _currentFrame = new();
 
@@ -457,11 +457,21 @@ public class Application {
 
       _ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
       _ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
+      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
+      _ubo.Layer = 1;
+
+      // _ubo.LightPosition = DirectionalLight.LightPosition;
+      // _ubo.LightColor = DirectionalLight.LightColor;
+      // _ubo.AmbientColor = DirectionalLight.AmbientColor;
+
+      _ubo.DirectionalLight = DirectionalLight;
+      /*
       _ubo.LightPosition = DirectionalLight.LightPosition;
       _ubo.LightColor = DirectionalLight.LightColor;
       _ubo.AmientLightColor = DirectionalLight.AmbientColor;
       _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
-      _ubo.Layer = 1;
+      */
+
 
       fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
         _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -626,6 +636,6 @@ public class Application {
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer { get; } = null!;
   public FrameInfo FrameInfo => _currentFrame;
-  public DirectionalLight DirectionalLight { get; } = new();
+  public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
 }

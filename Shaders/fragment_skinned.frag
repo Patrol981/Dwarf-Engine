@@ -11,6 +11,9 @@ layout (location = 0) out vec4 outColor;
 
 #include skin_data
 
+#include directional_light
+#include point_light
+
 layout (push_constant) uniform Push {
   mat4 transform;
   mat4 normalMatrix;
@@ -22,79 +25,17 @@ layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 layout (set = 1, binding = 0) #include global_ubo
 layout (set = 2, binding = 0) #include skinned_model_ubo
 
-vec3 sobel_filter(sampler2D tex, vec2 texCoords) {
-  vec2 texelSize = 1.0 / textureSize(tex, 0);
-
-  float Gx[3][3];
-  Gx[0][0] = -1.0; Gx[0][1] = 0.0; Gx[0][2] = 1.0;
-  Gx[1][0] = -2.0; Gx[1][1] = 0.0; Gx[1][2] = 2.0;
-  Gx[2][0] = -1.0; Gx[2][1] = 0.0; Gx[2][2] = 1.0;
-
-  float Gy[3][3];
-  Gy[0][0] = -1.0; Gy[0][1] = -2.0; Gy[0][2] = -1.0;
-  Gy[1][0] = 0.0;  Gy[1][1] = 0.0;  Gy[1][2] = 0.0;
-  Gy[2][0] = 1.0;  Gy[2][1] = 2.0;  Gy[2][2] = 1.0;
-
-  vec3 sumGx = vec3(0.0);
-  vec3 sumGy = vec3(0.0);
-
-  for(int i = -1; i <= 1; ++i) {
-    for(int j = -1; j <= 1; ++j) {
-      vec3 sampleColor = texture(tex, texCoords + vec2(i, j) * texelSize).rgb;
-      sumGx += sampleColor * Gx[i+1][j+1];
-      sumGy += sampleColor * Gy[i+1][j+1];
-    }
-  }
-
-  float magnitude = length(sumGx) + length(sumGy);
-
-  return vec3(magnitude);
-}
-
-vec3 edge_detection(sampler2D tex, vec2 texCoords) {
-  vec2 texelSize = 1.0 / textureSize(tex, 0);
-  vec3 centerColor = texture(tex, texCoords).rgb;
-
-  vec3 sum = vec3(0.0);
-  for(int i = -1; i <= 1; ++i) {
-    for(int j = -1; j <= 1; ++j) {
-      vec3 sampleColor = texture(tex, texCoords + vec2(i, j) * texelSize).rgb;
-      sum += abs(sampleColor - centerColor);
-    }
-  }
-
-  return sum;
-}
-
-bool is_texture_complex_enough(sampler2D tex, vec2 texCoords, float threshold) {
-  vec2 texelSize = 1.0 / textureSize(tex, 0);
-  vec3 centerColor = texture(tex, texCoords).rgb;
-
-  vec3 sum = vec3(0.0);
-  int count = 0;
-  for(int i = -1; i <= 1; ++i) {
-    for(int j = -1; j <= 1; ++j) {
-      vec3 sampleColor = texture(tex, texCoords + vec2(i, j) * texelSize).rgb;
-      sum += abs(sampleColor - centerColor);
-      count++;
-    }
-  }
-
-  float averageDifference = length(sum) / float(count);
-  return averageDifference <= threshold;
-}
-
 void main() {
   // ambient
   // float ambientStrength = 0.1;
-  vec3 lightColor = ubo.lightColor.xyz;
+  vec3 lightColor = ubo.directionalLight.lightColor.xyz;
   vec3 ambient = modelUBO.ambient * lightColor;
   // vec3 ambient = ambientStrength * lightColor;
 
   // diffuse
-  vec3 lightDirection = normalize(ubo.lightPosition - fragPositionWorld);
+  vec3 lightDirection = normalize(ubo.directionalLight.lightPosition - fragPositionWorld);
   float diff = max(dot(fragNormalWorld, lightDirection), 0.0);
-  vec3 diffuse = (diff * modelUBO.diffuse) * lightColor;
+  vec3 diffuse = (diff * modelUBO.diffuse) * lightColor * ubo.directionalLight.lightIntensity;
   // vec3 diffuse = diff * lightColor;
 
   // specular
@@ -102,7 +43,8 @@ void main() {
   vec3 viewDir = normalize(ubo.cameraPosition - fragPositionWorld);
   vec3 reflectDir = reflect(-lightDirection, fragNormalWorld);
   float spec = pow(max(dot(viewDir, reflectDir), 0.0), modelUBO.shininess);
-  vec3 specular = lightColor * (spec * modelUBO.specular);
+  // float spec = pow(max(dot(viewDir, reflectDir), 0.0), 0.5);
+  vec3 specular = lightColor * (spec * modelUBO.specular) * ubo.directionalLight.lightIntensity;
 
   vec3 result = (ambient + diffuse + specular) * fragColor * modelUBO.color;
 

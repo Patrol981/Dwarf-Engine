@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
-
+using Dwarf.Utils;
 using SharpGLTF.Schema2;
 
 namespace Dwarf.Loader.Providers;
@@ -42,8 +42,10 @@ public partial class GLTFLoader {
         stream.CopyTo(memoryStream);
         byte[] imageData = memoryStream.ToArray();
 
-        File.WriteAllBytes($"./Resources/{tags[i]}.png", imageData);
-        paths[i] = $"./Resources/{tags[i]}.png";
+        var targetPath = Path.Join(DwarfPath.AssemblyDirectory, $"./Resources/{tags[i]}.png");
+        File.WriteAllBytes(targetPath, imageData);
+        // paths[i] = $"./Resources/{tags[i]}.png";
+        paths[i] = targetPath;
       }
 
       var textures = await TextureManager.AddTextures(app.Device, paths, flip);
@@ -223,7 +225,7 @@ public partial class GLTFLoader {
           .Where(x => x.LogicalIndex == accessor?.LogicalIndex).FirstOrDefault();
         SharpGLTF.Schema2.Buffer? buffer = modelRoot.LogicalBuffers
           .Where(x => x.LogicalIndex == bufferView?.LogicalIndex).FirstOrDefault();
-        
+
 
         if (accessor == null || buffer == null || bufferView == null) return;
         */

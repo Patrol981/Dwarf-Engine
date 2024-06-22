@@ -8,6 +8,9 @@ layout (location = 3) in vec2 uv;
 layout (location = 0) out vec3 fragColor;
 layout (location = 1) out vec3 fragPositionWorld;
 
+#include directional_light
+#include point_light
+
 layout (set = 0, binding = 0) #include global_ubo
 
 layout (push_constant) uniform Push {

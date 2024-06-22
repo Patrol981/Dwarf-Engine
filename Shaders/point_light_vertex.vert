@@ -11,15 +11,10 @@ const vec2 OFFSETS[6] = vec2[](
 
 layout (location = 0) out vec2 fragOffset;
 
-layout (set = 0, binding = 0) uniform GlobalUbo {
-  mat4 view;
-  mat4 projection;
-  vec3 lightPosition;
-  vec4 lightColor;
-  vec4 ambientLightColor;
-  vec3 cameraPosition;
-  int layer;
-} ubo;
+#include directional_light
+#include point_light
+
+layout (set = 0, binding = 0) #include global_ubo
 
 const float LIGHT_RADIUS = 0.1;
 
@@ -28,7 +23,7 @@ void main() {
   vec3 cameraRightWorld = {ubo.view[0][0], ubo.view[1][0], ubo.view[2][0]};
   vec3 cameraUpWorld = {ubo.view[0][1], ubo.view[1][1], ubo.view[2][1]};
 
-  vec3 positionWorld = ubo.lightPosition.xyz
+  vec3 positionWorld = ubo.directionalLight.lightPosition.xyz
     + LIGHT_RADIUS * fragOffset.x * cameraRightWorld
     + LIGHT_RADIUS * fragOffset.y * -cameraUpWorld;
 

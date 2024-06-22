@@ -14,6 +14,10 @@ layout (location = 3) out vec2 texCoord;
 
 #include material
 
+#include directional_light
+#include point_light
+
+
 layout (push_constant) uniform Push {
   mat4 transform;
   mat4 normalMatrix;

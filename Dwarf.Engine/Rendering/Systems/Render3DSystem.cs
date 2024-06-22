@@ -28,7 +28,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   // private readonly List<VkDrawIndexedIndirectCommand> _indirectCommands = [];
   // private readonly DwarfBuffer _indirectCommandBuffer = null!;
 
-  private ModelUniformBufferObject _modelUbo = new();
+  // private ModelUniformBufferObject _modelUbo = new();
+  private readonly unsafe ModelUniformBufferObject* _modelUbo =
+    (ModelUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<ModelUniformBufferObject>());
   private readonly unsafe SimplePushConstantData* _pushConstantData =
     (SimplePushConstantData*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimplePushConstantData>());
 
@@ -138,7 +140,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
       (ulong)_texturesCount,
       BufferUsage.UniformBuffer,
-      MemoryProperty.HostVisible,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
       ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
     );
 
@@ -226,22 +228,19 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
 
       // _modelUbo.Material = materialData;
-      _modelUbo.Color = materialData.Color;
-      _modelUbo.Specular = materialData.Specular;
-      _modelUbo.Shininess = materialData.Shininess;
-      _modelUbo.Diffuse = materialData.Diffuse;
-      _modelUbo.Ambient = materialData.Ambient;
+      unsafe {
+        _modelUbo->Color = materialData.Color;
+        _modelUbo->Specular = materialData.Specular;
+        _modelUbo->Shininess = materialData.Shininess;
+        _modelUbo->Diffuse = materialData.Diffuse;
+        _modelUbo->Ambient = materialData.Ambient;
+      }
+
 
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
-      ulong offset = 0;
       unsafe {
-        var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
-
-        offset = fixedSize * (ulong)(i);
-        fixed (ModelUniformBufferObject* modelUboPtr = &_modelUbo) {
-          _modelBuffer.WriteToBuffer((IntPtr)(modelUboPtr), _modelBuffer.GetInstanceSize(), offset);
-        }
+        _modelBuffer.WriteToBuffer((IntPtr)_modelUbo, _modelBuffer.GetInstanceSize(), dynamicOffset >> 1);
       }
 
       var transform = entities[i].GetOwner().GetComponent<Transform>();
@@ -328,22 +327,18 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
 
       // _modelUbo.Material = materialData;
-      _modelUbo.Color = materialData.Color;
-      _modelUbo.Specular = materialData.Specular;
-      _modelUbo.Shininess = materialData.Shininess;
-      _modelUbo.Diffuse = materialData.Diffuse;
-      _modelUbo.Ambient = materialData.Ambient;
+      unsafe {
+        _modelUbo->Color = materialData.Color;
+        _modelUbo->Specular = materialData.Specular;
+        _modelUbo->Shininess = materialData.Shininess;
+        _modelUbo->Diffuse = materialData.Diffuse;
+        _modelUbo->Ambient = materialData.Ambient;
+      }
 
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * ((uint)i + (uint)prevIdx);
 
-      ulong offset = 0;
       unsafe {
-        var fixedSize = _modelBuffer.GetAlignmentSize() / 2;
-
-        offset = fixedSize * (ulong)(i + prevIdx);
-        fixed (ModelUniformBufferObject* modelUboPtr = &_modelUbo) {
-          _modelBuffer.WriteToBuffer((IntPtr)(modelUboPtr), _modelBuffer.GetInstanceSize(), offset);
-        }
+        _modelBuffer.WriteToBuffer((IntPtr)(_modelUbo), _modelBuffer.GetInstanceSize(), dynamicOffset >> 1);
       }
 
       var transform = entities[i].GetOwner().GetComponent<Transform>();
@@ -447,6 +442,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _device.WaitDevice();
 
     MemoryUtils.FreeIntPtr<SimplePushConstantData>((nint)_pushConstantData);
+    MemoryUtils.FreeIntPtr<ModelUniformBufferObject>((nint)_modelUbo);
 
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);

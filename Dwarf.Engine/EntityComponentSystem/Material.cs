@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using Dwarf.EntityComponentSystem;
 
@@ -15,6 +16,7 @@ public struct MaterialData {
 }
 */
 
+[StructLayout(LayoutKind.Sequential)]
 public struct MaterialData {
   public Vector3 Color;
   public Vector3 Ambient;
@@ -42,7 +44,7 @@ public class Material : Component {
       Shininess = 1.0f,
       Ambient = new(1.0f, 1.0f, 1.0f),
       Diffuse = new(0.0f, 0.0f, 0.0f),
-      Specular = new Vector3(0, 0, 0)
+      Specular = new(0, 0, 0)
     };
   }
 

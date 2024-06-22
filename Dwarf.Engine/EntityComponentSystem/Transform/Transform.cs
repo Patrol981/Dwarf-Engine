@@ -88,6 +88,24 @@ public class Transform : Component {
     }
   }
 
+  /// <summary>
+  /// Sets Transform euler angle to given position only by Y axis
+  /// </summary>
+  /// <param name="position"></param>
+  public void LookAtFixed(Vector3 position) {
+    var direction = position - _position;
+    direction.Y = 0;
+    direction = Vector3.Normalize(direction);
+    var yaw = MathF.Atan2(direction.X, direction.Z);
+    yaw = Converter.RadiansToDegrees(yaw);
+    _rotation.Y = yaw;
+  }
+
+  public void LookAtFixedRound(Vector3 position) {
+    LookAtFixed(position);
+    _rotation.Y = Clamp.ClampToClosestAngle(_rotation.Y);
+  }
+
   public static Vector3 MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
     var vec = target - current;
     var mag = Vector3.Distance(current, target);

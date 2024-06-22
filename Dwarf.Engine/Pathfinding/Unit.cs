@@ -43,6 +43,7 @@ public class Unit : DwarfScript {
     if (_path!.Length <= 0) { IsMoving = false; yield break; }
 
     var currentWaypoint = _path[0];
+    _transform.LookAtFixed(currentWaypoint);
 
     if (currentWaypoint == _transform.Position) {
       IsMoving = false;
@@ -58,9 +59,9 @@ public class Unit : DwarfScript {
           yield break;
         }
         currentWaypoint = _path[_targetIndex];
+        _transform.LookAtFixed(currentWaypoint);
       }
       _transform.Position = Transform.MoveTowards(_transform.Position, currentWaypoint, _speed * Time.DeltaTime);
-      // yield return new WaitForSeconds(.1f);
       yield return null;
     }
   }

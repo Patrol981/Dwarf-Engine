@@ -486,6 +486,7 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _swapChainImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _swapChainImageViews[i]);
     }
+
     for (int i = 0; i < _depthImages.Length; i++) {
       vkDestroyImage(_device.LogicalDevice, _depthImages[i]);
     }
@@ -495,6 +496,17 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _depthImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _depthImageViews[i]);
     }
+
+    for (int i = 0; i < _normalImages.Length; i++) {
+      vkDestroyImage(_device.LogicalDevice, _normalImages[i]);
+    }
+    for (int i = 0; i < _normalImagesMemories.Length; i++) {
+      vkFreeMemory(_device.LogicalDevice, _normalImagesMemories[i]);
+    }
+    for (int i = 0; i < _normalImageViews.Length; i++) {
+      vkDestroyImageView(_device.LogicalDevice, _normalImageViews[i]);
+    }
+
     for (int i = 0; i < _swapchainFramebuffers.Length; i++) {
       vkDestroyFramebuffer(_device.LogicalDevice, _swapchainFramebuffers[i]);
     }

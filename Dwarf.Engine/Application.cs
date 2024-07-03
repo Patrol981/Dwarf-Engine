@@ -126,7 +126,7 @@ public class Application {
     _currentScene = scene;
   }
 
-  public async Task<Task> SetupScene() {
+  private async Task<Task> SetupScene() {
     if (_currentScene == null) return Task.CompletedTask;
 
     await LoadTextures();
@@ -267,7 +267,7 @@ public class Application {
 
   private async Task<Task> Init() {
     var tasks = new Task[] {
-      SetupScene(),
+      await SetupScene(),
       InitResources(),
     };
 
@@ -613,6 +613,7 @@ public class Application {
 
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
+    _globalTextureSetLayout?.Dispose();
     _globalPool.Dispose();
     unsafe {
       MemoryUtils.FreeIntPtr<GlobalUniformBufferObject>((nint)_ubo);

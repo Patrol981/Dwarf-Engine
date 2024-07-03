@@ -5,5 +5,5 @@ uniform GlobalUbo {
   int layer;
   DirectionalLight directionalLight;
   int pointLightsLength;
-  PointLight[] pointLights;
+  PointLight pointLights[128];
 } ubo;

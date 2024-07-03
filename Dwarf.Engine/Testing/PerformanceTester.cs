@@ -1,9 +1,5 @@
-using System.Numerics;
-
 using Dwarf.EntityComponentSystem;
-using Dwarf.Loaders;
 using Dwarf.Physics;
-using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Testing;
 public class PerformanceTester {
@@ -28,7 +24,7 @@ public class PerformanceTester {
     entity.AddPrimitive("./Resources/gigachad.png", PrimitiveType.Cylinder);
     // entity.AddModel("./Resources/tks.glb");
     entity.AddRigdbody(PrimitiveType.Cylinder, false, 1);
-    entity.GetComponent<Rigidbody>().Init(Application.Instance.GetSystems().PhysicsSystem.BodyInterface);
+    entity.GetComponent<Rigidbody>().Init(Application.Instance.Systems.PhysicsSystem.BodyInterface);
     app.AddEntity(entity);
     return Task.CompletedTask;
   }

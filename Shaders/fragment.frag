@@ -18,7 +18,7 @@ layout (push_constant) uniform Push {
 } push;
 
 layout (set = 0, binding = 0) uniform sampler2D textureSampler;
-layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
+// layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
 layout (set = 1, binding = 0) #include global_ubo
 
@@ -26,6 +26,8 @@ layout (set = 2, binding = 0) #include model_ubo
 
 
 void main() {
+  vec3 surfaceNormal = normalize(fragNormalWorld);
+
   // ambient
   // float ambientStrength = 0.1;
   vec3 lightColor = ubo.directionalLight.lightColor.xyz;
@@ -36,7 +38,19 @@ void main() {
   vec3 lightDirection = normalize(ubo.directionalLight.lightPosition - fragPositionWorld);
   float diff = max(dot(fragNormalWorld, lightDirection), 0.0);
   vec3 diffuse = (diff * modelUBO.diffuse) * lightColor;
+  vec3 pDiffuse;
   // vec3 diffuse = diff * lightColor;
+
+  for(int i = 0; i < ubo.pointLightsLength; i++) {
+    PointLight light = ubo.pointLights[i];
+    vec3 pointDir = light.lightPosition.xyz - fragPositionWorld;
+    float attenuation = 1.0 / dot(pointDir, pointDir);
+    float cosAngIncidence = max(dot(surfaceNormal, normalize(pointDir)), 0);
+    vec3 intensity = light.lightColor.xyz * light.lightColor.w * attenuation;
+
+    pDiffuse += intensity * cosAngIncidence;
+  }
+  // diffuse += pDiffuse;
 
   // specular
   // float specularStrength = 0.5;

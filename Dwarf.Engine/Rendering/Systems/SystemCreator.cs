@@ -10,13 +10,14 @@ public enum SystemCreationFlags {
   Renderer2D = 2,
   RendererUI = 4,
   Physics3D = 8,
-  PointLights = 16,
-  Guizmos = 32,
+  DirectionalLight = 16,
+  PointLights = 32,
+  Guizmos = 64,
 }
 
 public class SystemCreator {
   public static void CreateSystems(
-    ref SystemCollection systemCollection,
+    SystemCollection systemCollection,
     SystemCreationFlags flags,
     VulkanDevice device,
     Renderer renderer,
@@ -27,6 +28,7 @@ public class SystemCreator {
     var hasRenderer2D = flags.HasFlag(SystemCreationFlags.Renderer2D);
     var hasRendererUI = flags.HasFlag(SystemCreationFlags.RendererUI);
     var usePhysics3D = flags.HasFlag(SystemCreationFlags.Physics3D);
+    var hasDirectionalLight = flags.HasFlag(SystemCreationFlags.DirectionalLight);
     var hasPointLights = flags.HasFlag(SystemCreationFlags.PointLights);
     var hasGuizmos = flags.HasFlag(SystemCreationFlags.Guizmos);
 
@@ -53,6 +55,11 @@ public class SystemCreator {
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
       systemCollection.PhysicsSystem = (new());
+    }
+    if (hasDirectionalLight) {
+      Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");
+      systemCollection.DirectionalLightSystem =
+        new(device, renderer, globalSetLayout.GetDescriptorSetLayout());
     }
     if (hasPointLights) {
       Logger.Info("[SYSTEM CREATOR] Creating Point Light System");

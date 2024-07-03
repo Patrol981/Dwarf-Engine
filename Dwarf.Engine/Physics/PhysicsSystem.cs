@@ -112,8 +112,8 @@ public class PhysicsSystem : IDisposable {
 
   public static void Calculate(object application) {
     var app = (Application)application;
-    var systems = app.GetSystems();
-    var entities = Entity.Distinct<Rigidbody>(app.GetEntities());
+    var systems = app.Systems;
+    var entities = app.GetEntities().Distinct<Rigidbody>();
     // var system = (PhysicsSystem)physicsSystem;
 
     while (!app.Window.ShouldClose) {

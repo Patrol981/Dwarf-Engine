@@ -117,7 +117,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     return len == sets;
   }
 
-  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
+  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
     // _pipeline.Bind(frameInfo.CommandBuffer);
     BindPipeline(frameInfo.CommandBuffer);
 

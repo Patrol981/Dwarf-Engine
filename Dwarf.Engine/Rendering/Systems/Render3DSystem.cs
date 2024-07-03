@@ -301,7 +301,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Unmap();
   }
 
-  private void RenderComplex(FrameInfo frameInfo, Span<IRender3DElement> entities, int prevIdx) {
+  private void RenderComplex(FrameInfo frameInfo, ReadOnlySpan<IRender3DElement> entities, int prevIdx) {
     BindPipeline(frameInfo.CommandBuffer, Skinned3D);
     unsafe {
       vkCmdBindDescriptorSets(

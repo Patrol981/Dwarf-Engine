@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
@@ -8,6 +9,7 @@ using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Rendering.UI;
 using Dwarf.Rendering.UI.DirectRPG;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
 
@@ -56,10 +58,6 @@ public class Application {
   private EventCallback? _onLoad;
   private EventCallback? _onLoadPrimaryResources;
   private TextureManager _textureManager = null!;
-  private SystemCollection _systems = null!;
-  private DescriptorPool _globalPool = null!;
-  private VkDescriptorSet[] _globalDescriptorSets = [];
-  private DwarfBuffer[] _uboBuffers = [];
 
   private readonly List<Entity> _entities = new();
   private readonly object _entitiesLock = new object();
@@ -69,14 +67,22 @@ public class Application {
   private Scene _currentScene = null!;
 
   // ubos
+  private DescriptorPool _globalPool = null!;
+  private VkDescriptorSet[] _globalDescriptorSets = [];
+  private DwarfBuffer[] _uboBuffers = [];
+
   private DescriptorSetLayout _globalSetLayout = null!;
+  private DescriptorSetLayout _globalTextureSetLayout = null!;
+
   private readonly SystemCreationFlags _systemCreationFlags;
 
   private Thread? _renderThread;
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
-  private GlobalUniformBufferObject _ubo;
+  // private GlobalUniformBufferObject _ubo;
+  private readonly unsafe GlobalUniformBufferObject* _ubo =
+    (GlobalUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<GlobalUniformBufferObject>());
 
   private FrameInfo _currentFrame = new();
 
@@ -102,7 +108,7 @@ public class Application {
     Window = new Window(1200, 900, appName, Fullscreen);
     Device = new VulkanDevice(Window);
     Renderer = new Renderer(Window, Device);
-    _systems = new SystemCollection();
+    Systems = new SystemCollection();
 
     _textureManager = new(Device);
     _systemCreationFlags = systemCreationFlags;
@@ -176,7 +182,8 @@ public class Application {
       PerformCalculations();
 
       _onUpdate?.Invoke();
-      MasterUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
+      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
+      MasterUpdate(updatable.GetScripts());
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
@@ -211,6 +218,7 @@ public class Application {
     _globalPool = new DescriptorPool.Builder(Device)
       .SetMaxSets((uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .Build();
 
     _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
@@ -238,38 +246,23 @@ public class Application {
         .Build(out _globalDescriptorSets[i]);
     }
 
+    _globalTextureSetLayout = new DescriptorSetLayout.Builder(Device)
+      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+      .Build();
+
     Mutex.WaitOne();
-    SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
-    var objs3D = Entity.DistinctInterface<IRender3DElement>(_entities).ToArray();
-    _systems.Render3DSystem?.Setup(objs3D, ref _textureManager);
-    _systems.Render2DSystem?.Setup(Entity.Distinct<Sprite>(_entities).ToArray(), ref _textureManager);
-    _systems.RenderUISystem?.Setup(_systems.Canvas, ref _textureManager);
-    _systems.PointLightSystem?.Setup();
-    _systems.PhysicsSystem?.Init(objs3D);
+    // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
+    Systems.Setup(this, _systemCreationFlags, Device, Renderer, _globalSetLayout, null!, ref _textureManager);
 
     _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
-    MasterAwake(Entity.GetScripts(_entities));
+    MasterAwake(_entities.GetScripts());
     _onLoad?.Invoke();
-    MasterStart(Entity.GetScripts(_entities));
+    MasterStart(_entities.GetScripts());
 
     return Task.CompletedTask;
-  }
-
-  private void SetupSystems(
-    SystemCreationFlags creationFlags,
-    VulkanDevice device,
-    Renderer renderer,
-    DescriptorSetLayout globalSetLayout,
-    PipelineConfigInfo configInfo
-  ) {
-    SystemCreator.CreateSystems(ref _systems, creationFlags, device, renderer, globalSetLayout, configInfo);
-  }
-
-  public SystemCollection GetSystems() {
-    return _systems;
   }
 
   private async Task<Task> Init() {
@@ -319,9 +312,9 @@ public class Application {
     _entities.AddRange(_currentScene.GetEntities());
     Mutex.ReleaseMutex();
 
-    var targetCnv = Entity.Distinct<Canvas>(_entities);
+    var targetCnv = _entities.Distinct<Canvas>();
     if (targetCnv.Length > 0) {
-      _systems.Canvas = targetCnv[0].GetComponent<Canvas>();
+      Systems.Canvas = targetCnv[0].GetComponent<Canvas>();
     }
 
     var endTime = DateTime.Now;
@@ -367,12 +360,18 @@ public class Application {
     lock (_entitiesLock) {
       var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
       _entities.Add(entity);
-      MasterAwake(Entity.GetScripts(new[] { entity }));
-      MasterStart(Entity.GetScripts(new[] { entity }));
+      MasterAwake(new[] { entity }.GetScripts());
+      MasterStart(new[] { entity }.GetScripts());
       vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
       unsafe {
         vkDestroyFence(Device.LogicalDevice, fence);
       }
+    }
+  }
+
+  public void AddEntities(Entity[] entities) {
+    foreach (var entity in entities) {
+      AddEntity(entity);
     }
   }
 
@@ -428,7 +427,7 @@ public class Application {
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
-    _systems.ValidateSystems(
+    Systems.ValidateSystems(
         _entities.ToArray(),
         Device, Renderer,
         _globalSetLayout.GetDescriptorSetLayout(),
@@ -455,16 +454,16 @@ public class Application {
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = Renderer.GetFrameIndex();
 
-      _ubo.Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
-      _ubo.View = _camera.GetComponent<Camera>().GetViewMatrix();
-      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
-      _ubo.Layer = 1;
+      _ubo->Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
+      _ubo->View = _camera.GetComponent<Camera>().GetViewMatrix();
+      _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
+      _ubo->Layer = 1;
 
       // _ubo.LightPosition = DirectionalLight.LightPosition;
       // _ubo.LightColor = DirectionalLight.LightColor;
       // _ubo.AmbientColor = DirectionalLight.AmbientColor;
 
-      _ubo.DirectionalLight = DirectionalLight;
+      _ubo->DirectionalLight = DirectionalLight;
       /*
       _ubo.LightPosition = DirectionalLight.LightPosition;
       _ubo.LightColor = DirectionalLight.LightColor;
@@ -473,9 +472,7 @@ public class Application {
       */
 
 
-      fixed (GlobalUniformBufferObject* uboPtr = &_ubo) {
-        _uboBuffers[frameIndex].WriteToBuffer((IntPtr)(uboPtr), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      }
+      _uboBuffers[frameIndex].WriteToBuffer((nint)(_ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
 
       // var currentFrame = new FrameInfo();
       _currentFrame.Camera = _camera.GetComponent<Camera>();
@@ -484,16 +481,20 @@ public class Application {
       _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
       _currentFrame.TextureManager = _textureManager;
 
+      Systems.PointLightSystem?.Update(ref _currentFrame, ref *_ubo, _entities.ToArray());
+      Logger.Info($"{_ubo->PointLights[0].LightPosition}");
+
       // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
       _onRender?.Invoke();
       _skybox.Render(_currentFrame);
-      _systems.UpdateSystems(_entities.ToArray(), _currentFrame);
+      Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
       GuiController.Update(Time.DeltaTime);
       _onGUI?.Invoke();
-      MasterRenderUpdate(Entity.GetScripts(_entities.Where(x => x.CanBeDisposed == false).ToArray()));
+      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
+      MasterRenderUpdate(updatable.GetScripts());
       GuiController.Render(_currentFrame);
 
       Renderer.EndSwapchainRenderPass(commandBuffer);
@@ -532,7 +533,7 @@ public class Application {
   }
 
   private void PerformCalculations() {
-    _systems.UpdateCalculationSystems(GetEntities().ToArray());
+    Systems.UpdateCalculationSystems(GetEntities().ToArray());
   }
 
   internal unsafe void LoaderLoop() {
@@ -613,7 +614,10 @@ public class Application {
     _textureManager?.Dispose();
     _globalSetLayout.Dispose();
     _globalPool.Dispose();
-    _systems?.Dispose();
+    unsafe {
+      MemoryUtils.FreeIntPtr<GlobalUniformBufferObject>((nint)_ubo);
+    }
+    Systems?.Dispose();
     Renderer?.Dispose();
     Window?.Dispose();
     Device?.Dispose();
@@ -638,4 +642,5 @@ public class Application {
   public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
+  public SystemCollection Systems { get; } = null!;
 }

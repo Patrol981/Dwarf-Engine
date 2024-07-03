@@ -1,3 +1,4 @@
+using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
 using Dwarf.Rendering.Systems;
@@ -13,7 +14,10 @@ public class SystemCollection : IDisposable {
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
+
+  private DirectionalLightSystem? _directionaLightSystem;
   private PointLightSystem? _pointLightSystem;
+
   private GuizmoRenderSystem? _guizmoRenderSystem;
 
   private Canvas? _canvas = null;
@@ -28,14 +32,13 @@ public class SystemCollection : IDisposable {
 
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     lock (_renderLock) {
-      // _render3DSystem?.Render(frameInfo, Entity.DistinctInterface<IRender3DElement>(entities).ToArray());
       _render3DSystem?.Render(
         frameInfo,
-        Entity.Get3DElements(entities.ToArray())
-      // Entity.DistinctInterface<IRender3DElement>(entities).ToArray() as IRender3DElement[]
+        entities.DistinctI3D()
       );
-      _render2DSystem?.Render(frameInfo, Entity.Distinct<Sprite>(entities).ToArray());
-      _renderDebugSystem?.Render(frameInfo, Entity.DistinctInterface<IDebugRender3DObject>(entities).ToArray());
+      _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
+      _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
+      _directionaLightSystem?.Render(frameInfo);
       _pointLightSystem?.Render(frameInfo);
       _guizmoRenderSystem?.Render(frameInfo);
       _renderUISystem?.DrawUI(frameInfo, _canvas);
@@ -58,7 +61,7 @@ public class SystemCollection : IDisposable {
     ref TextureManager textureManager
   ) {
     if (_render3DSystem != null) {
-      var modelEntities = Entity.DistinctInterface<IRender3DElement>(entities).ToArray();
+      var modelEntities = entities.DistinctInterface<IRender3DElement>();
       if (modelEntities.Length < 1) return;
       var sizes = _render3DSystem.CheckSizes(modelEntities);
       var textures = _render3DSystem.CheckTextures(modelEntities);
@@ -69,7 +72,7 @@ public class SystemCollection : IDisposable {
     }
 
     if (_render2DSystem != null) {
-      var spriteEntities = Entity.Distinct<Sprite>(entities).ToArray();
+      var spriteEntities = entities.DistinctReadOnlySpan<Sprite>();
       if (spriteEntities.Length < 1) return;
       var sizes = _render2DSystem.CheckSizes(spriteEntities);
       var textures = _render2DSystem.CheckTextures(spriteEntities);
@@ -91,6 +94,35 @@ public class SystemCollection : IDisposable {
     }
   }
 
+  public void Setup(
+    Application app,
+    SystemCreationFlags creationFlags,
+    IDevice device,
+    Renderer renderer,
+    DescriptorSetLayout globalSetLayout,
+    PipelineConfigInfo configInfo,
+    ref TextureManager textureManager
+  ) {
+    SystemCreator.CreateSystems(
+      app.Systems,
+      creationFlags,
+      (VulkanDevice)device,
+      renderer,
+      globalSetLayout,
+      configInfo
+    );
+
+    var entities = app.GetEntities();
+    var objs3D = entities.DistinctInterface<IRender3DElement>();
+    _render3DSystem?.Setup(objs3D, ref textureManager);
+    _render2DSystem?.Setup(entities.DistinctAsReadOnlySpan<Sprite>(), ref textureManager);
+    _renderUISystem?.Setup(Canvas, ref textureManager);
+    _directionaLightSystem?.Setup();
+    _pointLightSystem?.Setup();
+    _physicsSystem?.Init(objs3D);
+  }
+
+  [Obsolete]
   public void ReloadSystems(
     VulkanDevice device,
     Renderer renderer,
@@ -121,11 +153,11 @@ public class SystemCollection : IDisposable {
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
     if (_render3DSystem != null) {
-      _render3DSystem.Setup(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
+      _render3DSystem.Setup(entities.DistinctInterface<IRender3DElement>(), ref textureManager);
     }
 
     if (_render2DSystem != null) {
-      _render2DSystem.Setup(Entity.Distinct<Sprite>(entities).ToArray(), ref textureManager);
+      _render2DSystem.Setup(entities.DistinctReadOnlySpan<Sprite>(), ref textureManager);
     }
 
     if (_renderUISystem != null) {
@@ -148,7 +180,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _render3DSystem?.Setup(Entity.DistinctInterface<IRender3DElement>(entities).ToArray(), ref textureManager);
+    _render3DSystem?.Setup(entities.DistinctInterface<IRender3DElement>(), ref textureManager);
   }
 
   public void Reload2DRenderer(
@@ -166,7 +198,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _render2DSystem?.Setup(Entity.Distinct<Sprite>(entities).ToArray(), ref textureManager);
+    _render2DSystem?.Setup(entities.DistinctReadOnlySpan<Sprite>(), ref textureManager);
   }
 
   public void ReloadUIRenderer(
@@ -213,6 +245,11 @@ public class SystemCollection : IDisposable {
     set { _renderDebugSystem = value; }
   }
 
+  public DirectionalLightSystem DirectionalLightSystem {
+    get { return _directionaLightSystem ?? null!; }
+    set { _directionaLightSystem = value; }
+  }
+
   public PointLightSystem PointLightSystem {
     get { return _pointLightSystem ?? null!; }
     set { _pointLightSystem = value; }
@@ -236,6 +273,7 @@ public class SystemCollection : IDisposable {
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();
     _guizmoRenderSystem?.Dispose();
+    _directionaLightSystem?.Dispose();
     _pointLightSystem?.Dispose();
   }
 }

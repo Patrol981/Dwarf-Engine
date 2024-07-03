@@ -4,7 +4,7 @@ namespace Dwarf;
 
 public abstract class Scene {
   protected readonly Application _app;
-  private List<Entity> _entities = new();
+  private readonly List<Entity> _entities = new();
   private List<List<string>> _texturePaths = new();
 
   public Scene(Application app) {
@@ -17,6 +17,10 @@ public abstract class Scene {
 
   public void AddEntity(Entity entity) {
     _entities.Add(entity);
+  }
+
+  public void AddEntities(Entity[] entities) {
+    _entities.AddRange(entities);
   }
 
   public List<Entity> GetEntities() {

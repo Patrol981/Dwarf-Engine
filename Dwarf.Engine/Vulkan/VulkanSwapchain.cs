@@ -1,4 +1,3 @@
-using Dwarf;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -15,9 +14,15 @@ public class VulkanSwapchain : IDisposable {
   private VkImageView[] _swapChainImageViews = null!;
   private VkImage[] _swapchainImages = [];
   private VkRenderPass _renderPass = VkRenderPass.Null;
+
   private VkImage[] _depthImages = [];
   private VkDeviceMemory[] _depthImagesMemories = [];
   private VkImageView[] _depthImageViews = [];
+
+  private readonly VkImage[] _normalImages = [];
+  private readonly VkDeviceMemory[] _normalImagesMemories = [];
+  private readonly VkImageView[] _normalImageViews = [];
+
   private VkFormat _swapchainImageFormat = VkFormat.Undefined;
   private VkFormat _swapchainDepthFormat = VkFormat.Undefined;
   private VkExtent2D _swapchainExtent = VkExtent2D.Zero;

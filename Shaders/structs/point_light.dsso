@@ -1,4 +1,4 @@
 struct PointLight {
   vec4 lightColor;
-  vec3 lightPosition;
+  vec4 lightPosition;
 };

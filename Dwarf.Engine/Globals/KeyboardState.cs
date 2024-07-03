@@ -1,7 +1,7 @@
 using Dwarf.EntityComponentSystem;
+using Dwarf.GLFW.Core;
 using Dwarf.Physics;
 using Dwarf.Testing;
-using Dwarf.GLFW.Core;
 // using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
 
@@ -56,14 +56,14 @@ public sealed class KeyboardState {
     Application.Instance.CurrentPipelineConfig = Application.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)
       ? new VertexDebugPipeline()
       : new PipelineConfigInfo();
-    Application.Instance.GetSystems().Reload3DRenderSystem = true;
-    Application.Instance.GetSystems().Reload2DRenderSystem = true;
+    Application.Instance.Systems.Reload3DRenderSystem = true;
+    Application.Instance.Systems.Reload2DRenderSystem = true;
   }
 
   static void ChangeDebugVisiblity() {
     s_debug = !s_debug;
     var entities = Application.Instance.GetEntities();
-    var debugObjects = Entity.DistinctInterface<IDebugRender3DObject>(entities);
+    var debugObjects = entities.DistinctInterface<IDebugRender3DObject>();
     foreach (var entity in debugObjects) {
       var e = entity.GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
       if (s_debug) {

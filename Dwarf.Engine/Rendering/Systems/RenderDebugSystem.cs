@@ -33,7 +33,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     // CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
   }
 
-  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
+  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
     // _pipeline.Bind(frameInfo.CommandBuffer);
     BindPipeline(frameInfo.CommandBuffer);
 

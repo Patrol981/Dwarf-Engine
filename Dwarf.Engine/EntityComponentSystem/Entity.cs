@@ -123,65 +123,6 @@ public class Entity {
     return _componentManager;
   }
 
-  public static ReadOnlySpan<DwarfScript> GetScripts(List<Entity> entities) {
-    var list = new List<DwarfScript>();
-
-    foreach (var e in entities) {
-      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
-    }
-
-    return list.ToArray();
-  }
-
-  public static ReadOnlySpan<DwarfScript> GetScripts(Entity[] entities) {
-    var list = new List<DwarfScript>();
-
-    foreach (var e in entities) {
-      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
-    }
-
-    return list.ToArray();
-  }
-
-  public static ReadOnlySpan<Entity> Distinct<T>(List<Entity> entities) where T : Component {
-    return entities.Where(e => e.HasComponent<T>()).ToArray();
-  }
-
-  public static ReadOnlySpan<Entity> Distinct<T>(ReadOnlySpan<Entity> entities) where T : Component {
-    var returnEntities = new List<Entity>();
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
-    }
-    return returnEntities.ToArray();
-  }
-
-  public static Span<Entity> DistinctList<T>(List<Entity> entities) where T : Component {
-    return entities.Where(e => e.HasComponent<T>()).ToArray();
-  }
-
-  public static Span<Entity> DistinctInterface<T>(List<Entity> entities) where T : IDrawable {
-    return entities.Where(e => e.IsDrawable<T>()).ToArray();
-  }
-
-  public static Span<IRender3DElement> Get3DElements(ReadOnlySpan<Entity> entities) {
-    var drawables3D = new List<IRender3DElement>();
-    for (int i = 0; i < entities.Length; i++) {
-      var target = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-      if (target != null) {
-        drawables3D.Add(target);
-      }
-    }
-    return drawables3D.ToArray();
-  }
-
-  public static ReadOnlySpan<Entity> DistinctInterface<T>(ReadOnlySpan<Entity> entities) where T : IDrawable {
-    var returnEntities = new List<Entity>();
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].IsDrawable<T>()) returnEntities.Add(entities[i]);
-    }
-    return returnEntities.ToArray();
-  }
-
   public static T? FindComponentOfType<T>() where T : Component, new() {
     var entities = Application.Instance.GetEntities();
     var target = entities.Where(x => x.HasComponent<T>())

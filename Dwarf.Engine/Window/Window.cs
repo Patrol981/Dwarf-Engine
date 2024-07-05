@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 
-using Dwarf.Globals;
-using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 using Dwarf.GLFW;
 using Dwarf.GLFW.Core;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Utils;
 
 using StbImageSharp;
@@ -19,8 +19,8 @@ using static Dwarf.GLFW.GLFW;
 namespace Dwarf.Windowing;
 
 public unsafe class Window : IDisposable {
-  public VkString AppName = new("Dwarf App");
-  public VkString EngineName = new("Dwarf Engine");
+  public VkUtf8String AppName = "Dwarf App"u8;
+  public VkUtf8String EngineName = "Dwarf Engine"u8;
   private DwarfExtent2D _extent;
   private bool _windowMinimalized = false;
 

@@ -42,7 +42,7 @@ public class VulkanDevice : IDevice {
   public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
-  public List<string> DeviceExtensions { get; private set; } = [];
+  public List<VkUtf8String> DeviceExtensions { get; private set; } = [];
 
   public VulkanDevice(Window window) {
     _window = window;
@@ -346,13 +346,13 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateInstance() {
-    HashSet<string> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
-    HashSet<string> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
+    HashSet<VkUtf8String> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
+    HashSet<VkUtf8String> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
 
     var appInfo = new VkApplicationInfo {
-      pApplicationName = new VkString("Dwarf App"),
+      pApplicationName = _window.AppName,
       applicationVersion = new(1, 0, 0),
-      pEngineName = new VkString("Dwarf Engine"),
+      pEngineName = _window.EngineName,
       engineVersion = new(1, 0, 0),
       apiVersion = VkVersion.Version_1_3
     };
@@ -361,11 +361,11 @@ public class VulkanDevice : IDevice {
       pApplicationInfo = &appInfo
     };
 
-    List<string> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
+    List<VkUtf8String> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
 
-    List<string> instanceLayers = new();
+    List<VkUtf8String> instanceLayers = new();
     // Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
-    foreach (string availableExtension in availableInstanceExtensions) {
+    foreach (VkUtf8String availableExtension in availableInstanceExtensions) {
       if (availableExtension == VK_EXT_DEBUG_UTILS_EXTENSION_NAME) {
         instanceExtensions.Add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
       } else if (availableExtension == VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME) {
@@ -428,7 +428,7 @@ public class VulkanDevice : IDevice {
     VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* userData
   ) {
-    string message = new(pCallbackData->pMessage);
+    VkUtf8String message = new(pCallbackData->pMessage);
     if (messageTypes == VkDebugUtilsMessageTypeFlagsEXT.Validation) {
       if (messageSeverity == VkDebugUtilsMessageSeverityFlagsEXT.Error) {
         Logger.Error($"[Vulkan]: Validation: {messageSeverity} - {message}");
@@ -502,9 +502,9 @@ public class VulkanDevice : IDevice {
       createInfo.pQueueCreateInfos = ptr;
     }
 
-    List<string> enabledExtensions = new() {
+    List<VkUtf8String> enabledExtensions = [
       VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+    ];
 
     using var deviceExtensionNames = new VkStringArray(enabledExtensions);
 

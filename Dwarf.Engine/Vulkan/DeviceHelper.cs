@@ -1,4 +1,5 @@
 using Dwarf.Extensions.Logging;
+using Dwarf.Utils;
 
 using Vortice.Vulkan;
 
@@ -32,7 +33,8 @@ public static unsafe class DeviceHelper {
         continue;
 
       vkGetPhysicalDeviceProperties(physicalDevice, out var checkProperties);
-      Logger.Info($"{checkProperties.GetDeviceName().ToString()}");
+      var deviceName = ByteConverter.BytePointerToStringUTF8(checkProperties.deviceName);
+      Logger.Info(deviceName);
       bool discrete = checkProperties.deviceType == VkPhysicalDeviceType.DiscreteGpu;
       if (discrete || returnDevice.IsNull) {
         gpuInfo = checkProperties;
@@ -41,7 +43,8 @@ public static unsafe class DeviceHelper {
       }
     }
 
-    Logger.Info($"Successfully found a device: {gpuInfo.GetDeviceName()}");
+    var gpuName = ByteConverter.BytePointerToStringUTF8(gpuInfo.deviceName);
+    Logger.Info($"Successfully found a device: {gpuName}");
 
     return returnDevice;
   }
@@ -57,7 +60,7 @@ public static unsafe class DeviceHelper {
     }
   }
 
-  public static string[] EnumerateInstanceLayers() {
+  public static VkUtf8String[] EnumerateInstanceLayers() {
     if (!IsSupported()) {
       return [];
     }
@@ -78,20 +81,22 @@ public static unsafe class DeviceHelper {
       vkEnumerateInstanceLayerProperties(&count, ptr).CheckResult();
     }
 
-    string[] resultExt = new string[count];
+    VkUtf8String[] resultExt = new VkUtf8String[count];
     for (int i = 0; i < count; i++) {
-      resultExt[i] = properties[i].GetLayerName();
+      fixed (byte* pLayerName = properties[i].layerName) {
+        resultExt[i] = new VkUtf8String(pLayerName);
+      }
     }
 
     return resultExt;
   }
 
-  public static void GetOptimalValidationLayers(HashSet<string> availableLayers, List<string> instanceLayers) {
+  public static void GetOptimalValidationLayers(HashSet<VkUtf8String> availableLayers, List<VkUtf8String> instanceLayers) {
     // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
-    List<string> validationLayers = new()
-    {
-       "VK_LAYER_KHRONOS_validation"
-    };
+    List<VkUtf8String> validationLayers =
+    [
+       "VK_LAYER_KHRONOS_validation"u8
+    ];
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -99,9 +104,9 @@ public static unsafe class DeviceHelper {
     }
 
     // Otherwise we fallback to using the LunarG meta layer
-    validationLayers = new() {
-       "VK_LAYER_LUNARG_standard_validation"
-    };
+    validationLayers = [
+       "VK_LAYER_LUNARG_standard_validation"u8
+    ];
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -109,14 +114,13 @@ public static unsafe class DeviceHelper {
     }
 
     // Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
-    validationLayers = new()
-    {
-            "VK_LAYER_GOOGLE_threading",
-            "VK_LAYER_LUNARG_parameter_validation",
-            "VK_LAYER_LUNARG_object_tracker",
-            "VK_LAYER_LUNARG_core_validation",
-            "VK_LAYER_GOOGLE_unique_objects",
-        };
+    validationLayers = [
+            "VK_LAYER_GOOGLE_threading"u8,
+      "VK_LAYER_LUNARG_parameter_validation"u8,
+      "VK_LAYER_LUNARG_object_tracker"u8,
+      "VK_LAYER_LUNARG_core_validation"u8,
+      "VK_LAYER_GOOGLE_unique_objects"u8,
+    ];
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -124,10 +128,9 @@ public static unsafe class DeviceHelper {
     }
 
     // Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
-    validationLayers = new()
-    {
-            "VK_LAYER_LUNARG_core_validation"
-        };
+    validationLayers = [
+            "VK_LAYER_LUNARG_core_validation"u8
+    ];
 
     if (ValidateLayers(validationLayers, availableLayers)) {
       instanceLayers.AddRange(validationLayers);
@@ -135,10 +138,10 @@ public static unsafe class DeviceHelper {
     }
   }
 
-  private static bool ValidateLayers(List<string> required, HashSet<string> availableLayers) {
-    foreach (string layer in required) {
+  private static bool ValidateLayers(List<VkUtf8String> required, HashSet<VkUtf8String> availableLayers) {
+    foreach (VkUtf8String layer in required) {
       bool found = false;
-      foreach (string availableLayer in availableLayers) {
+      foreach (VkUtf8String availableLayer in availableLayers) {
         if (availableLayer == layer) {
           found = true;
           break;
@@ -166,25 +169,28 @@ public static unsafe class DeviceHelper {
     return !swapChainSupport.Formats.IsEmpty && !swapChainSupport.PresentModes.IsEmpty;
   }
 
-  public static string[] GetInstanceExtensions() {
+  public static VkUtf8String[] GetInstanceExtensions() {
     uint count = 0;
-    VkResult result = vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, null);
+    VkResult result = vkEnumerateInstanceExtensionProperties(&count, null);
     if (result != VkResult.Success) {
-      return Array.Empty<string>();
+      return [];
     }
 
     if (count == 0) {
-      return Array.Empty<string>();
+      return [];
     }
 
     VkExtensionProperties[] props = new VkExtensionProperties[count];
     fixed (VkExtensionProperties* ptr = props) {
-      vkEnumerateInstanceExtensionProperties((sbyte*)null, &count, ptr);
+      vkEnumerateInstanceExtensionProperties(&count, ptr);
     }
 
-    string[] extensions = new string[count];
+    VkUtf8String[] extensions = new VkUtf8String[count];
     for (int i = 0; i < count; i++) {
-      extensions[i] = props[i].GetExtensionName();
+      fixed (byte* pExtensionName = props[i].extensionName) {
+        extensions[i] = new VkUtf8String(pExtensionName);
+      }
+
     }
 
     return extensions;

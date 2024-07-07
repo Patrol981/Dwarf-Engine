@@ -13,7 +13,7 @@ public class DirectionalLightSystem : SystemBase {
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];

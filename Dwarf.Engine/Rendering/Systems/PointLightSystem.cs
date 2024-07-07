@@ -25,7 +25,7 @@ public class PointLightSystem : SystemBase {
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];
@@ -43,35 +43,24 @@ public class PointLightSystem : SystemBase {
     _device.WaitQueue();
   }
 
-  public unsafe void Update(ref FrameInfo frameInfo, ref GlobalUniformBufferObject ubo, ReadOnlySpan<Entity> entities) {
+  public unsafe void Update(ReadOnlySpan<Entity> entities, out PointLight[] lightData) {
     var lights = entities.DistinctReadOnlySpan<PointLightComponent>();
 
     if (lights.Length > 0) {
       _lightsCache = lights.ToArray();
     } else {
       Array.Clear(_lightsCache);
+      lightData = [];
       return;
     }
 
-    // PointLight* lightData = stackalloc PointLight[128];
-    var lightData = new PointLight[128];
-    // var lightData = new UnmanagedArray<PointLight>()
-
-    // Logger.Info($"{ubo->PointLightsLength}");
+    lightData = new PointLight[lights.Length];
 
     for (int i = 0; i < lights.Length; i++) {
       var pos = lights[i].GetComponent<Transform>();
-      // ubo->PointLights[i].LightPosition = new Vector4(pos.Position, 1.0f);
-      lightData[i].LightPosition = new Vector4(1, 2, 3, 4);
+      lightData[i].LightPosition = new Vector4(pos.Position, 1.0f);
       lightData[i].LightColor = lights[i].GetComponent<PointLightComponent>().Color;
-
-      // Logger.Info($"setting index {i} with values {lightData[i].LightPosition}");
     }
-
-    // var unmanagedData = new UnmanagedArray<PointLight>(lightData);
-    ubo.PointLightsLength = lights.Length;
-    ubo.PointLights = lightData;
-    // ubo.PointLights = (PointLight*)unmanagedData.Handle;
   }
 
   public void Render(FrameInfo frameInfo) {

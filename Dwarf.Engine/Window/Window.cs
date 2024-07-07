@@ -28,8 +28,6 @@ public unsafe class Window : IDisposable {
 
   private readonly object _windowLock = new();
 
-  // private static bool EnableValidationLayers = true;
-
   public Window(int width, int height, string windowName, bool fullscreen) {
     Size = new Vector2I(width, height);
     InitWindow(windowName, fullscreen);
@@ -43,10 +41,6 @@ public unsafe class Window : IDisposable {
 
   public unsafe void SetWindowName(string name) {
     glfwSetWindowTitle(GLFWwindow, name);
-  }
-
-  protected void Clear() {
-
   }
 
   private unsafe void InitWindow(string windowName, bool fullscreen) {
@@ -76,7 +70,7 @@ public unsafe class Window : IDisposable {
     // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
     //var w = this;
     //var ptr = GetWindowPtr(&w);
-    //glfwSetWindowUserPointer(_window, ptr);
+    // glfwSetWindowUserPointer(GLFWwindow, this);
     WindowState.s_Window = this;
     glfwSetFramebufferSizeCallback(GLFWwindow, FrambufferResizedCallback);
     glfwSetCursorPosCallback(GLFWwindow, MouseState.MouseCallback);

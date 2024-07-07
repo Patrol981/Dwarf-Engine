@@ -12,13 +12,7 @@ layout (location = 1) out vec3 fragPositionWorld;
 layout (location = 2) out vec3 fragNormalWorld;
 layout (location = 3) out vec2 texCoord;
 
-struct Material {
-  vec3 color;
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-  float shininess;
-};
+#include material
 
 layout (push_constant) uniform Push {
   mat4 transform;
@@ -34,6 +28,10 @@ layout (set = 1, binding = 0) #include global_ubo
 // 500 FPS on avg
 // TODO: optimize set, so its reusable across all models?
 layout (set = 2, binding = 0) #include model_ubo
+
+layout (std140, set = 3, binding = 0) readonly buffer PointLightBuffer {
+  PointLight pointLights[];
+} pointLightBuffer;
 
 void main() {
   vec4 positionWorld = push.transform * vec4(position, 1.0);

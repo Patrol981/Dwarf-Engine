@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -69,10 +70,15 @@ public class Application {
   // ubos
   private DescriptorPool _globalPool = null!;
   private VkDescriptorSet[] _globalDescriptorSets = [];
-  private DwarfBuffer[] _uboBuffers = [];
+  private VkDescriptorSet[] _storageDescriptorSets = [];
 
-  private DescriptorSetLayout _globalSetLayout = null!;
-  private DescriptorSetLayout _globalTextureSetLayout = null!;
+  private DwarfBuffer[] _uboBuffers = [];
+  private DwarfBuffer[] _storageBuffers = [];
+
+  // private DescriptorSetLayout _globalSetLayout = null!;
+  // private DescriptorSetLayout _globalTextureSetLayout = null!;
+  // private DescriptorSetLayout _storageSetLayout = null!;
+  private Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
 
@@ -80,6 +86,7 @@ public class Application {
   private bool _renderShouldClose = false;
 
   private Skybox _skybox = null!;
+  private const int MAX_POINT_LIGHTS_COUNT = 128;
   // private GlobalUniformBufferObject _ubo;
   private readonly unsafe GlobalUniformBufferObject* _ubo =
     (GlobalUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -206,6 +213,7 @@ public class Application {
 
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i].Dispose();
+      _storageBuffers[i].Dispose();
     }
     Cleanup();
   }
@@ -216,12 +224,14 @@ public class Application {
   #region RESOURCES
   private unsafe Task InitResources() {
     _globalPool = new DescriptorPool.Builder(Device)
-      .SetMaxSets((uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .SetMaxSets(5)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .Build();
 
     _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
+    _storageBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
     for (int i = 0; i < _uboBuffers.Length; i++) {
       _uboBuffers[i] = new(
         Device,
@@ -232,29 +242,53 @@ public class Application {
         Device.Properties.limits.minUniformBufferOffsetAlignment
       );
       _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
+
+      _storageBuffers[i] = new(
+        Device,
+        (ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT,
+        1,
+        BufferUsage.StorageBuffer,
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        Device.Properties.limits.minStorageBufferOffsetAlignment
+      );
+      _storageBuffers[i].Map((ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT);
     }
 
-    _globalSetLayout = new DescriptorSetLayout.Builder(Device)
+    _descriptorSetLayouts.TryAdd("Global", new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
-      .Build();
+      .Build());
+
+    _descriptorSetLayouts.TryAdd("PointLight", new DescriptorSetLayout.Builder(Device)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .Build());
 
     _globalDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
+    _storageDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
+
     for (int i = 0; i < _globalDescriptorSets.Length; i++) {
       var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      _ = new VulkanDescriptorWriter(_globalSetLayout, _globalPool)
+      _ = new VulkanDescriptorWriter(_descriptorSetLayouts["Global"], _globalPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out _globalDescriptorSets[i]);
     }
 
-    _globalTextureSetLayout = new DescriptorSetLayout.Builder(Device)
+    for (int i = 0; i < _storageDescriptorSets.Length; i++) {
+      var bufferInfo = _storageBuffers[i].GetDescriptorBufferInfo(
+        (ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT);
+      _ = new VulkanDescriptorWriter(_descriptorSetLayouts["PointLight"], _globalPool)
+        .WriteBuffer(0, &bufferInfo)
+        .Build(out _storageDescriptorSets[i]);
+    }
+
+    _descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-      .Build();
+      .Build());
 
     Mutex.WaitOne();
     // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
-    Systems.Setup(this, _systemCreationFlags, Device, Renderer, _globalSetLayout, null!, ref _textureManager);
+    Systems.Setup(this, _systemCreationFlags, Device, Renderer, _descriptorSetLayouts, null!, ref _textureManager);
 
-    _skybox = new(Device, _textureManager, Renderer, _globalSetLayout.GetDescriptorSetLayout());
+    _skybox = new(Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
@@ -430,7 +464,7 @@ public class Application {
     Systems.ValidateSystems(
         _entities.ToArray(),
         Device, Renderer,
-        _globalSetLayout.GetDescriptorSetLayout(),
+        _descriptorSetLayouts,
         CurrentPipelineConfig,
         ref _textureManager
       );
@@ -471,18 +505,34 @@ public class Application {
       _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
       */
 
+      // Systems.PointLightSystem?.Update(ref _currentFrame, ref *_ubo, _entities.ToArray());
+
+      if (Systems.PointLightSystem != null) {
+        Systems.PointLightSystem.Update(_entities.ToArray(), out var pointLights);
+        if (pointLights.Length > 1) {
+          _ubo->PointLightsLength = pointLights.Length;
+          fixed (PointLight* pPointLights = pointLights) {
+            _storageBuffers[frameIndex].WriteToBuffer(
+              (nint)pPointLights,
+              (ulong)Unsafe.SizeOf<PointLight>() * (ulong)MAX_POINT_LIGHTS_COUNT
+            );
+          }
+        } else {
+          _ubo->PointLightsLength = 0;
+        }
+      }
+
 
       _uboBuffers[frameIndex].WriteToBuffer((nint)(_ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-
       // var currentFrame = new FrameInfo();
       _currentFrame.Camera = _camera.GetComponent<Camera>();
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
       _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
+      _currentFrame.PointLightsDescriptorSet = _storageDescriptorSets[frameIndex];
       _currentFrame.TextureManager = _textureManager;
 
-      Systems.PointLightSystem?.Update(ref _currentFrame, ref *_ubo, _entities.ToArray());
-      Logger.Info($"{_ubo->PointLights[0].LightPosition}");
+      // Logger.Info($"{_ubo->PointLights.LightPosition}");
 
       // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
@@ -612,8 +662,9 @@ public class Application {
     }
 
     _textureManager?.Dispose();
-    _globalSetLayout.Dispose();
-    _globalTextureSetLayout?.Dispose();
+    foreach (var layout in _descriptorSetLayouts) {
+      layout.Value.Dispose();
+    }
     _globalPool.Dispose();
     unsafe {
       MemoryUtils.FreeIntPtr<GlobalUniformBufferObject>((nint)_ubo);

@@ -4,6 +4,5 @@ uniform GlobalUbo {
   vec3 cameraPosition;
   int layer;
   DirectionalLight directionalLight;
-  int pointLightsLength;
-  PointLight pointLights[128];
+  int pointLightLength;
 } ubo;

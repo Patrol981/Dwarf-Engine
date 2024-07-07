@@ -1,0 +1,35 @@
+vec3 calc_point_light(PointLight light, vec3 normal, vec3 viewDir) {
+  vec3 lightDirection = normalize(light.lightPosition.xyz - fragPositionWorld);
+  // diffuse shading
+  float diff = max(dot(normal, lightDirection), 0.0);
+  // specular shading
+  vec3 reflectDir = reflect(-lightDirection, normal);
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), modelUBO.shininess);
+  // attenuation
+  float distance = length(light.lightPosition.xyz - fragPositionWorld);
+  float attenuation = 1.0 / (distance +
+    (distance * distance));
+
+  // combine results
+  vec3 ambient  = modelUBO.ambient;
+  vec3 diffuse  = light.lightColor.xyz * (diff);
+  vec3 specular = modelUBO.specular * spec;
+  // diffuse *= attenuation;
+  diffuse *= light.lightColor.w;
+  return (diffuse);
+}
+
+vec3 calc_dir_light(DirectionalLight directionalLight, vec3 normal, vec3 viewDir) {
+  vec3 lightDirection = normalize(directionalLight.lightPosition - fragPositionWorld);
+  // diffuse shading
+  float diff = max(dot(normal, lightDirection), 0.0);
+  // specular shading
+  vec3 reflectDir = reflect(-lightDirection, normal);
+  float spec = pow(max(dot(viewDir, reflectDir), 0.0), modelUBO.shininess);
+  // combine results
+  vec3 ambient  = directionalLight.ambientLightColor.xyz;
+  vec3 diffuse  = directionalLight.lightColor.xyz * (diff * modelUBO.diffuse);
+  vec3 specular = directionalLight.lightColor.xyz * (spec * modelUBO.specular) * directionalLight.lightIntensity;
+  // vec3 specular = directionalLight.lightIntensity * spec;
+  return (ambient + diffuse + specular);
+}

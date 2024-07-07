@@ -22,7 +22,7 @@ public class RenderUISystem : SystemBase {
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();

@@ -49,7 +49,6 @@ public abstract class SystemBase {
 
   protected readonly IDevice _device = null!;
   protected readonly Renderer _renderer = null!;
-  protected VkDescriptorSetLayout _globalDescriptorSetLayout;
   protected PipelineConfigInfo _pipelineConfigInfo;
   protected Dictionary<string, PipelineData> _pipelines = [];
 
@@ -64,12 +63,10 @@ public abstract class SystemBase {
   public SystemBase(
     IDevice device,
     Renderer renderer,
-    VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) {
     _device = device;
     _renderer = renderer;
-    _globalDescriptorSetLayout = globalSetLayout;
 
     _pipelineConfigInfo = configInfo ?? null!;
   }

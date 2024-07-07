@@ -56,7 +56,7 @@ public class SystemCollection : IDisposable {
     ReadOnlySpan<Entity> entities,
     VulkanDevice device,
     Renderer renderer,
-    VkDescriptorSetLayout globalLayout,
+    Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo pipelineConfigInfo,
     ref TextureManager textureManager
   ) {
@@ -67,7 +67,7 @@ public class SystemCollection : IDisposable {
       var textures = _render3DSystem.CheckTextures(modelEntities);
       if (!sizes || !textures || Reload3DRenderSystem) {
         Reload3DRenderSystem = false;
-        Reload3DRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
+        Reload3DRenderer(device, renderer, layouts, ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
@@ -78,7 +78,7 @@ public class SystemCollection : IDisposable {
       var textures = _render2DSystem.CheckTextures(spriteEntities);
       if (!sizes || !textures || Reload2DRenderSystem) {
         Reload2DRenderSystem = false;
-        Reload2DRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo, entities);
+        Reload2DRenderer(device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
@@ -89,7 +89,7 @@ public class SystemCollection : IDisposable {
       var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {
         ReloadUISystem = false;
-        ReloadUIRenderer(device, renderer, globalLayout, ref textureManager, pipelineConfigInfo);
+        ReloadUIRenderer(device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
       }
     }
   }
@@ -99,7 +99,7 @@ public class SystemCollection : IDisposable {
     SystemCreationFlags creationFlags,
     IDevice device,
     Renderer renderer,
-    DescriptorSetLayout globalSetLayout,
+    Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo,
     ref TextureManager textureManager
   ) {
@@ -108,7 +108,7 @@ public class SystemCollection : IDisposable {
       creationFlags,
       (VulkanDevice)device,
       renderer,
-      globalSetLayout,
+      layouts,
       configInfo
     );
 
@@ -120,35 +120,6 @@ public class SystemCollection : IDisposable {
     _directionaLightSystem?.Setup();
     _pointLightSystem?.Setup();
     _physicsSystem?.Init(objs3D);
-  }
-
-  [Obsolete]
-  public void ReloadSystems(
-    VulkanDevice device,
-    Renderer renderer,
-    VkDescriptorSetLayout globalLayout,
-    PipelineConfigInfo pipelineConfigInfo,
-    ReadOnlySpan<Entity> entities,
-    Canvas canvas,
-    ref TextureManager textureManager
-  ) {
-
-    if (_render3DSystem != null) {
-      _render3DSystem.Dispose();
-      _render3DSystem = new Render3DSystem(device, renderer, globalLayout, pipelineConfigInfo);
-    }
-
-    if (_render2DSystem != null) {
-      _render2DSystem.Dispose();
-      _render2DSystem = new Render2DSystem(device, renderer, globalLayout, pipelineConfigInfo);
-    }
-
-    if (_renderUISystem != null) {
-      _renderUISystem.Dispose();
-      _renderUISystem = new RenderUISystem(device, renderer, globalLayout, pipelineConfigInfo);
-    }
-
-    SetupRenderDatas(entities, canvas, ref textureManager, renderer);
   }
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
@@ -168,7 +139,7 @@ public class SystemCollection : IDisposable {
   public void Reload3DRenderer(
     VulkanDevice device,
     Renderer renderer,
-    VkDescriptorSetLayout globalLayout,
+    Dictionary<string, DescriptorSetLayout> externalLayouts,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
     ReadOnlySpan<Entity> entities
@@ -177,7 +148,7 @@ public class SystemCollection : IDisposable {
     _render3DSystem = new Render3DSystem(
       device,
       renderer,
-      globalLayout,
+      externalLayouts,
       pipelineConfig
     );
     _render3DSystem?.Setup(entities.DistinctInterface<IRender3DElement>(), ref textureManager);

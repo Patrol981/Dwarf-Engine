@@ -37,9 +37,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public Render3DSystem(
     IDevice device,
     Renderer renderer,
-    VkDescriptorSetLayout globalSetLayout,
+    // VkDescriptorSetLayout[] externalLayouts,
+    Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBufferDynamic, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -54,8 +55,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     VkDescriptorSetLayout[] basicLayouts = [
       _textureSetLayout.GetDescriptorSetLayout(),
-      globalSetLayout,
+      externalLayouts["Global"].GetDescriptorSetLayout(),
       _setLayout.GetDescriptorSetLayout(),
+      externalLayouts["PointLight"].GetDescriptorSetLayout()
     ];
 
     VkDescriptorSetLayout[] complexLayouts = [
@@ -215,6 +217,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         0,
         null
       );
+
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Simple3D].PipelineLayout,
+        3,
+        1,
+        &frameInfo.PointLightsDescriptorSet,
+        0,
+        null
+      );
     }
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
@@ -311,6 +324,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         1,
         1,
         &frameInfo.GlobalDescriptorSet,
+        0,
+        null
+      );
+
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Skinned3D].PipelineLayout,
+        4,
+        1,
+        &frameInfo.PointLightsDescriptorSet,
         0,
         null
       );

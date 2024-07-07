@@ -21,7 +21,7 @@ public class SystemCreator {
     SystemCreationFlags flags,
     VulkanDevice device,
     Renderer renderer,
-    DescriptorSetLayout globalSetLayout,
+    Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo = null!
   ) {
     var hasRenderer3D = flags.HasFlag(SystemCreationFlags.Renderer3D);
@@ -35,22 +35,22 @@ public class SystemCreator {
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
       systemCollection.RenderUISystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
     }
     if (hasRenderer3D) {
       Logger.Info("[SYSTEM CREATOR] Creating 3D Renderer");
       systemCollection.Render3DSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
+        new(device, renderer, layouts, configInfo);
 
       Logger.Info("[SYSTEM CREATOR] Creating 3D Debug Renderer");
       var debugConfig = new VertexDebugPipeline();
       systemCollection.RenderDebugSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout(), debugConfig);
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout(), debugConfig);
     }
     if (hasRenderer2D) {
       Logger.Info("[SYSTEM CREATOR] Creating 2D Renderer");
       systemCollection.Render2DSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout(), configInfo);
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
     }
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
@@ -59,17 +59,17 @@ public class SystemCreator {
     if (hasDirectionalLight) {
       Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");
       systemCollection.DirectionalLightSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout());
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
     if (hasPointLights) {
       Logger.Info("[SYSTEM CREATOR] Creating Point Light System");
       systemCollection.PointLightSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout());
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
     if (hasGuizmos) {
       Logger.Info("[SYSTEM CREATOR] Creating Guizmos Rendering System");
       systemCollection.GuizmoRenderSystem =
-        new(device, renderer, globalSetLayout.GetDescriptorSetLayout());
+        new(device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
   }
 }

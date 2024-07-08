@@ -74,7 +74,7 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {

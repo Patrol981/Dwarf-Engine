@@ -7,5 +7,6 @@ public struct FrameInfo {
   public Camera Camera;
   public VkDescriptorSet GlobalDescriptorSet;
   public VkDescriptorSet PointLightsDescriptorSet;
+  public VkDescriptorSet ObjectDataDescriptorSet;
   public TextureManager TextureManager;
 }

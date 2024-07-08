@@ -11,13 +11,14 @@ public unsafe class DwarfBuffer : IDisposable {
 
   private readonly IDevice _device;
   private void* _mapped;
-  private readonly VkBuffer _buffer = VkBuffer.Null;
-  private readonly VkDeviceMemory _memory = VkDeviceMemory.Null;
+  private VkBuffer _buffer = VkBuffer.Null;
+  private VkDeviceMemory _memory = VkDeviceMemory.Null;
 
-  private readonly ulong _bufferSize;
-  private readonly ulong _instanceCount;
+  private ulong _bufferSize;
+  private ulong _instanceCount;
   private readonly ulong _instanceSize;
   private readonly ulong _alignmentSize;
+  private readonly ulong _offsetAlignment;
   private readonly BufferUsage _usageFlags;
   private readonly MemoryProperty _memoryPropertyFlags;
 
@@ -37,6 +38,7 @@ public unsafe class DwarfBuffer : IDisposable {
     _instanceCount = instanceCount;
     _usageFlags = usageFlags;
     _memoryPropertyFlags = propertyFlags;
+    _offsetAlignment = minOffsetAlignment;
 
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
@@ -58,6 +60,7 @@ public unsafe class DwarfBuffer : IDisposable {
     _usageFlags = usageFlags;
     _memoryPropertyFlags = propertyFlags;
     _alignmentSize = bufferSize;
+    _offsetAlignment = 1;
     _bufferSize = bufferSize;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
 
@@ -163,6 +166,10 @@ public unsafe class DwarfBuffer : IDisposable {
     return _alignmentSize;
   }
 
+  public ulong GetOffsetAlignment() {
+    return _offsetAlignment;
+  }
+
   public BufferUsage GetVkBufferUsageFlags() {
     return _usageFlags;
   }
@@ -185,6 +192,88 @@ public unsafe class DwarfBuffer : IDisposable {
 
   public void DestoryBuffer() {
     vkDestroyBuffer(_device.LogicalDevice, _buffer);
+  }
+
+  public void Resize(ulong newCount) {
+    /*
+    _device = device;
+    _instanceSize = bufferSize;
+    _instanceCount = 1;
+    _usageFlags = usageFlags;
+    _memoryPropertyFlags = propertyFlags;
+    _alignmentSize = bufferSize;
+    _offsetAlignment = 1;
+    _bufferSize = bufferSize;
+    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+
+    _isStagingBuffer = stagingBuffer; 
+    */
+
+    /*
+     _device = device;
+    _instanceSize = instanceSize;
+    _instanceCount = instanceCount;
+    _usageFlags = usageFlags;
+    _memoryPropertyFlags = propertyFlags;
+    _offsetAlignment = minOffsetAlignment;
+
+    _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
+    _bufferSize = _alignmentSize * _instanceCount;
+    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+    */
+
+    _device.WaitDevice();
+    _device.WaitQueue();
+
+    Unmap();
+
+    var oldSize = _bufferSize;
+
+    _instanceCount = newCount;
+    _bufferSize = _alignmentSize * _instanceCount;
+
+    VkBufferCreateInfo bufferCreateInfo = new() {
+      sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      size = _bufferSize,
+      usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+      sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
+
+    VkBuffer newBuffer;
+    vkCreateBuffer(_device.LogicalDevice, &bufferCreateInfo, null, &newBuffer);
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_device.LogicalDevice, newBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = new() {
+      sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+      allocationSize = memRequirements.size,
+      memoryTypeIndex = _device.FindMemoryType(memRequirements.memoryTypeBits, MemoryProperty.HostVisible | MemoryProperty.HostCoherent)
+    };
+
+    VkDeviceMemory newBufferMemory;
+    vkAllocateMemory(_device.LogicalDevice, &allocInfo, null, &newBufferMemory);
+    vkBindBufferMemory(_device.LogicalDevice, newBuffer, newBufferMemory, 0);
+
+    void* oldData;
+    vkMapMemory(_device.LogicalDevice, _memory, 0, oldSize, 0, &oldData);
+
+    void* newData;
+    vkMapMemory(_device.LogicalDevice, newBufferMemory, 0, oldSize, 0, &newData);
+
+    // MemoryUtils.MemCopy(_mapped, (void*)data, (int)_bufferSize);
+    MemoryUtils.MemCopy((nint)newData, (nint)oldData, (int)oldSize);
+
+    vkUnmapMemory(_device.LogicalDevice, _memory);
+    vkUnmapMemory(_device.LogicalDevice, newBufferMemory);
+
+    vkDestroyBuffer(_device.LogicalDevice, _buffer, null);
+    vkFreeMemory(_device.LogicalDevice, _memory, null);
+
+    _buffer = newBuffer;
+    _memory = newBufferMemory;
+
+    Map();
   }
 
   public void Dispose() {

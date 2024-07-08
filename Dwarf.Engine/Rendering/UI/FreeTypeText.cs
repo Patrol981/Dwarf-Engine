@@ -64,7 +64,7 @@ public class FreeTypeText : Component, IUIElement {
     return Task.CompletedTask;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     return Task.CompletedTask;
   }

@@ -34,6 +34,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private readonly unsafe SimplePushConstantData* _pushConstantData =
     (SimplePushConstantData*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimplePushConstantData>());
 
+  private IRender3DElement[] _notSkinnedEntitiesCache = [];
+  private IRender3DElement[] _skinnedEntitiesCache = [];
+
   public Render3DSystem(
     IDevice device,
     Renderer renderer,
@@ -56,8 +59,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     VkDescriptorSetLayout[] basicLayouts = [
       _textureSetLayout.GetDescriptorSetLayout(),
       externalLayouts["Global"].GetDescriptorSetLayout(),
+      externalLayouts["ObjectData"].GetDescriptorSetLayout(),
       _setLayout.GetDescriptorSetLayout(),
-      externalLayouts["PointLight"].GetDescriptorSetLayout()
+      externalLayouts["PointLight"].GetDescriptorSetLayout(),
     ];
 
     VkDescriptorSetLayout[] complexLayouts = [
@@ -146,6 +150,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
     );
 
+    LastKnownElemCount = entities.Length;
+
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
       if (targetModel!.IsSkinned) {
@@ -194,14 +200,69 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len == _texturesCount;
   }
 
-  public void Render(FrameInfo frameInfo, Span<IRender3DElement> entities) {
-    if (entities.Length < 1) return;
+  public void UpdateOld(Span<IRender3DElement> entities, out SimplePushConstantData[] objectData) {
+    if (entities.Length < 1) {
+      objectData = [];
+      return;
+    }
 
     var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
     var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
 
-    RenderSimple(frameInfo, notSkinnedEntities.ToArray());
-    RenderComplex(frameInfo, skinnedEntities.ToArray(), notSkinnedEntities.Count());
+    objectData = new SimplePushConstantData[entities.Length];
+    for (int i = 0; i < entities.Length; i++) {
+      var transform = entities[i].GetOwner().GetComponent<Transform>();
+      objectData[i].ModelMatrix = transform.Matrix4;
+      objectData[i].NormalMatrix = transform.NormalMatrix;
+    }
+  }
+
+  public void Update(Span<IRender3DElement> entities, out ObjectData[] objectData) {
+    if (entities.Length < 1) {
+      objectData = [];
+      return;
+    }
+
+    var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned).ToArray();
+    var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned).ToArray();
+
+    var notSkinnedArray = new ObjectData[notSkinnedEntities.Length];
+    var skinnedArray = new ObjectData[skinnedEntities.Length];
+    objectData = new ObjectData[entities.Length];
+
+    for (int i = 0; i < notSkinnedEntities.Length; i++) {
+      var transform = notSkinnedEntities[i].GetOwner().GetComponent<Transform>();
+      notSkinnedArray[i] = new ObjectData {
+        ModelMatrix = transform.Matrix4,
+        NormalMatrix = transform.NormalMatrix
+      };
+      // objectData[i].IsSkinned = 0;
+      // Logger.Info($"{notSkinnedEntities[i].GetOwner().Name} {transform.Position} {notSkinnedArray[i].ModelMatrix.Translation}");
+    }
+    for (int i = 0; i < skinnedEntities.Length; i++) {
+      var transform = skinnedEntities[i].GetOwner().GetComponent<Transform>();
+      skinnedArray[i] = new ObjectData {
+        ModelMatrix = transform.Matrix4,
+        NormalMatrix = transform.NormalMatrix,
+        // IsSkinned = 1
+      };
+      // Logger.Info($"{skinnedEntities[i].GetOwner().Name} {transform.Position} {skinnedArray[i].ModelMatrix.Translation}");
+    }
+
+    _notSkinnedEntitiesCache = notSkinnedEntities;
+    _skinnedEntitiesCache = skinnedEntities;
+
+    objectData = [.. notSkinnedArray, .. skinnedArray];
+  }
+
+  public void Render(FrameInfo frameInfo, Span<IRender3DElement> entities) {
+    // if (entities.Length < 1) return;
+
+    // var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
+    // var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
+
+    RenderSimple(frameInfo, _notSkinnedEntitiesCache);
+    RenderComplex(frameInfo, _skinnedEntitiesCache, _notSkinnedEntitiesCache.Length);
   }
 
   private void RenderSimple(FrameInfo frameInfo, Span<IRender3DElement> entities) {
@@ -222,9 +283,20 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Simple3D].PipelineLayout,
-        3,
+        4,
         1,
         &frameInfo.PointLightsDescriptorSet,
+        0,
+        null
+      );
+
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Simple3D].PipelineLayout,
+        2,
+        1,
+        &frameInfo.ObjectDataDescriptorSet,
         0,
         null
       );
@@ -259,6 +331,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var transform = entities[i].GetOwner().GetComponent<Transform>();
 
       unsafe {
+        /*
         _pushConstantData->ModelMatrix = transform.Matrix4;
         _pushConstantData->NormalMatrix = transform.NormalMatrix;
 
@@ -270,13 +343,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           (uint)Unsafe.SizeOf<SimplePushConstantData>(),
           _pushConstantData
         );
+        */
 
         fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
           vkCmdBindDescriptorSets(
             frameInfo.CommandBuffer,
             VkPipelineBindPoint.Graphics,
             _pipelines[Simple3D].PipelineLayout,
-            2,
+            3,
             1,
             descPtr,
             1,
@@ -302,7 +376,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           if (entities[i] != lastModel)
             entities[i].Bind(frameInfo.CommandBuffer, x);
 
-          entities[i].Draw(frameInfo.CommandBuffer, x);
+          entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i);
 
           entities[i].Meshes[x].Skin?.Ssbo.Unmap();
         }
@@ -338,6 +412,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         0,
         null
       );
+
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Skinned3D].PipelineLayout,
+        2,
+        1,
+        &frameInfo.ObjectDataDescriptorSet,
+        0,
+        null
+      );
     }
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
@@ -368,6 +453,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var transform = entities[i].GetOwner().GetComponent<Transform>();
 
       unsafe {
+        /*
         _pushConstantData->ModelMatrix = transform.Matrix4;
         _pushConstantData->NormalMatrix = transform.NormalMatrix;
 
@@ -379,13 +465,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           (uint)Unsafe.SizeOf<SimplePushConstantData>(),
           _pushConstantData
         );
+        */
 
         fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
           vkCmdBindDescriptorSets(
             frameInfo.CommandBuffer,
             VkPipelineBindPoint.Graphics,
             _pipelines[Skinned3D].PipelineLayout,
-            2,
+            3,
             1,
             descPtr,
             1,
@@ -437,7 +524,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
               entities[i].SkinDescriptor,
               frameInfo,
               _pipelines[Skinned3D].PipelineLayout,
-              3,
+              5,
               1
             );
           }
@@ -449,7 +536,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
           if (entities[i] != lastModel)
             entities[i].Bind(frameInfo.CommandBuffer, x);
 
-          entities[i].Draw(frameInfo.CommandBuffer, x);
+          entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i + (uint)prevIdx);
 
           // entities[i].Meshes[x].Skin?.Ssbo.Unmap();
         }
@@ -475,4 +562,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     base.Dispose();
   }
+
+  public IRender3DElement[] CachedRenderables => [.. _notSkinnedEntitiesCache, .. _skinnedEntitiesCache];
+  public int LastKnownElemCount { get; private set; }
 }

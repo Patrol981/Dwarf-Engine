@@ -68,11 +68,11 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, firstInstance);
     } else {
-      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, firstInstance);
     }
     return Task.CompletedTask;
   }

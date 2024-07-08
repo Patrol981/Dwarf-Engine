@@ -94,11 +94,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index) {
+  public Task Draw(IntPtr commandBuffer, uint index, uint firstInstance = 0) {
     if (_hasIndexBuffer[index]) {
-      _renderer.CommandList.DrawIndexed(commandBuffer, index, _indexCount, 1, 0, 0, 0);
+      _renderer.CommandList.DrawIndexed(commandBuffer, index, _indexCount, 1, 0, 0, firstInstance);
     } else {
-      _renderer.CommandList.Draw(commandBuffer, index, _vertexCount, 1, 0, 0);
+      _renderer.CommandList.Draw(commandBuffer, index, _vertexCount, 1, 0, firstInstance);
     }
     return Task.CompletedTask;
   }

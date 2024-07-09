@@ -32,20 +32,9 @@ public class GuizmoRenderSystem : SystemBase {
       PipelineProvider = new GuizmoPipelineProvider(),
       DescriptorSetLayouts = descriptorSetLayouts,
     });
-
-    /*
-    CreatePipelineLayout<GuizmoBufferObject>(descriptorSetLayouts);
-    CreatePipeline(
-      renderer.GetSwapchainRenderPass(),
-      "guizmo_vertex",
-      "guizmo_fragment",
-      new GuizmoPipelineProvider()
-   );
-    */
   }
 
   public void Render(FrameInfo frameInfo) {
-    // _pipeline.Bind(frameInfo.CommandBuffer);
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(

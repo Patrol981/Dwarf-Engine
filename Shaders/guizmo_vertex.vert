@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 const vec2 OFFSETS[6] = vec2[](
   vec2(-1.0, -1.0),

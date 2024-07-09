@@ -115,7 +115,7 @@ public static unsafe class DeviceHelper {
 
     // Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
     validationLayers = [
-            "VK_LAYER_GOOGLE_threading"u8,
+      "VK_LAYER_GOOGLE_threading"u8,
       "VK_LAYER_LUNARG_parameter_validation"u8,
       "VK_LAYER_LUNARG_object_tracker"u8,
       "VK_LAYER_LUNARG_core_validation"u8,
@@ -129,7 +129,7 @@ public static unsafe class DeviceHelper {
 
     // Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
     validationLayers = [
-            "VK_LAYER_LUNARG_core_validation"u8
+      "VK_LAYER_LUNARG_core_validation"u8
     ];
 
     if (ValidateLayers(validationLayers, availableLayers)) {

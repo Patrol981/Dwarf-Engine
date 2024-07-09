@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout (location = 0) in vec3 fragColor;
 layout (location = 1) in vec3 fragPositionWorld;
@@ -22,9 +22,9 @@ layout (set = 0, binding = 0) uniform sampler2D textureSampler;
 
 layout (set = 1, binding = 0) #include global_ubo
 
-layout (set = 2, binding = 0) #include model_ubo
+layout (set = 3, binding = 0) #include model_ubo
 
-layout (std140, set = 3, binding = 0) readonly buffer PointLightBuffer {
+layout (std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
   PointLight pointLights[];
 } pointLightBuffer;
 

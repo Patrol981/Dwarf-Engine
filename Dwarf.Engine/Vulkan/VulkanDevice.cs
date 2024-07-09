@@ -97,6 +97,25 @@ public class VulkanDevice : IDevice {
     vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
   }
 
+  public unsafe void AllocateBuffer(
+    ulong size,
+    BufferUsage uFlags,
+    MemoryProperty pFlags,
+    VkBuffer buffer,
+    out VkDeviceMemory bufferMemory
+  ) {
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_logicalDevice, buffer, out memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = new() {
+      allocationSize = memRequirements.size,
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags)
+    };
+
+    vkAllocateMemory(_logicalDevice, &allocInfo, null, out bufferMemory).CheckResult();
+    vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
+  }
+
   public unsafe Task CopyBuffer(ulong srcBuffer, ulong dstBuffer, ulong size) {
     lock (_queueLock) {
       VkCommandBuffer commandBuffer = BeginSingleTimeCommands();
@@ -262,7 +281,7 @@ public class VulkanDevice : IDevice {
     lock (_queueLock) {
       var result = vkDeviceWaitIdle(_logicalDevice);
       if (result == VkResult.ErrorDeviceLost) {
-        throw new VkException("Device Lost!");
+        throw new VkException($"Device Lost! {result.ToString()}");
       }
     }
   }
@@ -488,15 +507,22 @@ public class VulkanDevice : IDevice {
       sampleRateShading = true,
       multiDrawIndirect = true,
       geometryShader = true,
+      shaderStorageBufferArrayDynamicIndexing = true,
     };
 
-    VkPhysicalDeviceVulkan12Features deviceFeatures2 = new();
-    deviceFeatures2.timelineSemaphore = true;
+    VkPhysicalDeviceVulkan11Features vk11Features = new() {
+      shaderDrawParameters = true,
+    };
+
+    VkPhysicalDeviceVulkan12Features vk12Features = new() {
+      timelineSemaphore = true,
+      pNext = &vk11Features
+    };
 
     VkDeviceCreateInfo createInfo = new() {
-      queueCreateInfoCount = queueCount
+      queueCreateInfoCount = queueCount,
     };
-    createInfo.pNext = &deviceFeatures2;
+    createInfo.pNext = &vk12Features;
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;

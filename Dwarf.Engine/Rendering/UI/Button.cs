@@ -91,7 +91,7 @@ public class Button : Component, I2DCollision, IUIElement {
     _guiTexture.Dispose();
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     _guiTexture.Draw(commandBuffer, index);
     return Task.CompletedTask;
   }

@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
-using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -26,7 +25,7 @@ public class StorageCollection : IDisposable {
 
     _dynamicPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(10)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 90)
+      .AddPoolSize(VkDescriptorType.StorageBuffer, 10)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
   }
@@ -88,7 +87,9 @@ public class StorageCollection : IDisposable {
     if (storageData.Buffers.Length < index) return;
     var buff = storageData.Buffers[index];
 
-    if (buff.GetBufferSize() < buff.GetAlignmentSize() * (ulong)elemCount) {
+    if (buff.GetBufferSize() < buff.GetAlignmentSize() * (ulong)elemCount ||
+      buff.GetInstanceCount() > (ulong)elemCount
+    ) {
       Storages[key].Buffers[index]?.Dispose();
       Storages[key].Buffers[index] = new(
         _device,
@@ -105,10 +106,6 @@ public class StorageCollection : IDisposable {
       _ = new VulkanDescriptorWriter(layout, _dynamicPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out Storages[key].Descriptors[index]);
-
-      // RecreateBuffer(ref storageData.Buffers[index], (ulong)elemCount);
-
-      Logger.Info($"[StorageColection] Resized {key} at index {index} to a new size: {storageData.Buffers[index].GetBufferSize()} bytes");
     }
   }
 

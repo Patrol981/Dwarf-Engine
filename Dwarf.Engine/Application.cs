@@ -68,20 +68,6 @@ public class Application {
 
   // ubos
   private DescriptorPool _globalPool = null!;
-  /*
-  private VkDescriptorSet[] _globalDescriptorSets = [];
-  private VkDescriptorSet[] _storageDescriptorSets = [];
-  private VkDescriptorSet[] _objectDescriptorSets = [];
-
-  private DwarfBuffer[] _uboBuffers = [];
-  private DwarfBuffer[] _storageBuffers = [];
-  private DwarfBuffer[] _objectBuffers = [];
-  private int _cachedObjectLength = 0;
-  */
-
-  // private DescriptorSetLayout _globalSetLayout = null!;
-  // private DescriptorSetLayout _globalTextureSetLayout = null!;
-  // private DescriptorSetLayout _storageSetLayout = null!;
   private readonly Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
@@ -215,12 +201,6 @@ public class Application {
     if (_renderThread != null && _renderThread.IsAlive)
       _renderThread?.Join();
 
-    /*
-    for (int i = 0; i < _uboBuffers.Length; i++) {
-      _uboBuffers[i].Dispose();
-      _storageBuffers[i].Dispose();
-    }
-    */
     Cleanup();
   }
 
@@ -235,43 +215,6 @@ public class Application {
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
       .Build();
-
-    /*
-    _uboBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
-    _storageBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
-    _objectBuffers = new DwarfBuffer[Renderer.MAX_FRAMES_IN_FLIGHT];
-    for (int i = 0; i < _uboBuffers.Length; i++) {
-      _uboBuffers[i] = new(
-        Device,
-        (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
-        1,
-        BufferUsage.UniformBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        Device.Properties.limits.minUniformBufferOffsetAlignment
-      );
-      _uboBuffers[i].Map((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-
-      _storageBuffers[i] = new(
-        Device,
-        (ulong)Unsafe.SizeOf<PointLight>(),
-        MAX_POINT_LIGHTS_COUNT,
-        BufferUsage.StorageBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        Device.Properties.limits.minStorageBufferOffsetAlignment
-      );
-      _storageBuffers[i].Map((ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT);
-
-      _objectBuffers[i] = new(
-        Device,
-        (ulong)Unsafe.SizeOf<ObjectData>(),
-        MAX_POINT_LIGHTS_COUNT,
-        BufferUsage.StorageBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        Device.Properties.limits.minStorageBufferOffsetAlignment
-      );
-      _objectBuffers[i].Map();
-    }
-    */
 
     _descriptorSetLayouts.TryAdd("Global", new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
@@ -311,34 +254,6 @@ public class Application {
       "PointStorage",
       Device.Properties.limits.minStorageBufferOffsetAlignment
     );
-
-    // _globalDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
-    // _storageDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
-    // _objectDescriptorSets = new VkDescriptorSet[Renderer.MAX_FRAMES_IN_FLIGHT];
-    /*
-    for (int i = 0; i < _globalDescriptorSets.Length; i++) {
-      var bufferInfo = _uboBuffers[i].GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      _ = new VulkanDescriptorWriter(_descriptorSetLayouts["Global"], _globalPool)
-        .WriteBuffer(0, &bufferInfo)
-        .Build(out _globalDescriptorSets[i]);
-    }
-
-    for (int i = 0; i < _storageDescriptorSets.Length; i++) {
-      var bufferInfo = _storageBuffers[i].GetDescriptorBufferInfo(
-        (ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT);
-      _ = new VulkanDescriptorWriter(_descriptorSetLayouts["PointLight"], _globalPool)
-        .WriteBuffer(0, &bufferInfo)
-        .Build(out _storageDescriptorSets[i]);
-    }
-
-    for (int i = 0; i < _objectDescriptorSets.Length; i++) {
-      var bufferInfo = _objectBuffers[i].GetDescriptorBufferInfo();
-      _ = new VulkanDescriptorWriter(_descriptorSetLayouts["ObjectData"], _globalPool)
-        .WriteBuffer(0, &bufferInfo)
-        // .WriteBuffer(1, &bufferInfo)
-        .Build(out _objectDescriptorSets[i]);
-    }
-    */
 
     _descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)

@@ -7,7 +7,7 @@ namespace Dwarf.Globals;
 public static class CameraState {
   private static Camera? _camera;
   private static Entity? _cameraEntity;
-  private static float _cameraSpeed = 1.5f;
+  private static float _cameraSpeed = 3.0f;
   private static float _sensitivity = 0.2f;
   private static bool _firstMove = true;
   private static Vector2d _lastPos;

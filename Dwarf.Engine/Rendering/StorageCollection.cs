@@ -119,34 +119,6 @@ public class StorageCollection : IDisposable {
     return Storages[key].Descriptors[index];
   }
 
-  private unsafe void RecreateBuffer(ref DwarfBuffer buffer, ulong newSize) {
-    buffer.Resize(newSize);
-  }
-
-  private void RecreateBuffer(
-    ref DwarfBuffer buffer,
-    VulkanDevice device,
-    BufferUsage usageType,
-    ulong bufferSize,
-    ulong bufferCount,
-    string storageName,
-    ulong offsetAlignment,
-    bool mapWholeBuffer = false
-  ) {
-    buffer?.Dispose();
-
-    buffer = new(
-      device,
-      bufferSize,
-      bufferCount,
-      usageType,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-      offsetAlignment
-    );
-
-    buffer.Map(bufferSize * bufferCount);
-  }
-
   public void Dispose() {
     _dynamicPool?.Dispose();
     foreach (var storage in Storages.Values) {

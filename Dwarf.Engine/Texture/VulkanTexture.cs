@@ -1,4 +1,5 @@
 using Dwarf.AbstractionLayer;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -167,7 +168,14 @@ public class VulkanTexture : ITexture {
   }
 
   public static async Task<ITexture> LoadFromPath(VulkanDevice device, string path, int flip = 1, VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None) {
-    var textureData = await LoadDataFromPath(path, flip);
+    ImageResult textureData;
+    if (Path.Exists(path)) {
+      textureData = await LoadDataFromPath(path, flip);
+    } else {
+      var cwd = DwarfPath.AssemblyDirectory;
+      textureData = await LoadDataFromPath($"{cwd}{path}", flip);
+    }
+
     var texture = new VulkanTexture(device, textureData.Width, textureData.Height, path);
     texture.SetTextureData(textureData.Data, imageCreateFlags);
     return texture;

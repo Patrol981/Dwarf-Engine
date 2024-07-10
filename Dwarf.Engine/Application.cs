@@ -74,6 +74,8 @@ public class Application {
 
   private Thread? _renderThread;
   private bool _renderShouldClose = false;
+  private bool _newSceneShouldLoad = false;
+  private bool _appExitRequest = false;
 
   private Skybox _skybox = null!;
   // private GlobalUniformBufferObject _ubo;
@@ -121,6 +123,68 @@ public class Application {
 
   public void SetCurrentScene(Scene scene) {
     _currentScene = scene;
+  }
+
+  public void LoadScene(Scene scene) {
+    SetCurrentScene(scene);
+    _newSceneShouldLoad = true;
+  }
+
+  private async void SceneLoadReactor() {
+    await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
+
+    Guizmos.Clear();
+    Guizmos.Free();
+    foreach (var e in _entities) {
+      e.CanBeDisposed = true;
+    }
+
+    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
+    if (_entities.Count() > 0) {
+      return;
+    }
+
+    if (!_renderShouldClose) {
+      _renderShouldClose = true;
+      return;
+    }
+
+    Logger.Info("Waiting for render process to close...");
+    while (_renderShouldClose) {
+    }
+    _renderThread?.Join();
+
+    Logger.Info("Waiting for render thread to close...");
+    while (_renderThread.IsAlive) {
+    }
+    _renderThread = new Thread(LoaderLoop);
+    _renderThread.Name = "App Loading Frontend Thread";
+    _renderThread.Start();
+
+    var usedPhysicsBefore = Systems.PhysicsSystem != null;
+    Systems.PhysicsSystem?.Dispose();
+
+    await SetupScene();
+    MasterAwake(_entities.GetScripts());
+    MasterStart(_entities.GetScripts());
+
+    if (usedPhysicsBefore) {
+      Systems.PhysicsSystem = new();
+      Systems.PhysicsSystem.Init(_entities.DistinctInterface<IRender3DElement>());
+    }
+
+    _renderShouldClose = true;
+    Logger.Info("Waiting for loading render process to close...");
+    while (_renderShouldClose) {
+
+    }
+
+    _renderThread.Join();
+    _renderThread = new Thread(RenderLoop);
+    _renderThread.Name = "Render Thread";
+    _renderThread.Start();
+
+    _newSceneShouldLoad = false;
   }
 
   private async Task<Task> SetupScene() {
@@ -181,6 +245,14 @@ public class Application {
       _onUpdate?.Invoke();
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterUpdate(updatable.GetScripts());
+
+      if (_newSceneShouldLoad) {
+        SceneLoadReactor();
+      }
+
+      if (_appExitRequest) {
+        HandleExit();
+      }
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
@@ -648,6 +720,7 @@ public class Application {
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
+    Logger.Info("Closing Renderer");
 
     Device.WaitQueue();
     Device.WaitDevice();
@@ -699,6 +772,44 @@ public class Application {
     }
   }
 
+  public void CloseApp() {
+    _appExitRequest = true;
+  }
+
+  private async void HandleExit() {
+    await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
+
+    Guizmos.Clear();
+    Guizmos.Free();
+    foreach (var e in _entities) {
+      e.CanBeDisposed = true;
+    }
+
+    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
+    if (_entities.Count() > 0) {
+      return;
+    }
+
+    if (!_renderShouldClose) {
+      _renderShouldClose = true;
+      return;
+    }
+
+    Logger.Info("Waiting for render process to close...");
+    while (_renderShouldClose) {
+    }
+    _renderThread?.Join();
+
+    Logger.Info("Waiting for render thread to close...");
+    while (_renderThread!.IsAlive) {
+    }
+
+    Systems.PhysicsSystem?.Dispose();
+
+    glfwTerminate();
+    System.Environment.Exit(1);
+  }
+
   public VulkanDevice Device { get; } = null!;
   public Mutex Mutex { get; private set; }
   public Window Window { get; } = null!;
@@ -709,6 +820,7 @@ public class Application {
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
   public StorageCollection StorageCollection { get; } = null!;
+  public Scene CurrentScene => _currentScene;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
 }

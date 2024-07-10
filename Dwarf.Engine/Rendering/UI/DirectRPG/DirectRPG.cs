@@ -32,7 +32,12 @@ public partial class DirectRPG {
     s_menuOffset = 0;
   }
 
-  public static void CreateMenuButton(string label, Vector2 size = default, bool center = true) {
+  public static void CreateMenuButton(
+    string label,
+    ButtonClickedDelegate buttonClicked,
+    Vector2 size = default,
+    bool center = true
+  ) {
     var io = ImGui.GetIO();
 
     if (size == default) {
@@ -46,7 +51,7 @@ public partial class DirectRPG {
       ImGui.SetCursorPos(centerPos);
     }
     if (ImGui.Button(label, size)) {
-      Logger.Info("Test");
+      buttonClicked.Invoke();
     }
 
     s_menuOffset += size.Y;

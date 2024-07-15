@@ -27,7 +27,7 @@ public partial class DirectRPG {
     ImGui.SetNextWindowSize(size);
     size.X -= 5;
     size.Y -= 5;
-    SetWindowAlignment(size, Anchor.RightBottom);
+    SetWindowAlignment(size, Anchor.RightBottom, false);
     ImGui.Begin("Canvas Log");
     using var seq = s_logMessages.GetEnumerator();
     while (seq.MoveNext()) {

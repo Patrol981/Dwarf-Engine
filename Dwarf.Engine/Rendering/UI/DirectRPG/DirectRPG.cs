@@ -1,67 +1,46 @@
 using System.Numerics;
-
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
+
 public partial class DirectRPG {
-  private static float s_menuOffset = 0;
+  public const ImGuiWindowFlags NONE = ImGuiWindowFlags.None;
+  public const ImGuiWindowFlags STATIC_WINDOW = ImGuiWindowFlags.NoTitleBar |
+                                                ImGuiWindowFlags.NoResize |
+                                                ImGuiWindowFlags.NoCollapse |
+                                                ImGuiWindowFlags.NoMove;
 
   public static void CreateMenuStyles() {
     var colors = ImGui.GetStyle().Colors;
     var style = ImGui.GetStyle();
   }
 
-  public static void BeginMainMenu() {
-    CreateMenuStyles();
-    var io = ImGui.GetIO();
-    ImGui.SetNextWindowPos(new(0, 0));
-    ImGui.SetNextWindowSize(io.DisplaySize);
-    ImGui.SetNextWindowBgAlpha(0.5f);
-    ImGui.Begin("Fullscreen Menu",
-      ImGuiWindowFlags.NoDecoration |
-      ImGuiWindowFlags.NoMove |
-      ImGuiWindowFlags.NoResize |
-      ImGuiWindowFlags.NoBringToFrontOnFocus
-    );
+  public static void BeginParent(string label, Vector2 size, ImGuiWindowFlags flags) {
+    ImGui.SetNextWindowSize(size);
+    ImGui.Begin(label, flags);
   }
 
-  public static void EndMainMenu() {
+  public static void EndParent() {
     ImGui.End();
-    s_menuOffset = 0;
   }
 
-  public static void CreateMenuButton(
-    string label,
-    ButtonClickedDelegate buttonClicked,
-    Vector2 size = default,
-    bool center = true
-  ) {
-    var io = ImGui.GetIO();
-
-    if (size == default) {
-      size.X = 200;
-      size.Y = 50;
-    }
-    if (center) {
-      var centerPos = io.DisplaySize / 2;
-      centerPos.X -= size.X / 2;
-      centerPos.Y -= (size.Y / 2) - s_menuOffset * 2;
-      ImGui.SetCursorPos(centerPos);
-    }
-    if (ImGui.Button(label, size)) {
-      buttonClicked.Invoke();
-    }
-
-    s_menuOffset += size.Y;
+  public static void UploadTexture(VulkanTexture texture) {
+    Application.Instance.GuiController.GetOrCreateImGuiBinding(texture);
   }
 
-  public static void CreateInventory() {
-    ImGui.BeginChild("Inventory");
+  public static nint GetStoredTexture(string id) {
+    var target = Application.Instance.GuiController.StoredTextures.Where(x => x.TextureName == id).First();
+    if (target == null) return IntPtr.Zero;
+    return Application.Instance.GuiController.GetOrCreateImGuiBinding(target);
+  }
 
-    ImGui.Text("Test");
-
-    ImGui.EndChild();
+  public static void AlignNextWindow(Anchor anchor, Vector2 size, bool stick = true) {
+    //
+    // ValidateAnchor(size, anchor);
+    SetWindowAlignment(size, anchor, stick);
+    // ImGui.SetNextWindowPos(new(0, 0));
   }
 }

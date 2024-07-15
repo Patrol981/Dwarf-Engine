@@ -202,8 +202,6 @@ public class Application {
   public async void Run() {
     Logger.Info("[APPLICATION] Application started");
 
-    WindowState.SetCursorMode(GLFW.InputValue.GLFW_CURSOR_NORMAL);
-
     _onLoadPrimaryResources?.Invoke();
 
     GuiController = new(Device, Renderer);

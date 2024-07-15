@@ -24,6 +24,8 @@ public partial class ImGuiController {
     }
   }
 
+  public VulkanTexture[] StoredTextures => [.. _userTextures.Values];
+
   private IntPtr GetNextImGuiBinding() {
     int newId = _lastId++;
     return (IntPtr)newId;

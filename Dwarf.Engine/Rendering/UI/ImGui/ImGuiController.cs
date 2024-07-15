@@ -176,7 +176,65 @@ public partial class ImGuiController : IDisposable {
     return keyResult != ImGuiKey.None;
   }
 
-  private void CreateStyles() {
+  private static void CreateStyles() {
+    var style = ImGui.GetStyle();
+
+    style.WindowMinSize = new(160, 20);
+    style.FramePadding = new(4, 2);
+    style.ItemSpacing = new(6, 2);
+    style.ItemInnerSpacing = new(6, 4);
+    style.Alpha = 0.95f;
+    style.WindowRounding = 4.0f;
+    style.FrameRounding = 2.0f;
+    style.IndentSpacing = 6.0f;
+    style.ItemInnerSpacing = new(2, 4);
+    style.ColumnsMinSpacing = 50.0f;
+    style.GrabMinSize = 14.0f;
+    style.GrabRounding = 16.0f;
+    style.ScrollbarSize = 12.0f;
+    style.ScrollbarRounding = 16.0f;
+
+    style.Colors[(int)ImGuiCol.Text] = new(0.86f, 0.93f, 0.89f, 0.78f);
+    style.Colors[(int)ImGuiCol.TextDisabled] = new(0.86f, 0.93f, 0.89f, 0.28f);
+    style.Colors[(int)ImGuiCol.WindowBg] = new(0.13f, 0.14f, 0.17f, 1.00f);
+    style.Colors[(int)ImGuiCol.Border] = new(0.31f, 0.31f, 1.00f, 0.00f);
+    style.Colors[(int)ImGuiCol.BorderShadow] = new(0.00f, 0.00f, 0.00f, 0.00f);
+    style.Colors[(int)ImGuiCol.FrameBg] = new(0.20f, 0.22f, 0.27f, 1.00f);
+    style.Colors[(int)ImGuiCol.FrameBgHovered] = new(0.92f, 0.18f, 0.29f, 0.78f);
+    style.Colors[(int)ImGuiCol.FrameBgActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.TitleBg] = new(0.20f, 0.22f, 0.27f, 1.00f);
+    style.Colors[(int)ImGuiCol.TitleBgCollapsed] = new(0.20f, 0.22f, 0.27f, 0.75f);
+    style.Colors[(int)ImGuiCol.TitleBgActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.MenuBarBg] = new(0.20f, 0.22f, 0.27f, 0.47f);
+    style.Colors[(int)ImGuiCol.ScrollbarBg] = new(0.20f, 0.22f, 0.27f, 1.00f);
+    style.Colors[(int)ImGuiCol.ScrollbarGrab] = new(0.09f, 0.15f, 0.16f, 1.00f);
+    style.Colors[(int)ImGuiCol.ScrollbarGrabHovered] = new(0.92f, 0.18f, 0.29f, 0.78f);
+    style.Colors[(int)ImGuiCol.ScrollbarGrabActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.CheckMark] = new(0.71f, 0.22f, 0.27f, 1.00f);
+    style.Colors[(int)ImGuiCol.SliderGrab] = new(0.47f, 0.77f, 0.83f, 0.14f);
+    style.Colors[(int)ImGuiCol.SliderGrabActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.Button] = new(0.47f, 0.77f, 0.83f, 0.14f);
+    style.Colors[(int)ImGuiCol.ButtonHovered] = new(0.92f, 0.18f, 0.29f, 0.86f);
+    style.Colors[(int)ImGuiCol.ButtonActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.Header] = new(0.92f, 0.18f, 0.29f, 0.76f);
+    style.Colors[(int)ImGuiCol.HeaderHovered] = new(0.92f, 0.18f, 0.29f, 0.86f);
+    style.Colors[(int)ImGuiCol.HeaderActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.Separator] = new(0.14f, 0.16f, 0.19f, 1.00f);
+    style.Colors[(int)ImGuiCol.SeparatorHovered] = new(0.92f, 0.18f, 0.29f, 0.78f);
+    style.Colors[(int)ImGuiCol.SeparatorActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.ResizeGrip] = new(0.47f, 0.77f, 0.83f, 0.04f);
+    style.Colors[(int)ImGuiCol.ResizeGripHovered] = new(0.92f, 0.18f, 0.29f, 0.78f);
+    style.Colors[(int)ImGuiCol.ResizeGripActive] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.PlotLines] = new(0.86f, 0.93f, 0.89f, 0.63f);
+    style.Colors[(int)ImGuiCol.PlotLinesHovered] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.PlotHistogram] = new(0.86f, 0.93f, 0.89f, 0.63f);
+    style.Colors[(int)ImGuiCol.PlotHistogramHovered] = new(0.92f, 0.18f, 0.29f, 1.00f);
+    style.Colors[(int)ImGuiCol.TextSelectedBg] = new(0.92f, 0.18f, 0.29f, 0.43f);
+    style.Colors[(int)ImGuiCol.PopupBg] = new(0.20f, 0.22f, 0.27f, 0.9f);
+    style.Colors[(int)ImGuiCol.ModalWindowDimBg] = new(0.20f, 0.22f, 0.27f, 0.73f);
+  }
+
+  private void CreateStyles_Old() {
     var colors = ImGui.GetStyle().Colors;
     colors[(int)ImGuiCol.Text] = new(1.00f, 1.00f, 1.00f, 1.00f);
     colors[(int)ImGuiCol.TextDisabled] = new(0.50f, 0.50f, 0.50f, 1.00f);
@@ -301,7 +359,9 @@ public partial class ImGuiController : IDisposable {
     io.MouseDown[1] = MouseState.GetInstance().QuickStateMouseButtons.Right;
     io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
     var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
-    io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
+    if (WindowState.s_MouseCursorState != GLFW.InputValue.GLFW_CURSOR_DISABLED) {
+      io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
+    }
 
     // _pressedChars.Clear();
 

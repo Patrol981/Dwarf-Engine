@@ -12,7 +12,7 @@ using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-
+using ImGuiNET;
 using Vortice.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
@@ -155,10 +155,11 @@ public class Application {
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
-    while (_renderThread.IsAlive) {
+    while (_renderThread!.IsAlive) {
     }
-    _renderThread = new Thread(LoaderLoop);
-    _renderThread.Name = "App Loading Frontend Thread";
+    _renderThread = new Thread(LoaderLoop) {
+      Name = "App Loading Frontend Thread"
+    };
     _renderThread.Start();
 
     var usedPhysicsBefore = Systems.PhysicsSystem != null;
@@ -180,8 +181,9 @@ public class Application {
     }
 
     _renderThread.Join();
-    _renderThread = new Thread(RenderLoop);
-    _renderThread.Name = "Render Thread";
+    _renderThread = new Thread(RenderLoop) {
+      Name = "Render Thread"
+    };
     _renderThread.Start();
 
     _newSceneShouldLoad = false;
@@ -219,8 +221,9 @@ public class Application {
 
     }
     _renderThread.Join();
-    _renderThread = new Thread(RenderLoop);
-    _renderThread.Name = "Render Thread";
+    _renderThread = new Thread(RenderLoop) {
+      Name = "Render Thread"
+    };
     _renderThread.Start();
     // _calculationThread = new Thread(CalculationLoop);
 

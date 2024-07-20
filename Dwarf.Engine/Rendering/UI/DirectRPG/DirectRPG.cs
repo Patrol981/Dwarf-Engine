@@ -23,6 +23,10 @@ public partial class DirectRPG {
     ImGui.Begin(label, flags);
   }
 
+  public static void BeginParent(string label, ImGuiWindowFlags flags) {
+    ImGui.Begin(label, flags);
+  }
+
   public static void EndParent() {
     ImGui.End();
   }

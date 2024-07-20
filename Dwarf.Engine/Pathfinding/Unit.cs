@@ -8,7 +8,7 @@ using Dwarf.Extensions.Logging;
 
 namespace Dwarf.Pathfinding;
 public class Unit : DwarfScript {
-  private float _speed = .1f;
+  private float _speed = .05f;
   private Vector3[] _path = [];
   private int _targetIndex;
   private Transform _transform = null!;
@@ -39,6 +39,31 @@ public class Unit : DwarfScript {
   }
 
   private IEnumerator FollowPath() {
+    if (_path == null || _path.Length == 0) {
+      IsMoving = false;
+      yield break;
+    }
+
+    int currentWaypointIndex = 0;
+    Vector3 currentWaypoint = _path[currentWaypointIndex];
+
+    while (true) {
+      if (Vector3.Distance(_transform.Position, currentWaypoint) < 0.01f) { // Use a tolerance value for position comparison
+        currentWaypointIndex++;
+        if (currentWaypointIndex >= _path.Length) {
+          _path = null!;
+          IsMoving = false;
+          yield break;
+        }
+        currentWaypoint = _path[currentWaypointIndex];
+        _transform.LookAtFixed(currentWaypoint);
+      }
+      _transform.Position = Transform.MoveTowards(_transform.Position, currentWaypoint, _speed * Time.DeltaTime);
+      yield return null;
+    }
+  }
+
+  private IEnumerator FollowPath_Old() {
     if (_path == null) { IsMoving = false; yield break; }
     if (_path!.Length <= 0) { IsMoving = false; yield break; }
 

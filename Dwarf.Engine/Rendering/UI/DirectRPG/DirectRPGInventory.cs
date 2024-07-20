@@ -32,7 +32,7 @@ public partial class DirectRPG {
       }
 
       var imTex = GetStoredTexture(s_items[i].TextureId);
-      if (ImGui.ImageButton($"{i}", imTex, s_inventoryIconSize)) {
+      if (ImGui.ImageButton($"{i}", imTex, s_inventoryIconSize, new(0, 1), new(1, 0))) {
 
       }
 

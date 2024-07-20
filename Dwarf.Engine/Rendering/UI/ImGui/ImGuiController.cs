@@ -48,6 +48,8 @@ public partial class ImGuiController : IDisposable {
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
+  public ImFontPtr CurrentFont { get; private set; }
+
   // private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
   // private readonly List<char> _pressedChars = new List<char>();
 
@@ -103,7 +105,15 @@ public partial class ImGuiController : IDisposable {
     ImGui.SetCurrentContext(context);
 
     var io = ImGui.GetIO();
-    // var font = io.Fonts.AddFontDefault();
+    io.Fonts.ClearFonts();
+    var dwarfPath = DwarfPath.AssemblyDirectory;
+    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}./Resources/fonts/PixelifySans-SemiBold.ttf", 14);
+    unsafe {
+      if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
+        Logger.Error("Could not load font!");
+        throw new ArgumentException("Could not load font!");
+      }
+    }
     io.Fonts.SetTexID(_fontAtlasId);
 
     io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;

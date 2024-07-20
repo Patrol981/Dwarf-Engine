@@ -132,7 +132,7 @@ public partial class GLTFLoader {
     ref Dictionary<Mesh, SharpGLTF.Schema2.MaterialChannel> meshMaterialPair,
     string path
   ) {
-    Dwarf.Model.Animation.Skin skin = null!;
+    // Dwarf.Model.Animation.Skin skin = null!;
   }
 
   private static void ProcessAnimationData(

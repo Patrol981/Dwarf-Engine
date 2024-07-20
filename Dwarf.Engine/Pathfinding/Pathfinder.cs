@@ -84,8 +84,8 @@ public class Pathfinder : DwarfScript {
       path.Add(currentNode);
       currentNode = currentNode.Parent;
     }
-    var waypoints = SimplifyPath(path.ToArray());
-    // var waypoints = ConvertPath(path.ToArray());
+    // var waypoints = SimplifyPath(path.ToArray());
+    var waypoints = ConvertPath(path.ToArray());
     Array.Reverse(waypoints);
     return waypoints;
   }

@@ -19,14 +19,22 @@ public partial class DirectRPG {
     CanvasLogBase(size);
   }
 
+  public static void CanvasLogNextToSpellBar() {
+    var io = ImGui.GetIO();
+    var xCenter = (int)io.DisplaySize.X >> 1;
+    var xOffset = (int)SpellBarSize.X >> 1;
+    var size = new Vector2(((xCenter) - xOffset) >> 1, 150);
+    CanvasLogBase(size);
+  }
+
   public static void CanvasLog(Vector2 size) {
     CanvasLogBase(size);
   }
 
   private static void CanvasLogBase(Vector2 size) {
     ImGui.SetNextWindowSize(size);
-    size.X -= 5;
-    size.Y -= 5;
+    size.X -= 6;
+    size.Y -= 6;
     SetWindowAlignment(size, Anchor.RightBottom, false);
     ImGui.Begin("Canvas Log");
     using var seq = s_logMessages.GetEnumerator();

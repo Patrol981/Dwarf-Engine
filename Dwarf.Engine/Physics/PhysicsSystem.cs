@@ -1,13 +1,14 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 
 using JoltPhysicsSharp;
 
-using static Dwarf.Engine.Physics.JoltConfig;
+using static Dwarf.Physics.JoltConfig;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public delegate void PhysicsSystemCallback();
 
@@ -16,7 +17,7 @@ public class PhysicsSystem : IDisposable {
   public const float DeltaTime = 1.0f / 600.0f;
   public const int CollisionSteps = 1;
 
-  private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem;
+  private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem = null!;
   public PhysicsSystem() {
     if (!Foundation.Init(0u, false)) {
       return;
@@ -101,7 +102,7 @@ public class PhysicsSystem : IDisposable {
     }
 
     // _physicsSystem.OptimizeBroadPhase();
-    _physicsSystem.Step(DeltaTime, CollisionSteps);
+    _physicsSystem.Step(Time.DeltaTime * 10, CollisionSteps);
     return Task.CompletedTask;
 
     // Console.WriteLine(entities.Length);
@@ -111,8 +112,8 @@ public class PhysicsSystem : IDisposable {
 
   public static void Calculate(object application) {
     var app = (Application)application;
-    var systems = app.GetSystems();
-    var entities = Entity.Distinct<Rigidbody>(app.GetEntities());
+    var systems = app.Systems;
+    var entities = app.GetEntities().Distinct<Rigidbody>();
     // var system = (PhysicsSystem)physicsSystem;
 
     while (!app.Window.ShouldClose) {

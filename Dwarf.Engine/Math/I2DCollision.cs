@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public interface I2DCollision {
   public bool IsUI { get; }
   public Vector2 Size { get; }

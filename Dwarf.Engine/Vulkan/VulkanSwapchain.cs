@@ -1,4 +1,3 @@
-using Dwarf.Engine;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
@@ -15,9 +14,15 @@ public class VulkanSwapchain : IDisposable {
   private VkImageView[] _swapChainImageViews = null!;
   private VkImage[] _swapchainImages = [];
   private VkRenderPass _renderPass = VkRenderPass.Null;
+
   private VkImage[] _depthImages = [];
   private VkDeviceMemory[] _depthImagesMemories = [];
   private VkImageView[] _depthImageViews = [];
+
+  private readonly VkImage[] _normalImages = [];
+  private readonly VkDeviceMemory[] _normalImagesMemories = [];
+  private readonly VkImageView[] _normalImageViews = [];
+
   private VkFormat _swapchainImageFormat = VkFormat.Undefined;
   private VkFormat _swapchainDepthFormat = VkFormat.Undefined;
   private VkExtent2D _swapchainExtent = VkExtent2D.Zero;
@@ -154,8 +159,8 @@ public class VulkanSwapchain : IDisposable {
 
     SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
-    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
-    var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
+    // VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+    // var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
 
     for (int i = 0; i < swapChainImages.Length; i++) {
       var viewCreateInfo = new VkImageViewCreateInfo(
@@ -348,8 +353,6 @@ public class VulkanSwapchain : IDisposable {
     return result;
   }
 
-  public List<VkSubmitInfo> SubmitQueue = [];
-
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     if (_imagesInFlight[imageIndex] != VkFence.Null) {
       vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
@@ -391,19 +394,9 @@ public class VulkanSwapchain : IDisposable {
       submitInfo.signalSemaphoreCount = 1;
       submitInfo.pSignalSemaphores = signalPtr;
 
-      // _device._mutex.WaitOne();
-      // vkWaitForFences(_device.LogicalDevice, 1, &fence, VkBool32.True, 100000000000);
-      // vkWaitForFences(_device.LogicalDevice, 1, swFlightFencesPtr, VkBool32.True, 100000000000);
       vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
 
-      /*
-      lock (_device._queueLock) {
-        vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
-      }
-      */
       _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
-      // vkDestroyFence(_device.LogicalDevice, fence, null);
-      // _device._mutex.ReleaseMutex();
 
       VkPresentInfoKHR presentInfo = new() {
         waitSemaphoreCount = 1,
@@ -419,8 +412,6 @@ public class VulkanSwapchain : IDisposable {
       var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
       Application.Instance.Mutex.ReleaseMutex();
       _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-      SubmitQueue.Clear();
 
       return result;
     }
@@ -456,13 +447,23 @@ public class VulkanSwapchain : IDisposable {
   }
 
   private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
+    if (Application.Instance.VSync) {
+      Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
+      return VkPresentModeKHR.Fifo;
+    }
+
     foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
       // render mode
-      if (availablePresentMode == VkPresentModeKHR.Mailbox || availablePresentMode == VkPresentModeKHR.Immediate) {
+      if (
+        availablePresentMode == VkPresentModeKHR.Mailbox ||
+        availablePresentMode == VkPresentModeKHR.Immediate
+      ) {
+        Logger.Info($"[SWAPCHAIN] Present Mode is set to: {availablePresentMode}");
         return availablePresentMode;
       }
     }
 
+    Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
     return VkPresentModeKHR.Fifo;
   }
 
@@ -473,8 +474,8 @@ public class VulkanSwapchain : IDisposable {
       VkExtent2D actualExtent = Extent2D;
 
       actualExtent = new VkExtent2D(
-        Math.Max(capabilities.minImageExtent.width, Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
-        Math.Max(capabilities.minImageExtent.height, Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
+        System.Math.Max(capabilities.minImageExtent.width, System.Math.Min(capabilities.maxImageExtent.width, actualExtent.width)),
+        System.Math.Max(capabilities.minImageExtent.height, System.Math.Min(capabilities.maxImageExtent.height, actualExtent.height))
       );
 
       return actualExtent;
@@ -485,6 +486,7 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _swapChainImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _swapChainImageViews[i]);
     }
+
     for (int i = 0; i < _depthImages.Length; i++) {
       vkDestroyImage(_device.LogicalDevice, _depthImages[i]);
     }
@@ -494,6 +496,17 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _depthImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _depthImageViews[i]);
     }
+
+    for (int i = 0; i < _normalImages.Length; i++) {
+      vkDestroyImage(_device.LogicalDevice, _normalImages[i]);
+    }
+    for (int i = 0; i < _normalImagesMemories.Length; i++) {
+      vkFreeMemory(_device.LogicalDevice, _normalImagesMemories[i]);
+    }
+    for (int i = 0; i < _normalImageViews.Length; i++) {
+      vkDestroyImageView(_device.LogicalDevice, _normalImageViews[i]);
+    }
+
     for (int i = 0; i < _swapchainFramebuffers.Length; i++) {
       vkDestroyFramebuffer(_device.LogicalDevice, _swapchainFramebuffers[i]);
     }

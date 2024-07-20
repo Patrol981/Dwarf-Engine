@@ -1,13 +1,13 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class Button : Component, I2DCollision, IUIElement {
   private readonly Application _application = null!;
 
@@ -91,7 +91,7 @@ public class Button : Component, I2DCollision, IUIElement {
     _guiTexture.Dispose();
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     _guiTexture.Draw(commandBuffer, index);
     return Task.CompletedTask;
   }

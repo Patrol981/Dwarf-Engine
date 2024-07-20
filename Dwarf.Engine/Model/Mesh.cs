@@ -1,8 +1,12 @@
-namespace Dwarf.Engine;
+using Dwarf.Model.Animation;
 
-public class Mesh {
+namespace Dwarf;
+
+public class Mesh : IDisposable {
   public Vertex[] Vertices = [];
   public uint[] Indices = [];
+
+  public Skin? Skin = default!;
 
   public float Height {
     get {
@@ -18,5 +22,9 @@ public class Mesh {
 
       return (float)(maxY - minY);
     }
+  }
+
+  public void Dispose() {
+    Skin?.Dispose();
   }
 }

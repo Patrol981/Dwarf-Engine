@@ -1,13 +1,12 @@
 using System.Numerics;
 
-using Dwarf.Engine;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Procedural;
-using Dwarf.Engine.Rendering.UI;
-using Dwarf.Extensions.Logging;
+using Dwarf;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Loaders;
+using Dwarf.Physics;
+using Dwarf.Procedural;
+using Dwarf.Rendering.UI;
 
 namespace Dwarf.AssetSystem;
 
@@ -30,10 +29,10 @@ public struct CameraAssetData {
 
 public class GameAsset {
   public Guid AssetId { get; set; }
-  public string Name { get; set; }
+  public string Name { get; set; } = default!;
   public List<string>? AssetResourcePaths { get; set; }
   public List<string>? AssetScripts { get; set; }
-  public string AssetType { get; set; }
+  public string AssetType { get; set; } = default!;
   public Vector3 Position { get; set; }
   public Vector3 Rotation { get; set; }
   public Vector3 Scale { get; set; }
@@ -184,7 +183,7 @@ public class GameAsset {
 
     foreach (var script in AssetScripts) {
       Type componentType = Type.GetType(script)!;
-      Component component = (Component)Activator.CreateInstance(componentType);
+      Component component = (Component)Activator.CreateInstance(componentType)!;
       entity.AddComponent(component);
     }
   }
@@ -197,8 +196,8 @@ public class GameAsset {
     if (AssetType == typeof(Terrain3D).FullName) {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
-      entity.GetComponent<Terrain3D>().Setup();
-      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic);
+      entity.GetComponent<Terrain3D>().Setup(new(150, 150), default);
+      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic, false);
     }
   }
 

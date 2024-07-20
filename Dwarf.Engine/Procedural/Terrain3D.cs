@@ -1,29 +1,40 @@
+using Dwarf.EntityComponentSystem;
 using System.Numerics;
 
-using Dwarf.Engine.Math;
+using Dwarf.Math;
+using Dwarf.Extensions.Logging;
 
-namespace Dwarf.Engine.Procedural;
-public class Terrain3D : MeshRenderer {
+namespace Dwarf.Procedural;
+public class Terrain3D : Component {
   const int HEIGHT = 512;
   const int WIDTH = 512;
 
   private double[,] _points;
-  private readonly Application _app;
+  private readonly Application _app = default!;
 
-  private uint _size = 1024;
+  private Vector2 _size = Vector2.Zero;
+  private string _texturePath = string.Empty;
 
-  public Terrain3D() { }
+  public Terrain3D() {
+    _points = new double[HEIGHT, WIDTH];
+  }
 
-  public Terrain3D(Application app) : base(app.Device, app.Renderer) {
+  public Terrain3D(Application app) {
     _app = app;
     _points = new double[HEIGHT, WIDTH];
   }
 
-  public void Setup() {
+  public void Setup(Vector2 size, string? texturePath = default) {
+    _size = size;
+    if (texturePath != null) {
+      _texturePath = texturePath;
+    } else {
+      _texturePath = "./Resources/Textures/base/no_texture.png";
+    }
     var mesh = Generate(_app);
-    base.Init(new Mesh[] { mesh });
     SetupTexture(_app);
-    base.BindToTexture(_app.TextureManager, Owner!.EntityID.ToString());
+    Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer, [mesh]));
+    Owner!.GetComponent<MeshRenderer>().BindToTexture(_app.TextureManager, _texturePath);
   }
 
   private Mesh Generate(Application app) {
@@ -37,89 +48,44 @@ public class Terrain3D : MeshRenderer {
       }
     }
 
-    var verts = new List<Vertex>();
-    var mesh = new Mesh();
+    var mesh = Primitives.CreatePlanePrimitive(
+      new(0, 0, 0),
+      new(100, 100),
+      new(_size.X, _size.Y),
+      new(15, 15)
+    );
 
-    for (int y = 0; y < HEIGHT; y++) {
-      for (int x = 0; x < WIDTH; x++) {
-        var v = new Vertex();
-        v.Position = new Vector3(
-          (float)x / ((float)WIDTH - 1) * _size,
-          0,
-          // (float)_points[x, y] * 5,
-          (float)y / ((float)HEIGHT - 1) * _size
-        );
-
-        v.Normal = new Vector3(
-          0,
-          1,
-          0
-        );
-
-        v.Uv = new Vector2(
-          (float)x / ((float)WIDTH - 1),
-          (float)y / ((float)HEIGHT - 1)
-        );
-
-
-        v.Color = new Vector3(
-          rand.NextSingle(),
-          rand.NextSingle(),
-          rand.NextSingle()
-        );
-
-        /*
-        v.Color = new Vector3(
-          1,
-          1,
-          1
-        );
-        */
-
-        verts.Add(v);
-      }
-    }
-
-    mesh.Vertices = verts.ToArray();
-    var indices = new List<uint>();
-
-    for (int gz = 0; gz < HEIGHT - 1; gz++) {
-      for (int gx = 0; gx < WIDTH - 1; gx++) {
-        uint topLeft = (uint)((gz * WIDTH) + gx);
-        uint topRight = topLeft + 1;
-        uint bottomLeft = (uint)(((gz + 1) * WIDTH) + gx);
-        uint bottomRight = bottomLeft + 1;
-
-        indices.Add((uint)bottomLeft);
-        indices.Add((uint)topLeft);
-
-        indices.Add((uint)topRight);
-        indices.Add((uint)topRight);
-
-        indices.Add((uint)bottomRight);
-        indices.Add((uint)bottomLeft);
-
-        /*
-        indices.Add((uint)topLeft);
-        indices.Add((uint)bottomLeft);
-        indices.Add((uint)topRight);
-        indices.Add((uint)topRight);
-        indices.Add((uint)bottomLeft);
-        indices.Add((uint)bottomRight);
-        */
-      }
-    }
-
-    mesh.Indices = indices.ToArray();
-    // mesh = Primitives.CreateCylinderPrimitive(0.5f, 1.5f, 20);
+    // ApplyPerlinNoiseToMesh(ref mesh, _points, _size, new(WIDTH, HEIGHT));
 
     return mesh;
   }
 
   private async void SetupTexture(Application app) {
-    var data = await TextureLoader.LoadDataFromPath("./Resources/Textures/base/no_texture.png");
-    var texture = new VulkanTexture(app.Device, data.Width, data.Height, Owner!.EntityID.ToString());
-    texture.SetTextureData(data.Data);
-    await app.TextureManager.AddTexture(texture);
+    app.Mutex.WaitOne();
+    await app.TextureManager.AddTexture(_texturePath);
+    app.Mutex.ReleaseMutex();
+  }
+
+  private static void ApplyPerlinNoiseToMesh(
+    ref Mesh mesh,
+    double[,] noiseMap,
+    Vector2 worldSize,
+    Vector2 numVertices
+  ) {
+    var vertices = mesh.Vertices;
+
+    float xStep = worldSize.X / (numVertices.X - 1);
+    float yStep = worldSize.Y / (numVertices.Y - 1);
+
+    for (int y = 0; y < numVertices.Y; y++) {
+      for (int x = 0; x < numVertices.X; x++) {
+        int index = x + y * (int)numVertices.X;
+        var noiseValue = noiseMap[x, y]; // Get noise value from the map
+
+        // Update Y coordinate of the vertex
+        vertices[index].Position.Y += (float)noiseValue;
+      }
+    }
+
   }
 }

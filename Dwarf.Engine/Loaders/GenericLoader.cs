@@ -2,10 +2,10 @@ using System.Numerics;
 
 using Assimp;
 
-using Dwarf.Engine.Rendering;
+using Dwarf.Rendering;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Engine.Loaders;
+namespace Dwarf.Loaders;
 
 public class GenericLoader {
   private Task<List<Mesh>> ProcessChildNode(Assimp.Scene scene, Assimp.Node childNode) {
@@ -113,7 +113,7 @@ public class GenericLoader {
     );
 
     var node = scene.RootNode;
-    var meshes = new List<Dwarf.Engine.Mesh>();
+    var meshes = new List<Dwarf.Mesh>();
 
     // if (!node.HasChildren) return mesh.ToArray();
     foreach (var child in node.Children) {

@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.EntityComponentSystem;
+﻿namespace Dwarf.EntityComponentSystem;
 public class DwarfScript : Component {
   protected bool DidAwake { get; private set; }
   protected bool DidStart { get; private set; }
@@ -13,6 +13,7 @@ public class DwarfScript : Component {
   }
   public virtual void Update() { }
   public virtual void FixedUpdate() { }
+  public virtual void RenderUpdate() { }
 
   public virtual void CollisionEnter(Entity entity) { }
 

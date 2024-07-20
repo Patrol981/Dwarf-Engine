@@ -1,20 +1,25 @@
 using System.Numerics;
 
+using Dwarf.Extensions.Logging;
+
 using SharpGLTF.Schema2;
 
-namespace Dwarf.Engine.Loader.Providers;
+namespace Dwarf.Loader.Providers;
 
-public class GLTFLoader {
+public partial class GLTFLoader {
   public static async Task<MeshRenderer> Load(Application app, string path, bool preload = false, int flip = 1) {
-    var model = ModelRoot.Load(path);
-    var meshes = new List<Dwarf.Engine.Mesh>();
+    var materialTexturePair = new Dictionary<int, int>();
+    var modelRoot = ModelRoot.Load(path);
+    var modelMeshes = ProcessModel(modelRoot);
 
+    /*
     foreach (var mesh in model.LogicalMeshes) {
       var resultMesh = ProcessMesh(mesh);
       if (resultMesh != null) {
         meshes.Add(resultMesh);
       }
     }
+    
 
     foreach (var bone in model.LogicalSkins) {
       ProcessBones(bone);
@@ -23,12 +28,13 @@ public class GLTFLoader {
     foreach (var anim in model.LogicalAnimations) {
 
     }
+    */
 
-    var resultModel = new MeshRenderer(app.Device, app.Renderer, meshes.ToArray(), path);
+    var resultModel = new MeshRenderer(app.Device, app.Renderer, modelMeshes.ToArray(), path);
     resultModel.TextureFlipped = flip;
 
     if (!preload) {
-      var images = ProcessMaterials(model);
+      var images = ProcessMaterials(modelRoot);
       string[] tags = GetFileNames(path, images.Count);
       string[] paths = new string[tags.Length];
 
@@ -63,7 +69,60 @@ public class GLTFLoader {
     var joints = skin.Skeleton;
   }
 
-  private static Dwarf.Engine.Mesh ProcessMesh(SharpGLTF.Schema2.Mesh mesh) {
+  private static IList<Dwarf.Mesh> ProcessModel(ModelRoot modelRoot) {
+    var model = new List<Mesh>();
+
+    foreach (var mesh in modelRoot.LogicalMeshes) {
+      if (mesh == null) continue;
+
+      var vertices = new List<Vertex>();
+      var indices = new List<uint>();
+
+      foreach (var primitive in mesh.Primitives) {
+        var textureCoords = new List<Vector2>();
+        var normals = new List<Vector3>();
+
+
+        var positions = primitive.GetVertexAccessor("POSITION").AsVector3Array();
+        if (primitive.GetVertexAccessor("TEXCOORD_0") != null) {
+          textureCoords = primitive.GetVertexAccessor("TEXCOORD_0").AsVector2Array().ToList();
+        }
+        if (primitive.GetVertexAccessor("NORMAL") != null) {
+          normals = primitive.GetVertexAccessor("NORMAL").AsVector3Array().ToList();
+        }
+        var indexes = primitive.GetIndexAccessor().AsIndicesArray();
+        indices.AddRange(indexes.ToArray());
+
+        var vertex = new Vertex();
+        for (int i = 0; i < positions.Count; i++) {
+          vertex.Position = positions[i];
+          vertex.Color = new Vector3(1, 1, 1);
+          vertex.Normal = normals.Count > 0 ? normals[i] : new Vector3(1, 1, 1);
+          vertex.Uv = textureCoords.Count > 0 ? textureCoords[i] : new Vector2(0, 0);
+
+          vertices.Add(vertex);
+        }
+      }
+
+      var meshData = new Mesh();
+      meshData.Vertices = vertices.ToArray();
+      meshData.Indices = indices.ToArray();
+      model.Add(meshData);
+    }
+
+    if (modelRoot.LogicalSkins.Count > 0) {
+      Logger.Info($"{modelRoot.LogicalMeshes.Count} : {modelRoot.LogicalSkins.Count}");
+
+      foreach (var skin in modelRoot.LogicalSkins) {
+
+      }
+    }
+
+
+    return model;
+  }
+
+  private static Dwarf.Mesh ProcessMesh(SharpGLTF.Schema2.Mesh mesh) {
     if (mesh == null) return null!;
 
     List<Vertex> vertices = new List<Vertex>();
@@ -141,6 +200,7 @@ public class GLTFLoader {
     return images;
   }
 
+  [Obsolete]
   private static void ProcessNode(Node node, ref List<Mesh> meshes) {
     if (node.Mesh == null) return;
 
@@ -164,6 +224,9 @@ public class GLTFLoader {
         vertex.Color = new System.Numerics.Vector3(1, 1, 1);
         vertex.Normal = normals[i];
         vertex.Uv = textureCoords[i];
+
+        // vertex.JointIndices = [];
+        // vertex.JointWeights = [];
 
         vertices.Add(vertex);
       }

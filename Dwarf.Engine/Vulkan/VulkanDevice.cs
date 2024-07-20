@@ -1,11 +1,9 @@
 using System.Diagnostics;
-using System.Drawing;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine;
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Windowing;
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
@@ -26,25 +24,25 @@ public class VulkanDevice : IDevice {
   private VkPhysicalDevice _physicalDevice = VkPhysicalDevice.Null;
   private VkDevice _logicalDevice = VkDevice.Null;
 
-  private VkCommandPool _commandPool = VkCommandPool.Null;
+  private readonly VkCommandPool _commandPool = VkCommandPool.Null;
   private readonly object _commandPoolLock = new object();
 
   private VkQueue _graphicsQueue = VkQueue.Null;
   private VkQueue _presentQueue = VkQueue.Null;
-  private VkQueue _transferQueue = VkQueue.Null;
+  private readonly VkQueue _transferQueue = VkQueue.Null;
 
   internal readonly object _queueLock = new object();
 
-  private VkFence _singleTimeFence = VkFence.Null;
+  private readonly VkFence _singleTimeFence = VkFence.Null;
 
-  private VkSemaphore _semaphore = VkSemaphore.Null;
-  private ulong _timeline = 0;
+  private readonly VkSemaphore _semaphore = VkSemaphore.Null;
+  // private readonly ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
   public const long FenceTimeout = 100000000000;
 
   public VkPhysicalDeviceFeatures Features { get; private set; }
-  public List<string> DeviceExtensions { get; private set; }
+  public List<VkUtf8String> DeviceExtensions { get; private set; } = [];
 
   public VulkanDevice(Window window) {
     _window = window;
@@ -83,8 +81,29 @@ public class VulkanDevice : IDevice {
       sharingMode = VkSharingMode.Exclusive
     };
 
+    // Logger.Info($"Allocating Size: {size}");
+
     vkCreateBuffer(_logicalDevice, &bufferInfo, null, out buffer).CheckResult();
 
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_logicalDevice, buffer, out memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = new() {
+      allocationSize = memRequirements.size,
+      memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, pFlags)
+    };
+
+    vkAllocateMemory(_logicalDevice, &allocInfo, null, out bufferMemory).CheckResult();
+    vkBindBufferMemory(_logicalDevice, buffer, bufferMemory, 0).CheckResult();
+  }
+
+  public unsafe void AllocateBuffer(
+    ulong size,
+    BufferUsage uFlags,
+    MemoryProperty pFlags,
+    VkBuffer buffer,
+    out VkDeviceMemory bufferMemory
+  ) {
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_logicalDevice, buffer, out memRequirements);
 
@@ -262,7 +281,7 @@ public class VulkanDevice : IDevice {
     lock (_queueLock) {
       var result = vkDeviceWaitIdle(_logicalDevice);
       if (result == VkResult.ErrorDeviceLost) {
-        throw new VkException("Device Lost!");
+        throw new VkException($"Device Lost! {result.ToString()}");
       }
     }
   }
@@ -346,13 +365,13 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateInstance() {
-    HashSet<string> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
-    HashSet<string> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
+    HashSet<VkUtf8String> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
+    HashSet<VkUtf8String> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
 
     var appInfo = new VkApplicationInfo {
-      pApplicationName = new VkString("Dwarf App"),
+      pApplicationName = _window.AppName,
       applicationVersion = new(1, 0, 0),
-      pEngineName = new VkString("Dwarf Engine"),
+      pEngineName = _window.EngineName,
       engineVersion = new(1, 0, 0),
       apiVersion = VkVersion.Version_1_3
     };
@@ -361,11 +380,11 @@ public class VulkanDevice : IDevice {
       pApplicationInfo = &appInfo
     };
 
-    List<string> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
+    List<VkUtf8String> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
 
-    List<string> instanceLayers = new();
+    List<VkUtf8String> instanceLayers = new();
     // Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
-    foreach (string availableExtension in availableInstanceExtensions) {
+    foreach (VkUtf8String availableExtension in availableInstanceExtensions) {
       if (availableExtension == VK_EXT_DEBUG_UTILS_EXTENSION_NAME) {
         instanceExtensions.Add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
       } else if (availableExtension == VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME) {
@@ -428,7 +447,7 @@ public class VulkanDevice : IDevice {
     VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* userData
   ) {
-    string message = new(pCallbackData->pMessage);
+    VkUtf8String message = new(pCallbackData->pMessage);
     if (messageTypes == VkDebugUtilsMessageTypeFlagsEXT.Validation) {
       if (messageSeverity == VkDebugUtilsMessageSeverityFlagsEXT.Error) {
         Logger.Error($"[Vulkan]: Validation: {messageSeverity} - {message}");
@@ -488,23 +507,30 @@ public class VulkanDevice : IDevice {
       sampleRateShading = true,
       multiDrawIndirect = true,
       geometryShader = true,
+      shaderStorageBufferArrayDynamicIndexing = true,
     };
 
-    VkPhysicalDeviceVulkan12Features deviceFeatures2 = new();
-    deviceFeatures2.timelineSemaphore = true;
+    VkPhysicalDeviceVulkan11Features vk11Features = new() {
+      shaderDrawParameters = true,
+    };
+
+    VkPhysicalDeviceVulkan12Features vk12Features = new() {
+      timelineSemaphore = true,
+      pNext = &vk11Features
+    };
 
     VkDeviceCreateInfo createInfo = new() {
-      queueCreateInfoCount = queueCount
+      queueCreateInfoCount = queueCount,
     };
-    createInfo.pNext = &deviceFeatures2;
+    createInfo.pNext = &vk12Features;
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;
     }
 
-    List<string> enabledExtensions = new() {
+    List<VkUtf8String> enabledExtensions = [
       VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
+    ];
 
     using var deviceExtensionNames = new VkStringArray(enabledExtensions);
 

@@ -1,12 +1,12 @@
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 using Dwarf.GLFW;
 
 using OpenTK.Mathematics;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class ThirdPersonCamera : DwarfScript {
   private Camera _camera;
   private float _distanceFromTarget = 2.5f;
@@ -57,9 +57,15 @@ public class ThirdPersonCamera : DwarfScript {
     float theta = _angleAroundTarget;
     float offectX = (float)(horizontal * MathF.Sin(MathHelper.DegreesToRadians(theta)));
     float offsetZ = (float)(horizontal * MathF.Cos(MathHelper.DegreesToRadians(theta)));
-    Owner!.GetComponent<Transform>().Position.X = FollowTarget.GetComponent<Transform>().Position.X - offectX;
-    Owner!.GetComponent<Transform>().Position.Z = FollowTarget.GetComponent<Transform>().Position.Z - offsetZ;
-    Owner!.GetComponent<Transform>().Position.Y = FollowTarget.GetComponent<Transform>().Position.Y - vertical - 1.3f;
+
+    var transform = Owner!.GetComponent<Transform>();
+    var targetPos = FollowTarget.GetComponent<Transform>().Position;
+
+    // Owner!.GetComponent<Transform>().Position.X = FollowTarget.GetComponent<Transform>().Position.X - offectX;
+    // Owner!.GetComponent<Transform>().Position.Z = FollowTarget.GetComponent<Transform>().Position.Z - offsetZ;
+    // Owner!.GetComponent<Transform>().Position.Y = FollowTarget.GetComponent<Transform>().Position.Y - vertical - 1.3f;
+
+    transform.Position = new(targetPos.X - offectX, targetPos.Y - vertical - 1.3f, targetPos.Z - offsetZ);
   }
 
   private unsafe void HandleMovement() {

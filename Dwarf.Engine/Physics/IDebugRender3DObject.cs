@@ -1,8 +1,8 @@
-﻿using Dwarf.Engine.Rendering;
+﻿using Dwarf.Rendering;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 public interface IDebugRender3DObject : IDrawable {
   public bool UsesTexture { get; }
   public bool UsesLight { get; set; }

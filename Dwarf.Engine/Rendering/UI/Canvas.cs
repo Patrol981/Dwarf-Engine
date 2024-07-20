@@ -1,12 +1,12 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
-using Dwarf.Engine.Windowing;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Utils;
+using Dwarf.Windowing;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 
 public enum Anchor {
   Right,
@@ -57,7 +57,7 @@ public class Canvas : Component, IDisposable {
 
   private Vector2 _maxCanvasSize = Vector2.Zero;
   private float _globalScale = 0.1f;
-  private Resolution[] _resolutions = {
+  private readonly Resolution[] _resolutions = {
     new Resolution(new(800, 600), ResolutionSize.Screen800x600, ResolutionAspect.Aspect4to3),
     new Resolution(new(1024, 600), ResolutionSize.Screen1024x600, ResolutionAspect.Aspect16to9),
     new Resolution(new(1334, 750), ResolutionSize.Screen1334x750, ResolutionAspect.Aspect16to9),
@@ -68,7 +68,7 @@ public class Canvas : Component, IDisposable {
   };
   private Resolution _currentResoltionScale;
 
-  private List<Entity> _entities = new();
+  private readonly List<Entity> _entities = new();
 
   public Canvas() {
     _window = Application.Instance.Window;
@@ -181,7 +181,7 @@ public class Canvas : Component, IDisposable {
     return Task.CompletedTask;
   }
 
-  private async Task<Task> CheckAnchor(RectTransform rect) {
+  private Task CheckAnchor(RectTransform rect) {
     // await Task.Delay(50);
 
     // var extent = _window.Extent;
@@ -249,8 +249,9 @@ public class Canvas : Component, IDisposable {
     }
 
     var pos = Ray.ScreenPointToWorld2D(CameraState.GetCamera(), point, new Vector2(extent.Width, extent.Height));
-    rect.Position.X = pos.X;
-    rect.Position.Y = pos.Y;
+
+    rect.Position = new(pos.X, pos.Y, rect.Position.Z);
+
 
     return Task.CompletedTask;
   }

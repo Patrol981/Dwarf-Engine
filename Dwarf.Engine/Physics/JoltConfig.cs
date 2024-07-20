@@ -1,4 +1,4 @@
-﻿namespace Dwarf.Engine.Physics;
+﻿namespace Dwarf.Physics;
 public static class JoltConfig {
   public static uint MaxBodies { get; private set; } = 1024;
   public static uint NumBodyMutexes { get; private set; } = 0;

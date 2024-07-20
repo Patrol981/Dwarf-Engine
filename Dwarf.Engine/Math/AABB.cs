@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public class AABB {
   private Vector3 _min;
   private Vector3 _max;

@@ -1,11 +1,12 @@
 using System.Numerics;
 
-using Dwarf.Engine.Loader.Providers;
-using Dwarf.Engine.Loaders;
-using Dwarf.Engine.Physics;
+using Dwarf.Extensions.Logging;
+using Dwarf.Loader.Providers;
+using Dwarf.Loaders;
+using Dwarf.Physics;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Engine.EntityComponentSystem;
+namespace Dwarf.EntityComponentSystem;
 public static class EntityCreator {
 
   /// <summary>
@@ -95,7 +96,7 @@ public static class EntityCreator {
     if (modelPath.Contains("glb")) {
       var preload = texturePaths != null;
 
-      entity.AddComponent(await GLTFLoader.Load(app, modelPath, preload, flip));
+      entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
 
       if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
         throw new Exception("Mesh is empty");
@@ -136,7 +137,8 @@ public static class EntityCreator {
       throw new Exception("This method does not support formats other than .glb");
     }
 
-    entity.AddComponent(await GLTFLoader.Load(app, modelPath, false, flip));
+    Logger.Info($"{entity.Name} Mesh init");
+    entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
 
     if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
       throw new Exception("Mesh is empty");
@@ -167,11 +169,13 @@ public static class EntityCreator {
   public static async void AddPrimitive(this Entity entity, string texturePath, PrimitiveType primitiveType = PrimitiveType.Cylinder) {
     var app = Application.Instance;
 
+    app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
     var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
     entity.AddComponent(model);
     await app.TextureManager.AddTexture(texturePath);
     entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    app.Mutex.ReleaseMutex();
   }
 
   public static void AddRigdbody(
@@ -252,5 +256,15 @@ public static class EntityCreator {
   ) {
     var device = Application.Instance.Device;
     AddRigdbody(device, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, kinematic, flip);
+  }
+
+  public static void AddRigdbody(
+    this Entity entity,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    bool kinematic = false,
+    bool flip = false
+  ) {
+    var device = Application.Instance.Device;
+    AddRigdbody(device, ref entity, primitiveType, default, kinematic, flip);
   }
 }

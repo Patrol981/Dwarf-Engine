@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace Dwarf.Engine.Rendering.UI.FontStash;
+namespace Dwarf.Rendering.UI.FontStash;
 public class FontStashManager : FontStashSharp.Interfaces.ITexture2DManager {
   public FontStashManager() { }
 

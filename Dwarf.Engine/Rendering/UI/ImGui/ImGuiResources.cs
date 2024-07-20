@@ -1,10 +1,8 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Vulkan;
 
 using ImGuiNET;
 
@@ -12,7 +10,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public partial class ImGuiController {
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
     var pipelineInfo = new VkPipelineLayoutCreateInfo() {
@@ -53,7 +51,7 @@ public partial class ImGuiController {
     _fontTexture = new VulkanTexture(_device, texWidth, texHeight, "im_gui_texture");
     _fontTexture.SetTextureData(fontData);
 
-    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.GetSampler(), _fontTexture.GetImageView(), VkImageLayout.ShaderReadOnlyOptimal);
+    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.Sampler, _fontTexture.ImageView, VkImageLayout.ShaderReadOnlyOptimal);
     _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
     _descriptorWriter.WriteImage(0, &fontDescriptor);
     _descriptorWriter.Build(out _systemDescriptorSet);
@@ -111,8 +109,10 @@ public partial class ImGuiController {
     );
 
     _device.WaitDevice();
+    Application.Instance.Mutex.WaitOne();
     stagingBuffer.Map((ulong)uploadSize);
     stagingBuffer.WriteToBuffer(fontData, (ulong)uploadSize);
+    Application.Instance.Mutex.ReleaseMutex();
     // stagingBuffer.WriteToBuffer(fontData);
     stagingBuffer.Unmap();
 
@@ -158,7 +158,9 @@ public partial class ImGuiController {
       VkPipelineStageFlags.FragmentShader
     );
 
+    Application.Instance.Mutex.WaitOne();
     _device.FlushCommandBuffer(copyCmd, copyQueue, true);
+    Application.Instance.Mutex.ReleaseMutex();
     stagingBuffer.Dispose();
 
     // font texture sampler
@@ -244,6 +246,19 @@ public partial class ImGuiController {
         null
       );
     }
+  }
+
+  public unsafe void BindTexture(FrameInfo frameInfo, VkDescriptorSet texId) {
+    vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _systemPipelineLayout,
+        0,
+        1,
+        &texId,
+        0,
+        null
+      );
   }
 
   public unsafe void SetScissorRect(FrameInfo frameInfo, ImDrawCmdPtr pcmd, ImDrawDataPtr drawData) {

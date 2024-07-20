@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Math;
 using Dwarf.Extensions.Logging;
 using Dwarf.GLFW;
 using Dwarf.GLFW.Core;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Utils;
 
 using StbImageSharp;
@@ -16,23 +16,21 @@ using static Dwarf.GLFW.GLFW;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 
-namespace Dwarf.Engine.Windowing;
+namespace Dwarf.Windowing;
 
 public unsafe class Window : IDisposable {
-  public VkString AppName = new("Dwarf App");
-  public VkString EngineName = new("Dwarf Engine");
+  public VkUtf8String AppName = "Dwarf App"u8;
+  public VkUtf8String EngineName = "Dwarf Engine"u8;
   private DwarfExtent2D _extent;
   private bool _windowMinimalized = false;
 
-  public event EventHandler OnResizedEventDispatcher;
+  public event EventHandler? OnResizedEventDispatcher;
 
   private readonly object _windowLock = new();
 
-  // private static bool EnableValidationLayers = true;
-
-  public Window(int width, int height, string windowName) {
+  public Window(int width, int height, string windowName, bool fullscreen) {
     Size = new Vector2I(width, height);
-    InitWindow(windowName);
+    InitWindow(windowName, fullscreen);
     LoadIcons();
     LoadGamePadInput();
   }
@@ -45,21 +43,34 @@ public unsafe class Window : IDisposable {
     glfwSetWindowTitle(GLFWwindow, name);
   }
 
-  protected void Clear() {
-
-  }
-
-  private unsafe void InitWindow(string windowName) {
+  private unsafe void InitWindow(string windowName, bool fullscreen) {
     glfwInit();
     glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
     glfwWindowHint((int)WindowHintBool.Resizable, 1);
-    GLFWwindow = glfwCreateWindow(Size.X, Size.Y, windowName, null, null);
-    _extent = new DwarfExtent2D(Size.X, Size.Y);
+    glfwWindowHint((int)WindowHintBool.Decorated, 0);
+    glfwWindowHint((int)WindowHintBool.Floating, 0);
+    glfwWindowHint((int)WindowHintBool.DoubleBuffer, 1);
+
+    if (fullscreen) {
+      GLFWmonitor = glfwGetPrimaryMonitor();
+      GLFWvidmode = glfwGetVideoMode(GLFWmonitor);
+
+      glfwWindowHint((int)WindowHintBool.RedBits, GLFWvidmode->RedBits);
+      glfwWindowHint((int)WindowHintBool.GreenBits, GLFWvidmode->GreenBits);
+      glfwWindowHint((int)WindowHintBool.BlueBits, GLFWvidmode->BlueBits);
+      glfwWindowHint((int)WindowHintBool.RefreshRate, GLFWvidmode->RefreshRate);
+
+      GLFWwindow = glfwCreateWindow(GLFWvidmode->Width, GLFWvidmode->Height, windowName, GLFWmonitor, null);
+      _extent = new DwarfExtent2D(GLFWvidmode->Width, GLFWvidmode->Height);
+    } else {
+      GLFWwindow = glfwCreateWindow(Size.X, Size.Y, windowName, GLFWmonitor, null);
+      _extent = new DwarfExtent2D(Size.X, Size.Y);
+    }
 
     // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
     //var w = this;
     //var ptr = GetWindowPtr(&w);
-    //glfwSetWindowUserPointer(_window, ptr);
+    // glfwSetWindowUserPointer(GLFWwindow, this);
     WindowState.s_Window = this;
     glfwSetFramebufferSizeCallback(GLFWwindow, FrambufferResizedCallback);
     glfwSetCursorPosCallback(GLFWwindow, MouseState.MouseCallback);
@@ -137,6 +148,9 @@ public unsafe class Window : IDisposable {
   private static unsafe void IconifyCallback(GLFWwindow* window, int iconified) {
     WindowState.s_Window._windowMinimalized = iconified != 0;
     Logger.Info($"Window Minimalized: {WindowState.s_Window._windowMinimalized}");
+    if (!WindowState.s_Window._windowMinimalized) {
+      // Application.Instance.Renderer.RecreateSwapchain();
+    }
   }
 
   private void OnResizedEvent(EventArgs e) {
@@ -178,5 +192,7 @@ public unsafe class Window : IDisposable {
   }
   public Vector2I Size { get; }
   public GLFWwindow* GLFWwindow { get; private set; }
+  public GLFWvidmode* GLFWvidmode { get; private set; }
+  public GLFWmonitor* GLFWmonitor { get; private set; }
   public nint CursorHandle { get; private set; }
 }

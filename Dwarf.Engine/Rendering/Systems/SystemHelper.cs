@@ -2,7 +2,7 @@
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class SystemHelper {
   public static void CreatePipeline(ref VulkanDevice device, VkRenderPass renderPass, VkPipelineLayout layout, ref Pipeline pipeline, ref PipelineConfigInfo configInfo) {
     pipeline?.Dispose();

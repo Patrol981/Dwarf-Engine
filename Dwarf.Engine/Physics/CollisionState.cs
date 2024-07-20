@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public enum CollisionState {
   Enter,

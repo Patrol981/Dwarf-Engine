@@ -1,6 +1,6 @@
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 
 [Flags]
 public enum MemoryProperty {

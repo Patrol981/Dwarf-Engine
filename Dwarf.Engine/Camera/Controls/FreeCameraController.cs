@@ -1,5 +1,5 @@
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 using Dwarf.Extensions.Logging;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
@@ -8,10 +8,10 @@ using Dwarf.GLFW;
 using static Dwarf.GLFW.GLFW;
 using static Dwarf.Keys;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
-public class FreeCameraController : Component {
-  public unsafe void Update() {
+public class FreeCameraController : DwarfScript {
+  public override void Update() {
     var useController = glfwJoystickIsGamepad(0);
     if (useController == 1) {
       MoveByController();

@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 
-namespace Dwarf.Engine.Math;
+namespace Dwarf.Math;
 public class Collision2D {
   public static bool MouseClickedCollision(I2DCollision coll, Camera camera, Vector2 screenSize) {
     var mouseRay = Ray.MouseToWorld2D(camera, screenSize);

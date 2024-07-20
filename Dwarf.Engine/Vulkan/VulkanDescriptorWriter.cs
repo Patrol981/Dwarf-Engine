@@ -5,13 +5,22 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanDescriptorWriter {
-  private readonly DescriptorSetLayout _setLayout;
-  private readonly DescriptorPool _pool;
+  private readonly unsafe DescriptorSetLayout _setLayout;
+  private readonly unsafe DescriptorPool _pool;
   private VkWriteDescriptorSet[] _writes = [];
   public VulkanDescriptorWriter(DescriptorSetLayout setLayout, DescriptorPool pool) {
     _setLayout = setLayout;
     _pool = pool;
   }
+
+  public unsafe VulkanDescriptorWriter(nint setLayout, nint pool) {
+    _setLayout = null!;
+    _pool = null!;
+    throw new NotImplementedException();
+    // _setLayout = &setLayout;
+    // _pool = pool;
+  }
+
 
   public unsafe VulkanDescriptorWriter WriteBuffer(uint binding, VkDescriptorBufferInfo* bufferInfo) {
     var bindingDescription = _setLayout.Bindings[binding];
@@ -45,7 +54,7 @@ public class VulkanDescriptorWriter {
     return this;
   }
 
-  public bool Build(out VkDescriptorSet set) {
+  public unsafe bool Build(out VkDescriptorSet set) {
     bool success = _pool.AllocateDescriptor(_setLayout.GetDescriptorSetLayout(), out set);
     if (!success) {
       return false;

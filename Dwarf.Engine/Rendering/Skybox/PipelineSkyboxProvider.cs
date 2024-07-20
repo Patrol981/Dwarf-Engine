@@ -1,11 +1,11 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using DwarfEngine.Vulkan;
+using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class PipelineSkyboxProvider : PipelineProvider {
   public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {

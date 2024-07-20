@@ -2,9 +2,9 @@ using System.Numerics;
 
 using JoltPhysicsSharp;
 
-using static Dwarf.Engine.Physics.JoltConfig;
+using static Dwarf.Physics.JoltConfig;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public static class JoltProgram {
   internal static Body CreateFloor(in BodyInterface bodyInterface, float size = 200.0f) {

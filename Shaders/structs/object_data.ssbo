@@ -1,0 +1,4 @@
+struct ObjectData {
+  mat4 transformMatrix;
+  mat4 normalMatrix;
+};

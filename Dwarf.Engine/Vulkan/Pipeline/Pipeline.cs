@@ -1,6 +1,4 @@
-using Dwarf.Engine.AbstractionLayer;
-
-using DwarfEngine.Vulkan;
+using Dwarf.AbstractionLayer;
 
 using Vortice.Vulkan;
 
@@ -56,7 +54,7 @@ public class Pipeline : IDisposable {
     CreateShaderModule(vertexCode, out _vertexShaderModule);
     CreateShaderModule(fragmentCode, out _fragmentShaderModule);
 
-    VkString entryPoint = new("main");
+    VkUtf8String entryPoint = "main"u8;
     VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
 
     //vertex

@@ -1,10 +1,9 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using StbImageSharp;
@@ -13,16 +12,15 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
   private readonly VulkanDevice _device = null!;
-  private bool _hasIndexBuffer = false;
+  private readonly bool _hasIndexBuffer = false;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
   private Guid _textureIdRef = Guid.Empty;
-  private bool _usesTexture = false;
 
   private Vector2 _baseTextureSize = Vector2.Zero;
 
@@ -76,7 +74,7 @@ public class GuiTexture : Component, IUIElement {
     }
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     if (_hasIndexBuffer) {
       vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
     } else {
@@ -102,7 +100,6 @@ public class GuiTexture : Component, IUIElement {
     _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
-      _usesTexture = true;
       if (useLocalPath) {
         GetTextureSize($"./Textures/{texturePath}");
       } else {
@@ -177,7 +174,10 @@ public class GuiTexture : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -206,7 +206,10 @@ public class GuiTexture : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     //stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(

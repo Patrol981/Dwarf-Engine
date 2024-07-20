@@ -1,17 +1,15 @@
 
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 public class ColliderMesh : Component, IDebugRender3DObject {
   private readonly VulkanDevice _device = null!;
 
@@ -19,7 +17,7 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   private DwarfBuffer _indexBuffer = null!;
   private ulong _vertexCount = 0;
   private ulong _indexCount = 0;
-  private bool _hasIndexBuffer = false;
+  private readonly bool _hasIndexBuffer = false;
 
   public ColliderMesh() { }
 
@@ -71,12 +69,12 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     }
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     // _device._mutex.WaitOne();
     if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, firstInstance);
     } else {
-      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, firstInstance);
     }
     // _device._mutex.ReleaseMutex();
     return Task.CompletedTask;
@@ -98,7 +96,10 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -132,7 +133,10 @@ public class ColliderMesh : Component, IDebugRender3DObject {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffer = new DwarfBuffer(
       _device,

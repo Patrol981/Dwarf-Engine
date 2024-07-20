@@ -1,16 +1,13 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Utils;
+using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
-
-using DwarfEngine.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public class Skybox : IDisposable {
   protected class SkyboxMesh {
     public TexturedVertex[] Vertices = [];
@@ -221,25 +218,24 @@ public class Skybox : IDisposable {
     1.0f,
     1.0f
   ];
-  private SkyboxMesh _mesh;
-  private Transform _transform;
-  private Material _material;
+  private readonly SkyboxMesh _mesh;
+  private readonly Transform _transform;
+  private readonly Material _material;
 
-  private VkDescriptorSetLayout _globalDescriptorSetLayout;
   private PipelineConfigInfo _pipelineConfigInfo = null!;
   private VkPipelineLayout _pipelineLayout;
   private Pipeline _pipeline = null!;
 
   private DescriptorPool _descriptorPool = null!;
   private DescriptorPool _texturePool = null!;
-  private DescriptorSetLayout _textureSetLayout = null!;
+  private readonly DescriptorSetLayout _textureSetLayout = null!;
 
   private VkDescriptorSet _textureSet = VkDescriptorSet.Null;
   private DwarfBuffer _skyboxBuffer = null!;
   private DwarfBuffer _vertexBuffer = null!;
   private ulong _vertexCount = 0;
 
-  private string[] _cubemapNames = new string[6];
+  private readonly string[] _cubemapNames = new string[6];
   private CubeMapTexture _cubemapTexture = null!;
 
   public Skybox(VulkanDevice device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
@@ -327,14 +323,14 @@ public class Skybox : IDisposable {
   }
 
   private unsafe void BindTexture(FrameInfo frameInfo) {
-    Descriptor.BindDescriptorSet(_device, _textureSet, frameInfo, ref _pipelineLayout, 0, 1);
+    Descriptor.BindDescriptorSet(_textureSet, frameInfo, _pipelineLayout, 0, 1);
   }
 
   private unsafe void BindDescriptorTexture() {
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = _cubemapTexture.GetSampler(),
+      sampler = _cubemapTexture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _cubemapTexture.GetImageView()
+      imageView = _cubemapTexture.ImageView
     };
     _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
       .WriteImage(0, &imageInfo)
@@ -370,7 +366,12 @@ public class Skybox : IDisposable {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (TexturedVertex* verticesPtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,

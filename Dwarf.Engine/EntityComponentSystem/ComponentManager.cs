@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.EntityComponentSystem;
+namespace Dwarf.EntityComponentSystem;
 
 public class ComponentManager {
   private Dictionary<Type, Component> _components;
@@ -13,7 +13,7 @@ public class ComponentManager {
 
   public T GetComponent<T>() where T : Component {
     var component = _components!.TryGetValue(typeof(T), out var value);
-    return component ? (T)value! : null;
+    return component ? (T)value! : null!;
   }
 
   public void RemoveComponent<T>() where T : Component {

@@ -1,4 +1,4 @@
-using Dwarf.Engine.AbstractionLayer;
+using Dwarf.AbstractionLayer;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -8,9 +8,9 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class VulkanTextureArray : VulkanTexture {
-  private string[] _paths = [];
+  private readonly string[] _paths = [];
   private PackedTexture _textures;
 
   public VulkanTextureArray(
@@ -40,7 +40,12 @@ public class VulkanTextureArray : VulkanTexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_textures.Size);
+    unsafe {
+      fixed (byte* dataPtr = data) {
+        stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_textures.Size);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_textures.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);

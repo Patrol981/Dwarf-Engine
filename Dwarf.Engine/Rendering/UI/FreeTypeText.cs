@@ -1,27 +1,26 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class FreeTypeText : Component, IUIElement {
   private readonly VulkanDevice _device;
   private readonly FreeType _ft;
 
-  private string _text = string.Empty;
+  private readonly string _text = string.Empty;
   private Vector2 _pos = Vector2.Zero;
-  private Mesh _mesh = new() {
+  private readonly Mesh _mesh = new() {
     Vertices = [],
   };
-  private Dictionary<char, Guid> _ids = [];
+  private readonly Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
   private DwarfBuffer _vertexBuffer = null!;
@@ -65,7 +64,7 @@ public class FreeTypeText : Component, IUIElement {
     return Task.CompletedTask;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
     return Task.CompletedTask;
   }
@@ -162,7 +161,12 @@ public class FreeTypeText : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (Vertex* verticesPtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)verticesPtr);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,

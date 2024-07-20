@@ -1,21 +1,20 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
-  private readonly VulkanDevice _device;
+  private readonly VulkanDevice _device = null!;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
@@ -25,16 +24,16 @@ public class TextField : Component, IUIElement {
   private bool _hasIndexBuffer = false;
 
   // debug
-  private int _numOfRows = 11;
-  private Dictionary<char, Vector2> _charactersOnAtlas = new();
+  private readonly int _numOfRows = 11;
+  private readonly Dictionary<char, Vector2> _charactersOnAtlas = new();
 
   private Vector2 _startPos = Vector2.Zero;
   private Vector2 _startPosUpdated = Vector2.Zero;
 
-  float _cursorX = 96.0f; // size of an glyph
-  float _cursorY = 96.0f; // size of an glyph
+  readonly float _cursorX = 96.0f; // size of an glyph
+  // readonly float _cursorY = 96.0f; // size of an glyph
 
-  float _glyphOffset;
+  readonly float _glyphOffset;
 
   public TextField() { }
 
@@ -69,11 +68,11 @@ public class TextField : Component, IUIElement {
     _startPosUpdated = _startPos;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index = 0) {
+  public Task Draw(IntPtr commandBuffer, uint index = 0, uint firstInstance = 0) {
     if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, firstInstance);
     } else {
-      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
+      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, firstInstance);
     }
     return Task.CompletedTask;
   }
@@ -209,7 +208,12 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    unsafe {
+      fixed (Vertex* verticesPtr = vertices) {
+        stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
       _device,
@@ -239,7 +243,10 @@ public class TextField : Component, IUIElement {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
     stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(

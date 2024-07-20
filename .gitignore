@@ -3,6 +3,8 @@ obj/**
 **/obj/**
 **/bin/**
 CompiledShaders/**
+TranspiledShaders/**
+Shaders_backup/**
 .vs/**
 .vscode/**
 *.sln

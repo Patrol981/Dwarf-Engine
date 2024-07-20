@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 
 using System.Numerics;
 

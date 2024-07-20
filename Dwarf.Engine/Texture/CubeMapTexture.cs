@@ -1,7 +1,4 @@
-using System.Runtime.InteropServices;
-
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Extensions.Logging;
+using Dwarf.AbstractionLayer;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -11,9 +8,9 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 public class CubeMapTexture : VulkanTexture {
-  private string[] _paths = [];
+  private readonly string[] _paths = [];
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
@@ -34,7 +31,7 @@ public class CubeMapTexture : VulkanTexture {
     return await TextureLoader.LoadDataFromPath(path, flip);
   }
 
-  public void SetTextureData(byte[] data) {
+  public new void SetTextureData(byte[] data) {
     var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
@@ -43,7 +40,12 @@ public class CubeMapTexture : VulkanTexture {
     );
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    unsafe {
+      fixed (byte* textureDataPointer = data) {
+        stagingBuffer.WriteToBuffer((nint)textureDataPointer, (ulong)_cubemapPack.Size);
+      }
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);
@@ -51,7 +53,7 @@ public class CubeMapTexture : VulkanTexture {
     stagingBuffer.Dispose();
   }
 
-  public void SetTextureData(nint dataPtr) {
+  public new void SetTextureData(nint dataPtr) {
     var stagingBuffer = new DwarfBuffer(
       _device,
       (ulong)_cubemapPack.Size,
@@ -59,15 +61,18 @@ public class CubeMapTexture : VulkanTexture {
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
 
+    /*
     var data = new byte[_cubemapPack.Size];
     Marshal.Copy(dataPtr, data, 0, data.Length);
     if (MemoryUtils.IsNull(data)) {
       Logger.Warn($"[Texture Bytes] Memory is null");
       return;
     }
+    */
 
     stagingBuffer.Map();
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
+    stagingBuffer.WriteToBuffer(dataPtr, (ulong)_cubemapPack.Size);
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(data), (ulong)_cubemapPack.Size);
     stagingBuffer.Unmap();
 
     ProcessTexture(stagingBuffer);

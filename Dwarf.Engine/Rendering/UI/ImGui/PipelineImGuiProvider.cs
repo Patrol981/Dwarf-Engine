@@ -1,13 +1,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using DwarfEngine.Vulkan;
+using Dwarf.Vulkan;
 
 using ImGuiNET;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Engine.Rendering.UI;
+namespace Dwarf.Rendering.UI;
 public class PipelineImGuiProvider : PipelineProvider {
   public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     var bindingDescriptions = new VkVertexInputBindingDescription[1];

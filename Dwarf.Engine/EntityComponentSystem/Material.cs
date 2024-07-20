@@ -1,10 +1,11 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.EntityComponentSystem;
 
-namespace Dwarf.Engine;
+namespace Dwarf;
 
+/*
 [StructLayout(LayoutKind.Explicit)]
 public struct MaterialData {
   [FieldOffset(0)] public Vector3 Color;
@@ -12,6 +13,16 @@ public struct MaterialData {
   [FieldOffset(32)] public Vector3 Diffuse;
   [FieldOffset(48)] public Vector3 Specular;
   [FieldOffset(60)] public float Shininess;
+}
+*/
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MaterialData {
+  public Vector3 Color;
+  public Vector3 Ambient;
+  public Vector3 Diffuse;
+  public Vector3 Specular;
+  public float Shininess;
 }
 
 public class Material : Component {
@@ -33,7 +44,7 @@ public class Material : Component {
       Shininess = 1.0f,
       Ambient = new(1.0f, 1.0f, 1.0f),
       Diffuse = new(0.0f, 0.0f, 0.0f),
-      Specular = new Vector3(0, 0, 0)
+      Specular = new(0, 0, 0)
     };
   }
 

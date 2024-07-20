@@ -1,37 +1,46 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Physics;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering.Systems;
+namespace Dwarf.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
     VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];
 
-    CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
+    AddPipelineData<ColliderMeshPushConstant>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "debug_vertex",
+      FragmentName = "debug_fragment",
+      PipelineProvider = new PipelineModelProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    // CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
+    // CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
   }
 
-  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
-    _pipeline.Bind(frameInfo.CommandBuffer);
+  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
+      PipelineLayout,
       0,
       1,
       &frameInfo.GlobalDescriptorSet,
@@ -49,13 +58,13 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
         // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
 
         ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
-          entities[i].GetComponent<Transform>().Matrix4 :
-          entities[i].GetComponent<Transform>().MatrixWithoutRotation
+          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
+          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
       };
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
-        _pipelineLayout,
+        PipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
         (uint)Unsafe.SizeOf<ColliderMeshPushConstant>(),

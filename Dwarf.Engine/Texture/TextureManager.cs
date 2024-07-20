@@ -1,8 +1,8 @@
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.Rendering.UI;
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
-namespace Dwarf.Engine;
+namespace Dwarf;
 
 public class TextureManager : IDisposable {
   private readonly VulkanDevice _device;
@@ -11,13 +11,6 @@ public class TextureManager : IDisposable {
     _device = device;
     LoadedTextures = [];
     TextureArray = [];
-
-    FreeType = new FreeType(device);
-    FreeType.Init();
-
-    foreach (var c in FreeType.Characters) {
-      AddTexture(c.Value.Texture);
-    }
   }
 
   public void AddRange(ITexture[] textures) {
@@ -35,14 +28,14 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public async Task<Task> AddTexture(string texturePath) {
+  public async Task<Task> AddTexture(string texturePath, int flip = 1) {
     foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
-    var texture = await TextureLoader.LoadFromPath(_device, texturePath, default);
+    var texture = await TextureLoader.LoadFromPath(_device, texturePath, flip);
     LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
@@ -104,7 +97,7 @@ public class TextureManager : IDisposable {
 
   public Dictionary<Guid, ITexture> LoadedTextures { get; }
   public Dictionary<Guid, VulkanTextureArray> TextureArray { get; }
-  public FreeType FreeType { get; }
+  public FreeType FreeType { get; } = default!;
 
   public void Dispose() {
     foreach (var tex in LoadedTextures) {

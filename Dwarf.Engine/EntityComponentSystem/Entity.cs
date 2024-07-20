@@ -1,10 +1,11 @@
-using Dwarf.Engine.Rendering;
-namespace Dwarf.Engine.EntityComponentSystem;
+using Dwarf.Rendering;
+namespace Dwarf.EntityComponentSystem;
 
 public class Entity {
   public bool CanBeDisposed = false;
+  public EntityLayer Layer = EntityLayer.Default;
 
-  private ComponentManager _componentManager;
+  private readonly ComponentManager _componentManager;
   private readonly object _componentLock = new object();
 
   public Entity() {
@@ -79,7 +80,7 @@ public class Entity {
       }
     }
 
-    return list.ToArray();
+    return [.. list];
   }
 
   public void DisposeEverything() {
@@ -102,7 +103,7 @@ public class Entity {
       }
     }
 
-    return list.ToArray();
+    return [.. list];
   }
 
   public bool HasComponent<T>() where T : Component {
@@ -122,52 +123,25 @@ public class Entity {
     return _componentManager;
   }
 
-  public static ReadOnlySpan<DwarfScript> GetScripts(List<Entity> entities) {
-    var list = new List<DwarfScript>();
-
-    foreach (var e in entities) {
-      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
-    }
-
-    return list.ToArray();
+  public static T? FindComponentOfType<T>() where T : Component, new() {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.HasComponent<T>())
+      .FirstOrDefault();
+    return target == null ? null : target.GetComponent<T>();
   }
 
-  public static ReadOnlySpan<DwarfScript> GetScripts(Entity[] entities) {
-    var list = new List<DwarfScript>();
-
-    foreach (var e in entities) {
-      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
-    }
-
-    return list.ToArray();
+  public static T? FindComponentByName<T>(string name) where T : Component, new() {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.Name == name)
+      .FirstOrDefault();
+    return target == null ? null : target.GetComponent<T>();
   }
 
-  public static ReadOnlySpan<Entity> Distinct<T>(List<Entity> entities) where T : Component {
-    return entities.Where(e => e.HasComponent<T>()).ToArray();
-  }
-
-  public static ReadOnlySpan<Entity> Distinct<T>(ReadOnlySpan<Entity> entities) where T : Component {
-    var returnEntities = new List<Entity>();
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].HasComponent<T>()) returnEntities.Add(entities[i]);
-    }
-    return returnEntities.ToArray();
-  }
-
-  public static Span<Entity> DistinctList<T>(List<Entity> entities) where T : Component {
-    return entities.Where(e => e.HasComponent<T>()).ToArray();
-  }
-
-  public static Span<Entity> DistinctInterface<T>(List<Entity> entities) where T : IDrawable {
-    return entities.Where(e => e.IsDrawable<T>()).ToArray();
-  }
-
-  public static ReadOnlySpan<Entity> DistinctInterface<T>(ReadOnlySpan<Entity> entities) where T : IDrawable {
-    var returnEntities = new List<Entity>();
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].IsDrawable<T>()) returnEntities.Add(entities[i]);
-    }
-    return returnEntities.ToArray();
+  public static Entity? FindEntityByName(string name) {
+    var entities = Application.Instance.GetEntities();
+    var target = entities.Where(x => x.Name == name)
+      .FirstOrDefault();
+    return target ?? null!;
   }
 
   public bool Active { get; set; } = true;

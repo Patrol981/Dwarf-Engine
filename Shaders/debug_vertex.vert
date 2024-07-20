@@ -1,4 +1,4 @@
-#version 450
+#version 460
 
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 color;
@@ -8,15 +8,10 @@ layout (location = 3) in vec2 uv;
 layout (location = 0) out vec3 fragColor;
 layout (location = 1) out vec3 fragPositionWorld;
 
-layout (set = 0, binding = 0) uniform GlobalUbo {
-  mat4 view;
-  mat4 projection;
-  vec3 lightPosition;
-  vec4 lightColor;
-  vec4 ambientLightColor;
-  vec3 cameraPosition;
-  int layer;
-} ubo;
+#include directional_light
+#include point_light
+
+layout (set = 0, binding = 0) #include global_ubo
 
 layout (push_constant) uniform Push {
   mat4 transform;

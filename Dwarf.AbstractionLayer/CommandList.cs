@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 public abstract class CommandList {
   public abstract void BindVertex(
     IntPtr commandBuffer,

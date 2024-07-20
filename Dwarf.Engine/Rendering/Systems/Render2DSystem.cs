@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Lists;
 using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
@@ -10,7 +10,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Engine.Rendering;
+namespace Dwarf.Rendering;
 public class Render2DSystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new();
   private DwarfBuffer _spriteBuffer = null!;
@@ -20,7 +20,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, globalSetLayout, configInfo) {
+  ) : base(device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -34,8 +34,17 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       _setLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout()
     ];
-    CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
-    CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
+
+    AddPipelineData<SpriteUniformBufferObject>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "sprite_vertex",
+      FragmentName = "sprite_fragment",
+      PipelineProvider = new PipelineSpriteProvider(),
+      DescriptorSetLayouts = descriptorSetLayouts,
+    });
+
+    //CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
+    //CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
   }
 
   public unsafe void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
@@ -93,7 +102,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       var textureManager = Application.Instance.TextureManager;
       Setup(entities, ref textureManager);
     }
-    if (entities.Length > (uint)_spriteBuffer.GetInstanceCount()) {
+    if (entities.Length > (uint)_spriteBuffer!.GetInstanceCount()) {
       return false;
     } else if (entities.Length < (uint)_spriteBuffer.GetInstanceCount()) {
       return true;
@@ -108,13 +117,14 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     return len == sets;
   }
 
-  public unsafe void Render(FrameInfo frameInfo, Span<Entity> entities) {
-    _pipeline.Bind(frameInfo.CommandBuffer);
+  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
+    // _pipeline.Bind(frameInfo.CommandBuffer);
+    BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
       frameInfo.CommandBuffer,
       VkPipelineBindPoint.Graphics,
-      _pipelineLayout,
+      PipelineLayout,
       0,
       1,
       &frameInfo.GlobalDescriptorSet,
@@ -133,7 +143,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
-        _pipelineLayout,
+        PipelineLayout,
         VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
         0,
         (uint)Unsafe.SizeOf<SpriteUniformBufferObject>(),
@@ -143,7 +153,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       var sprite = entities[i].GetComponent<Sprite>();
       if (!sprite.Owner!.CanBeDisposed && sprite.Owner!.Active) {
         if (sprite.UsesTexture)
-          sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipelineLayout);
+          // sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipeline.PipelineLayout);
+          sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, _pipelines["main"].PipelineLayout);
         sprite.Bind(frameInfo.CommandBuffer);
         sprite.Draw(frameInfo.CommandBuffer);
       }
@@ -154,9 +165,9 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     var id = entity.GetComponent<Sprite>().GetTextureIdReference();
     var texture = textureManager.GetTexture(id);
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = texture.GetSampler(),
+      sampler = texture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = texture.GetImageView()
+      imageView = texture.ImageView
     };
     VkDescriptorSet set;
     _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)

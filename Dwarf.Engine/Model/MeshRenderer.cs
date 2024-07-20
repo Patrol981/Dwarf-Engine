@@ -1,14 +1,17 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Dwarf.Engine.AbstractionLayer;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Math;
-using Dwarf.Engine.Physics;
-using Dwarf.Engine.Rendering;
+using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Utils;
+using Dwarf.Math;
+using Dwarf.Physics;
+using Dwarf.Rendering;
+using Dwarf.Vulkan;
 
-namespace Dwarf.Engine;
+using Vortice.Vulkan;
+
+namespace Dwarf;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
   private readonly IDevice _device = null!;
@@ -20,7 +23,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   private DwarfBuffer[] _indexBuffers = [];
   private ulong[] _indexCount = [];
   private Guid[] _textureIdRefs = [];
-  private AABB _mergedAABB = new();
+  private readonly AABB _mergedAABB = new();
+
+  private VkDescriptorSet _skinDescriptor = VkDescriptorSet.Null;
 
   public MeshRenderer() { }
 
@@ -57,6 +62,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     Meshes = meshes;
     AABBArray = new AABB[MeshsesCount];
 
+    if (MeshsesCount < 1) throw new ArgumentOutOfRangeException(nameof(MeshsesCount));
+
     for (int i = 0; i < meshes.Length; i++) {
       if (meshes[i].Indices.Length > 0) _hasIndexBuffer[i] = true;
       _textureIdRefs[i] = Guid.Empty;
@@ -87,11 +94,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
-  public Task Draw(IntPtr commandBuffer, uint index) {
+  public Task Draw(IntPtr commandBuffer, uint index, uint firstInstance = 0) {
     if (_hasIndexBuffer[index]) {
-      _renderer.CommandList.DrawIndexed(commandBuffer, index, _indexCount, 1, 0, 0, 0);
+      _renderer.CommandList.DrawIndexed(commandBuffer, index, _indexCount, 1, 0, 0, firstInstance);
     } else {
-      _renderer.CommandList.Draw(commandBuffer, index, _vertexCount, 1, 0, 0);
+      _renderer.CommandList.Draw(commandBuffer, index, _vertexCount, 1, 0, firstInstance);
     }
     return Task.CompletedTask;
   }
@@ -128,6 +135,17 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
+  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    unsafe {
+      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
+      range.range = Ssbo.GetAlignmentSize();
+
+      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+      .WriteBuffer(0, &range)
+      .Build(out _skinDescriptor);
+    }
+  }
+
   protected unsafe Task CreateVertexBuffer(Vertex[] vertices, uint index) {
     _vertexCount[index] = (ulong)vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount[index];
@@ -144,7 +162,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffers[index] = new DwarfBuffer(
       _device,
@@ -176,7 +197,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     );
 
     stagingBuffer.Map(bufferSize);
-    stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
+    }
+    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
 
     _indexBuffers[index] = new DwarfBuffer(
       _device,
@@ -200,9 +224,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
         _indexBuffers[i]?.Dispose();
       }
     }
+
+    foreach (var mesh in Meshes) {
+      mesh?.Dispose();
+    }
+
+    Ssbo?.Dispose();
   }
   public int MeshsesCount { get; private set; } = 0;
   public Mesh[] Meshes { get; private set; } = [];
+  public DwarfBuffer Ssbo { get; set; } = null!;
+  public Matrix4x4[] InverseMatrices { get; set; } = [];
+  public VkDescriptorSet SkinDescriptor => _skinDescriptor;
   public string FileName { get; } = "";
   public int TextureFlipped { get; set; } = 1;
   public float CalculateHeightOfAnModel() {
@@ -216,6 +249,14 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return _textureIdRefs[index];
   }
   public bool FinishedInitialization { get; private set; } = false;
+
+  public bool IsSkinned {
+    get {
+      return Meshes.Where(x => x.Skin != null).Count() > 0;
+    }
+  }
+
+  public Entity GetOwner() => Owner!;
 
   public AABB[] AABBArray { get; private set; } = [];
 

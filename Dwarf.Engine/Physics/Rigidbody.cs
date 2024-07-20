@@ -1,14 +1,16 @@
 using System.Numerics;
 
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Rendering;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
+using Dwarf.Math;
+using Dwarf.Rendering;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
 
-using static Dwarf.Engine.Physics.JoltConfig;
+using static Dwarf.Physics.JoltConfig;
 
-namespace Dwarf.Engine.Physics;
+namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
   private readonly VulkanDevice _device = null!;
@@ -16,18 +18,26 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private MotionQuality _motionQuality = MotionQuality.Discrete;
-  private float _inputRadius = 0.0f;
-  private float _sizeX = 1.0f;
-  private float _sizeY = 1.0f;
-  private float _sizeZ = 1.0f;
-  private float _offsetX = 0.0f;
-  private float _offsetY = 0.0f;
-  private float _offsetZ = 0.0f;
+  private readonly MotionQuality _motionQuality = MotionQuality.Discrete;
+  private readonly bool _physicsControlRotation = false;
+  private readonly float _inputRadius = 0.0f;
+  private readonly float _sizeX = 1.0f;
+  private readonly float _sizeY = 1.0f;
+  private readonly float _sizeZ = 1.0f;
+  private readonly float _offsetX = 0.0f;
+  private readonly float _offsetY = 0.0f;
+  private readonly float _offsetZ = 0.0f;
 
   public Rigidbody() { }
 
-  public Rigidbody(VulkanDevice device, PrimitiveType colliderShape, float inputRadius, bool kinematic = false, bool flip = false) {
+  public Rigidbody(
+    VulkanDevice device,
+    PrimitiveType colliderShape,
+    float inputRadius,
+    bool kinematic = false,
+    bool flip = false,
+    bool physicsControlRotation = false
+  ) {
     PrimitiveType = colliderShape;
     _device = device;
     _inputRadius = inputRadius;
@@ -35,6 +45,7 @@ public class Rigidbody : Component, IDisposable {
     if (kinematic) {
       _motionType = MotionType.Kinematic;
     }
+    _physicsControlRotation = physicsControlRotation;
   }
 
   public Rigidbody(
@@ -44,7 +55,8 @@ public class Rigidbody : Component, IDisposable {
     float sizeY,
     float sizeZ,
     bool kinematic,
-    bool flip
+    bool flip,
+    bool physicsControlRotation = false
   ) {
     _device = device;
     PrimitiveType = primitiveType;
@@ -55,6 +67,7 @@ public class Rigidbody : Component, IDisposable {
     _sizeX = sizeX;
     _sizeY = sizeY;
     _sizeZ = sizeZ;
+    _physicsControlRotation = physicsControlRotation;
   }
 
   public Rigidbody(
@@ -67,7 +80,8 @@ public class Rigidbody : Component, IDisposable {
     float offsetY,
     float offsetZ,
     bool kinematic,
-    bool flip
+    bool flip,
+    bool physicsControlRotation = false
   ) {
     _device = device;
     PrimitiveType = primitiveType;
@@ -81,6 +95,7 @@ public class Rigidbody : Component, IDisposable {
     _offsetX = offsetX;
     _offsetY = offsetY;
     _offsetZ = offsetZ;
+    _physicsControlRotation = physicsControlRotation;
   }
 
   public unsafe void Init(in BodyInterface bodyInterface) {
@@ -175,7 +190,6 @@ public class Rigidbody : Component, IDisposable {
 
   public void Update() {
     var pos = _bodyInterface.GetPosition(_bodyId);
-    var rot = _bodyInterface.GetRotation(_bodyId);
     var transform = Owner!.GetComponent<Transform>();
 
     transform.Position = pos;
@@ -184,10 +198,16 @@ public class Rigidbody : Component, IDisposable {
       _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
     }
 
-    // freeze rigidbody to X an Z axis
-    _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
+    if (!_physicsControlRotation) {
+      var quat = Quaternion.CreateFromRotationMatrix(transform.AngleYMatrix);
+      _bodyInterface.SetRotation(_bodyId, quat, Activation.Activate);
+    } else {
+      transform.Rotation = Quat.ToEuler(_bodyInterface.GetRotation(_bodyId));
+    }
 
-    // Console.WriteLine(pos);
+
+    // freeze rigidbody to X an Z axis
+    // _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
   }
 
   public void AddForce(Vector3 vec3) {
@@ -215,6 +235,14 @@ public class Rigidbody : Component, IDisposable {
     rot.X += vec3.X;
     rot.Y += vec3.Y;
     rot.Z += vec3.Z;
+    _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
+  }
+
+  public void SetRotation(Vector3 vec3) {
+    var rot = _bodyInterface.GetRotation(_bodyId);
+    rot.X = vec3.X;
+    rot.Y = vec3.Y;
+    rot.Z = vec3.Z;
     _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
   }
 
@@ -261,6 +289,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
   public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);
+  public Quaternion Rotation => _bodyInterface.GetRotation(_bodyId);
   public bool Flipped { get; } = false;
 
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;

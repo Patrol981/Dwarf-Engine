@@ -1,4 +1,4 @@
-namespace Dwarf.Engine.AbstractionLayer;
+namespace Dwarf.AbstractionLayer;
 public interface ITexture : IDisposable {
   public string TextureName { get; }
 
@@ -9,9 +9,11 @@ public interface ITexture : IDisposable {
   // public Task<ImageResult> LoadDataFromPath(string path, int flip = 1);
   // public ImageResult LoadDataFromBytes(byte[] data, int flip = 1);
 
-  public ulong GetSampler();
-  public ulong GetImageView();
-  public ulong GetTextureImage();
+  public ulong Sampler { get; }
+  public ulong ImageView { get; }
+  public ulong TextureImage { get; }
+  public ulong TextureDescriptor { get; }
+  public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool);
   public int Width { get; }
   public int Height { get; }
   public int Size { get; }

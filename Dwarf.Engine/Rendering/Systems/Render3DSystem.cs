@@ -5,10 +5,15 @@ using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
+using Dwarf.Model.Animation;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
-
+using OpenTK.Mathematics;
 using Vortice.Vulkan;
+
+using SharpGLTF.Schema2;
+using SharpGLTF.Transforms;
 
 using static Vortice.Vulkan.Vulkan;
 
@@ -155,7 +160,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
       if (targetModel!.IsSkinned) {
-        targetModel.BuildDescriptors(_jointDescriptorLayout, _descriptorPool);
+        // targetModel.BuildDescriptors(_jointDescriptorLayout, _descriptorPool);
       }
 
       if (targetModel!.MeshsesCount > 1) {
@@ -482,46 +487,36 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       }
 
       if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
-        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
-          if (!entities[i].FinishedInitialization) continue;
+        if (!entities[i].FinishedInitialization) continue;
 
+        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
           if (entities[i].IsSkinned & entities[i].Meshes[x].Skin != null) {
             // Logger.Info($"Inv Len : {entities[i].Meshes[x].Skin!.InverseBindMatrices.Length}");
             // Logger.Info($"Mesh Len : {entities[i].Meshes.Length}");
-            for (int y = 0; y < entities[i].Meshes[x].Skin!.InverseBindMatrices.Length; y++) {
-              var target = entities[i].Meshes[x].Skin!.InverseBindMatrices[y];
+            var targetSkin = entities[i].Meshes[x].Skin;
+            // targetSkin.SkeletonAnimations.Update();
 
-              // entities[i].Meshes[x].Skin?.Ssbo.Flush();
-              //entities[i].Meshes[x].Skin?.Ssbo.Unmap();
-              // entities[i].Meshes[x].Skin?.Ssbo.Map();
+            // var matrices = entities[i].Meshes[x].Skin!.InverseBindMatrices;
+            // var m2 = matrices.Reverse().ToArray();
+            targetSkin!.SkeletonAnimations.Current?.Update(Time.DeltaTime * 10, ref targetSkin.Skeleton);
+            targetSkin!.Skeleton.Update();
+            // targetSkin.SkeletonAnimations.Update(0.001f, ref targetSkin.Skeleton, 0);
+            // targetSkin.WriteSkeletonIdentity();
+            targetSkin?.WriteSkeleton();
 
-              var test = Matrix4x4.CreateTranslation(new Vector3(0, 0, 0));
-
-              /*
-              entities[i].Meshes[x].Skin?.Write(
-                test,
-                (ulong)Unsafe.SizeOf<Matrix4x4>(),
-                (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)y
+            for (int jIdx = 0; jIdx < targetSkin!.Skeleton.FinalJointMatrices.Length; jIdx++) {
+              Guizmos.AddCube(
+                (targetSkin!.Skeleton.FinalJointMatrices[jIdx] * transform.Matrix4).Translation,
+                new(0.09f, 0.09f, 0.09f),
+                new(0, 1, 1)
               );
-              */
-
-              // Ssbo.WriteToBuffer((nint)(&data), size, offset);
-              /*
-              unsafe {
-                fixed (Matrix4x4* inverseMatricesPtr = entities[i].InverseMatrices) {
-                  entities[i].Ssbo.WriteToBuffer(
-                    (nint)inverseMatricesPtr,
-                    entities[i].Ssbo.GetAlignmentSize()
-                  );
-                }
-              }
-              */
-
             }
 
+
+
             Descriptor.BindDescriptorSet(
-              // entities[i].Meshes[x].Skin!.DescriptorSet,
-              entities[i].SkinDescriptor,
+              entities[i].Meshes[x].Skin!.DescriptorSet,
+              // entities[i].SkinDescriptor,
               frameInfo,
               _pipelines[Skinned3D].PipelineLayout,
               5,
@@ -538,7 +533,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
           entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i + (uint)prevIdx);
 
-          // entities[i].Meshes[x].Skin?.Ssbo.Unmap();
+          // entities[i].Ssbo.Unmap();
         }
       }
 
@@ -546,6 +541,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     }
 
     _modelBuffer.Unmap();
+
+    // skeletalAnimations.TimeSave += Time.DeltaTime;
   }
 
   public override unsafe void Dispose() {

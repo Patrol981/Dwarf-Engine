@@ -5,6 +5,7 @@ namespace Dwarf.Globals;
 public static class Time {
   private static double s_lastFrame = 0.0;
   private static double s_deltaTime = 0.0;
+  private static double s_fixedTime = 0.0;
 
   private static double s_time = 0.0f;
   private static readonly double s_timeDelta = 0.01f;
@@ -16,6 +17,19 @@ public static class Time {
     double currentFrame = glfwGetTime();
     s_deltaTime = currentFrame - s_lastFrame;
     s_lastFrame = currentFrame;
+  }
+
+
+  public static void Tick() {
+    double currentFrame = glfwGetTime();
+    s_deltaTime = currentFrame - s_lastFrame;
+    s_fixedTime = s_deltaTime;
+    if (s_deltaTime > 0.25f) {
+      s_deltaTime = 0.25f;
+    }
+    s_lastFrame = currentFrame;
+
+    s_accumulator += s_deltaTime;
   }
 
   public static void Tick_2() {
@@ -31,18 +45,8 @@ public static class Time {
     }
   }
 
-  public static void Tick() {
-    double currentFrame = glfwGetTime();
-    s_deltaTime = currentFrame - s_lastFrame;
-    if (s_deltaTime > 0.25f) {
-      s_deltaTime = 0.25f;
-    }
-    s_lastFrame = currentFrame;
-
-    s_accumulator += s_deltaTime;
-  }
-
   public static float DeltaTime => (float)s_deltaTime;
+  public static float FixedTime => (float)s_fixedTime;
   public const float LOW_LIMIT = 0.0167f; // 60FPS
   public const float HIGH_LIMIT = 0.1f; // 10FPS
 }

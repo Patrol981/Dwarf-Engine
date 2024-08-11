@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dwarf.Math;
 
 namespace Dwarf;
 
@@ -8,7 +9,7 @@ public struct Vertex {
   public Vector3 Normal;
   public Vector2 Uv;
 
-  public Vector4 JointIndices;
+  public Vector4I JointIndices;
   public Vector4 JointWeights;
 }
 

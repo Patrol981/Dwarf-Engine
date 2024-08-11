@@ -126,6 +126,16 @@ public class Transform : Component {
     return worldModel;
   }
 
+  private Matrix4x4 GetMatrixWithoutScale() {
+    var modelPos = _position;
+    var angleX = Converter.DegreesToRadians(_rotation.X);
+    var angleY = Converter.DegreesToRadians(_rotation.Y);
+    var angleZ = Converter.DegreesToRadians(_rotation.Z);
+    var rotation = Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
+    var worldModel = rotation * Matrix4x4.CreateTranslation(modelPos);
+    return worldModel;
+  }
+
   private Matrix4x4 GetMatrixWithYAngleRotation() {
     var modelPos = _position;
     var angleY = Converter.DegreesToRadians(_rotation.Y);
@@ -179,6 +189,7 @@ public class Transform : Component {
 
   public Vector3 Forward => GetForward();
   public Matrix4x4 Matrix4 => GetMatrix();
+  public Matrix4x4 NoScale => GetMatrixWithoutScale();
   public Matrix4x4 ScaleMatrix => GetScale();
   public Matrix4x4 RotationMatrix => GetRotation();
   public Matrix4x4 AngleYMatrix => GetAngleY();

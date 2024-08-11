@@ -102,7 +102,7 @@ public class PhysicsSystem : IDisposable {
     }
 
     // _physicsSystem.OptimizeBroadPhase();
-    _physicsSystem.Step(Time.DeltaTime * 10, CollisionSteps);
+    _physicsSystem.Step(Time.FixedTime * 10, CollisionSteps);
     return Task.CompletedTask;
 
     // Console.WriteLine(entities.Length);

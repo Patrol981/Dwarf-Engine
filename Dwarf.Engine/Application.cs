@@ -422,17 +422,19 @@ public class Application {
   #region ENTITY_FLOW
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
-    for (short i = 0; i < entities.Length; i++) {
-      entities[i].Awake();
-    }
+    var ents = entities.ToArray();
+    Parallel.ForEach(ents, (entity) => {
+      entity.Awake();
+    });
 #endif
   }
 
   private static void MasterStart(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
-    for (short i = 0; i < entities.Length; i++) {
-      entities[i].Start();
-    }
+    var ents = entities.ToArray();
+    Parallel.ForEach(ents, (entity) => {
+      entity.Start();
+    });
 #endif
   }
 

@@ -1,8 +1,6 @@
 using System.Numerics;
 using Dwarf.Extensions.Logging;
 using ImGuiNET;
-using Microsoft.VisualBasic;
-using OpenTK.Graphics.ES11;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
 

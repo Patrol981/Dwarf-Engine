@@ -10,9 +10,9 @@ public class Mesh : IDisposable {
   public Vector4[] BoneWeights = [];
 
   public Matrix4x4[] NodeMatrices = [];
+  public glTFLoader.Schema.Node MeshNode = null!;
 
   public Skin? Skin = default!;
-
   public float Height {
     get {
       double minY = double.MaxValue;

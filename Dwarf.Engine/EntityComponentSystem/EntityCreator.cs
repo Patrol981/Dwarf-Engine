@@ -1,7 +1,6 @@
 using System.Numerics;
 
 using Dwarf.Extensions.Logging;
-using Dwarf.Loader.Providers;
 using Dwarf.Loaders;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
@@ -96,8 +95,8 @@ public static class EntityCreator {
     if (modelPath.Contains("glb")) {
       var preload = texturePaths != null;
 
-      entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
-      // entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, preload, flip));
+      // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
+      entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, preload, flip));
 
       if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
         throw new Exception("Mesh is empty");

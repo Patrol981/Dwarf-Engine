@@ -1,5 +1,6 @@
 using System.Numerics;
 using Dwarf.Extensions.Logging;
+using Dwarf.Math;
 
 namespace Dwarf.Model.Animation;
 
@@ -70,42 +71,25 @@ public class SkeletalAnimation {
     }
 
     foreach (var channel in Channels) {
-      Sampler sampler;
-      /*
-      if (channel.SamplerIndex > Samplers.Length - 1) {
-        sampler = Samplers.FirstOrDefault();
-        Logger.Error($"Sampler Index Overflow! [{channel.SamplerIndex}]");
-      } else {
-        sampler = Samplers[channel.SamplerIndex];
-      }
-      */
-      sampler = Samplers[channel.SamplerIndex];
+      var sampler = Samplers[channel.SamplerIndex];
 
       int jointIndex = skeleton.GlobalNodeToJointIdx[channel.Node];
-      var joint = skeleton.JointsData[jointIndex];
 
       for (int i = 0; i < sampler.Timestamps.Length - 1; i++) {
-        if (_currentKeyFrameTime >= sampler.Timestamps[i] && _currentKeyFrameTime <= sampler.Timestamps[i + 1]) {
+        if ((_currentKeyFrameTime >= sampler.Timestamps[i]) && (_currentKeyFrameTime <= sampler.Timestamps[i + 1])) {
           switch (sampler.Interpolation) {
             case InterpolationMethod.Linear:
-              float a = (_currentKeyFrameTime - sampler.Timestamps[i]) / (sampler.Timestamps[i + 1] - sampler.Timestamps[i]);
+              // float a = (_currentKeyFrameTime - sampler.Timestamps[i]) / (sampler.Timestamps[i + 1] - sampler.Timestamps[i]);
+              float a = MathF.Max(0.0f, _currentKeyFrameTime - sampler.Timestamps[i]) / (sampler.Timestamps[i + 1] - sampler.Timestamps[i]);
               switch (channel.Path) {
                 case Path.Translation:
                   var interpolation =
-                    Mix(
-                      new(
-                        sampler.TRSOutputValuesToBeInterpolated[i].X,
-                        sampler.TRSOutputValuesToBeInterpolated[i].Y,
-                        sampler.TRSOutputValuesToBeInterpolated[i].Z
-                      ),
-                      new(
-                        sampler.TRSOutputValuesToBeInterpolated[i + 1].X,
-                        sampler.TRSOutputValuesToBeInterpolated[i + 1].Y,
-                        sampler.TRSOutputValuesToBeInterpolated[i + 1].Z
-                      ),
+                    Vector4.Lerp(
+                      sampler.TRSOutputValuesToBeInterpolated[i],
+                      sampler.TRSOutputValuesToBeInterpolated[i + 1],
                       a
                     );
-                  skeleton.JointsData[jointIndex].DeformedNodeTranslation = new Vector3(
+                  skeleton.Joints[jointIndex].DeformedNodeTranslation = new Vector3(
                     interpolation.X,
                     interpolation.Y,
                     interpolation.Z
@@ -113,20 +97,20 @@ public class SkeletalAnimation {
                   break;
                 case Path.Rotation:
                   var quat1 = new Quaternion(
+                    sampler.TRSOutputValuesToBeInterpolated[i].W,
                     sampler.TRSOutputValuesToBeInterpolated[i].X,
                     sampler.TRSOutputValuesToBeInterpolated[i].Y,
-                    sampler.TRSOutputValuesToBeInterpolated[i].Z,
-                    sampler.TRSOutputValuesToBeInterpolated[i].W
+                    sampler.TRSOutputValuesToBeInterpolated[i].Z
                   );
 
                   var quat2 = new Quaternion(
+                    sampler.TRSOutputValuesToBeInterpolated[i + 1].W,
                     sampler.TRSOutputValuesToBeInterpolated[i + 1].X,
                     sampler.TRSOutputValuesToBeInterpolated[i + 1].Y,
-                    sampler.TRSOutputValuesToBeInterpolated[i + 1].Z,
-                    sampler.TRSOutputValuesToBeInterpolated[i + 1].W
+                    sampler.TRSOutputValuesToBeInterpolated[i + 1].Z
                   );
 
-                  skeleton.JointsData[jointIndex].DeformedNodeRotation =
+                  skeleton.Joints[jointIndex].DeformedNodeRotation =
                     Quaternion.Normalize(Quaternion.Slerp(quat1, quat2, a));
                   break;
                 case Path.Scale:
@@ -136,7 +120,7 @@ public class SkeletalAnimation {
                       sampler.TRSOutputValuesToBeInterpolated[i + 1],
                       a
                     );
-                  skeleton.JointsData[jointIndex].DeformedNodeScale = new(scaleInterpolation.X, scaleInterpolation.Y, scaleInterpolation.Z);
+                  skeleton.Joints[jointIndex].DeformedNodeScale = new(scaleInterpolation.X, scaleInterpolation.Y, scaleInterpolation.Z);
                   break;
                 default:
                   Logger.Error("Path was not found");
@@ -145,9 +129,10 @@ public class SkeletalAnimation {
               break;
 
             case InterpolationMethod.Step:
+              Logger.Info("Step detected");
               switch (channel.Path) {
                 case Path.Translation:
-                  skeleton.JointsData[jointIndex].DeformedNodeTranslation =
+                  skeleton.Joints[jointIndex].DeformedNodeTranslation =
                     new Vector3(
                       sampler.TRSOutputValuesToBeInterpolated[i].X,
                       sampler.TRSOutputValuesToBeInterpolated[i].Y,
@@ -161,7 +146,7 @@ public class SkeletalAnimation {
                     sampler.TRSOutputValuesToBeInterpolated[i].Z,
                     sampler.TRSOutputValuesToBeInterpolated[i].W
                   );
-                  skeleton.JointsData[jointIndex].DeformedNodeRotation = quat;
+                  skeleton.Joints[jointIndex].DeformedNodeRotation = quat;
                   break;
                 case Path.Scale:
                   var scale = new Vector3(
@@ -169,7 +154,7 @@ public class SkeletalAnimation {
                     sampler.TRSOutputValuesToBeInterpolated[i].Y,
                     sampler.TRSOutputValuesToBeInterpolated[i].Z
                   );
-                  skeleton.JointsData[jointIndex].DeformedNodeScale = scale;
+                  skeleton.Joints[jointIndex].DeformedNodeScale = scale;
                   break;
                 default:
                   Logger.Error("Path was not found");

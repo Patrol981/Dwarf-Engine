@@ -3,10 +3,11 @@ using JoltPhysicsSharp;
 using glTFLoader.Schema;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
+using Dwarf.Loaders;
 
 namespace Dwarf.Model.Animation;
 
-public struct JointData {
+public struct Joint {
   public string Name = default!;
   public Matrix4x4 InverseBindMatrix = Matrix4x4.Identity;
 
@@ -18,8 +19,22 @@ public struct JointData {
   public int[] Children = [];
   public Node Node = null!;
 
-  public JointData() {
+  public Joint() {
   }
+
+  /*
+  public Matrix4x4 GetLocalMatrix() {
+    var translation = Node.Translation.ToVector3();
+    var rotation = Node.Rotation.ToQuat();
+    var scale = Node.Scale.ToVector3();
+
+    var translationMatrix = Matrix4x4.Identity * Matrix4x4.CreateTranslation(translation);
+    var rotationMatrix = Matrix4x4.CreateFromQuaternion(rotation);
+    var scaleMatrix = Matrix4x4.Identity * Matrix4x4.CreateScale(scale);
+
+    return translationMatrix * rotationMatrix * scaleMatrix;
+  }
+  */
 
   public Matrix4x4 GetDeformedBindMatrix() {
     var translation = Matrix4x4.CreateTranslation(DeformedNodeTranslation);
@@ -32,10 +47,23 @@ public struct JointData {
 
     // Logger.Info($"{Name} : {DeformedNodeTranslation}");
 
+    var mat = translation * scale;
+    mat = Matrix4x4.Transform(mat, DeformedNodeRotation);
+    // return Matrix4x4.Transpose(scale * rotation * translation);
+
     // Typically, the order of transformations is scale -> rotation -> translation
-    return translation * rot * scale;
-    // return scale * rotation * translation;
+    // return Matrix4x4.Transpose(scale * rotation * translation);
+    return translation * rotation * scale;
+    // return Matrix4x4.Transpose(translation) * Matrix4x4.Transpose(rotation) * Matrix4x4.Transpose(scale);
+
+    return new Matrix4x4(
+      DeformedNodeTranslation.X, DeformedNodeTranslation.Y, DeformedNodeTranslation.Z, 0,
+      DeformedNodeRotation.X, DeformedNodeRotation.Y, DeformedNodeRotation.Z, 0,
+      DeformedNodeScale.X, DeformedNodeScale.Y, DeformedNodeScale.Z, 0,
+      0, 0, 0, 1
+    );
     // return scale * rot * translation;
+    //
     // return translation * rot * scale;
     // return Node.LocalMatrix * Node.LocalTransform.Matrix;
   }
@@ -46,39 +74,5 @@ public struct JointData {
     var rotation = Matrix4x4.CreateFromQuaternion(DeformedNodeRotation);
 
     return (scale * rotation * translation) * transform;
-  }
-}
-
-public class Joint {
-  public Node JointNode { get; private set; }
-  public int Id;
-  public string Name;
-  public Joint? Parent;
-  public List<Joint> Children = [];
-
-  public Matrix4x4 UndeformedNodeMatrix = Matrix4x4.Identity;
-  public Matrix4x4 InverseBindMatrix; // undeformed inverse node matrix
-
-  public Vector3 DeformedNodeTranslation = Vector3.Zero;
-  public Quaternion DeformedNodeRotation = Quaternion.Identity;
-  public Vector3 DeformedNodeScale = Vector3.One;
-
-  public Joint(Node node, int id) {
-    JointNode = node;
-    Id = id;
-    Name = node.Name;
-
-    /*
-    foreach (var child in JointNode.VisualChildren) {
-      var joint = new Joint(child, child.LogicalIndex);
-      Children.Add(joint);
-    }
-    */
-  }
-
-  public Matrix4x4 GetDeformedBindMatrix() {
-    var translation = Matrix4x4.CreateTranslation(DeformedNodeTranslation);
-    var scale = Matrix4x4.CreateScale(DeformedNodeScale);
-    return translation * Matrix4x4.CreateFromQuaternion(DeformedNodeRotation) * scale;
   }
 }

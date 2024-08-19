@@ -39,9 +39,6 @@ public static class GLTFLoaderKHR {
       meshRenderer.BindMultipleModelPartsToTexture(app.TextureManager, "./Resources/Textures/base/no_texture.png");
     }
 
-    meshRenderer.Meshes[0].Skin.SkeletonAnimations.Start("Walk");
-    meshRenderer.Meshes[0].Skin.SkeletonAnimations.SetRepeat(true);
-
     // meshRenderer.Meshes[0].Skin.Skeleton.Traverse();
 
     return meshRenderer;
@@ -53,13 +50,9 @@ public static class GLTFLoaderKHR {
     ref Dictionary<Mesh, int> meshMaterialPair
   ) {
     foreach (var mesh in meshMaterialPair.Keys) {
-      List<Matrix4x4> matrices = [];
-      for (int i = 0; i < 25; i++) {
-        matrices.Add(Matrix4x4.Identity);
-      }
-      Skeleton skeleton = new();
-      mesh.Skin = new(skeleton);
-      mesh.Skin.Init(gltf, globalBuffer);
+      // Skeleton skeleton = new(mesh.MeshNode);
+      // mesh.Skin = new(skeleton, mesh.MeshNode);
+      // mesh.Skin.Init(gltf, globalBuffer);
     }
   }
 
@@ -145,23 +138,24 @@ public static class GLTFLoaderKHR {
       Vector3[] positions = [];
 
       if (primitive.Attributes.TryGetValue("TEXCOORD_0", out int coordIdx)) {
-        LoadAccessor<Vector2>(gltf, globalBuffer, gltf.Accessors[coordIdx], out var texFloats);
+        LoadAccessor<float>(gltf, globalBuffer, gltf.Accessors[coordIdx], out var texFloats);
         textureCoords = texFloats.ToVector2Array();
       }
       if (primitive.Attributes.TryGetValue("POSITION", out int positionIdx)) {
-        LoadAccessor<Vector3>(gltf, globalBuffer, gltf.Accessors[positionIdx], out var posFloats);
+        LoadAccessor<float>(gltf, globalBuffer, gltf.Accessors[positionIdx], out var posFloats);
         positions = posFloats.ToVector3Array();
       }
       if (primitive.Attributes.TryGetValue("NORMAL", out int normalIdx)) {
-        LoadAccessor<Vector3>(gltf, globalBuffer, gltf.Accessors[normalIdx], out var normFloats);
+        LoadAccessor<float>(gltf, globalBuffer, gltf.Accessors[normalIdx], out var normFloats);
         normals = normFloats.ToVector3Array();
       }
       if (primitive.Attributes.TryGetValue("WEIGHTS_0", out int weightsIdx)) {
-        LoadAccessor<Vector4>(gltf, globalBuffer, gltf.Accessors[weightsIdx], out var weightFLoats);
+        LoadAccessor<float>(gltf, globalBuffer, gltf.Accessors[weightsIdx], out var weightFLoats);
         weights = weightFLoats.ToVector4Array();
       }
       if (primitive.Attributes.TryGetValue("JOINTS_0", out int jointsIdx)) {
-        LoadAccessorUint(gltf, globalBuffer, gltf.Accessors[jointsIdx], out var jointIndices);
+
+        LoadAccessor<ushort>(gltf, globalBuffer, gltf.Accessors[jointsIdx], out var jointIndices);
         joints = jointIndices.ToVec4IArray();
       }
       if (primitive.Indices.HasValue) {
@@ -171,10 +165,11 @@ public static class GLTFLoaderKHR {
       }
 
       var vertex = new Vertex();
-      var nodeMat = GetNodeMatrix(mesh);
+      var nodeMat = CreateMatrixFromNodeData(mesh);
       nodeMatrices.Add(nodeMat);
       for (int i = 0; i < positions.Length; i++) {
         vertex.Position = Vector3.Transform(positions[i], nodeMat);
+        // vertex.Position = positions[i] + mesh.Translation.ToVector3();
         vertex.Color = Vector3.One;
         vertex.Normal = normals.Length > 0 ? normals[i] : new Vector3(1, 1, 1);
         vertex.Uv = textureCoords.Length > 0 ? textureCoords[i] : new Vector2(0, 0);
@@ -196,25 +191,53 @@ public static class GLTFLoaderKHR {
       Vertices = [.. vertices],
       Indices = [.. indices],
       Skin = null,
-      NodeMatrices = [.. nodeMatrices]
+      NodeMatrices = [.. nodeMatrices],
+      MeshNode = mesh
     };
 
     meshMaterialPair.Add(meshData, materialId);
   }
 
-  public static Matrix4x4 GetNodeMatrix(Node node) {
+  public static Matrix4x4 CreateMatrixFromNodeData(glTFLoader.Schema.Node node) {
+    var translation = node.Translation != null ? new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]) : Vector3.Zero;
+    var rotation = node.Rotation != null ? new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]) : Quaternion.Identity;
+    var scale = node.Scale != null ? new Vector3(node.Scale[0], node.Scale[1], node.Scale[2]) : Vector3.One;
+
+    var translationMatrix = Matrix4x4.CreateTranslation(translation);
+    var rotationMatrix = Matrix4x4.CreateFromQuaternion(rotation);
+    var scaleMatrix = Matrix4x4.CreateScale(scale);
+
+    // Combine the TRS matrices
+    return scaleMatrix * rotationMatrix * translationMatrix;
+  }
+
+  public static Matrix4x4 GetNodeMatrix(glTFLoader.Schema.Node node) {
     if (node.Matrix != null && node.Matrix.Length == 16) {
-      return new Matrix4x4(
+      var mat1 = new Matrix4x4(
           node.Matrix[0], node.Matrix[1], node.Matrix[2], node.Matrix[3],
           node.Matrix[4], node.Matrix[5], node.Matrix[6], node.Matrix[7],
           node.Matrix[8], node.Matrix[9], node.Matrix[10], node.Matrix[11],
           node.Matrix[12], node.Matrix[13], node.Matrix[14], node.Matrix[15]
       );
+      var mat = new Matrix4x4(
+          node.Matrix[0], node.Matrix[4], node.Matrix[8], node.Matrix[12],
+          node.Matrix[1], node.Matrix[5], node.Matrix[9], node.Matrix[13],
+          node.Matrix[2], node.Matrix[6], node.Matrix[10], node.Matrix[14],
+          node.Matrix[3], node.Matrix[7], node.Matrix[11], node.Matrix[15]
+      );
+      // Logger.Error("Returning mat");
+      // Matrix4x4.Invert(mat1, out var result);
+      return mat1;
     } else {
+      Logger.Error("returning pos");
       // Otherwise, use TRS components and build the matrix
       var translation = node.Translation != null ? new Vector3(node.Translation[0], node.Translation[1], node.Translation[2]) : Vector3.Zero;
       var rotation = node.Rotation != null ? new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]) : Quaternion.Identity;
       var scale = node.Scale != null ? new Vector3(node.Scale[0], node.Scale[1], node.Scale[2]) : Vector3.One;
+      var angleX = Converter.DegreesToRadians(node.Rotation[0]);
+      var angleY = Converter.DegreesToRadians(node.Rotation[1]);
+      var angleZ = Converter.DegreesToRadians(node.Rotation[2]);
+      var rot = Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
 
       // Build the transformation matrix from TRS components
       var translationMatrix = Matrix4x4.CreateTranslation(translation);
@@ -329,89 +352,112 @@ public static class GLTFLoaderKHR {
 
     return data;
   }
-
-  public static void LoadAccessorUint(Gltf gltf, byte[] globalBuffer, Accessor accessor, out ushort[][] data) {
+  public static void LoadAccessor<T>(Gltf gltf, byte[] globalBuffer, Accessor accessor, out T[][] data) {
     var bufferView = gltf.BufferViews[(int)accessor.BufferView!];
 
-    data = new ushort[accessor.Count][];
+    data = new T[accessor.Count][];
     var byteOffset = bufferView.ByteOffset + accessor.ByteOffset;
-    int stride;
-    if (bufferView.ByteStride.HasValue) {
-      stride = bufferView.ByteStride.Value;
-    } else {
-      stride = sizeof(uint);
-    }
 
-    var elemPerVec = 4;
-    var strideMinus = 4;
+    var typeResult = HandleType(accessor.Type, accessor.ComponentType);
+    if (typeof(T) != typeResult.Item2)
+      throw new ArgumentException($"{typeof(T)} does not match with {typeResult.Item2}");
 
     using var stream = new MemoryStream(globalBuffer);
     using var reader = new BinaryReader(stream);
 
     reader.BaseStream.Seek(byteOffset, SeekOrigin.Begin);
+
     for (int i = 0; i < accessor.Count; i++) {
-      data[i] = new ushort[elemPerVec];
-      for (int j = 0; j < elemPerVec; j++) {
-        data[i][j] = reader.ReadUInt16();
+      data[i] = new T[typeResult.Item1];
+      for (int j = 0; j < typeResult.Item1; j++) {
+        if (typeResult.Item2 == typeof(float)) {
+          var value = reader.ReadSingle();
+          data[i][j] = (T)(object)value;
+        } else if (typeResult.Item2 == typeof(short)) {
+          var value = reader.ReadInt16();
+          data[i][j] = (T)(object)value;
+        } else if (typeResult.Item2 == typeof(sbyte)) {
+          var value = reader.ReadSByte();
+          data[i][j] = (T)(object)value;
+        } else if (typeResult.Item2 == typeof(uint)) {
+          var value = reader.ReadUInt32();
+          data[i][j] = (T)(object)value;
+        } else if (typeResult.Item2 == typeof(byte)) {
+          var value = reader.ReadByte();
+          data[i][j] = (T)(object)value;
+        } else if (typeResult.Item2 == typeof(ushort)) {
+          var value = reader.ReadUInt16();
+          data[i][j] = (T)(object)value;
+        } else {
+          throw new InvalidCastException($"Given type {typeResult.Item2} cannot be parsed!");
+        }
       }
-      reader.BaseStream.Seek(stride - stride, SeekOrigin.Current);
     }
   }
 
-  public static void LoadAccessor<T>(Gltf gltf, byte[] globalBuffer, Accessor accessor, out float[][] data) {
-    var bufferView = gltf.BufferViews[(int)accessor.BufferView!];
+  private static (int, Type) HandleType(Accessor.TypeEnum type, Accessor.ComponentTypeEnum componentType) {
+    Type valueType;
+    int elemPerVec;
 
-    data = new float[accessor.Count][];
-    var byteOffset = bufferView.ByteOffset + accessor.ByteOffset;
-    int stride;
-    if (bufferView.ByteStride.HasValue) {
-      stride = bufferView.ByteStride.Value;
-    } else {
-      stride = Unsafe.SizeOf<T>();
-    }
-
-    var elemPerVec = 0;
-    var strideMinus = 0;
-    if (typeof(T) == typeof(Vector3)) {
-      elemPerVec = 3;
-      strideMinus = 12;
-    }
-    if (typeof(T) == typeof(Vector4)) {
-      elemPerVec = 4;
-      strideMinus = 16;
-    }
-    if (typeof(T) == typeof(Vector2)) {
-      elemPerVec = 2;
-      strideMinus = 8;
-    }
-    if (typeof(T) == typeof(Matrix4x4)) {
-      elemPerVec = 16;
-      strideMinus = 64;
-    }
-    if (typeof(T) == typeof(float)) {
-      elemPerVec = 1;
-      strideMinus = 4;
-    }
-    if (typeof(T) == typeof(uint)) {
-      elemPerVec = 1;
-      strideMinus = 4;
+    switch (componentType) {
+      case Accessor.ComponentTypeEnum.BYTE:
+        valueType = typeof(sbyte);
+        break;
+      case Accessor.ComponentTypeEnum.SHORT:
+        valueType = typeof(short);
+        break;
+      case Accessor.ComponentTypeEnum.FLOAT:
+        valueType = typeof(float);
+        break;
+      case Accessor.ComponentTypeEnum.UNSIGNED_INT:
+        valueType = typeof(uint);
+        break;
+      case Accessor.ComponentTypeEnum.UNSIGNED_BYTE:
+        valueType = typeof(byte);
+        break;
+      case Accessor.ComponentTypeEnum.UNSIGNED_SHORT:
+        valueType = typeof(ushort);
+        break;
+      default:
+        Logger.Error("Unknown Component Type!");
+        throw new ArgumentException($"Unknown Component Type! {nameof(componentType)}");
     }
 
-    using var stream = new MemoryStream(globalBuffer);
-    using var reader = new BinaryReader(stream);
-
-    reader.BaseStream.Seek(byteOffset, SeekOrigin.Begin);
-    for (int i = 0; i < accessor.Count; i++) {
-      data[i] = new float[elemPerVec];
-      for (int j = 0; j < elemPerVec; j++) {
-        data[i][j] = reader.ReadSingle();
-      }
-      reader.BaseStream.Seek(stride - strideMinus, SeekOrigin.Current);
+    switch (type) {
+      case Accessor.TypeEnum.SCALAR:
+        elemPerVec = 1;
+        break;
+      case Accessor.TypeEnum.VEC2:
+        elemPerVec = 2;
+        break;
+      case Accessor.TypeEnum.VEC3:
+        elemPerVec = 3;
+        break;
+      case Accessor.TypeEnum.VEC4:
+        elemPerVec = 4;
+        break;
+      case Accessor.TypeEnum.MAT2:
+        elemPerVec = 4;
+        break;
+      case Accessor.TypeEnum.MAT3:
+        elemPerVec = 9;
+        break;
+      case Accessor.TypeEnum.MAT4:
+        elemPerVec = 16;
+        break;
+      default:
+        Logger.Error("Unknown Type!");
+        throw new ArgumentException($"Unknown Type! {nameof(type)}");
     }
+
+    return (elemPerVec, valueType);
   }
 
   public static Vector3 ToVector3(this float[] vec3) {
     return new Vector3(vec3[0], vec3[1], vec3[2]);
+  }
+  public static Vector3 ToVector3(this Vector4 vector4) {
+    return new Vector3(vector4.X, vector4.Y, vector4.Z);
   }
   public static Vector3[] ToVector3Array(this float[][] vec3Array) {
     return vec3Array.Select(x => x.ToVector3()).ToArray();
@@ -425,7 +471,18 @@ public static class GLTFLoaderKHR {
   }
 
   public static Vector4 ToVector4(this float[] vec4) {
-    return new Vector4(vec4[0], vec4[1], vec4[2], vec4[3]);
+    if (vec4.Length < 4) {
+      var returnVec = new Vector4();
+      for (int i = 0; i < vec4.Length; i++) {
+        returnVec[i] = vec4[i];
+      }
+      for (int i = vec4.Length; i < 4; i++) {
+        returnVec[i] = 0;
+      }
+      return returnVec;
+    } else {
+      return new Vector4(vec4[0], vec4[1], vec4[2], vec4[3]);
+    }
   }
   public static Vector4[] ToVector4Array(this float[][] vec4Array) {
     return vec4Array.Select(x => x.ToVector4()).ToArray();
@@ -440,5 +497,29 @@ public static class GLTFLoaderKHR {
   }
   public static Vector4I[] ToVec4IArray(this ushort[][] ushorts) {
     return ushorts.Select(x => x.ToVec4I()).ToArray();
+  }
+
+  public static Matrix4x4 ToMatrix4x4(this float[] floats) {
+    var std = new Matrix4x4(
+      floats[0], floats[1], floats[2], floats[3],
+      floats[4], floats[5], floats[6], floats[7],
+      floats[8], floats[9], floats[10], floats[11],
+      floats[12], floats[13], floats[14], floats[15]
+    );
+    var alt = new Matrix4x4(
+      floats[0], floats[4], floats[8], floats[12],
+      floats[1], floats[5], floats[9], floats[13],
+      floats[2], floats[6], floats[10], floats[14],
+      floats[3], floats[7], floats[11], floats[15]
+    );
+
+    return std;
+  }
+  public static Matrix4x4[] ToMatrix4x4Array(this float[][] floats) {
+    return floats.Select(x => x.ToMatrix4x4()).ToArray();
+  }
+
+  public static Quaternion ToQuat(this float[] floats) {
+    return new Quaternion(floats[0], floats[1], floats[2], floats[3]);
   }
 }

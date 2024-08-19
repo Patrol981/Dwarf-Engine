@@ -6,197 +6,106 @@ using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Vulkan;
-using glTFLoader.Schema;
-using SharpGLTF.Collections;
-using SharpGLTF.Schema2;
+
 using Vortice.Vulkan;
 
 namespace Dwarf.Model.Animation;
 
 public class Skin : IDisposable {
   public string Name { get; private set; } = default!;
-  public SharpGLTF.Schema2.Node SkeletonRoot { get; private set; } = null!;
-  public IList<SharpGLTF.Schema2.Node> Joints { get; private set; } = [];
   public DwarfBuffer Ssbo = null!;
   private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
-  public ModelRoot GltfModel;
 
-  public Skeleton Skeleton = null!;
-  public List<SkeletalAnimation> Animations = [];
-  public skeletalAnimations SkeletonAnimations = new();
+  public Node SkeletonRoot = null!;
+  public List<Matrix4x4> InverseBindMatrices;
+  public List<Node> Joints;
+
+  public List<Matrix4x4> OutputNodeMatrices;
+  public int JointsCount;
+
+  public List<Animation> Animations;
+
+  public Node MeshNode { get; private set; }
 
   private Skin() {
 
   }
 
-  public Skin(
-    string name,
-    SharpGLTF.Schema2.Node skeletonRoot,
-    Matrix4x4[] inverseBindMatrices,
-    IList<SharpGLTF.Schema2.Node> joints,
-    DwarfBuffer ssbo,
-    VkDescriptorSet descriptorSet
-  ) {
-    Name = name;
-    SkeletonRoot = skeletonRoot;
-    InverseBindMatrices = inverseBindMatrices;
-    Joints = joints;
-    Ssbo = ssbo;
-    _descriptorSet = descriptorSet;
-  }
-
-  public Skin(Skeleton skeleton) {
-    Skeleton = skeleton;
-  }
-
-  public void Setup(IDevice device) {
-    if (Skeleton.FinalJointMatrices.Length > 0) {
-      Ssbo = new DwarfBuffer(
-        device,
-        (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)Skeleton.FinalJointMatrices.Length,
-        BufferUsage.StorageBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-      );
-    } else {
-      Ssbo = new DwarfBuffer(
-        device,
-        (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)InverseBindMatrices.Length,
-        BufferUsage.StorageBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-      );
+  public unsafe void UpdateAnimation(int idx, float time) {
+    if (Animations.Count < 1) {
+      Logger.Error(".glTF does not contain animation.");
+      return;
     }
 
-  }
-  public void Init(ModelRoot model, Gltf gltf) {
-    GltfModel = model;
-    var skin = model.LogicalSkins[0];
+    if (idx > Animations.Count - 1) {
+      Logger.Error($"No animation with index {idx}");
+      return;
+    }
 
-    if (skin.GetInverseBindMatricesAccessor() != null) {
-      Skeleton.JointsData = new JointData[skin.JointsCount];
-      Skeleton.FinalJointMatrices = new Matrix4x4[skin.JointsCount];
-
-      Skeleton.Name = skin.Name;
-
-      var inverseBindMatrices = skin.GetInverseBindMatricesAccessor().AsMatrix4x4Array();
-      var targetClass = typeof(SharpGLTF.Schema2.Skin);
-      var fieldInfo = targetClass.GetField("_joints", BindingFlags.NonPublic | BindingFlags.Instance);
-      List<int> _joints = (List<int>)fieldInfo!.GetValue(skin)!;
-      for (int i = 0; i < skin.JointsCount; ++i) {
-        int globalIdx = _joints[i];
-        Skeleton.JointsData[i] = new JointData {
-          InverseBindMatrix = inverseBindMatrices[i],
-          Name = model.LogicalNodes[globalIdx].Name,
-          // Node = model.LogicalNodes[globalIdx]
-        };
-
-        Skeleton.GlobalNodeToJointIdx[globalIdx] = i;
+    bool updated = false;
+    var animation = Animations[idx];
+    foreach (var channel in animation.Channels) {
+      var sampler = animation.Samplers[channel.SamplerIndex];
+      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
+        continue;
       }
-
-      var rootJoint = _joints[0];
-
-      LoadJoint_Old(rootJoint, Skeleton.NO_PARENT);
-    }
-
-    Ssbo = new DwarfBuffer(
-      Application.Instance.Device,
-      (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)Skeleton.JointsData.Length,
-      BufferUsage.StorageBuffer,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-    Ssbo.Map();
-
-    // Load animations
-
-    var numberOfAnimations = gltf.Animations.Length;
-    for (int i = 0; i < numberOfAnimations; ++i) {
-      var animation = gltf.Animations[i];
-      Logger.Info($"Animation: {animation.Name}");
-      var skeletalAnimation = new SkeletalAnimation(animation.Name);
-
-      int samplersCount = gltf.Samplers.Length;
-      skeletalAnimation.Samplers = new SkeletalAnimation.Sampler[samplersCount];
-      for (int samplerIndex = 0; samplerIndex < samplersCount; ++samplerIndex) {
-        var gltfSampler = gltf.Animations[i].Samplers[samplerIndex];
-
-        skeletalAnimation.Samplers[samplerIndex].Interpolation = SkeletalAnimation.InterpolationMethod.Linear;
-        if (gltfSampler.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.STEP) {
-          skeletalAnimation.Samplers[samplerIndex].Interpolation = SkeletalAnimation.InterpolationMethod.Step;
-        } else if (gltfSampler.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.CUBICSPLINE) {
-          skeletalAnimation.Samplers[samplerIndex].Interpolation = SkeletalAnimation.InterpolationMethod.CubicSpline;
-        }
-
-        // get timestamp
-        {
-          int count = 0;
-          var acc = model.LogicalAccessors[gltfSampler.Input].AsScalarArray();
-          count = acc.Count;
-          skeletalAnimation.Samplers[samplerIndex].Timestamps = new float[count];
-          for (int index = 0; index < count; ++index) {
-            skeletalAnimation.Samplers[samplerIndex].Timestamps[index] = acc[index];
-          }
-        }
-
-
-        // read sampler keyframes
-        {
-          var acc = model.LogicalAccessors[gltfSampler.Output].AsVector4Array();
-          int count = acc.Count;
-          skeletalAnimation.Samplers[samplerIndex].TRSOutputValuesToBeInterpolated = new Vector4[count];
-          for (int index = 0; index < count; index++) {
-            skeletalAnimation.Samplers[samplerIndex].TRSOutputValuesToBeInterpolated[index] = acc[index];
-          }
-        }
-
-        if (skeletalAnimation.Samplers.Length > 0) {
-          var sampler = skeletalAnimation.Samplers[samplerIndex];
-          if (sampler.Timestamps.Length >= 2) {
-            skeletalAnimation.SetFirstKeyFrameTime(sampler.Timestamps[0]);
-            skeletalAnimation.SetLastKeyFrameTime(sampler.Timestamps.Last());
-          }
-
-          var channelsCount = animation.Channels.Length;
-          skeletalAnimation.Channels = new SkeletalAnimation.Channel[channelsCount];
-          for (int channelIndex = 0; channelIndex < channelsCount; ++channelIndex) {
-            var gltfChannel = animation.Channels[channelIndex];
-
-            skeletalAnimation.Channels[channelIndex].SamplerIndex = gltfChannel.Sampler;
-            skeletalAnimation.Channels[channelIndex].Node = (int)gltfChannel.Target.Node;
-
-            if (gltfChannel.Target.Path == AnimationChannelTarget.PathEnum.translation) {
-              skeletalAnimation.Channels[channelIndex].Path = SkeletalAnimation.Path.Translation;
-            } else if (gltfChannel.Target.Path == AnimationChannelTarget.PathEnum.rotation) {
-              skeletalAnimation.Channels[channelIndex].Path = SkeletalAnimation.Path.Rotation;
-            } else if (gltfChannel.Target.Path == AnimationChannelTarget.PathEnum.scale) {
-              skeletalAnimation.Channels[channelIndex].Path = SkeletalAnimation.Path.Scale;
-            } else {
-              Logger.Error($"[Skin::Init] Path not supported");
+      for (int i = 0; i < sampler.Inputs.Count; i++) {
+        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
+          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
+          if (u <= 1.0f) {
+            switch (channel.Path) {
+              case AnimationChannel.PathType.Translation:
+                sampler.Translate(idx, time, channel.Node);
+                break;
+              case AnimationChannel.PathType.Rotation:
+                sampler.Rotate(idx, time, channel.Node);
+                break;
+              case AnimationChannel.PathType.Scale:
+                sampler.Scale(idx, time, channel.Node);
+                break;
             }
+            updated = true;
           }
-
-          Animations.Add(skeletalAnimation);
-          SkeletonAnimations.AddAnimation(skeletalAnimation);
         }
       }
     }
+    if (updated) {
+      // foreach(var node in )
+    }
   }
 
+  /*
   public void Init(Gltf gltf, byte[] globalBuffer) {
     var gltfSkin = gltf.Skins[0];
 
     if (gltfSkin.InverseBindMatrices.HasValue) {
       var numofJoints = gltfSkin.Joints.Length;
-      Skeleton.JointsData = new JointData[numofJoints];
+      Skeleton.Joints = new Joint[numofJoints];
       Skeleton.FinalJointMatrices = new Matrix4x4[numofJoints];
       Skeleton.Name = gltfSkin.Name;
 
       var inverseBindMatrices = GLTFLoaderKHR.GetInverseBindMatrices(gltf, globalBuffer, gltfSkin);
+
+      var accessorIdx = gltfSkin.InverseBindMatrices.Value;
+
+      // TODO check if both matrices are equal
+
+      GLTFLoaderKHR.LoadAccessor<float>(gltf, globalBuffer, gltf.Accessors[accessorIdx], out var matFloats);
+      var matArr = matFloats.ToMatrix4x4Array();
+
+      if (!Matrix4x4.Equals(inverseBindMatrices, matArr)) {
+        Logger.Error("Matrices are not the same!!!!");
+      }
+
       for (int jointIdx = 0; jointIdx < numofJoints; jointIdx++) {
+        // inverseBindMatrices[jointIdx].M42 = -inverseBindMatrices[jointIdx].M42;
         int globalIdx = gltfSkin.Joints[jointIdx];
-        Skeleton.JointsData[jointIdx] = new JointData {
-          InverseBindMatrix = inverseBindMatrices[jointIdx],
+        Skeleton.Joints[jointIdx] = new Joint {
+          InverseBindMatrix = matArr[jointIdx],
           Name = gltf.Nodes[globalIdx].Name,
           Node = gltf.Nodes[globalIdx],
         };
+        // Skeleton.Joints[jointIdx].Node.Translation[1] *= -1;
 
         Skeleton.GlobalNodeToJointIdx[globalIdx] = jointIdx;
       }
@@ -207,13 +116,19 @@ public class Skin : IDisposable {
 
     Ssbo = new DwarfBuffer(
       Application.Instance.Device,
-      (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)Skeleton.JointsData.Length,
+      (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)Skeleton.Joints.Length,
       BufferUsage.StorageBuffer,
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
     Ssbo.Map();
 
     // Load Animations
+
+    if (gltf.Animations == null) {
+      Skeleton.IsAnimated = false;
+      return;
+    }
+
     var numberOfAnimations = gltf.Animations.Length;
     for (int animationIndex = 0; animationIndex < numberOfAnimations; animationIndex++) {
       var gltfAnimation = gltf.Animations[animationIndex];
@@ -254,11 +169,12 @@ public class Skin : IDisposable {
         // POSSIBLE BUG HERE
         {
           var acc = gltf.Accessors[gltfSampler.Output];
-          GLTFLoaderKHR.LoadAccessor<Vector4>(gltf, globalBuffer, acc, out var outArray);
+          GLTFLoaderKHR.LoadAccessor<float>(gltf, globalBuffer, acc, out var outArray);
           var vec4Array = outArray.ToVector4Array();
           int count = acc.Count;
           animation.Samplers[samplerIndex].TRSOutputValuesToBeInterpolated = new Vector4[count];
           for (int index = 0; index < count; index++) {
+            vec4Array[index].Y *= -1;
             animation.Samplers[samplerIndex].TRSOutputValuesToBeInterpolated[index] = vec4Array[index];
           }
         }
@@ -293,47 +209,29 @@ public class Skin : IDisposable {
           SkeletonAnimations.AddAnimation(animation);
         }
       }
-      var test = samplersCount;
-      Logger.Info("test");
-
     }
   }
 
   public void LoadJoint(Gltf gltf, int globalJointIdx, int parent) {
     var current = Skeleton.GlobalNodeToJointIdx[globalJointIdx];
-    Skeleton.JointsData[current].ParentJoint = parent;
+    Skeleton.Joints[current].ParentJoint = parent;
 
     if (gltf.Nodes[globalJointIdx].Children == null) {
-      Skeleton.JointsData[current].Children = [];
+      Skeleton.Joints[current].Children = [];
     } else {
       var childCount = gltf.Nodes[globalJointIdx].Children.Length;
       if (childCount > 0) {
-        Skeleton.JointsData[current].Children = new int[childCount];
+        Skeleton.Joints[current].Children = new int[childCount];
         var children = gltf.Nodes[globalJointIdx].Children;
         for (int i = 0; i < childCount; i++) {
           var globalGltfNodeIdxForChild = children[i];
-          Skeleton.JointsData[current].Children[i] = Skeleton.GlobalNodeToJointIdx[globalGltfNodeIdxForChild];
+          Skeleton.Joints[current].Children[i] = Skeleton.GlobalNodeToJointIdx[globalGltfNodeIdxForChild];
           LoadJoint(gltf, globalGltfNodeIdxForChild, current);
         }
       }
     }
   }
-
-  public void LoadJoint_Old(int globalJointIdx, int parent) {
-    var current = Skeleton.GlobalNodeToJointIdx[globalJointIdx];
-
-    Skeleton.JointsData[current].ParentJoint = parent;
-    var childCount = GltfModel.LogicalNodes[globalJointIdx].VisualChildren.Count();
-    if (childCount > 0) {
-      Skeleton.JointsData[current].Children = new int[childCount];
-      var children = GltfModel.LogicalNodes[globalJointIdx].VisualChildren.ToArray();
-      for (int i = 0; i < childCount; ++i) {
-        var globalGltfNodeIdxForChild = children[i].LogicalIndex;
-        Skeleton.JointsData[current].Children[i] = Skeleton.GlobalNodeToJointIdx[globalGltfNodeIdxForChild];
-        LoadJoint_Old(globalGltfNodeIdxForChild, current);
-      }
-    }
-  }
+  */
 
   public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
     unsafe {
@@ -345,31 +243,20 @@ public class Skin : IDisposable {
       .Build(out _descriptorSet);
     }
   }
-  public unsafe void Write(nint data) {
-    Ssbo.Map();
-    Ssbo.WriteToBuffer(data, (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)InverseBindMatrices.Length);
-    Ssbo.Unmap();
-  }
-
-  public unsafe void Write() {
-    fixed (Matrix4x4* ibmPtr = InverseBindMatrices) {
-      Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
-    }
-  }
 
   public unsafe void WriteSkeleton() {
-    fixed (Matrix4x4* ibmPtr = Skeleton.FinalJointMatrices) {
+    fixed (Matrix4x4* ibmPtr = OutputNodeMatrices.ToArray()) {
       Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
     }
     Ssbo.Flush();
   }
 
   public unsafe void WriteSkeletonIdentity() {
-    if (Skeleton.FinalJointMatrices.Length < 1) {
+    if (InverseBindMatrices.Count < 1) {
       WriteIdentity();
       return;
     }
-    var mats = new Matrix4x4[Skeleton.FinalJointMatrices.Length];
+    var mats = new Matrix4x4[InverseBindMatrices.Count];
     for (int i = 0; i < mats.Length; i++) {
       mats[i] = Matrix4x4.Identity;
     }
@@ -379,7 +266,7 @@ public class Skin : IDisposable {
   }
 
   public unsafe void WriteIdentity() {
-    var mats = new Matrix4x4[InverseBindMatrices.Length];
+    var mats = new Matrix4x4[InverseBindMatrices.Count];
     for (int i = 0; i < mats.Length; i++) {
       mats[i] = Matrix4x4.Identity;
     }
@@ -396,45 +283,9 @@ public class Skin : IDisposable {
     Ssbo.WriteToBuffer((nint)(&data), size, offset);
   }
 
-  public class Builder {
-    private readonly Skin _skin = new();
-
-    public Builder SetName(string name) {
-      _skin.Name = name;
-      return this;
-    }
-
-    public Builder SetSkeletonRoot(SharpGLTF.Schema2.Node node) {
-      _skin.SkeletonRoot = node;
-      return this;
-    }
-
-    public Builder SetInverseBindMatrices(Matrix4x4[] inverseBindMatrices) {
-      _skin.InverseBindMatrices = inverseBindMatrices;
-      return this;
-    }
-
-    public Builder SetJoints(IList<SharpGLTF.Schema2.Node> joints) {
-      _skin.Joints = joints;
-      return this;
-    }
-
-    public Skin Build(IDevice device) {
-      _skin.Ssbo = new DwarfBuffer(
-        device,
-        (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)_skin.InverseBindMatrices.Length,
-        BufferUsage.StorageBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-      );
-
-      return _skin;
-    }
-  }
-
   public void Dispose() {
     Ssbo?.Dispose();
   }
 
   public VkDescriptorSet DescriptorSet => _descriptorSet;
-  public Matrix4x4[] InverseBindMatrices { get; set; } = [];
 }

@@ -12,9 +12,6 @@ using Dwarf.Vulkan;
 using OpenTK.Mathematics;
 using Vortice.Vulkan;
 
-using SharpGLTF.Schema2;
-using SharpGLTF.Transforms;
-
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering;
@@ -498,19 +495,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
             // var matrices = entities[i].Meshes[x].Skin!.InverseBindMatrices;
             // var m2 = matrices.Reverse().ToArray();
-            targetSkin!.SkeletonAnimations.Current?.Update(Time.DeltaTime * 10, ref targetSkin.Skeleton);
-            targetSkin!.Skeleton.Update();
+            // targetSkin!.SkeletonAnimations.Current?.Update(Time.DeltaTime * 100, ref targetSkin.Skeleton);
+            // targetSkin!.Skeleton.Update();
             // targetSkin.SkeletonAnimations.Update(0.001f, ref targetSkin.Skeleton, 0);
             // targetSkin.WriteSkeletonIdentity();
             targetSkin?.WriteSkeleton();
-
-            for (int jIdx = 0; jIdx < targetSkin!.Skeleton.FinalJointMatrices.Length; jIdx++) {
-              Guizmos.AddCube(
-                (targetSkin!.Skeleton.FinalJointMatrices[jIdx] * transform.Matrix4).Translation,
-                new(0.09f, 0.09f, 0.09f),
-                new(0, 1, 1)
-              );
-            }
 
 
 

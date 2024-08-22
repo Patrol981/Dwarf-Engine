@@ -2,8 +2,10 @@ using System.Numerics;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Dwarf.Model;
+using Dwarf.Model.Animation;
 using Dwarf.Physics;
 using Dwarf.Rendering;
 using Dwarf.Vulkan;
@@ -154,6 +156,52 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       .Build(out _skinDescriptor);
     }
   }
+
+  public unsafe void UpdateAnimation(int idx, float time) {
+    if (Animations.Count < 1) {
+      Logger.Error(".glTF does not contain animation.");
+      return;
+    }
+
+    if (idx > Animations.Count - 1) {
+      Logger.Error($"No animation with index {idx}");
+      return;
+    }
+
+    bool updated = false;
+    var animation = Animations[idx];
+    foreach (var channel in animation.Channels) {
+      var sampler = animation.Samplers[channel.SamplerIndex];
+      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
+        continue;
+      }
+      for (int i = 0; i < sampler.Inputs.Count; i++) {
+        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
+          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
+          if (u <= 1.0f) {
+            switch (channel.Path) {
+              case AnimationChannel.PathType.Translation:
+                sampler.Translate(idx, time, channel.Node);
+                break;
+              case AnimationChannel.PathType.Rotation:
+                sampler.Rotate(idx, time, channel.Node);
+                break;
+              case AnimationChannel.PathType.Scale:
+                sampler.Scale(idx, time, channel.Node);
+                break;
+            }
+            updated = true;
+          }
+        }
+      }
+    }
+    if (updated) {
+      foreach (var node in Nodes) {
+        node.Update();
+      }
+    }
+  }
+
   public unsafe void Dispose() {
     foreach (var node in LinearNodes) {
       _device.WaitQueue();
@@ -170,8 +218,15 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public Node[] Nodes { get; private set; } = [];
   public Node[] LinearNodes { get; private set; } = [];
   public Node[] MeshedNodes { get; private set; } = [];
+
+
+  public List<Animation> Animations = [];
+  public List<Skin> Skins = [];
+
   public DwarfBuffer Ssbo { get; set; } = null!;
   public Matrix4x4[] InverseMatrices { get; set; } = [];
+
+
   public VkDescriptorSet SkinDescriptor => _skinDescriptor;
   public string FileName { get; } = "";
   public int TextureFlipped { get; set; } = 1;
@@ -186,6 +241,30 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     var tmp = LinearNodes.ToList();
     tmp.Add(node);
     LinearNodes = [.. tmp];
+  }
+
+  public Node? FindNode(Node parent, int idx) {
+    Node? found = null!;
+    if (parent.Index == idx) {
+      return parent;
+    }
+    foreach (var child in parent.Children) {
+      found = FindNode(child, idx);
+      if (found != null) {
+        break;
+      }
+    }
+    return found;
+  }
+  public Node? NodeFromIndex(int idx) {
+    Node? found = null!;
+    foreach (var node in Nodes) {
+      found = FindNode(node, idx);
+      if (found != null) {
+        break;
+      }
+    }
+    return found;
   }
   public float CalculateHeightOfAnModel() {
     var height = 0.0f;

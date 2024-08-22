@@ -127,14 +127,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private void BuildTargetDescriptorJointBuffer(Node node) {
     if (node.Skin == null) return;
 
-    node.Skin.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+    node.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
   }
 
   private void BuildTargetDescriptorJointBuffer(IRender3DElement target) {
     for (int i = 0; i < target.MeshedNodesCount; i++) {
       if (!target.MeshedNodes[i].HasSkin) return;
 
-      target.MeshedNodes[i].Skin!.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+      target.MeshedNodes[i].BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
     }
   }
   private int CalculateNodesLength(ReadOnlySpan<Entity> entities) {
@@ -614,9 +614,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      nodes[i].Skin!.WriteIdentity();
+      nodes[i].WriteIdentity();
       Descriptor.BindDescriptorSet(
-        nodes[i].Skin!.DescriptorSet,
+        nodes[i].DescriptorSet,
         frameInfo,
         _pipelines[Skinned3D].PipelineLayout,
         5,
@@ -633,151 +633,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Unmap();
   }
 
-
-
-  private void RenderComplex(FrameInfo frameInfo, ReadOnlySpan<IRender3DElement> entities, int prevIdx) {
-    BindPipeline(frameInfo.CommandBuffer, Skinned3D);
-    unsafe {
-      vkCmdBindDescriptorSets(
-        frameInfo.CommandBuffer,
-        VkPipelineBindPoint.Graphics,
-        _pipelines[Skinned3D].PipelineLayout,
-        1,
-        1,
-        &frameInfo.GlobalDescriptorSet,
-        0,
-        null
-      );
-
-      vkCmdBindDescriptorSets(
-        frameInfo.CommandBuffer,
-        VkPipelineBindPoint.Graphics,
-        _pipelines[Skinned3D].PipelineLayout,
-        4,
-        1,
-        &frameInfo.PointLightsDescriptorSet,
-        0,
-        null
-      );
-
-      vkCmdBindDescriptorSets(
-        frameInfo.CommandBuffer,
-        VkPipelineBindPoint.Graphics,
-        _pipelines[Skinned3D].PipelineLayout,
-        2,
-        1,
-        &frameInfo.ObjectDataDescriptorSet,
-        0,
-        null
-      );
-    }
-
-    _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
-    _modelBuffer.Flush();
-
-    IRender3DElement lastModel = null!;
-
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].GetOwner().CanBeDisposed) continue;
-
-      var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
-
-      // _modelUbo.Material = materialData;
-      unsafe {
-        _modelUbo->Color = materialData.Color;
-        _modelUbo->Specular = materialData.Specular;
-        _modelUbo->Shininess = materialData.Shininess;
-        _modelUbo->Diffuse = materialData.Diffuse;
-        _modelUbo->Ambient = materialData.Ambient;
-      }
-
-      uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * ((uint)i + (uint)prevIdx);
-
-      unsafe {
-        _modelBuffer.WriteToBuffer((IntPtr)(_modelUbo), _modelBuffer.GetInstanceSize(), dynamicOffset >> 1);
-      }
-
-      var transform = entities[i].GetOwner().GetComponent<Transform>();
-
-      unsafe {
-        /*
-        _pushConstantData->ModelMatrix = transform.Matrix4;
-        _pushConstantData->NormalMatrix = transform.NormalMatrix;
-
-        vkCmdPushConstants(
-          frameInfo.CommandBuffer,
-          _pipelines[Skinned3D].PipelineLayout,
-          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-          0,
-          (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-          _pushConstantData
-        );
-        */
-
-        fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
-          vkCmdBindDescriptorSets(
-            frameInfo.CommandBuffer,
-            VkPipelineBindPoint.Graphics,
-            _pipelines[Skinned3D].PipelineLayout,
-            3,
-            1,
-            descPtr,
-            1,
-            &dynamicOffset
-          );
-        }
-      }
-
-      if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
-        if (!entities[i].FinishedInitialization) continue;
-
-        for (uint x = 0; x < entities[i].MeshedNodesCount; x++) {
-          if (entities[i].IsSkinned & entities[i].MeshedNodes[x].Skin != null) {
-            // Logger.Info($"Inv Len : {entities[i].Meshes[x].Skin!.InverseBindMatrices.Length}");
-            // Logger.Info($"Mesh Len : {entities[i].Meshes.Length}");
-            var targetSkin = entities[i].MeshedNodes[x].Skin;
-            // targetSkin.SkeletonAnimations.Update();
-
-            // var matrices = entities[i].Meshes[x].Skin!.InverseBindMatrices;
-            // var m2 = matrices.Reverse().ToArray();
-            // targetSkin!.SkeletonAnimations.Current?.Update(Time.DeltaTime * 100, ref targetSkin.Skeleton);
-            // targetSkin!.Skeleton.Update();
-            // targetSkin.SkeletonAnimations.Update(0.001f, ref targetSkin.Skeleton, 0);
-            // targetSkin.WriteSkeletonIdentity();
-            targetSkin?.WriteSkeleton();
-
-
-
-            Descriptor.BindDescriptorSet(
-              entities[i].MeshedNodes[x].Skin!.DescriptorSet,
-              // entities[i].SkinDescriptor,
-              frameInfo,
-              _pipelines[Skinned3D].PipelineLayout,
-              5,
-              1
-            );
-          }
-
-          if (i == _texturesCount) continue;
-          var targetTexture = frameInfo.TextureManager.GetTexture(entities[i].GetTextureIdReference((int)x));
-          Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
-
-          if (entities[i] != lastModel)
-            entities[i].Bind(frameInfo.CommandBuffer, x);
-
-          entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i + (uint)prevIdx);
-
-          // entities[i].Ssbo.Unmap();
-        }
-      }
-
-      lastModel = entities[i];
-    }
-
-    _modelBuffer.Unmap();
-
-    // skeletalAnimations.TimeSave += Time.DeltaTime;
-  }
 
   public override unsafe void Dispose() {
     _device.WaitQueue();

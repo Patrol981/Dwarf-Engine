@@ -1,6 +1,9 @@
 using System.Numerics;
-
+using System.Runtime.CompilerServices;
+using Dwarf.AbstractionLayer;
 using Dwarf.Model.Animation;
+using Dwarf.Vulkan;
+using Vortice.Vulkan;
 
 namespace Dwarf.Model;
 
@@ -24,6 +27,63 @@ public class Node {
 
   public glTFLoader.Schema.Node? GltfNodeReference;
   public MeshRenderer ParentRenderer = null!;
+
+  public DwarfBuffer Ssbo = null!;
+  private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
+
+  public void CreateBuffer() {
+    Ssbo = new DwarfBuffer(
+      Application.Instance.Device,
+      (ulong)Unsafe.SizeOf<Matrix4x4>() * 24,
+      BufferUsage.StorageBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+    );
+    Ssbo.Map();
+  }
+
+  public unsafe void WriteIdentity() {
+    var mats = new Matrix4x4[24];
+    for (int i = 0; i < mats.Length; i++) {
+      mats[i] = Matrix4x4.Identity;
+    }
+    fixed (Matrix4x4* matsPtr = mats) {
+      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
+    }
+  }
+
+  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    unsafe {
+      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
+      range.range = Ssbo.GetAlignmentSize();
+
+      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+      .WriteBuffer(0, &range)
+      .Build(out _descriptorSet);
+    }
+  }
+
+  /*
+    public unsafe void WriteSkeleton() {
+      fixed (Matrix4x4* ibmPtr = Matrices.ToArray()) {
+        Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
+      }
+      Ssbo.Flush();
+    }
+
+    public unsafe void WriteSkeletonIdentity() {
+      if (InverseBindMatrices.Count < 1) {
+        WriteIdentity();
+        return;
+      }
+      var mats = new Matrix4x4[InverseBindMatrices.Count];
+      for (int i = 0; i < mats.Length; i++) {
+        mats[i] = Matrix4x4.Identity;
+      }
+      fixed (Matrix4x4* matsPtr = mats) {
+        Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
+      }
+    }
+    */
 
   public Matrix4x4 GetLocalMatrix() {
     if (!UseCachedMatrix) {
@@ -91,7 +151,8 @@ public class Node {
           Skin.OutputNodeMatrices[i] = outputMatrix * jointMat;
         }
         Skin.JointsCount = numJoints;
-        Skin.WriteSkeleton();
+        WriteIdentity();
+        // Skin.WriteSkeleton();
       }
 
     }
@@ -103,9 +164,11 @@ public class Node {
 
   public bool HasMesh => Mesh != null;
   public bool HasSkin => Skin != null;
+  public VkDescriptorSet DescriptorSet => _descriptorSet;
 
   public void Dispose() {
     Skin?.Dispose();
     Mesh?.Dispose();
+    Ssbo.Dispose();
   }
 }

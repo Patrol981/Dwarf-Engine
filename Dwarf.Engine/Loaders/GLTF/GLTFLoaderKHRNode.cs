@@ -12,7 +12,7 @@ using static Dwarf.VulkanTexture;
 namespace Dwarf.Loaders;
 
 public static partial class GLTFLoaderKHR {
-  public static async Task<MeshRenderer> LoadGLTFNew(Application app, string path, bool preload = false, int flip = 1) {
+  public unsafe static async Task<MeshRenderer> LoadGLTFNew(Application app, string path, bool preload = false, int flip = 1) {
     var gltf = Interface.LoadModel(path);
     var glb = Interface.LoadBinaryBuffer(path);
 
@@ -36,11 +36,16 @@ public static partial class GLTFLoaderKHR {
       );
     }
 
+    if (gltf.Animations != null && gltf.Animations.Length > 0) {
+      LoadAnimations(gltf, glb, meshRenderer);
+    }
+
+    LoadSkins(gltf, glb, meshRenderer);
+
     foreach (var node in meshRenderer.LinearNodes) {
       if (node.SkinIndex > -1) {
-        // node.Skin = ski
-        node.Skin = new Model.Animation.Skin();
-        node.Skin.CreateBuffer();
+        node.Skin = meshRenderer.Skins[node.SkinIndex];
+        node.CreateBuffer();
       }
 
       if (node.Mesh != null) {
@@ -119,6 +124,122 @@ public static partial class GLTFLoaderKHR {
 
   private static void LoadMaterials() {
 
+  }
+
+  private static void LoadAnimations(Gltf gltf, byte[] globalBuffer, MeshRenderer meshRenderer) {
+    foreach (var anim in gltf.Animations) {
+      var animation = new Dwarf.Model.Animation.Animation();
+      animation.Name = anim.Name;
+      if (anim.Name == string.Empty) {
+        animation.Name = meshRenderer.Animations.Count.ToString();
+      }
+
+      // Samplers
+      foreach (var samp in anim.Samplers) {
+        var sampler = new Dwarf.Model.Animation.AnimationSampler();
+
+        if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.LINEAR) {
+          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.Linear;
+        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.STEP) {
+          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.Step;
+        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.CUBICSPLINE) {
+          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.CubicSpline;
+        }
+
+        // Read sampler input time values
+        {
+          var acc = gltf.Accessors[samp.Input];
+          var flat = GLTFLoaderKHR.GetFloatAccessor(gltf, globalBuffer, acc);
+          int count = acc.Count;
+          sampler.Inputs = [];
+          for (int index = 0; index < count; index++) {
+            sampler.Inputs.Add(flat[index]);
+          }
+
+          foreach (var input in sampler.Inputs) {
+            if (input < animation.Start) {
+              animation.Start = input;
+            }
+            if (input > animation.End) {
+              animation.End = input;
+            }
+          }
+        }
+
+        // Read sampler T/R/S values
+        {
+          var acc = gltf.Accessors[samp.Output];
+          GLTFLoaderKHR.LoadAccessor<float>(gltf, globalBuffer, acc, out var floatArray);
+          sampler.OutputsVec4 = [.. floatArray.ToVector4Array()];
+        }
+
+        animation.Samplers.Add(sampler);
+      }
+
+      // channels
+      foreach (var source in anim.Channels) {
+        var channel = new Dwarf.Model.Animation.AnimationChannel();
+
+        if (source.Target.Path == AnimationChannelTarget.PathEnum.rotation) {
+          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Rotation;
+        }
+        if (source.Target.Path == AnimationChannelTarget.PathEnum.translation) {
+          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Translation;
+        }
+        if (source.Target.Path == AnimationChannelTarget.PathEnum.scale) {
+          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Scale;
+        }
+        if (source.Target.Path == AnimationChannelTarget.PathEnum.weights) {
+          Logger.Warn("Weights not supported, skipping channel");
+          continue;
+        }
+
+        channel.SamplerIndex = source.Sampler;
+        var foundNode = meshRenderer.NodeFromIndex(source.Target.Node!.Value!);
+        if (foundNode != null) {
+          channel.Node = foundNode;
+        }
+        if (channel.Node == null) {
+          continue;
+        }
+
+        animation.Channels.Add(channel);
+      }
+
+      meshRenderer.Animations.Add(animation);
+    }
+  }
+
+  private static void LoadSkins(Gltf gltf, byte[] globalBuffer, MeshRenderer meshRenderer) {
+    foreach (var source in gltf.Skins) {
+      var newSkin = new Dwarf.Model.Animation.Skin();
+      newSkin.Name = source.Name;
+
+      // find skeleton root node
+      if (source.Skeleton.HasValue) {
+        var rootResult = meshRenderer.NodeFromIndex(source.Skeleton!.Value!);
+        if (rootResult != null) {
+          newSkin.SkeletonRoot = rootResult;
+        }
+      }
+
+      // find joint nodes
+      foreach (var jointIdx in source.Joints) {
+        var node = meshRenderer.NodeFromIndex(jointIdx);
+        if (node != null) {
+          newSkin.Joints.Add(node);
+        }
+      }
+
+      // get inverse bind matrices
+      if (source.InverseBindMatrices.HasValue) {
+        var acc = gltf.Accessors[source.InverseBindMatrices.Value!];
+        GLTFLoaderKHR.LoadAccessor<float>(gltf, globalBuffer, acc, out var floats);
+        newSkin.InverseBindMatrices = [.. floats.ToMatrix4x4Array()];
+      }
+
+      meshRenderer.Skins.Add(newSkin);
+    }
   }
 
   private static VkFilter GetFilterMode(int filterMode) {
@@ -249,8 +370,8 @@ public static partial class GLTFLoaderKHR {
 
           var vertex = new Vertex();
           for (int v = 0; v < positions.Length; v++) {
-            // vertex.Position = positions[v];
-            vertex.Position = Vector3.Transform(positions[v], newNode.GetLocalMatrix());
+            vertex.Position = positions[v];
+            // vertex.Position = Vector3.Transform(positions[v], newNode.GetLocalMatrix());
             vertex.Color = Vector3.One;
             vertex.Normal = normals.Length > 0 ? normals[v] : new Vector3(1, 1, 1);
             vertex.Uv = textureCoords.Length > 0 ? textureCoords[v] : new Vector2(0, 0);

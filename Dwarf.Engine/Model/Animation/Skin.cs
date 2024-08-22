@@ -12,9 +12,7 @@ using Vortice.Vulkan;
 namespace Dwarf.Model.Animation;
 
 public class Skin : IDisposable {
-  public string Name { get; private set; } = default!;
-  public DwarfBuffer Ssbo = null!;
-  private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
+  public string Name { get; set; } = default!;
 
   public Node SkeletonRoot = null!;
   public List<Matrix4x4> InverseBindMatrices;
@@ -22,115 +20,6 @@ public class Skin : IDisposable {
 
   public List<Matrix4x4> OutputNodeMatrices;
   public int JointsCount;
-
-  public List<Animation> Animations;
-
-  public Node MeshNode { get; private set; }
-
-  public Skin() {
-
-  }
-
-  public void CreateBuffer() {
-    Ssbo = new DwarfBuffer(
-      Application.Instance.Device,
-      (ulong)Unsafe.SizeOf<Matrix4x4>() * 24,
-      BufferUsage.StorageBuffer,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-    Ssbo.Map();
-  }
-
-  public unsafe void UpdateAnimation(int idx, float time) {
-    if (Animations.Count < 1) {
-      Logger.Error(".glTF does not contain animation.");
-      return;
-    }
-
-    if (idx > Animations.Count - 1) {
-      Logger.Error($"No animation with index {idx}");
-      return;
-    }
-
-    bool updated = false;
-    var animation = Animations[idx];
-    foreach (var channel in animation.Channels) {
-      var sampler = animation.Samplers[channel.SamplerIndex];
-      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
-        continue;
-      }
-      for (int i = 0; i < sampler.Inputs.Count; i++) {
-        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
-          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
-          if (u <= 1.0f) {
-            switch (channel.Path) {
-              case AnimationChannel.PathType.Translation:
-                sampler.Translate(idx, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Rotation:
-                sampler.Rotate(idx, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Scale:
-                sampler.Scale(idx, time, channel.Node);
-                break;
-            }
-            updated = true;
-          }
-        }
-      }
-    }
-    if (updated) {
-      // foreach(var node in )
-    }
-  }
-
-  public void LoadAnimations(Gltf gltf, byte[] globalBuffer) {
-    foreach (var anim in gltf.Animations) {
-      var animation = new Animation();
-      animation.Name = anim.Name;
-      if (anim.Name == string.Empty) {
-        animation.Name = Animations.Count.ToString();
-      }
-
-      // Samplers
-      foreach (var samp in anim.Samplers) {
-        var sampler = new AnimationSampler();
-
-        if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.LINEAR) {
-          sampler.Interpolation = AnimationSampler.InterpolationType.Linear;
-        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.STEP) {
-          sampler.Interpolation = AnimationSampler.InterpolationType.Step;
-        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.CUBICSPLINE) {
-          sampler.Interpolation = AnimationSampler.InterpolationType.CubicSpline;
-        }
-
-        // Read sampler input time values
-        {
-          var acc = gltf.Accessors[samp.Input];
-          var flat = GLTFLoaderKHR.GetFloatAccessor(gltf, globalBuffer, acc);
-          int count = acc.Count;
-          sampler.Inputs = [];
-          for (int index = 0; index < count; index++) {
-            sampler.Inputs.Add(flat[index]);
-          }
-
-          foreach (var input in sampler.Inputs) {
-            if (input < animation.Start) {
-              animation.Start = input;
-            }
-            if (input > animation.End) {
-              animation.End = input;
-            }
-          }
-        }
-
-        // Read sampler T/R/S values
-        {
-
-        }
-      }
-    }
-  }
 
   /*
   public void Init(Gltf gltf, byte[] globalBuffer) {
@@ -290,60 +179,7 @@ public class Skin : IDisposable {
     }
   }
   */
-
-  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
-    unsafe {
-      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
-      range.range = Ssbo.GetAlignmentSize();
-
-      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
-      .WriteBuffer(0, &range)
-      .Build(out _descriptorSet);
-    }
-  }
-
-  public unsafe void WriteSkeleton() {
-    fixed (Matrix4x4* ibmPtr = OutputNodeMatrices.ToArray()) {
-      Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
-    }
-    Ssbo.Flush();
-  }
-
-  public unsafe void WriteSkeletonIdentity() {
-    if (InverseBindMatrices.Count < 1) {
-      WriteIdentity();
-      return;
-    }
-    var mats = new Matrix4x4[InverseBindMatrices.Count];
-    for (int i = 0; i < mats.Length; i++) {
-      mats[i] = Matrix4x4.Identity;
-    }
-    fixed (Matrix4x4* matsPtr = mats) {
-      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-    }
-  }
-
-  public unsafe void WriteIdentity() {
-    var mats = new Matrix4x4[24];
-    for (int i = 0; i < mats.Length; i++) {
-      mats[i] = Matrix4x4.Identity;
-    }
-    fixed (Matrix4x4* matsPtr = mats) {
-      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-    }
-  }
-
-  public unsafe void Write(nint data, ulong size, ulong offset) {
-    Ssbo.WriteToBuffer(data, size, offset);
-  }
-
-  public unsafe void Write(Matrix4x4 data, ulong size, ulong offset) {
-    Ssbo.WriteToBuffer((nint)(&data), size, offset);
-  }
-
   public void Dispose() {
-    Ssbo?.Dispose();
+    // Ssbo?.Dispose();
   }
-
-  public VkDescriptorSet DescriptorSet => _descriptorSet;
 }

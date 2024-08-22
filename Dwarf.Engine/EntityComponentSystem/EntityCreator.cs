@@ -2,6 +2,7 @@ using System.Numerics;
 
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
+using Dwarf.Model;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
 
@@ -98,7 +99,7 @@ public static class EntityCreator {
       // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
       entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, preload, flip));
 
-      if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
+      if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
         throw new Exception("Mesh is empty");
       }
 
@@ -141,7 +142,7 @@ public static class EntityCreator {
     // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
     entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, false, flip));
 
-    if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
+    if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
       throw new Exception("Mesh is empty");
     }
   }
@@ -159,9 +160,13 @@ public static class EntityCreator {
     var entity = await CreateBase(entityName, position, rotation, scale);
     app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    Node node = new() { Mesh = mesh };
+    node.Mesh.BindToTexture(app.TextureManager, texturePath);
+    model.AddLinearNode(node);
+    model.Init();
     entity.AddComponent(model);
-    entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
 
     return entity;
@@ -172,10 +177,14 @@ public static class EntityCreator {
 
     app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    Node node = new() { Mesh = mesh };
+    node.Mesh.BindToTexture(app.TextureManager, texturePath);
+    model.AddLinearNode(node);
+    model.Init();
     entity.AddComponent(model);
     await app.TextureManager.AddTexture(texturePath);
-    entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
   }
 

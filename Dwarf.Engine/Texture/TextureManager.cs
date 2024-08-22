@@ -40,15 +40,16 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public Task AddTexture(ITexture texture) {
+  public Guid AddTexture(ITexture texture) {
     foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == texture.TextureName) {
         Logger.Warn($"Texture [{texture.TextureName}] is already loaded. Skipping current add call.");
-        return Task.CompletedTask;
+        return tex.Key;
       }
     }
-    LoadedTextures.Add(Guid.NewGuid(), texture);
-    return Task.CompletedTask;
+    var guid = Guid.NewGuid();
+    LoadedTextures.Add(guid, texture);
+    return guid;
   }
 
   public static async Task<ITexture[]> AddTextures(IDevice device, string[] paths, int flip = 1) {

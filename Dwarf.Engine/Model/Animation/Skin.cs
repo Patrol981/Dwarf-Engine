@@ -6,7 +6,7 @@ using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Vulkan;
-
+using glTFLoader.Schema;
 using Vortice.Vulkan;
 
 namespace Dwarf.Model.Animation;
@@ -27,8 +27,18 @@ public class Skin : IDisposable {
 
   public Node MeshNode { get; private set; }
 
-  private Skin() {
+  public Skin() {
 
+  }
+
+  public void CreateBuffer() {
+    Ssbo = new DwarfBuffer(
+      Application.Instance.Device,
+      (ulong)Unsafe.SizeOf<Matrix4x4>() * 24,
+      BufferUsage.StorageBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+    );
+    Ssbo.Map();
   }
 
   public unsafe void UpdateAnimation(int idx, float time) {
@@ -71,6 +81,54 @@ public class Skin : IDisposable {
     }
     if (updated) {
       // foreach(var node in )
+    }
+  }
+
+  public void LoadAnimations(Gltf gltf, byte[] globalBuffer) {
+    foreach (var anim in gltf.Animations) {
+      var animation = new Animation();
+      animation.Name = anim.Name;
+      if (anim.Name == string.Empty) {
+        animation.Name = Animations.Count.ToString();
+      }
+
+      // Samplers
+      foreach (var samp in anim.Samplers) {
+        var sampler = new AnimationSampler();
+
+        if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.LINEAR) {
+          sampler.Interpolation = AnimationSampler.InterpolationType.Linear;
+        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.STEP) {
+          sampler.Interpolation = AnimationSampler.InterpolationType.Step;
+        } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.CUBICSPLINE) {
+          sampler.Interpolation = AnimationSampler.InterpolationType.CubicSpline;
+        }
+
+        // Read sampler input time values
+        {
+          var acc = gltf.Accessors[samp.Input];
+          var flat = GLTFLoaderKHR.GetFloatAccessor(gltf, globalBuffer, acc);
+          int count = acc.Count;
+          sampler.Inputs = [];
+          for (int index = 0; index < count; index++) {
+            sampler.Inputs.Add(flat[index]);
+          }
+
+          foreach (var input in sampler.Inputs) {
+            if (input < animation.Start) {
+              animation.Start = input;
+            }
+            if (input > animation.End) {
+              animation.End = input;
+            }
+          }
+        }
+
+        // Read sampler T/R/S values
+        {
+
+        }
+      }
     }
   }
 
@@ -266,7 +324,7 @@ public class Skin : IDisposable {
   }
 
   public unsafe void WriteIdentity() {
-    var mats = new Matrix4x4[InverseBindMatrices.Count];
+    var mats = new Matrix4x4[24];
     for (int i = 0; i < mats.Length; i++) {
       mats[i] = Matrix4x4.Identity;
     }

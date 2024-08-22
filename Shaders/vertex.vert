@@ -39,7 +39,7 @@ layout(std140, set = 2, binding = 0) readonly buffer ObjectBuffer {
 
 void main() {
     // vec4 positionWorld = push.transform * vec4(position, 1.0);
-    vec4 positionWorld = objectBuffer.objectData[gl_BaseInstance].transformMatrix * vec4(position, 1.0);
+    vec4 positionWorld = objectBuffer.objectData[gl_BaseInstance].transformMatrix * objectBuffer.objectData[gl_BaseInstance].nodeMatrix * vec4(position, 1.0);
 
     gl_Position = ubo.projection * ubo.view * positionWorld;
 

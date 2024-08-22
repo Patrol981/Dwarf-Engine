@@ -125,7 +125,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   private void CreateVertexData() {
-    Mesh = new();
+    Mesh = new(_device);
 
     Mesh.Vertices = new Vertex[4];
     Mesh.Vertices[0] = new Vertex {

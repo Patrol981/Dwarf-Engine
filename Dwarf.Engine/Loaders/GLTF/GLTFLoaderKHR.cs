@@ -1,37 +1,40 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
+
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
-using Dwarf.Model.Animation;
 using Dwarf.Utils;
+
 using glTFLoader;
 using glTFLoader.Schema;
 
 namespace Dwarf.Loaders;
 
-public static class GLTFLoaderKHR {
+public static partial class GLTFLoaderKHR {
   public static async Task<MeshRenderer> LoadGLTF(Application app, string path, bool preload = false, int flip = 1) {
     var gltf = Interface.LoadModel(path);
     var glb = Interface.LoadBinaryBuffer(path);
 
+    return await LoadGLTFNew(app, path, preload, flip);
+
     string[] paths;
 
-    var meshMaterialPair = new Dictionary<Mesh, int>();
+    var nodeMaterialPair = new Dictionary<Dwarf.Model.Node, int>();
 
     foreach (var node in gltf.Nodes) {
       if (node.Mesh.HasValue) {
-        ProcessMesh(gltf, glb, node, ref meshMaterialPair);
+        ProcessMesh(app.Device, gltf, glb, node, ref nodeMaterialPair);
       }
     }
-    ProcessMaterial(gltf, glb, meshMaterialPair, path, out paths);
-    ProcessSkeleton(gltf, glb, ref meshMaterialPair);
+    ProcessMaterial(gltf, glb, nodeMaterialPair, path, out paths);
+    ProcessSkeleton(gltf, glb, ref nodeMaterialPair);
 
     var textures = await TextureManager.AddTextures(app.Device, paths, flip);
     app.TextureManager.AddRange([.. textures]);
 
-    var meshRenderer = new MeshRenderer(app.Device, app.Renderer, [.. meshMaterialPair.Keys]);
+    var meshRenderer = new MeshRenderer(app.Device, app.Renderer, [.. nodeMaterialPair.Keys], [.. nodeMaterialPair.Keys]);
 
-    if (meshRenderer.MeshsesCount == textures.Length || textures.Length > meshRenderer.MeshsesCount) {
+    if (meshRenderer.MeshedNodesCount == textures.Length || textures.Length > meshRenderer.MeshedNodesCount) {
       meshRenderer.BindMultipleModelPartsToTextures(app.TextureManager, paths);
     } else if (paths.Length > 0) {
       meshRenderer.BindMultipleModelPartsToTexture(app.TextureManager, paths[0]);
@@ -47,9 +50,11 @@ public static class GLTFLoaderKHR {
   private static void ProcessSkeleton(
     Gltf gltf,
     byte[] globalBuffer,
-    ref Dictionary<Mesh, int> meshMaterialPair
+    ref Dictionary<Dwarf.Model.Node, int> meshMaterialPair
   ) {
     foreach (var mesh in meshMaterialPair.Keys) {
+      // mesh.Skin = new();
+      // mesh.Skin.LoadAnimations(gltf, globalBuffer);
       // Skeleton skeleton = new(mesh.MeshNode);
       // mesh.Skin = new(skeleton, mesh.MeshNode);
       // mesh.Skin.Init(gltf, globalBuffer);
@@ -59,7 +64,7 @@ public static class GLTFLoaderKHR {
   private static void ProcessMaterial(
     Gltf gltf,
     byte[] globalBuffer,
-    Dictionary<Mesh, int> meshMaterialPair,
+    Dictionary<Dwarf.Model.Node, int> meshMaterialPair,
     string path,
     out string[] paths
   ) {
@@ -118,10 +123,11 @@ public static class GLTFLoaderKHR {
   }
 
   private static void ProcessMesh(
+    IDevice device,
     Gltf gltf,
     byte[] globalBuffer,
     glTFLoader.Schema.Node mesh,
-    ref Dictionary<Mesh, int> meshMaterialPair
+    ref Dictionary<Dwarf.Model.Node, int> meshMaterialPair
   ) {
     var vertices = new List<Vertex>();
     var nodeMatrices = new List<Matrix4x4>();
@@ -154,9 +160,13 @@ public static class GLTFLoaderKHR {
         weights = weightFLoats.ToVector4Array();
       }
       if (primitive.Attributes.TryGetValue("JOINTS_0", out int jointsIdx)) {
-
-        LoadAccessor<ushort>(gltf, globalBuffer, gltf.Accessors[jointsIdx], out var jointIndices);
-        joints = jointIndices.ToVec4IArray();
+        try {
+          LoadAccessor<ushort>(gltf, globalBuffer, gltf.Accessors[jointsIdx], out var jointIndices);
+          joints = jointIndices.ToVec4IArray();
+        } catch {
+          LoadAccessor<byte>(gltf, globalBuffer, gltf.Accessors[jointsIdx], out var jointIndices);
+          joints = jointIndices.ToVec4IArray();
+        }
       }
       if (primitive.Indices.HasValue) {
         var idx = primitive.Indices.Value;
@@ -168,7 +178,8 @@ public static class GLTFLoaderKHR {
       var nodeMat = CreateMatrixFromNodeData(mesh);
       nodeMatrices.Add(nodeMat);
       for (int i = 0; i < positions.Length; i++) {
-        vertex.Position = Vector3.Transform(positions[i], nodeMat);
+        // vertex.Position = Vector3.Transform(positions[i], nodeMat);
+        vertex.Position = positions[i];
         // vertex.Position = positions[i] + mesh.Translation.ToVector3();
         vertex.Color = Vector3.One;
         vertex.Normal = normals.Length > 0 ? normals[i] : new Vector3(1, 1, 1);
@@ -187,15 +198,21 @@ public static class GLTFLoaderKHR {
 
     if (vertices.Count < 1) return;
 
-    var meshData = new Mesh {
+    var meshData = new Mesh(device) {
       Vertices = [.. vertices],
       Indices = [.. indices],
-      Skin = null,
-      NodeMatrices = [.. nodeMatrices],
-      MeshNode = mesh
     };
 
-    meshMaterialPair.Add(meshData, materialId);
+    var node = new Dwarf.Model.Node {
+      Mesh = meshData,
+      Translation = mesh.Translation.ToVector3(),
+      Rotation = mesh.Rotation.ToQuat(),
+      Scale = mesh.Scale.ToVector3(),
+      NodeMatrix = mesh.Matrix.ToMatrix4x4(),
+      Name = mesh.Name,
+    };
+
+    meshMaterialPair.Add(node, materialId);
   }
 
   public static Matrix4x4 CreateMatrixFromNodeData(glTFLoader.Schema.Node node) {
@@ -495,7 +512,13 @@ public static class GLTFLoaderKHR {
   public static Vector4I ToVec4I(this ushort[] batch) {
     return new Vector4I(batch[0], batch[1], batch[2], batch[3]);
   }
+  public static Vector4I ToVec4I(this byte[] batch) {
+    return new Vector4I(batch[0], batch[1], batch[2], batch[3]);
+  }
   public static Vector4I[] ToVec4IArray(this ushort[][] ushorts) {
+    return ushorts.Select(x => x.ToVec4I()).ToArray();
+  }
+  public static Vector4I[] ToVec4IArray(this byte[][] ushorts) {
     return ushorts.Select(x => x.ToVec4I()).ToArray();
   }
 

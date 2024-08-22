@@ -1,5 +1,7 @@
 using System.Numerics;
 
+using Dwarf.Model;
+
 namespace Dwarf;
 
 public enum PrimitiveType {
@@ -17,7 +19,7 @@ public static class Primitives {
   static Vector3 Color = new(1f, 1f, 1f);
 
   public static Mesh CreatePrimitive(PrimitiveType primitiveType) {
-    var mesh = new Mesh();
+    var mesh = new Mesh(Application.Instance.Device);
 
     switch (primitiveType) {
       case PrimitiveType.Cylinder:
@@ -103,14 +105,14 @@ public static class Primitives {
       indices[i] = (uint)cornerIndex + (uint)numVertices.X + 1;
     }
 
-    return new Mesh() {
+    return new Mesh(Application.Instance.Device) {
       Vertices = vertices,
       Indices = indices
     };
   }
 
   public static Mesh CreatePlanePrimitive(int numOfDivs, float width) {
-    Mesh plane = new();
+    Mesh plane = new(Application.Instance.Device);
     List<Vertex> vertices = [];
 
     var triangleSide = width / numOfDivs;
@@ -132,31 +134,31 @@ public static class Primitives {
     return plane;
   }
 
-  public static Mesh CreateConvex(Mesh inputMesh) {
-    return inputMesh;
+  public static Mesh CreateConvex(Node[] inputMesh) {
+    return inputMesh[0].Mesh;
   }
 
-  public static Mesh CreateConvex(Mesh[] meshes, bool flip = false) {
-    var outputMesh = new Mesh();
+  public static Mesh CreateConvex(Node[] nodes, bool flip = false) {
+    var outputMesh = new Mesh(Application.Instance.Device);
     var vertices = new List<Vertex>();
     var indices = new List<uint>();
 
     uint vertexOffset = 0;
 
-    foreach (var m in meshes) {
-      for (int vertexIndex = 0; vertexIndex < m.Vertices.Length; vertexIndex++) {
-        var vertex = m.Vertices[vertexIndex];
+    foreach (var n in nodes) {
+      for (int vertexIndex = 0; vertexIndex < n.Mesh!.Vertices.Length; vertexIndex++) {
+        var vertex = n.Mesh!.Vertices[vertexIndex];
         Vector3 updatePos = flip ? new(vertex.Position.X, -vertex.Position.Y, vertex.Position.Z) : vertex.Position;
 
         vertex.Position = updatePos;
         vertices.Add(vertex);
       }
 
-      foreach (var index in m.Indices) {
+      foreach (var index in n.Mesh!.Indices) {
         indices.Add(index + vertexOffset);
       }
 
-      vertexOffset += (uint)m.Vertices.Length;
+      vertexOffset += (uint)n.Mesh!.Vertices.Length;
     }
 
     outputMesh.Vertices = vertices.ToArray();
@@ -239,7 +241,7 @@ public static class Primitives {
       0
     ];
 
-    var mesh = new Mesh {
+    var mesh = new Mesh(Application.Instance.Device) {
       Indices = indices,
       Vertices = vertices
     };
@@ -309,14 +311,14 @@ public static class Primitives {
       indices.Add(bottom2);
     }
 
-    var mesh = new Mesh();
+    var mesh = new Mesh(Application.Instance.Device);
     mesh.Vertices = vertices.ToArray();
     mesh.Indices = indices.ToArray();
     return mesh;
   }
 
   public static Mesh CreateSpherePrimitve(int slices, int stacks) {
-    Mesh mesh = new();
+    Mesh mesh = new(Application.Instance.Device);
     // List<Vertex> vertices = new();
     var vertices = new Vertex[slices * stacks];
     int index = 0;

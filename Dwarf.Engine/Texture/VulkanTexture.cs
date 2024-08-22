@@ -1,7 +1,8 @@
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
-
+using glTFLoader.Schema;
 using StbImageSharp;
 
 using Vortice.Vulkan;
@@ -13,10 +14,22 @@ namespace Dwarf;
 public class VulkanTexture : ITexture {
   protected readonly VulkanDevice _device = null!;
 
-  internal VkImage _textureImage = VkImage.Null;
-  internal VkDeviceMemory _textureImageMemory = VkDeviceMemory.Null;
-  internal VkImageView _imageView = VkImageView.Null;
-  internal VkSampler _imageSampler = VkSampler.Null;
+  public struct VulkanTextureData {
+    public VkImage TextureImage;
+    public VkDeviceMemory TextureImageMemory;
+    public VkImageView ImageView;
+    public VkSampler ImageSampler;
+  }
+
+  public struct TextureSampler {
+    public VkFilter MagFilter;
+    public VkFilter MinFilter;
+    public VkSamplerAddressMode AddressModeU;
+    public VkSamplerAddressMode AddressModeV;
+    public VkSamplerAddressMode AddressModeW;
+  };
+
+  internal VulkanTextureData _textureSampler;
 
   protected int _width = 0;
   protected int _height = 0;
@@ -57,9 +70,9 @@ public class VulkanTexture : ITexture {
 
   public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = _imageSampler,
+      sampler = _textureSampler.ImageSampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _imageView
+      imageView = _textureSampler.ImageView
     };
     unsafe {
       _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
@@ -70,9 +83,9 @@ public class VulkanTexture : ITexture {
 
   public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = _imageSampler,
+      sampler = _textureSampler.ImageSampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _imageView
+      imageView = _textureSampler.ImageView
     };
     unsafe {
       _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
@@ -94,8 +107,8 @@ public class VulkanTexture : ITexture {
     VkDescriptorImageInfo descImage = new();
     VkWriteDescriptorSet writeDesc = new();
 
-    descImage.sampler = _imageSampler;
-    descImage.imageView = _imageView;
+    descImage.sampler = _textureSampler.ImageSampler;
+    descImage.imageView = _textureSampler.ImageView;
     descImage.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
     writeDesc.dstSet = descriptorSet;
@@ -131,14 +144,14 @@ public class VulkanTexture : ITexture {
   private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     Application.Instance.Mutex.WaitOne();
     unsafe {
-      if (_textureImage.IsNotNull) {
+      if (_textureSampler.TextureImage.IsNotNull) {
         _device.WaitDevice();
-        vkDestroyImage(_device.LogicalDevice, _textureImage);
+        vkDestroyImage(_device.LogicalDevice, _textureSampler.TextureImage);
       }
 
-      if (_textureImageMemory.IsNotNull) {
+      if (_textureSampler.TextureImageMemory.IsNotNull) {
         _device.WaitDevice();
-        vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+        vkFreeMemory(_device.LogicalDevice, _textureSampler.TextureImageMemory);
       }
     }
 
@@ -151,17 +164,17 @@ public class VulkanTexture : ITexture {
       VkImageTiling.Optimal,
       VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
       MemoryProperty.DeviceLocal,
-      out _textureImage,
-      out _textureImageMemory
+      out _textureSampler.TextureImage,
+      out _textureSampler.TextureImageMemory
     );
 
 
     HandleTexture(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, _width, _height);
 
-    CreateTextureImageView(_device, _textureImage, out _imageView);
+    CreateTextureImageView(_device, _textureSampler.TextureImage, out _textureSampler.ImageView);
 
 
-    CreateSampler(_device, out _imageSampler);
+    CreateSampler(_device, out _textureSampler.ImageSampler);
 
     stagingBuffer.Dispose();
     Application.Instance.Mutex.ReleaseMutex();
@@ -211,6 +224,66 @@ public class VulkanTexture : ITexture {
     return image;
   }
 
+  public static ITexture LoadFromGLTF(
+    IDevice device,
+    Gltf gltf,
+    byte[] globalBuffer,
+    glTFLoader.Schema.Image gltfImage,
+    string textureName,
+    TextureSampler textureSampler,
+    int flip = 1
+  ) {
+    bool isKtx2 = false;
+    if (gltfImage.Uri != null) {
+      if (gltfImage.Uri.Contains("ktx2")) {
+        isKtx2 = true;
+      }
+    }
+
+
+    if (isKtx2) {
+      throw new NotImplementedException("KTX2 is not currently supported");
+    } else {
+      var bufferView = gltf.BufferViews[gltfImage.BufferView!.Value];
+      var buffer = gltf.Buffers[bufferView.Buffer];
+
+      using var stream = new MemoryStream(globalBuffer, bufferView.ByteOffset, bufferView.ByteLength);
+      using var reader = new BinaryReader(stream);
+
+      byte[] imgData = reader.ReadBytes(buffer.ByteLength);
+
+      StbImage.stbi_set_flip_vertically_on_load(flip);
+      var image = ImageResult.FromMemory(imgData);
+      byte[] rgba;
+      try {
+        rgba = ConvertRGBToRGBA(image.Data);
+      } catch {
+        rgba = image.Data;
+      }
+
+      var texture = new VulkanTexture((VulkanDevice)device, image.Width, image.Height, textureName);
+      texture.SetTextureData(rgba);
+
+      return texture;
+    }
+  }
+
+  public static byte[] ConvertRGBToRGBA(byte[] imgData) {
+    if (imgData == null || imgData.Length % 3 != 0)
+      throw new ArgumentException("Input byte array length must be a multiple of 3.", nameof(imgData));
+
+    int pixelCount = imgData.Length / 3;
+    byte[] rgbaData = new byte[pixelCount * 4];
+    for (int i = 0, j = 0; i < imgData.Length; i += 3, j += 4) {
+      rgbaData[j] = imgData[i];       // Red
+      rgbaData[j + 1] = imgData[i + 1]; // Green
+      rgbaData[j + 2] = imgData[i + 2]; // Blue
+      rgbaData[j + 3] = 255;            // Alpha (fully opaque)
+    }
+
+    return rgbaData;
+  }
+
   private unsafe void HandleTexture(VkBuffer stagingBuffer, VkFormat format, int width, int height) {
     var copyCmd = _device.CreateCommandBuffer(VkCommandBufferLevel.Primary, true);
 
@@ -234,7 +307,7 @@ public class VulkanTexture : ITexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.Undefined,
       VkImageLayout.TransferDstOptimal,
       subresourceRange
@@ -243,7 +316,7 @@ public class VulkanTexture : ITexture {
     vkCmdCopyBufferToImage(
       copyCmd,
       stagingBuffer,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.TransferDstOptimal,
       1,
       &region
@@ -251,7 +324,7 @@ public class VulkanTexture : ITexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.TransferDstOptimal,
       VkImageLayout.ShaderReadOnlyOptimal,
       subresourceRange
@@ -342,10 +415,10 @@ public class VulkanTexture : ITexture {
 
   public virtual unsafe void Dispose(bool disposing) {
     if (disposing) {
-      vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
-      vkDestroyImage(_device.LogicalDevice, _textureImage);
-      vkDestroyImageView(_device.LogicalDevice, _imageView);
-      vkDestroySampler(_device.LogicalDevice, _imageSampler);
+      vkFreeMemory(_device.LogicalDevice, _textureSampler.TextureImageMemory);
+      vkDestroyImage(_device.LogicalDevice, _textureSampler.TextureImage);
+      vkDestroyImageView(_device.LogicalDevice, _textureSampler.ImageView);
+      vkDestroySampler(_device.LogicalDevice, _textureSampler.ImageSampler);
     }
   }
 
@@ -354,13 +427,16 @@ public class VulkanTexture : ITexture {
     GC.SuppressFinalize(this);
   }
 
-  public ulong Sampler => _imageSampler;
-  public ulong ImageView => _imageView;
-  public ulong TextureImage => _textureImage;
+  public ulong Sampler => _textureSampler.ImageSampler;
+  public ulong ImageView => _textureSampler.ImageView;
+  public ulong TextureImage => _textureSampler.TextureImage;
   public ulong TextureDescriptor => _textureDescriptor;
   public VkDescriptorSet VkTextureDescriptor => _textureDescriptor;
   public int Width => _width;
   public int Height => _height;
-  public int Size => _size;
+  public int Size {
+    get => _size;
+    set => _size = value;
+  }
   public string TextureName { get; }
 }

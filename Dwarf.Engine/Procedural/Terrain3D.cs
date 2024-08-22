@@ -1,15 +1,15 @@
-using Dwarf.EntityComponentSystem;
 using System.Numerics;
 
+using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
-using Dwarf.Extensions.Logging;
+using Dwarf.Model;
 
 namespace Dwarf.Procedural;
 public class Terrain3D : Component {
   const int HEIGHT = 512;
   const int WIDTH = 512;
 
-  private double[,] _points;
+  private readonly double[,] _points;
   private readonly Application _app = default!;
 
   private Vector2 _size = Vector2.Zero;
@@ -26,14 +26,12 @@ public class Terrain3D : Component {
 
   public void Setup(Vector2 size, string? texturePath = default) {
     _size = size;
-    if (texturePath != null) {
-      _texturePath = texturePath;
-    } else {
-      _texturePath = "./Resources/Textures/base/no_texture.png";
-    }
+    _texturePath = texturePath != null ? texturePath : "./Resources/Textures/base/no_texture.png";
     var mesh = Generate(_app);
     SetupTexture(_app);
-    Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer, [mesh]));
+    Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer));
+    Owner!.GetComponent<MeshRenderer>().AddLinearNode(new Node() { Mesh = mesh });
+    Owner!.GetComponent<MeshRenderer>().Init();
     Owner!.GetComponent<MeshRenderer>().BindToTexture(_app.TextureManager, _texturePath);
   }
 

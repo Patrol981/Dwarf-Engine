@@ -2,14 +2,19 @@ using System.Numerics;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Model;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 namespace Dwarf.Rendering;
 public interface IRender3DElement : IDrawable {
-  int MeshsesCount { get; }
-  Mesh[] Meshes { get; }
+  int NodesCount { get; }
+  int MeshedNodesCount { get; }
+  int LinearNodesCount { get; }
+  Node[] Nodes { get; }
+  Node[] MeshedNodes { get; }
+  Node[] LinearNodes { get; }
   bool FinishedInitialization { get; }
   bool IsSkinned { get; }
   DwarfBuffer Ssbo { get; }

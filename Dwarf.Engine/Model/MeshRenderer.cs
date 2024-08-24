@@ -181,13 +181,13 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
           if (u <= 1.0f) {
             switch (channel.Path) {
               case AnimationChannel.PathType.Translation:
-                sampler.Translate(idx, time, channel.Node);
+                sampler.Translate(i, time, channel.Node);
                 break;
               case AnimationChannel.PathType.Rotation:
-                sampler.Rotate(idx, time, channel.Node);
+                sampler.Rotate(i, time, channel.Node);
                 break;
               case AnimationChannel.PathType.Scale:
-                sampler.Scale(idx, time, channel.Node);
+                sampler.Scale(i, time, channel.Node);
                 break;
             }
             updated = true;

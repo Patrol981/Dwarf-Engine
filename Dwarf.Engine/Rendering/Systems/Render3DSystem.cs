@@ -484,7 +484,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (nodes[i].AnimationTimer > nodes[i].ParentRenderer.Animations[0].End) {
         nodes[i].AnimationTimer -= nodes[i].ParentRenderer.Animations[0].End;
       }
-      nodes[i].ParentRenderer.UpdateAnimation(0, nodes[i].AnimationTimer);
+      nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
       // nodes[i].WriteIdentity();
       Descriptor.BindDescriptorSet(
         nodes[i].DescriptorSet,

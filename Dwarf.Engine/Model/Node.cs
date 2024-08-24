@@ -76,9 +76,21 @@ public class Node {
   public Matrix4x4 GetLocalMatrix() {
     if (!UseCachedMatrix) {
       CachedLocalMatrix =
+        NodeMatrix *
+        Matrix4x4.CreateScale(Scale) *
+        Matrix4x4.CreateFromQuaternion(Rotation) *
+        Matrix4x4.CreateTranslation(Translation);
+    }
+    return CachedLocalMatrix;
+  }
+
+  public Matrix4x4 GetLocalMatrix_1() {
+    if (!UseCachedMatrix) {
+      CachedLocalMatrix =
+        NodeMatrix *
         Matrix4x4.CreateTranslation(Translation) *
         Matrix4x4.CreateFromQuaternion(Rotation) *
-        Matrix4x4.CreateScale(Scale) * NodeMatrix;
+        Matrix4x4.CreateScale(Scale);
     }
     return CachedLocalMatrix;
   }
@@ -88,7 +100,7 @@ public class Node {
       Matrix4x4 m = GetLocalMatrix();
       var p = Parent;
       while (p != null) {
-        m = p.GetLocalMatrix() * m;
+        m *= p.GetLocalMatrix();
         p = p.Parent;
       }
       CachedMatrix = m;
@@ -132,8 +144,8 @@ public class Node {
         int numJoints = (int)MathF.Min(Skin.Joints.Count, MAX_NUM_JOINTS);
         for (int i = 0; i < numJoints; i++) {
           var jointNode = Skin.Joints[i];
-          var jointMat = jointNode.GetMatrix() * Skin.InverseBindMatrices[i];
-          jointMat = inTransform * jointMat;
+          var jointMat = Skin.InverseBindMatrices[i] * inTransform * jointNode.GetMatrix();
+          // jointMat = Matrix4x4.Transpose(inTransform) * jointMat;
           Skin.OutputNodeMatrices[i] = jointMat;
         }
         Skin.JointsCount = numJoints;

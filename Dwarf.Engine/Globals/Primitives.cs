@@ -107,7 +107,8 @@ public static class Primitives {
 
     return new Mesh(Application.Instance.Device) {
       Vertices = vertices,
-      Indices = indices
+      Indices = indices,
+      Matrix = Matrix4x4.Identity
     };
   }
 

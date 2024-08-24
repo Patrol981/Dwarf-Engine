@@ -230,6 +230,9 @@ public static partial class GLTFLoaderKHR {
           newSkin.Joints.Add(node);
         }
       }
+      if (newSkin.Joints != null) {
+        // newSkin.OutputNodeMatrices = new Matrix4x4[newSkin.Joints.Count];
+      }
 
       // get inverse bind matrices
       if (source.InverseBindMatrices.HasValue) {
@@ -326,7 +329,7 @@ public static partial class GLTFLoaderKHR {
     // Node contains mesh data
     if (node.Mesh.HasValue) {
       var gltfMesh = gltf.Meshes[node.Mesh.Value];
-      var newMesh = new Mesh(device);
+      var newMesh = new Mesh(device, newNode.NodeMatrix);
 
       var indices = new List<uint>();
       var vertices = new List<Vertex>();
@@ -393,13 +396,13 @@ public static partial class GLTFLoaderKHR {
       newMesh.Vertices = [.. vertices];
       newMesh.Indices = [.. indices];
       newNode.Mesh = newMesh;
-
-      if (parent != null) {
-        parent.Children.Add(newNode);
-      } else {
-        meshRenderer.AddNode(newNode);
-      }
-      meshRenderer.AddLinearNode(newNode);
     }
+
+    if (parent != null) {
+      parent.Children.Add(newNode);
+    } else {
+      meshRenderer.AddNode(newNode);
+    }
+    meshRenderer.AddLinearNode(newNode);
   }
 }

@@ -15,11 +15,18 @@ public class Skin : IDisposable {
   public string Name { get; set; } = default!;
 
   public Node SkeletonRoot = null!;
-  public List<Matrix4x4> InverseBindMatrices;
-  public List<Node> Joints;
+  public List<Matrix4x4> InverseBindMatrices = null!;
+  public List<Node> Joints = [];
 
-  public List<Matrix4x4> OutputNodeMatrices;
+  public Matrix4x4[] OutputNodeMatrices;
   public int JointsCount;
+
+  public Skin() {
+    OutputNodeMatrices = new Matrix4x4[128];
+    for (int i = 0; i < OutputNodeMatrices.Length; i++) {
+      OutputNodeMatrices[i] = Matrix4x4.Identity;
+    }
+  }
 
   /*
   public void Init(Gltf gltf, byte[] globalBuffer) {

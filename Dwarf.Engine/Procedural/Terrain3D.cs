@@ -30,7 +30,7 @@ public class Terrain3D : Component {
     var mesh = Generate(_app);
     SetupTexture(_app);
     Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer));
-    Owner!.GetComponent<MeshRenderer>().AddLinearNode(new Node() { Mesh = mesh });
+    Owner!.GetComponent<MeshRenderer>().AddLinearNode(new Node() { Mesh = mesh, });
     Owner!.GetComponent<MeshRenderer>().Init();
     Owner!.GetComponent<MeshRenderer>().BindToTexture(_app.TextureManager, _texturePath);
   }

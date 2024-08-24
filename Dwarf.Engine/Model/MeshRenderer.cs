@@ -70,19 +70,19 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   }
 
   private void InitBase() {
-    AABBArray = new AABB[LinearNodesCount];
+    AABBArray = new AABB[MeshedNodesCount];
 
     List<Task> createTasks = [];
 
     if (LinearNodesCount < 1) throw new ArgumentOutOfRangeException(nameof(LinearNodesCount));
 
-    for (int i = 0; i < LinearNodes.Length; i++) {
-      if (LinearNodes[i].HasMesh) {
-        createTasks.Add(LinearNodes[i].Mesh!.CreateVertexBuffer());
-        createTasks.Add(LinearNodes[i].Mesh!.CreateIndexBuffer());
+    for (int i = 0; i < MeshedNodes.Length; i++) {
+      if (MeshedNodes[i].HasMesh) {
+        createTasks.Add(MeshedNodes[i].Mesh!.CreateVertexBuffer());
+        createTasks.Add(MeshedNodes[i].Mesh!.CreateIndexBuffer());
 
         AABBArray[i] = new();
-        AABBArray[i].Update(LinearNodes[i].Mesh!);
+        AABBArray[i].Update(MeshedNodes[i].Mesh!);
       }
     }
 
@@ -159,7 +159,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public unsafe void UpdateAnimation(int idx, float time) {
     if (Animations.Count < 1) {
-      Logger.Error(".glTF does not contain animation.");
+      Logger.Error($".glTF of {Owner!.Name} does not contain animation.");
       return;
     }
 
@@ -175,7 +175,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
         continue;
       }
-      for (int i = 0; i < sampler.Inputs.Count; i++) {
+      for (int i = 0; i < sampler.Inputs.Count - 1; i++) {
         if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
           float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
           if (u <= 1.0f) {

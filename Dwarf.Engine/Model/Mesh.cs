@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
@@ -22,8 +23,11 @@ public class Mesh : IDisposable {
   public Guid TextureIdReference = Guid.Empty;
   public string TextureName = string.Empty;
 
-  public Mesh(IDevice device) {
+  public Matrix4x4 Matrix = Matrix4x4.Identity;
+
+  public Mesh(IDevice device, Matrix4x4 matrix = default) {
     _device = device;
+    Matrix = matrix;
   }
 
   public void BuildDescriptors() {

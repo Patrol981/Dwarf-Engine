@@ -1,7 +1,13 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Model.Animation;
+using Dwarf.Rendering;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
@@ -31,30 +37,23 @@ public class Node {
   public DwarfBuffer Ssbo = null!;
   private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
 
+  public float AnimationTimer = 0.0f;
+
   public void CreateBuffer() {
     Ssbo = new DwarfBuffer(
       Application.Instance.Device,
-      (ulong)Unsafe.SizeOf<Matrix4x4>() * 24,
-      BufferUsage.StorageBuffer,
+      (ulong)8192,
+      BufferUsage.UniformBuffer,
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
-    Ssbo.Map();
-  }
-
-  public unsafe void WriteIdentity() {
-    var mats = new Matrix4x4[24];
-    for (int i = 0; i < mats.Length; i++) {
-      mats[i] = Matrix4x4.Identity;
-    }
-    fixed (Matrix4x4* matsPtr = mats) {
-      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-    }
+    Ssbo.Map((ulong)8192);
   }
 
   public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
     unsafe {
-      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
-      range.range = Ssbo.GetAlignmentSize();
+      var targetSize = (ulong)8192;
+      var range = Ssbo.GetDescriptorBufferInfo(targetSize);
+      range.range = targetSize;
 
       _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
       .WriteBuffer(0, &range)
@@ -62,35 +61,24 @@ public class Node {
     }
   }
 
-  /*
-    public unsafe void WriteSkeleton() {
-      fixed (Matrix4x4* ibmPtr = Matrices.ToArray()) {
-        Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
+  public unsafe void WriteSkeleton() {
+    fixed (Matrix4x4* matrices = new Matrix4x4[128]) {
+      for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
+        matrices[i] = Skin.OutputNodeMatrices[i];
       }
-      Ssbo.Flush();
+      for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
+        matrices[i] = Matrix4x4.Identity;
+      }
+      Ssbo.WriteToBuffer((IntPtr)matrices, 8192);
     }
-
-    public unsafe void WriteSkeletonIdentity() {
-      if (InverseBindMatrices.Count < 1) {
-        WriteIdentity();
-        return;
-      }
-      var mats = new Matrix4x4[InverseBindMatrices.Count];
-      for (int i = 0; i < mats.Length; i++) {
-        mats[i] = Matrix4x4.Identity;
-      }
-      fixed (Matrix4x4* matsPtr = mats) {
-        Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-      }
-    }
-    */
+  }
 
   public Matrix4x4 GetLocalMatrix() {
     if (!UseCachedMatrix) {
       CachedLocalMatrix =
         Matrix4x4.CreateTranslation(Translation) *
         Matrix4x4.CreateFromQuaternion(Rotation) *
-        Matrix4x4.CreateScale(Scale);
+        Matrix4x4.CreateScale(Scale) * NodeMatrix;
     }
     return CachedLocalMatrix;
   }
@@ -136,25 +124,23 @@ public class Node {
 
   public void Update() {
     UseCachedMatrix = false;
-    Matrix4x4 m = GetMatrix();
-    if (Skin != null) {
-      var outputMatrix = m;
-
-      // Update Joint Matrices
-      Matrix4x4.Invert(m, out var inTransform);
-      if (Skin.Joints != null) {
+    if (Mesh != null) {
+      Matrix4x4 m = GetMatrix();
+      if (Skin != null) {
+        Mesh.Matrix = m;
+        Matrix4x4.Invert(m, out var inTransform);
         int numJoints = (int)MathF.Min(Skin.Joints.Count, MAX_NUM_JOINTS);
         for (int i = 0; i < numJoints; i++) {
           var jointNode = Skin.Joints[i];
           var jointMat = jointNode.GetMatrix() * Skin.InverseBindMatrices[i];
           jointMat = inTransform * jointMat;
-          Skin.OutputNodeMatrices[i] = outputMatrix * jointMat;
+          Skin.OutputNodeMatrices[i] = jointMat;
         }
         Skin.JointsCount = numJoints;
-        WriteIdentity();
-        // Skin.WriteSkeleton();
+        WriteSkeleton();
+      } else {
+        Mesh.Matrix = m;
       }
-
     }
 
     foreach (var child in Children) {
@@ -169,6 +155,6 @@ public class Node {
   public void Dispose() {
     Skin?.Dispose();
     Mesh?.Dispose();
-    Ssbo.Dispose();
+    Ssbo?.Dispose();
   }
 }

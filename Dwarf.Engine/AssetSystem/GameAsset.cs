@@ -1,6 +1,5 @@
 using System.Numerics;
 
-using Dwarf;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
 using Dwarf.Loaders;
@@ -73,7 +72,7 @@ public class GameAsset {
     if (meshInfo != null) {
       AssetResourcePaths?.Add(meshInfo.FileName);
       if (meshInfo.FileName.Contains(".obj")) {
-        for (int i = 0; i < meshInfo.MeshsesCount; i++) {
+        for (int i = 0; i < meshInfo.MeshedNodesCount; i++) {
           var texId = meshInfo.GetTextureIdReference(i);
           var tex = Application.Instance.TextureManager.GetTexture(texId);
           AssetResourcePaths?.Add(tex.TextureName);

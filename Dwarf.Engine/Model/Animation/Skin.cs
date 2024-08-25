@@ -6,71 +6,25 @@ using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Vulkan;
-
+using glTFLoader.Schema;
 using Vortice.Vulkan;
 
 namespace Dwarf.Model.Animation;
 
 public class Skin : IDisposable {
-  public string Name { get; private set; } = default!;
-  public DwarfBuffer Ssbo = null!;
-  private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
+  public string Name { get; set; } = default!;
 
   public Node SkeletonRoot = null!;
-  public List<Matrix4x4> InverseBindMatrices;
-  public List<Node> Joints;
+  public List<Matrix4x4> InverseBindMatrices = null!;
+  public List<Node> Joints = [];
 
-  public List<Matrix4x4> OutputNodeMatrices;
+  public Matrix4x4[] OutputNodeMatrices;
   public int JointsCount;
 
-  public List<Animation> Animations;
-
-  public Node MeshNode { get; private set; }
-
-  private Skin() {
-
-  }
-
-  public unsafe void UpdateAnimation(int idx, float time) {
-    if (Animations.Count < 1) {
-      Logger.Error(".glTF does not contain animation.");
-      return;
-    }
-
-    if (idx > Animations.Count - 1) {
-      Logger.Error($"No animation with index {idx}");
-      return;
-    }
-
-    bool updated = false;
-    var animation = Animations[idx];
-    foreach (var channel in animation.Channels) {
-      var sampler = animation.Samplers[channel.SamplerIndex];
-      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
-        continue;
-      }
-      for (int i = 0; i < sampler.Inputs.Count; i++) {
-        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
-          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
-          if (u <= 1.0f) {
-            switch (channel.Path) {
-              case AnimationChannel.PathType.Translation:
-                sampler.Translate(idx, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Rotation:
-                sampler.Rotate(idx, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Scale:
-                sampler.Scale(idx, time, channel.Node);
-                break;
-            }
-            updated = true;
-          }
-        }
-      }
-    }
-    if (updated) {
-      // foreach(var node in )
+  public Skin() {
+    OutputNodeMatrices = new Matrix4x4[128];
+    for (int i = 0; i < OutputNodeMatrices.Length; i++) {
+      OutputNodeMatrices[i] = Matrix4x4.Identity;
     }
   }
 
@@ -232,60 +186,7 @@ public class Skin : IDisposable {
     }
   }
   */
-
-  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
-    unsafe {
-      var range = Ssbo.GetDescriptorBufferInfo(Ssbo.GetAlignmentSize());
-      range.range = Ssbo.GetAlignmentSize();
-
-      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
-      .WriteBuffer(0, &range)
-      .Build(out _descriptorSet);
-    }
-  }
-
-  public unsafe void WriteSkeleton() {
-    fixed (Matrix4x4* ibmPtr = OutputNodeMatrices.ToArray()) {
-      Ssbo.WriteToBuffer((nint)ibmPtr, Ssbo.GetAlignmentSize());
-    }
-    Ssbo.Flush();
-  }
-
-  public unsafe void WriteSkeletonIdentity() {
-    if (InverseBindMatrices.Count < 1) {
-      WriteIdentity();
-      return;
-    }
-    var mats = new Matrix4x4[InverseBindMatrices.Count];
-    for (int i = 0; i < mats.Length; i++) {
-      mats[i] = Matrix4x4.Identity;
-    }
-    fixed (Matrix4x4* matsPtr = mats) {
-      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-    }
-  }
-
-  public unsafe void WriteIdentity() {
-    var mats = new Matrix4x4[InverseBindMatrices.Count];
-    for (int i = 0; i < mats.Length; i++) {
-      mats[i] = Matrix4x4.Identity;
-    }
-    fixed (Matrix4x4* matsPtr = mats) {
-      Ssbo.WriteToBuffer((nint)matsPtr, Ssbo.GetAlignmentSize());
-    }
-  }
-
-  public unsafe void Write(nint data, ulong size, ulong offset) {
-    Ssbo.WriteToBuffer(data, size, offset);
-  }
-
-  public unsafe void Write(Matrix4x4 data, ulong size, ulong offset) {
-    Ssbo.WriteToBuffer((nint)(&data), size, offset);
-  }
-
   public void Dispose() {
-    Ssbo?.Dispose();
+    // Ssbo?.Dispose();
   }
-
-  public VkDescriptorSet DescriptorSet => _descriptorSet;
 }

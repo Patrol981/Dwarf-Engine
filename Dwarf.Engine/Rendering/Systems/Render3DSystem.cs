@@ -6,10 +6,11 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Model;
 using Dwarf.Model.Animation;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
-using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -39,6 +40,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private IRender3DElement[] _notSkinnedEntitiesCache = [];
   private IRender3DElement[] _skinnedEntitiesCache = [];
 
+  private Node[] _notSkinnedNodesCache = [];
+  private Node[] _skinnedNodesCache = [];
+
   public Render3DSystem(
     IDevice device,
     Renderer renderer,
@@ -51,7 +55,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .Build();
 
     _jointDescriptorLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
@@ -96,7 +100,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       var targetItems = entities[i].GetDrawables<IRender3DElement>();
       for (int j = 0; j < targetItems.Length; j++) {
         var t = targetItems[j] as IRender3DElement;
-        count += t!.MeshsesCount;
+        count += t!.MeshedNodesCount;
       }
 
     }
@@ -115,10 +119,34 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
   }
 
-  private void BuildTargetDescriptorJointBuffer(Mesh mesh) {
-    if (mesh.Skin == null) return;
+  private void BuildTargetDescriptorTexture(IRender3DElement target, ref TextureManager textureManager) {
+    for (int i = 0; i < target.MeshedNodesCount; i++) {
+      var textureId = target.GetTextureIdReference();
+      var texture = (VulkanTexture)textureManager.GetTexture(textureId);
+      texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
+    }
+  }
 
-    mesh.Skin.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+  private void BuildTargetDescriptorJointBuffer(Node node) {
+    if (node.Skin == null) return;
+
+    node.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+  }
+
+  private void BuildTargetDescriptorJointBuffer(IRender3DElement target) {
+    for (int i = 0; i < target.MeshedNodesCount; i++) {
+      if (!target.MeshedNodes[i].HasSkin) return;
+
+      target.MeshedNodes[i].BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
+    }
+  }
+  private int CalculateNodesLength(ReadOnlySpan<Entity> entities) {
+    int len = 0;
+    foreach (var entity in entities) {
+      var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
+      len += i3d!.MeshedNodesCount;
+    }
+    return len;
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
@@ -136,6 +164,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .SetMaxSets(3000)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, 1000)
       .AddPoolSize(VkDescriptorType.StorageBuffer, 1000)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
@@ -152,23 +181,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
     );
 
-    LastKnownElemCount = entities.Length;
+    // LastKnownElemCount = entities.Length;
+    LastKnownElemCount = CalculateNodesLength(entities);
 
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-      if (targetModel!.IsSkinned) {
-        // targetModel.BuildDescriptors(_jointDescriptorLayout, _descriptorPool);
-      }
-
-      if (targetModel!.MeshsesCount > 1) {
-        for (int x = 0; x < targetModel.MeshsesCount; x++) {
-          BuildTargetDescriptorTexture(entities[i], ref textures, x);
-          BuildTargetDescriptorJointBuffer(targetModel.Meshes[x]);
-        }
-      } else {
-        BuildTargetDescriptorTexture(entities[i], ref textures);
-        BuildTargetDescriptorJointBuffer(targetModel.Meshes[0]);
-      }
+      BuildTargetDescriptorTexture(targetModel!, ref textures);
+      BuildTargetDescriptorJointBuffer(targetModel!);
     }
 
     var range = _modelBuffer.GetDescriptorBufferInfo(_modelBuffer.GetAlignmentSize());
@@ -202,24 +221,48 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len == _texturesCount;
   }
 
-  public void UpdateOld(Span<IRender3DElement> entities, out SimplePushConstantData[] objectData) {
+  public void Update(Span<IRender3DElement> entities, out ObjectData[] objectData) {
     if (entities.Length < 1) {
       objectData = [];
       return;
     }
 
-    var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
-    var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
+    List<Node> skinnedNodes = [];
+    List<Node> notSkinnedNodes = [];
 
-    objectData = new SimplePushConstantData[entities.Length];
-    for (int i = 0; i < entities.Length; i++) {
-      var transform = entities[i].GetOwner().GetComponent<Transform>();
-      objectData[i].ModelMatrix = transform.Matrix4;
-      objectData[i].NormalMatrix = transform.NormalMatrix;
+    List<ObjectData> objectDataSkinned = [];
+    List<ObjectData> objectDataNotSkinned = [];
+
+    foreach (var entity in entities) {
+      var transform = entity.GetOwner().GetComponent<Transform>();
+      foreach (var node in entity.MeshedNodes) {
+        if (node.HasSkin) {
+          skinnedNodes.Add(node);
+          objectDataSkinned.Add(new ObjectData {
+            ModelMatrix = transform.Matrix4,
+            NormalMatrix = transform.NormalMatrix,
+            NodeMatrix = node.Mesh!.Matrix,
+          });
+        } else {
+          notSkinnedNodes.Add(node);
+          objectDataNotSkinned.Add(new ObjectData {
+            ModelMatrix = transform.Matrix4,
+            NormalMatrix = transform.NormalMatrix,
+            NodeMatrix = node.Mesh!.Matrix,
+          });
+        }
+      }
     }
+
+    _skinnedNodesCache = [.. skinnedNodes];
+    _notSkinnedNodesCache = [.. notSkinnedNodes];
+
+    objectData = [.. objectDataNotSkinned, .. objectDataSkinned];
+
+    Guizmos.Clear();
   }
 
-  public void Update(Span<IRender3DElement> entities, out ObjectData[] objectData) {
+  public void Update_Old(Span<IRender3DElement> entities, out ObjectData[] objectData) {
     if (entities.Length < 1) {
       objectData = [];
       return;
@@ -246,6 +289,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       skinnedArray[i] = new ObjectData {
         ModelMatrix = transform.Matrix4,
         NormalMatrix = transform.NormalMatrix,
+        // NodeMatrix = skinnedEntities[i].
         // IsSkinned = 1
       };
       // Logger.Info($"{skinnedEntities[i].GetOwner().Name} {transform.Position} {skinnedArray[i].ModelMatrix.Translation}");
@@ -263,11 +307,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     // var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
     // var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
 
-    RenderSimple(frameInfo, _notSkinnedEntitiesCache);
-    RenderComplex(frameInfo, _skinnedEntitiesCache, _notSkinnedEntitiesCache.Length);
+    // RenderSimple(frameInfo, _notSkinnedEntitiesCache);
+    // RenderComplex(frameInfo, _skinnedEntitiesCache, _notSkinnedEntitiesCache.Length);
+
+    RenderSimple(frameInfo, _notSkinnedNodesCache);
+    RenderComplex(frameInfo, _skinnedNodesCache, _notSkinnedNodesCache.Length);
   }
 
-  private void RenderSimple(FrameInfo frameInfo, Span<IRender3DElement> entities) {
+  private void RenderSimple(FrameInfo frameInfo, Span<Node> nodes) {
     BindPipeline(frameInfo.CommandBuffer, Simple3D);
     unsafe {
       vkCmdBindDescriptorSets(
@@ -307,14 +354,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
-    IRender3DElement lastModel = null!;
+    for (int i = 0; i < nodes.Length; i++) {
+      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed) continue;
+      if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].GetOwner().CanBeDisposed) continue;
-
-      var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
-
-      // _modelUbo.Material = materialData;
+      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
       unsafe {
         _modelUbo->Color = materialData.Color;
         _modelUbo->Specular = materialData.Specular;
@@ -323,30 +367,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         _modelUbo->Ambient = materialData.Ambient;
       }
 
-
       uint dynamicOffset = (uint)_modelBuffer.GetAlignmentSize() * (uint)i;
 
       unsafe {
         _modelBuffer.WriteToBuffer((IntPtr)_modelUbo, _modelBuffer.GetInstanceSize(), dynamicOffset >> 1);
       }
 
-      var transform = entities[i].GetOwner().GetComponent<Transform>();
-
       unsafe {
-        /*
-        _pushConstantData->ModelMatrix = transform.Matrix4;
-        _pushConstantData->NormalMatrix = transform.NormalMatrix;
-
-        vkCmdPushConstants(
-          frameInfo.CommandBuffer,
-          _pipelines[Simple3D].PipelineLayout,
-          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-          0,
-          (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-          _pushConstantData
-        );
-        */
-
         fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
           vkCmdBindDescriptorSets(
             frameInfo.CommandBuffer,
@@ -361,36 +388,26 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
-        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
-          if (!entities[i].FinishedInitialization) continue;
+      if (!nodes[i].ParentRenderer.GetOwner().CanBeDisposed && nodes[i].ParentRenderer.GetOwner().Active) {
+        if (i == _texturesCount) continue;
+        var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
+        Descriptor.BindDescriptorSet(
+          targetTexture.TextureDescriptor,
+          frameInfo,
+          _pipelines[Simple3D].PipelineLayout,
+          0,
+          1
+        );
 
-          if (i == _texturesCount) continue;
-          var targetTexture = frameInfo.TextureManager.GetTexture(entities[i].GetTextureIdReference((int)x));
-          Descriptor.BindDescriptorSet(
-            targetTexture.TextureDescriptor,
-            frameInfo,
-            _pipelines[Simple3D].PipelineLayout,
-            0,
-            1
-          );
-
-          if (entities[i] != lastModel)
-            entities[i].Bind(frameInfo.CommandBuffer, x);
-
-          entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i);
-
-          entities[i].Meshes[x].Skin?.Ssbo.Unmap();
-        }
+        nodes[i].BindNode(frameInfo.CommandBuffer);
+        nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i);
       }
-
-      lastModel = entities[i];
     }
 
     _modelBuffer.Unmap();
   }
 
-  private void RenderComplex(FrameInfo frameInfo, ReadOnlySpan<IRender3DElement> entities, int prevIdx) {
+  private void RenderComplex(FrameInfo frameInfo, Span<Node> nodes, int prevIdx) {
     BindPipeline(frameInfo.CommandBuffer, Skinned3D);
     unsafe {
       vkCmdBindDescriptorSets(
@@ -430,14 +447,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
-    IRender3DElement lastModel = null!;
+    for (int i = 0; i < nodes.Length; i++) {
+      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed) continue;
+      if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].GetOwner().CanBeDisposed) continue;
-
-      var materialData = entities[i].GetOwner().GetComponent<Material>().Data;
-
-      // _modelUbo.Material = materialData;
+      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
       unsafe {
         _modelUbo->Color = materialData.Color;
         _modelUbo->Specular = materialData.Specular;
@@ -452,23 +466,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         _modelBuffer.WriteToBuffer((IntPtr)(_modelUbo), _modelBuffer.GetInstanceSize(), dynamicOffset >> 1);
       }
 
-      var transform = entities[i].GetOwner().GetComponent<Transform>();
-
       unsafe {
-        /*
-        _pushConstantData->ModelMatrix = transform.Matrix4;
-        _pushConstantData->NormalMatrix = transform.NormalMatrix;
-
-        vkCmdPushConstants(
-          frameInfo.CommandBuffer,
-          _pipelines[Skinned3D].PipelineLayout,
-          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-          0,
-          (uint)Unsafe.SizeOf<SimplePushConstantData>(),
-          _pushConstantData
-        );
-        */
-
         fixed (VkDescriptorSet* descPtr = &_dynamicSet) {
           vkCmdBindDescriptorSets(
             frameInfo.CommandBuffer,
@@ -483,56 +481,29 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      if (!entities[i].GetOwner().CanBeDisposed && entities[i].GetOwner().Active) {
-        if (!entities[i].FinishedInitialization) continue;
-
-        for (uint x = 0; x < entities[i].MeshsesCount; x++) {
-          if (entities[i].IsSkinned & entities[i].Meshes[x].Skin != null) {
-            // Logger.Info($"Inv Len : {entities[i].Meshes[x].Skin!.InverseBindMatrices.Length}");
-            // Logger.Info($"Mesh Len : {entities[i].Meshes.Length}");
-            var targetSkin = entities[i].Meshes[x].Skin;
-            // targetSkin.SkeletonAnimations.Update();
-
-            // var matrices = entities[i].Meshes[x].Skin!.InverseBindMatrices;
-            // var m2 = matrices.Reverse().ToArray();
-            // targetSkin!.SkeletonAnimations.Current?.Update(Time.DeltaTime * 100, ref targetSkin.Skeleton);
-            // targetSkin!.Skeleton.Update();
-            // targetSkin.SkeletonAnimations.Update(0.001f, ref targetSkin.Skeleton, 0);
-            // targetSkin.WriteSkeletonIdentity();
-            targetSkin?.WriteSkeleton();
-
-
-
-            Descriptor.BindDescriptorSet(
-              entities[i].Meshes[x].Skin!.DescriptorSet,
-              // entities[i].SkinDescriptor,
-              frameInfo,
-              _pipelines[Skinned3D].PipelineLayout,
-              5,
-              1
-            );
-          }
-
-          if (i == _texturesCount) continue;
-          var targetTexture = frameInfo.TextureManager.GetTexture(entities[i].GetTextureIdReference((int)x));
-          Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
-
-          if (entities[i] != lastModel)
-            entities[i].Bind(frameInfo.CommandBuffer, x);
-
-          entities[i].Draw(frameInfo.CommandBuffer, x, (uint)i + (uint)prevIdx);
-
-          // entities[i].Ssbo.Unmap();
-        }
+      if (nodes[i].ParentRenderer.Animations.Count > 0) {
+        nodes[i].ParentRenderer.GetOwner().GetComponent<AnimationController>().Update(nodes[i]);
       }
+      // nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
+      // nodes[i].WriteIdentity();
+      Descriptor.BindDescriptorSet(
+        nodes[i].DescriptorSet,
+        frameInfo,
+        _pipelines[Skinned3D].PipelineLayout,
+        5,
+        1
+      );
 
-      lastModel = entities[i];
+      var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
+      Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+
+      nodes[i].BindNode(frameInfo.CommandBuffer);
+      nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i + (uint)prevIdx);
     }
 
     _modelBuffer.Unmap();
-
-    // skeletalAnimations.TimeSave += Time.DeltaTime;
   }
+
 
   public override unsafe void Dispose() {
     _device.WaitQueue();

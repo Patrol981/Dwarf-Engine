@@ -45,7 +45,7 @@ public class TextField : Component, IUIElement {
   }
 
   public void Init() {
-    _textMesh = new();
+    _textMesh = new(_device);
 
     // setup chars mappings
     int currX = 0;
@@ -90,14 +90,14 @@ public class TextField : Component, IUIElement {
   }
 
   private void CreateQuads() {
-    _textMesh = new();
+    _textMesh = new(_device);
 
     var pos = Owner!.GetComponent<RectTransform>().Position;
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 
     for (int i = 0; i < Text.Length; i++) {
-      var tempMesh = new Mesh();
+      var tempMesh = new Mesh(_device);
       var targetChar = _charactersOnAtlas[Text[i]];
       tempMesh.Vertices = new Vertex[6];
 

@@ -1,6 +1,6 @@
 using Dwarf.AbstractionLayer;
 using Dwarf.Vulkan;
-
+using glTFLoader.Schema;
 using StbImageSharp;
 
 namespace Dwarf;

@@ -52,7 +52,7 @@ public class GenericLoader {
         }
 
       }
-      var mesh = new Mesh();
+      var mesh = new Mesh(Application.Instance.Device);
       mesh.Vertices = vertexArray.ToArray();
       mesh.Indices = indices.ToArray();
       meshes.Add(mesh);
@@ -98,7 +98,7 @@ public class GenericLoader {
     }
 
     assimpContext.Dispose();
-    return new MeshRenderer(device, renderer, meshes.ToArray(), path);
+    return new MeshRenderer(device, renderer, null!, null!, path);
   }
 
   public MeshRenderer LoadModel(VulkanDevice device, Renderer renderer, string path) {
@@ -159,7 +159,7 @@ public class GenericLoader {
           }
         }
 
-        var mesh = new Mesh();
+        var mesh = new Mesh(device);
         mesh.Vertices = vertexArray.ToArray();
         mesh.Indices = indices.ToArray();
         meshes.Add(mesh);
@@ -174,7 +174,7 @@ public class GenericLoader {
     assimpContext.Dispose();
     //mesh.Vertices = verts.ToArray();
     //mesh.Indices = inds.ToArray();
-    return new MeshRenderer(device, renderer, meshes.ToArray());
+    return new MeshRenderer(device, renderer, null!, null!);
 
     //for (int i = 0; i < node.ChildCount; i++) {
     //ProcessNode(node.Children[i], scene, ref mesh);

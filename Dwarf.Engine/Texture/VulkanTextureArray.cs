@@ -55,18 +55,18 @@ public class VulkanTextureArray : VulkanTexture {
 
   private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
-      if (_textureImage.IsNotNull) {
+      if (_textureSampler.TextureImage.IsNotNull) {
         _device.WaitDevice();
-        vkDestroyImage(_device.LogicalDevice, _textureImage);
+        vkDestroyImage(_device.LogicalDevice, _textureSampler.TextureImage);
       }
 
-      if (_textureImageMemory.IsNotNull) {
+      if (_textureSampler.TextureImageMemory.IsNotNull) {
         _device.WaitDevice();
-        vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+        vkFreeMemory(_device.LogicalDevice, _textureSampler.TextureImageMemory);
       }
     }
 
-    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Unorm, (uint)_textures.Headers.Length, out _textureImage, out _textureImageMemory);
+    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Unorm, (uint)_textures.Headers.Length, out _textureSampler.TextureImage, out _textureSampler.TextureImageMemory);
     HandleTextureArray(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm);
   }
 
@@ -134,7 +134,7 @@ public class VulkanTextureArray : VulkanTexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.Undefined,
       VkImageLayout.TransferDstOptimal,
       subresourceRange
@@ -144,7 +144,7 @@ public class VulkanTextureArray : VulkanTexture {
       vkCmdCopyBufferToImage(
         copyCmd,
         stagingBuffer,
-        _textureImage,
+        _textureSampler.TextureImage,
         VkImageLayout.TransferDstOptimal,
         (uint)bufferCopyRegions.Count,
         imageCopyPtr
@@ -153,7 +153,7 @@ public class VulkanTextureArray : VulkanTexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.TransferDstOptimal,
       VkImageLayout.ShaderReadOnlyOptimal,
       subresourceRange
@@ -179,7 +179,7 @@ public class VulkanTextureArray : VulkanTexture {
       samplerInfo.maxAnisotropy = _device.Properties.limits.maxSamplerAnisotropy;
       samplerInfo.anisotropyEnable = true;
     }
-    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _imageSampler).CheckResult();
+    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _textureSampler.ImageSampler).CheckResult();
 
     var viewInfo = new VkImageViewCreateInfo();
     viewInfo.viewType = VkImageViewType.Image2DArray;
@@ -187,7 +187,7 @@ public class VulkanTextureArray : VulkanTexture {
     viewInfo.subresourceRange = new(VkImageAspectFlags.Color, 0, 1, 0, 1);
     viewInfo.subresourceRange.layerCount = (uint)_textures.Headers.Length;
     viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.image = _textureImage;
-    vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _imageView).CheckResult();
+    viewInfo.image = _textureSampler.TextureImage;
+    vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _textureSampler.ImageView).CheckResult();
   }
 }

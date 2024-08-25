@@ -17,9 +17,7 @@ public class FreeTypeText : Component, IUIElement {
 
   private readonly string _text = string.Empty;
   private Vector2 _pos = Vector2.Zero;
-  private readonly Mesh _mesh = new() {
-    Vertices = [],
-  };
+  private readonly Mesh _mesh;
   private readonly Dictionary<char, Guid> _ids = [];
 
   private ulong _vertexCount = 0;
@@ -96,7 +94,7 @@ public class FreeTypeText : Component, IUIElement {
       float w = character.Size.X * scale.X;
       float h = character.Size.Y * scale.Y;
 
-      var mesh = new Mesh {
+      var mesh = new Mesh(_device) {
         Vertices = new Vertex[6]
       };
 

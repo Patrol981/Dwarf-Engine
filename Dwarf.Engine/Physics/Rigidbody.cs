@@ -1,7 +1,6 @@
 using System.Numerics;
 
 using Dwarf.EntityComponentSystem;
-using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Vulkan;
@@ -119,7 +118,7 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(target.Meshes, Flipped);
+        mesh = Primitives.CreateConvex(target.MeshedNodes, Flipped);
         ScaleColliderMesh(mesh);
         AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
@@ -131,9 +130,10 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Torus:
-        mesh = Primitives.CreateConvex(target.Meshes, Flipped);
-        ScaleColliderMesh(mesh);
-        AdjustColliderMesh(mesh);
+        throw new NotImplementedException();
+        // mesh = Primitives.CreateConvex(target.MeshedNodes, Flipped);
+        // ScaleColliderMesh(mesh);
+        // AdjustColliderMesh(mesh);
         shapeSettings = JoltProgram.CreateTorusMesh(1, 1, 16, 16);
         break;
       default:

@@ -97,7 +97,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   private void CreateSpriteVertexData() {
-    _spriteMesh = new() {
+    _spriteMesh = new(_device) {
       Vertices = new Vertex[4]
     };
     _spriteMesh.Vertices[0] = new Vertex {
@@ -194,7 +194,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   private void CreatePixelPerfectVertices(ref ImageResult image) {
-    _spriteMesh = new();
+    _spriteMesh = new(_device);
 
     for (uint y = 0; y < image.Height; y++) {
       for (uint x = 0; x < image.Width; x++) {

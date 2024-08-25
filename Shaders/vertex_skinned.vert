@@ -20,8 +20,6 @@ layout(location = 3) out vec2 texCoord;
 
 layout(set = 1, binding = 0) #include global_ubo
 
-// 500 FPS on avg
-// TODO: optimize set, so its reusable across all models?
 layout(set = 3, binding = 0) #include skinned_model_ubo
 
 #define MAX_NUM_JOINTS 128

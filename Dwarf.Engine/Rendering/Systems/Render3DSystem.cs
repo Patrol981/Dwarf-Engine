@@ -7,6 +7,7 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Model;
+using Dwarf.Model.Animation;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
@@ -480,11 +481,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      nodes[i].AnimationTimer += Time.DeltaTime * 100;
-      if (nodes[i].AnimationTimer > nodes[i].ParentRenderer.Animations[0].End) {
-        nodes[i].AnimationTimer -= nodes[i].ParentRenderer.Animations[0].End;
+      if (nodes[i].ParentRenderer.Animations.Count > 0) {
+        nodes[i].ParentRenderer.GetOwner().GetComponent<AnimationController>().Update(nodes[i]);
       }
-      nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
+      // nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
       // nodes[i].WriteIdentity();
       Descriptor.BindDescriptorSet(
         nodes[i].DescriptorSet,

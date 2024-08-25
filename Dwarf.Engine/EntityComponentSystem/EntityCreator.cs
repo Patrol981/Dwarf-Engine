@@ -3,6 +3,7 @@ using System.Numerics;
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Model;
+using Dwarf.Model.Animation;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
 
@@ -98,6 +99,10 @@ public static class EntityCreator {
 
       // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
       entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, preload, flip));
+      if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
+        entity.AddComponent(new AnimationController());
+        entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());
+      }
 
       if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
         throw new Exception("Mesh is empty");
@@ -141,6 +146,10 @@ public static class EntityCreator {
     Logger.Info($"{entity.Name} Mesh init");
     // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
     entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, false, flip));
+    if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
+      entity.AddComponent(new AnimationController());
+      entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());
+    }
 
     if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
       throw new Exception("Mesh is empty");

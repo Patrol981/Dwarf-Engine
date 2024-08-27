@@ -9,7 +9,14 @@ public class AnimationController : Component {
   private readonly Dictionary<string, Animation> _animations = [];
   private Animation _currentAnimation = null!;
 
-  public AnimationController() { }
+  public AnimationController() {
+    var mr = Owner?.TryGetComponent<MeshRenderer>();
+    if (mr != null) {
+      _meshRenderer = mr;
+    } else {
+      _meshRenderer = new MeshRenderer();
+    }
+  }
   public void Init(MeshRenderer meshRenderer) {
     _meshRenderer = meshRenderer;
 

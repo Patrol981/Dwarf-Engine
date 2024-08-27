@@ -219,7 +219,6 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public Node[] LinearNodes { get; private set; } = [];
   public Node[] MeshedNodes { get; private set; } = [];
 
-
   public List<Animation> Animations = [];
   public List<Skin> Skins = [];
 

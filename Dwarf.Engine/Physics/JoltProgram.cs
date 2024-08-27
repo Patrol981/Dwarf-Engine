@@ -70,7 +70,7 @@ public static class JoltProgram {
     return ValidateResult.AcceptAllContactsForThisBodyPair;
   }
 
-  internal static void OnContactAdded(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2) {
+  internal static void OnContactAdded(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
     var data = Rigidbody.GetCollisionData(body1.ID, body2.ID);
     if (data.Item1 != null && data.Item2 != null) {
       data.Item1.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Enter, data.Item2);
@@ -78,7 +78,7 @@ public static class JoltProgram {
     }
   }
 
-  internal static void OnContactPersisted(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2) {
+  internal static void OnContactPersisted(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
     var data = Rigidbody.GetCollisionData(body1.ID, body2.ID);
     if (data.Item1 != null && data.Item2 != null) {
       data.Item1.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Stay, data.Item2);

@@ -12,7 +12,7 @@ using static Dwarf.VulkanTexture;
 namespace Dwarf.Loaders;
 
 public static partial class GLTFLoaderKHR {
-  public unsafe static async Task<MeshRenderer> LoadGLTF(Application app, string path, bool preload = false, int flip = 1) {
+  public unsafe static Task<MeshRenderer> LoadGLTF(Application app, string path, int flip = 1) {
     var gltf = Interface.LoadModel(path);
     var glb = Interface.LoadBinaryBuffer(path);
 
@@ -65,7 +65,7 @@ public static partial class GLTFLoaderKHR {
       }
     }
 
-    return meshRenderer;
+    return Task.FromResult(meshRenderer);
   }
 
   private static void LoadTextureSamplers(Gltf gltf, out List<TextureSampler> textureSamplers) {

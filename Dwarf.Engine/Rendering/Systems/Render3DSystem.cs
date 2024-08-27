@@ -258,8 +258,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _notSkinnedNodesCache = [.. notSkinnedNodes];
 
     objectData = [.. objectDataNotSkinned, .. objectDataSkinned];
-
-    Guizmos.Clear();
   }
 
   public void Update_Old(Span<IRender3DElement> entities, out ObjectData[] objectData) {

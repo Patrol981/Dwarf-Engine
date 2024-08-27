@@ -70,9 +70,9 @@ public class Camera : Component {
     var projectionMatrix = new Matrix4x4();
     projectionMatrix[0, 0] = 1.0f / (_aspect * tanHalfFovy);
     projectionMatrix[1, 1] = 1.0f / (tanHalfFovy);
-    projectionMatrix[2, 2] = 100.0f / (100.0f - 0.01f);
+    projectionMatrix[2, 2] = 100.0f / (100.0f - 0.0f);
     projectionMatrix[2, 3] = 1.0f;
-    projectionMatrix[3, 2] = -(100.0f * 0.01f) / (100.0f - 0.01f);
+    projectionMatrix[3, 2] = -(100.0f * 0.0f) / (100.0f - 0.0f);
     return projectionMatrix;
   }
 

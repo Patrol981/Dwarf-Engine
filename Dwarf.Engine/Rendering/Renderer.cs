@@ -108,7 +108,7 @@ public unsafe class Renderer : IDisposable {
 
     VkClearValue[] values = new VkClearValue[2];
     // VkClearValue* values = stackalloc VkClearValue[2];
-    values[0].color = new VkClearColorValue(0.01f, 0.01f, 0.01f, 1.0f);
+    values[0].color = new VkClearColorValue(0.0f, 0.0f, 0.0f, 1.0f);
     values[1].depthStencil = new(1.0f, 0);
     fixed (VkClearValue* ptr = values) {
       renderPassInfo.clearValueCount = 2;

@@ -145,7 +145,7 @@ public class GameAsset {
     return entity;
   }
 
-  private async Task<Task> HandleAssetResources(Entity entity) {
+  private Task HandleAssetResources(Entity entity) {
     if (AssetResourcePaths == null) return Task.CompletedTask;
     if (AssetResourcePaths.Count < 1) return Task.CompletedTask;
 
@@ -153,24 +153,6 @@ public class GameAsset {
     if (glb != null) {
       entity.AddMaterial();
       entity.AddModel(glb, TextureFlip);
-    }
-
-    var obj = AssetResourcePaths?.Where(x => x.Contains(".obj")).FirstOrDefault();
-    if (obj != null) {
-      // entity.AddModel(obj);
-      entity.AddMaterial();
-      var app = Application.Instance;
-      entity.AddComponent(
-        await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, obj)
-      );
-
-      if (AssetResourcePaths?.Count > 2) {
-        var textures = AssetResourcePaths;
-        textures.Remove(obj);
-        entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, textures.ToArray());
-      } else {
-        entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, AssetResourcePaths![1]);
-      }
     }
 
     return Task.CompletedTask;
@@ -213,7 +195,7 @@ public class GameAsset {
     var app = Application.Instance;
     var cameraData = CameraAsset!.Value;
     entity.AddComponent(new Camera(cameraData.Fov, app.Renderer.AspectRatio));
-    entity.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+    entity.GetComponent<Camera>()?.SetPerspectiveProjection(0.0f, 100f);
     entity.GetComponent<Camera>().Yaw = cameraData.Yaw;
 
 #if RUNTIME

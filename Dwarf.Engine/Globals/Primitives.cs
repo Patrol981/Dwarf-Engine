@@ -113,7 +113,6 @@ public static class Primitives {
   }
 
   public static Mesh CreatePlanePrimitive(int numOfDivs, float width) {
-    Mesh plane = new(Application.Instance.Device);
     List<Vertex> vertices = [];
 
     var triangleSide = width / numOfDivs;
@@ -131,16 +130,17 @@ public static class Primitives {
         });
       }
     }
-    plane.Vertices = [.. vertices];
-    return plane;
+    return new Mesh(Application.Instance.Device) {
+      Vertices = vertices.ToArray(),
+      Matrix = Matrix4x4.Identity
+    };
   }
 
-  public static Mesh CreateConvex(Node[] inputMesh) {
+  public static Mesh? CreateConvex(Node[] inputMesh) {
     return inputMesh[0].Mesh;
   }
 
   public static Mesh CreateConvex(Node[] nodes, bool flip = false) {
-    var outputMesh = new Mesh(Application.Instance.Device);
     var vertices = new List<Vertex>();
     var indices = new List<uint>();
 
@@ -162,10 +162,11 @@ public static class Primitives {
       vertexOffset += (uint)n.Mesh!.Vertices.Length;
     }
 
-    outputMesh.Vertices = vertices.ToArray();
-    outputMesh.Indices = indices.ToArray();
-
-    return outputMesh;
+    return new Mesh(Application.Instance.Device) {
+      Vertices = [.. vertices],
+      Indices = [.. indices],
+      Matrix = Matrix4x4.Identity
+    };
   }
 
   public static Mesh CreateBoxPrimitive(float scale) {
@@ -242,11 +243,11 @@ public static class Primitives {
       0
     ];
 
-    var mesh = new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.Device) {
+      Vertices = vertices,
       Indices = indices,
-      Vertices = vertices
+      Matrix = Matrix4x4.Identity
     };
-    return mesh;
   }
 
   public static Mesh CreateCylinderPrimitive(float radius = 0.5f, float height = 1.0f, int segments = 20) {
@@ -312,14 +313,14 @@ public static class Primitives {
       indices.Add(bottom2);
     }
 
-    var mesh = new Mesh(Application.Instance.Device);
-    mesh.Vertices = vertices.ToArray();
-    mesh.Indices = indices.ToArray();
-    return mesh;
+    return new Mesh(Application.Instance.Device) {
+      Vertices = [.. vertices],
+      Indices = [.. indices],
+      Matrix = Matrix4x4.Identity
+    };
   }
 
   public static Mesh CreateSpherePrimitve(int slices, int stacks) {
-    Mesh mesh = new(Application.Instance.Device);
     // List<Vertex> vertices = new();
     var vertices = new Vertex[slices * stacks];
     int index = 0;
@@ -439,8 +440,10 @@ public static class Primitives {
     }
     */
 
-    mesh.Vertices = [.. vertices];
-    return mesh;
+    return new Mesh(Application.Instance.Device) {
+      Vertices = vertices,
+      Matrix = Matrix4x4.Identity
+    };
   }
 
   private static Vector3[] CalculateNormals(Vertex[] vertices, uint[] indices) {

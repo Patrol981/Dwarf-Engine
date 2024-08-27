@@ -66,8 +66,8 @@ public class VulkanSwapchain : IDisposable {
   private void Init() {
     CreateSwapChain();
     CreateImageViews();
-    CreateRenderPass();
     CreateDepthResources();
+    CreateRenderPass();
     CreateFramebuffers();
     CreateSyncObjects();
   }

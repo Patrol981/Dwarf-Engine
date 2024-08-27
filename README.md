@@ -128,7 +128,7 @@ public class DebugScene : Scene {
     var camera = new Entity();
     camera.AddComponent(new Transform(new  Vector3(0, -10, 0)));
     camera.AddComponent(new Camera(50, _app.Renderer.AspectRatio));
-    camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+    camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.0f, 100f);
     camera.GetComponent<Camera>().Pitch = 90;
     CameraState.SetCamera(camera.GetComponent<Camera>());
     CameraState.SetCameraEntity(camera);

@@ -5,13 +5,15 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
 using Dwarf.Pathfinding.AStar;
 using Dwarf.Extensions.Logging;
+using Dwarf.Model.Animation;
 
 namespace Dwarf.Pathfinding;
 public class Unit : DwarfScript {
-  private float _speed = .05f;
+  private float _speed = .02f;
   private Vector3[] _path = [];
   private int _targetIndex;
   private Transform _transform = null!;
+  private AnimationController? _animationController;
 
   public override void Awake() {
     var hasTransform = Owner!.HasComponent<Transform>();
@@ -19,6 +21,7 @@ public class Unit : DwarfScript {
       Owner!.AddComponent(new Transform());
     }
     _transform = Owner!.GetComponent<Transform>();
+    _animationController = Owner!.TryGetComponent<AnimationController>();
   }
 
   public override void Start() {
@@ -26,6 +29,11 @@ public class Unit : DwarfScript {
   }
 
   public override void Update() {
+    if (IsMoving) {
+      _animationController?.SetCurrentAnimation("Walking_A");
+    } else {
+      _animationController?.SetCurrentAnimation("Idle");
+    }
   }
 
   public async void OnPathFound(Vector3[] newPath, bool pathSuccess) {

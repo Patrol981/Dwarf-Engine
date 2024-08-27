@@ -26,12 +26,14 @@ public class FreeTypeText : Component, IUIElement {
   public FreeTypeText() {
     _device = null!;
     _ft = null!;
+    _mesh = null!;
   }
 
   public FreeTypeText(VulkanDevice device, FreeType ft, string text, TextureManager textureManager) {
     _device = device;
     _ft = ft;
     _text = text;
+    _mesh = null!;
 
     BindToTexture(textureManager);
     // BindToTexture(Application.Instance.TextureManager);

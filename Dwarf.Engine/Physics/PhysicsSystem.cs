@@ -19,7 +19,7 @@ public class PhysicsSystem : IDisposable {
 
   private readonly JoltPhysicsSharp.PhysicsSystem _physicsSystem = null!;
   public PhysicsSystem() {
-    if (!Foundation.Init(0u, false)) {
+    if (!Foundation.Init(false)) {
       return;
     }
 
@@ -60,7 +60,7 @@ public class PhysicsSystem : IDisposable {
     // Create the settings for the collision volume (the shape).
     // Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
     BoxShapeSettings floorShapeSettings = new(new System.Numerics.Vector3(100.0f, 1.0f, 100.0f));
-    BodyCreationSettings floorSettings = new(floorShapeSettings, new Double3(0.0f, 5.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);
+    BodyCreationSettings floorSettings = new(floorShapeSettings, new Vector3(0.0f, 5.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);
 
     var floor = bodyInterface.CreateBody(floorSettings);
     bodyInterface.AddBody(floor, Activation.DontActivate);

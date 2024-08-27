@@ -84,7 +84,6 @@ public static class EntityCreator {
   public static async Task<Entity> Create3DModel(
     string entityName,
     string modelPath,
-    string[] texturePaths,
     Vector3? position = null,
     Vector3? rotation = null,
     Vector3? scale = null,
@@ -95,42 +94,13 @@ public static class EntityCreator {
 
     var entity = await CreateBase(entityName, position, rotation, scale);
     if (modelPath.Contains("glb")) {
-      var preload = texturePaths != null;
-
-      // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
-      entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, preload, flip));
+      entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, flip));
       if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
         entity.AddComponent(new AnimationController());
         entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());
       }
-
-      if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
-        throw new Exception("Mesh is empty");
-      }
-
-      if (texturePaths != null) {
-        if (texturePaths.Length > 1) {
-          entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
-        } else {
-          if (sameTexture) {
-            entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
-          } else {
-            entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePaths[0]);
-          }
-        }
-      }
     } else {
-      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, modelPath));
-
-      if (texturePaths.Length > 1) {
-        entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
-      } else {
-        if (sameTexture) {
-          entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
-        } else {
-          entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePaths[0]);
-        }
-      }
+      throw new Exception("Only .glb/gltf file are supported");
     }
 
     return entity;
@@ -145,7 +115,7 @@ public static class EntityCreator {
 
     Logger.Info($"{entity.Name} Mesh init");
     // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
-    entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, false, flip));
+    entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, flip));
     if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
       entity.AddComponent(new AnimationController());
       entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());

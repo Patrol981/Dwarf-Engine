@@ -11,9 +11,9 @@ public class AnimationSampler {
   }
 
   public InterpolationType Interpolation;
-  public List<float> Inputs;
-  public List<Vector4> OutputsVec4;
-  public List<float> Outputs;
+  public List<float> Inputs = [];
+  public List<Vector4> OutputsVec4 = [];
+  public List<float> Outputs = [];
 
   public Vector4 CubicSplineInterpolation(int idx, float time, int stride) {
     float delta = Inputs[idx + 1] - Inputs[idx];

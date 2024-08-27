@@ -8,6 +8,6 @@ public class AnimationChannel {
   }
 
   public PathType Path;
-  public Node Node;
+  public Node Node = null!;
   public int SamplerIndex;
 }

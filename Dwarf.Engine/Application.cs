@@ -538,7 +538,7 @@ public class Application {
       _camera.GetComponent<Camera>().Aspect = aspect;
       switch (_camera.GetComponent<Camera>().CameraType) {
         case CameraType.Perspective:
-          _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+          _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.1f, 100f);
           break;
         case CameraType.Orthographic:
           _camera.GetComponent<Camera>()?.SetOrthograpicProjection();

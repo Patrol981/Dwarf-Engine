@@ -96,7 +96,7 @@ public class Transform : Component {
     var direction = position - _position;
     direction.Y = 0;
     direction = Vector3.Normalize(direction);
-    var yaw = MathF.Atan2(direction.X, direction.Z);
+    var yaw = MathF.Atan2(-direction.X, -direction.Z);
     yaw = Converter.RadiansToDegrees(yaw);
     _rotation.Y = yaw;
   }

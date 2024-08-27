@@ -8,7 +8,7 @@ public static class Time {
   private static double s_fixedTime = 0.0;
 
   private static double s_time = 0.0f;
-  private static readonly double s_timeDelta = 0.01f;
+  // private static readonly double s_timeDelta = 0.01f;
 
   private static double s_currentTime = glfwGetTime();
   private static double s_accumulator = 0.0;

@@ -6,6 +6,7 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Model;
 using Dwarf.Model.Animation;
 using Dwarf.Utils;
@@ -46,7 +47,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public Render3DSystem(
     IDevice device,
     Renderer renderer,
-    // VkDescriptorSetLayout[] externalLayouts,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(device, renderer, configInfo) {
@@ -72,10 +72,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     VkDescriptorSetLayout[] complexLayouts = [
       .. basicLayouts,
+      externalLayouts["JointsBuffer"].GetDescriptorSetLayout(),
       _jointDescriptorLayout.GetDescriptorSetLayout(),
     ];
 
-    AddPipelineData<SimplePushConstantData>(new() {
+    AddPipelineData(new() {
       RenderPass = renderer.GetSwapchainRenderPass(),
       VertexName = "vertex",
       FragmentName = "fragment",
@@ -84,7 +85,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       PipelineName = Simple3D
     });
 
-    AddPipelineData<SimplePushConstantData>(new() {
+    AddPipelineData(new() {
       RenderPass = renderer.GetSwapchainRenderPass(),
       VertexName = "vertex_skinned",
       FragmentName = "fragment_skinned",
@@ -94,7 +95,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     });
   }
 
-  private int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
+  private static int CalculateLengthOfPool(ReadOnlySpan<Entity> entities) {
     int count = 0;
     for (int i = 0; i < entities.Length; i++) {
       var targetItems = entities[i].GetDrawables<IRender3DElement>();
@@ -140,11 +141,24 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       target.MeshedNodes[i].BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
     }
   }
-  private int CalculateNodesLength(ReadOnlySpan<Entity> entities) {
+  private static int CalculateNodesLength(ReadOnlySpan<Entity> entities) {
     int len = 0;
     foreach (var entity in entities) {
       var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
       len += i3d!.MeshedNodesCount;
+    }
+    return len;
+  }
+
+  private static int CalculateNodesLengthWithSkin(ReadOnlySpan<Entity> entities) {
+    int len = 0;
+    foreach (var entity in entities) {
+      var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
+      foreach (var mNode in i3d!.MeshedNodes) {
+        if (mNode.HasSkin) {
+          len += 1;
+        }
+      }
     }
     return len;
   }
@@ -183,11 +197,15 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     // LastKnownElemCount = entities.Length;
     LastKnownElemCount = CalculateNodesLength(entities);
+    LastKnownElemSize = 0;
+    LastKnownSkinnedElemCount = CalculateNodesLengthWithSkin(entities);
 
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
       BuildTargetDescriptorTexture(targetModel!, ref textures);
-      BuildTargetDescriptorJointBuffer(targetModel!);
+      // BuildTargetDescriptorJointBuffer(targetModel!);
+
+      LastKnownElemSize += targetModel!.CalculateBufferSize();
     }
 
     var range = _modelBuffer.GetDescriptorBufferInfo(_modelBuffer.GetAlignmentSize());
@@ -221,17 +239,31 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len == _texturesCount;
   }
 
-  public void Update(Span<IRender3DElement> entities, out ObjectData[] objectData) {
+  public void Update(
+    Span<IRender3DElement> entities,
+    out ObjectData[] objectData,
+    out ObjectData[] skinnedObjects,
+    out List<Matrix4x4> flatJoints
+  ) {
     if (entities.Length < 1) {
       objectData = [];
+      skinnedObjects = [];
+      flatJoints = [];
       return;
     }
+
+    // var frustum = new Frustum(CameraState.GetCamera().GetViewMatrix());
+    // var frustum = Frustum.CreateFrustumFromCamera(CameraState.GetCamera());
+    // var entitiesInsideFrustum = Frustum.FilterObjectsByFrustum<IRender3DElement>(frustum, entities);
 
     List<Node> skinnedNodes = [];
     List<Node> notSkinnedNodes = [];
 
     List<ObjectData> objectDataSkinned = [];
     List<ObjectData> objectDataNotSkinned = [];
+
+    int offset = 0;
+    flatJoints = [];
 
     foreach (var entity in entities) {
       var transform = entity.GetOwner().GetComponent<Transform>();
@@ -242,13 +274,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             ModelMatrix = transform.Matrix4,
             NormalMatrix = transform.NormalMatrix,
             NodeMatrix = node.Mesh!.Matrix,
+            JointsBufferOffset = new Vector4(offset, 0, 0, 0)
           });
+          flatJoints.AddRange(node.Skin!.OutputNodeMatrices);
+          offset += node.Skin!.OutputNodeMatrices.Length;
         } else {
           notSkinnedNodes.Add(node);
           objectDataNotSkinned.Add(new ObjectData {
             ModelMatrix = transform.Matrix4,
             NormalMatrix = transform.NormalMatrix,
             NodeMatrix = node.Mesh!.Matrix,
+            JointsBufferOffset = Vector4.Zero,
           });
         }
       }
@@ -258,58 +294,15 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _notSkinnedNodesCache = [.. notSkinnedNodes];
 
     objectData = [.. objectDataNotSkinned, .. objectDataSkinned];
+    skinnedObjects = [.. objectDataSkinned];
   }
-
-  public void Update_Old(Span<IRender3DElement> entities, out ObjectData[] objectData) {
-    if (entities.Length < 1) {
-      objectData = [];
-      return;
+  public void Render(FrameInfo frameInfo) {
+    if (_notSkinnedNodesCache.Length > 0) {
+      RenderSimple(frameInfo, _notSkinnedNodesCache);
     }
-
-    var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned).ToArray();
-    var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned).ToArray();
-
-    var notSkinnedArray = new ObjectData[notSkinnedEntities.Length];
-    var skinnedArray = new ObjectData[skinnedEntities.Length];
-    objectData = new ObjectData[entities.Length];
-
-    for (int i = 0; i < notSkinnedEntities.Length; i++) {
-      var transform = notSkinnedEntities[i].GetOwner().GetComponent<Transform>();
-      notSkinnedArray[i] = new ObjectData {
-        ModelMatrix = transform.Matrix4,
-        NormalMatrix = transform.NormalMatrix
-      };
-      // objectData[i].IsSkinned = 0;
-      // Logger.Info($"{notSkinnedEntities[i].GetOwner().Name} {transform.Position} {notSkinnedArray[i].ModelMatrix.Translation}");
+    if (_skinnedNodesCache.Length > 0) {
+      RenderComplex(frameInfo, _skinnedNodesCache, _notSkinnedNodesCache.Length);
     }
-    for (int i = 0; i < skinnedEntities.Length; i++) {
-      var transform = skinnedEntities[i].GetOwner().GetComponent<Transform>();
-      skinnedArray[i] = new ObjectData {
-        ModelMatrix = transform.Matrix4,
-        NormalMatrix = transform.NormalMatrix,
-        // NodeMatrix = skinnedEntities[i].
-        // IsSkinned = 1
-      };
-      // Logger.Info($"{skinnedEntities[i].GetOwner().Name} {transform.Position} {skinnedArray[i].ModelMatrix.Translation}");
-    }
-
-    _notSkinnedEntitiesCache = notSkinnedEntities;
-    _skinnedEntitiesCache = skinnedEntities;
-
-    objectData = [.. notSkinnedArray, .. skinnedArray];
-  }
-
-  public void Render(FrameInfo frameInfo, Span<IRender3DElement> entities) {
-    // if (entities.Length < 1) return;
-
-    // var skinnedEntities = entities.ToArray().Where(x => x.IsSkinned);
-    // var notSkinnedEntities = entities.ToArray().Where(x => !x.IsSkinned);
-
-    // RenderSimple(frameInfo, _notSkinnedEntitiesCache);
-    // RenderComplex(frameInfo, _skinnedEntitiesCache, _notSkinnedEntitiesCache.Length);
-
-    RenderSimple(frameInfo, _notSkinnedNodesCache);
-    RenderComplex(frameInfo, _skinnedNodesCache, _notSkinnedNodesCache.Length);
   }
 
   private void RenderSimple(FrameInfo frameInfo, Span<Node> nodes) {
@@ -353,7 +346,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Flush();
 
     for (int i = 0; i < nodes.Length; i++) {
-      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed) continue;
+      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
       var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
@@ -440,13 +433,24 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         0,
         null
       );
+
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        _pipelines[Skinned3D].PipelineLayout,
+        5,
+        1,
+        &frameInfo.JointsBufferDescriptorSet,
+        0,
+        null
+      );
     }
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
     for (int i = 0; i < nodes.Length; i++) {
-      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed) continue;
+      if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
       var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
@@ -484,13 +488,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       }
       // nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
       // nodes[i].WriteIdentity();
-      Descriptor.BindDescriptorSet(
-        nodes[i].DescriptorSet,
-        frameInfo,
-        _pipelines[Skinned3D].PipelineLayout,
-        5,
-        1
-      );
+      // Descriptor.BindDescriptorSet(
+      //   nodes[i].DescriptorSet,
+      //   frameInfo,
+      //   _pipelines[Skinned3D].PipelineLayout,
+      //   5,
+      //   1
+      // );
 
       var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
       Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
@@ -520,4 +524,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   public IRender3DElement[] CachedRenderables => [.. _notSkinnedEntitiesCache, .. _skinnedEntitiesCache];
   public int LastKnownElemCount { get; private set; }
+  public long LastKnownElemSize { get; private set; }
+  public long LastKnownSkinnedElemCount { get; private set; }
 }

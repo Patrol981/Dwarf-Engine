@@ -300,7 +300,7 @@ public class VulkanDevice : IDevice {
   }
 
   public void WaitQueue() {
-    WaitQueue(_graphicsQueue);
+    WaitQueue(_presentQueue);
   }
 
   private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {

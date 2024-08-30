@@ -66,8 +66,8 @@ public class VulkanSwapchain : IDisposable {
   private void Init() {
     CreateSwapChain();
     CreateImageViews();
-    CreateDepthResources();
     CreateRenderPass();
+    CreateDepthResources();
     CreateFramebuffers();
     CreateSyncObjects();
   }
@@ -395,7 +395,6 @@ public class VulkanSwapchain : IDisposable {
       submitInfo.pSignalSemaphores = signalPtr;
 
       vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-
       _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
 
       VkPresentInfoKHR presentInfo = new() {
@@ -551,6 +550,7 @@ public class VulkanSwapchain : IDisposable {
 
   public VkSwapchainKHR Handle => _handle;
   public VkExtent2D Extent2D { get; }
+  public VkFence CurrentFence => _inFlightFences[_currentFrame];
   public VkRenderPass RenderPass => _renderPass;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;

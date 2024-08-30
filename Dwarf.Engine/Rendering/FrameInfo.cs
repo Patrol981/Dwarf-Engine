@@ -8,5 +8,6 @@ public struct FrameInfo {
   public VkDescriptorSet GlobalDescriptorSet;
   public VkDescriptorSet PointLightsDescriptorSet;
   public VkDescriptorSet ObjectDataDescriptorSet;
+  public VkDescriptorSet JointsBufferDescriptorSet;
   public TextureManager TextureManager;
 }

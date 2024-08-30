@@ -89,6 +89,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     _mergedAABB.Update(AABBArray);
     RunTasks(createTasks);
   }
+
+  public unsafe long CalculateBufferSize() {
+    long baseSize = sizeof(Matrix4x4);
+    long currentBufferSize = 0;
+    foreach (var node in MeshedNodes) {
+      if (node.HasSkin) {
+        currentBufferSize += (node.Skin!.OutputNodeMatrices.Length * baseSize);
+      }
+    }
+    return currentBufferSize;
+  }
+
   protected async void RunTasks(List<Task> createTasks) {
     await Task.WhenAll(createTasks);
     FinishedInitialization = true;
@@ -227,6 +239,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
 
   public VkDescriptorSet SkinDescriptor => _skinDescriptor;
+  public DwarfBuffer EntireSkinSSBO { get; private set; } = null!;
   public string FileName { get; } = "";
   public int TextureFlipped { get; set; } = 1;
   public void AddNode(Node node) {

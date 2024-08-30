@@ -23,8 +23,9 @@ layout(set = 1, binding = 0) #include global_ubo
 layout(set = 3, binding = 0) #include skinned_model_ubo
 
 #define MAX_NUM_JOINTS 128
-layout(std140, set = 5, binding = 0) uniform JointBuffer {
-    mat4 jointMatrices[MAX_NUM_JOINTS];
+// store entire nodes joints in flatten array to avoid nesting
+layout(std140, set = 5, binding = 0) readonly buffer JointBuffer {
+    mat4 jointMatrices[];
 } jointBuffer;
 
 layout(std140, set = 2, binding = 0) readonly buffer ObjectBuffer {
@@ -44,11 +45,18 @@ vec3 applyBoneTransform(vec4 p) {
 }
 
 void main() {
+    // mat4 skinMat =
+    //     jointWeights.x * jointBuffer.jointMatrices[jointIndices.x] +
+    //         jointWeights.y * jointBuffer.jointMatrices[jointIndices.y] +
+    //         jointWeights.z * jointBuffer.jointMatrices[jointIndices.z] +
+    //         jointWeights.w * jointBuffer.jointMatrices[jointIndices.w];
+
+    int offset = int(objectBuffer.objectData[gl_BaseInstance].jointsBufferOffset.x);
     mat4 skinMat =
-        jointWeights.x * jointBuffer.jointMatrices[jointIndices.x] +
-            jointWeights.y * jointBuffer.jointMatrices[jointIndices.y] +
-            jointWeights.z * jointBuffer.jointMatrices[jointIndices.z] +
-            jointWeights.w * jointBuffer.jointMatrices[jointIndices.w];
+        jointWeights.x * jointBuffer.jointMatrices[jointIndices.x + offset] +
+            jointWeights.y * jointBuffer.jointMatrices[jointIndices.y + offset] +
+            jointWeights.z * jointBuffer.jointMatrices[jointIndices.z + offset] +
+            jointWeights.w * jointBuffer.jointMatrices[jointIndices.w + offset];
 
     vec4 positionWorld =
         objectBuffer.objectData[gl_BaseInstance].transformMatrix *

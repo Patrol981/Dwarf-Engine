@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -13,6 +14,7 @@ using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
 using ImGuiNET;
+using OpenTK.Mathematics;
 using Vortice.Vulkan;
 
 using static Dwarf.GLFW.GLFW;
@@ -59,7 +61,8 @@ public class Application {
   private EventCallback? _onLoadPrimaryResources;
   private TextureManager _textureManager = null!;
 
-  private readonly List<Entity> _entities = new();
+  private readonly List<Entity> _entities = [];
+  private readonly Queue<Entity> _entitiesQueue = new();
   private readonly object _entitiesLock = new object();
 
   private Entity _camera = new();
@@ -298,8 +301,12 @@ public class Application {
       .Build());
 
     _descriptorSetLayouts.TryAdd("ObjectData", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
       // .AddBinding(1, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .Build());
+
+    _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
       .Build());
 
     StorageCollection.CreateStorage(
@@ -337,18 +344,32 @@ public class Application {
     Systems.Setup(this, _systemCreationFlags, Device, Renderer, _descriptorSetLayouts, null!, ref _textureManager);
 
     StorageCollection.CreateStorage(
-     Device,
-     VkDescriptorType.StorageBuffer,
-     BufferUsage.StorageBuffer,
-     Renderer.MAX_FRAMES_IN_FLIGHT,
-     (ulong)Unsafe.SizeOf<ObjectData>(),
-     (ulong)Systems.Render3DSystem.LastKnownElemCount,
-     _descriptorSetLayouts["ObjectData"],
-     null!,
-     "ObjectStorage",
-     Device.Properties.limits.minStorageBufferOffsetAlignment,
-     true
+      Device,
+      VkDescriptorType.StorageBuffer,
+      BufferUsage.StorageBuffer,
+      Renderer.MAX_FRAMES_IN_FLIGHT,
+      (ulong)Unsafe.SizeOf<ObjectData>(),
+      (ulong)Systems.Render3DSystem.LastKnownElemCount,
+      _descriptorSetLayouts["ObjectData"],
+      null!,
+      "ObjectStorage",
+      Device.Properties.limits.minStorageBufferOffsetAlignment,
+      true
    );
+
+    StorageCollection.CreateStorage(
+      Device,
+      VkDescriptorType.StorageBuffer,
+      BufferUsage.StorageBuffer,
+      Renderer.MAX_FRAMES_IN_FLIGHT,
+      (ulong)Unsafe.SizeOf<Matrix4x4>(),
+      (ulong)Systems.Render3DSystem.LastKnownSkinnedElemCount * 128,
+      _descriptorSetLayouts["JointsBuffer"],
+      null!,
+      "JointsStorage",
+      Device.Properties.limits.minStorageBufferOffsetAlignment,
+      true
+    );
 
     _skybox = new(Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
     Mutex.ReleaseMutex();
@@ -457,13 +478,13 @@ public class Application {
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
       var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      _entities.Add(entity);
       MasterAwake(new[] { entity }.GetScripts());
       MasterStart(new[] { entity }.GetScripts());
       vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
       unsafe {
         vkDestroyFence(Device.LogicalDevice, fence);
       }
+      _entitiesQueue.Enqueue(entity);
     }
   }
 
@@ -587,13 +608,28 @@ public class Application {
         }
       }
 
-      Systems.Render3DSystem.Update(_entities.ToArray().DistinctI3D(), out var objectData);
+      Systems.Render3DSystem.Update(
+        _entities.ToArray().DistinctI3D(),
+        out var objectData,
+        out var skinnedObjects,
+        out var flatJoints
+      );
       fixed (ObjectData* pObjectData = objectData) {
         StorageCollection.WriteBuffer(
           "ObjectStorage",
           frameIndex,
           (nint)pObjectData,
           (ulong)Unsafe.SizeOf<ObjectData>() * (ulong)objectData.Length
+        );
+      }
+
+      Matrix4x4[] flatArray = [.. flatJoints];
+      fixed (Matrix4x4* pMatrices = flatArray) {
+        StorageCollection.WriteBuffer(
+          "JointsStorage",
+          frameIndex,
+          (nint)pMatrices,
+          (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
         );
       }
 
@@ -612,6 +648,7 @@ public class Application {
       _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
       _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
       _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
+      _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
       // _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
       // _currentFrame.PointLightsDescriptorSet = _storageDescriptorSets[frameIndex];
       // _currentFrame.ObjectDataDescriptorSet = _objectDescriptorSets[frameIndex];
@@ -636,8 +673,17 @@ public class Application {
       Renderer.EndFrame();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
+      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemCount * 128, _descriptorSetLayouts["JointsBuffer"]);
 
       Collect();
+    }
+
+    if (_entitiesQueue.Count > 0) {
+      Mutex.WaitOne();
+      while (_entitiesQueue.Count > 0) {
+        _entities.Add(_entitiesQueue.Dequeue());
+      }
+      Mutex.ReleaseMutex();
     }
 
     Frames.TickEnd();

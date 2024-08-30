@@ -33,8 +33,7 @@ public class SystemCollection : IDisposable {
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     lock (_renderLock) {
       _render3DSystem?.Render(
-        frameInfo,
-        entities.DistinctI3D()
+        frameInfo
       );
       _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
       _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());

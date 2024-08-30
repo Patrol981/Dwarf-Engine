@@ -2,6 +2,7 @@ using System.Numerics;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
 using Dwarf.Model;
 using Dwarf.Vulkan;
 
@@ -17,6 +18,7 @@ public interface IRender3DElement : IDrawable {
   Node[] LinearNodes { get; }
   bool FinishedInitialization { get; }
   bool IsSkinned { get; }
+  long CalculateBufferSize();
   DwarfBuffer Ssbo { get; }
   Matrix4x4[] InverseMatrices { get; }
   VkDescriptorSet SkinDescriptor { get; }
@@ -24,5 +26,6 @@ public interface IRender3DElement : IDrawable {
   Entity GetOwner();
   Guid GetTextureIdReference(int index = 0);
   float CalculateHeightOfAnModel();
+  AABB AABB { get; }
   // public void DrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, ulong offset, uint drawCount, uint stride);
 }

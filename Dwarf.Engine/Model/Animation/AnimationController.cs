@@ -37,7 +37,7 @@ public class AnimationController : Component {
   public void Update(Node node) {
     if (_currentAnimation == null) return;
 
-    node.AnimationTimer += Time.DeltaTime * 60;
+    node.AnimationTimer += Time.FixedTime * 60;
     if (node.AnimationTimer > _currentAnimation.End) {
       node.AnimationTimer -= _currentAnimation.End;
     }

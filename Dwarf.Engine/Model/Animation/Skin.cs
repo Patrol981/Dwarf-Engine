@@ -22,7 +22,12 @@ public class Skin : IDisposable {
   public int JointsCount;
 
   public Skin() {
-    OutputNodeMatrices = new Matrix4x4[128];
+    // OutputNodeMatrices = new Matrix4x4[128];
+
+  }
+
+  public void Init() {
+    OutputNodeMatrices = new Matrix4x4[Joints.Count];
     for (int i = 0; i < OutputNodeMatrices.Length; i++) {
       OutputNodeMatrices[i] = Matrix4x4.Identity;
     }

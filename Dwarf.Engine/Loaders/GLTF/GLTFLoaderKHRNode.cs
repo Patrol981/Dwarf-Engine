@@ -45,7 +45,7 @@ public static partial class GLTFLoaderKHR {
     foreach (var node in meshRenderer.LinearNodes) {
       if (node.SkinIndex > -1) {
         node.Skin = meshRenderer.Skins[node.SkinIndex];
-        node.CreateBuffer();
+        // node.CreateBuffer();
       }
 
       if (node.Mesh != null) {
@@ -108,16 +108,19 @@ public static partial class GLTFLoaderKHR {
         textureSampler = textureSamplers[gltfTexture.Sampler.Value];
       }
 
-      var texture = VulkanTexture.LoadFromGLTF(
-        app.Device,
-        gltf,
-        globalBuffer,
-        gltfImage,
-        $"{textureName}_{textureIds.Count}",
-        textureSampler,
-        flip
-      );
-      var id = app.TextureManager.AddTexture(texture);
+      var id = app.TextureManager.GetTextureId($"{textureName}_{textureIds.Count}");
+      if (id == Guid.Empty) {
+        var texture = VulkanTexture.LoadFromGLTF(
+                app.Device,
+                gltf,
+                globalBuffer,
+                gltfImage,
+                $"{textureName}_{textureIds.Count}",
+                textureSampler,
+                flip
+              );
+        id = app.TextureManager.AddTexture(texture);
+      }
       textureIds.Add(id);
     }
   }
@@ -232,6 +235,7 @@ public static partial class GLTFLoaderKHR {
       }
       if (newSkin.Joints != null) {
         // newSkin.OutputNodeMatrices = new Matrix4x4[newSkin.Joints.Count];
+        newSkin.Init();
       }
 
       // get inverse bind matrices

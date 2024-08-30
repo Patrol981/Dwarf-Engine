@@ -6,85 +6,85 @@ using Dwarf.Math;
 namespace Dwarf;
 
 public class Transform : Component {
-  private Vector3 _position;
-  private Vector3 _rotation;
-  private Vector3 _scale;
+  public Vector3 Position;
+  public Vector3 Rotation;
+  public Vector3 Scale;
 
   public Transform() {
-    _position = new Vector3(0, 0, 0);
-    _rotation = new Vector3(0, 0, 0);
-    _scale = new Vector3(1, 1, 1);
+    Position = new Vector3(0, 0, 0);
+    Rotation = new Vector3(0, 0, 0);
+    Scale = new Vector3(1, 1, 1);
   }
 
   public Transform(Vector3 position) {
-    _position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
-    _rotation = new Vector3(0, 0, 0);
-    _scale = new Vector3(1, 1, 1);
+    Position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
+    Rotation = new Vector3(0, 0, 0);
+    Scale = new Vector3(1, 1, 1);
   }
 
   public Transform(Vector3 position, Vector3 rotation) {
-    _position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
-    _rotation = rotation != Vector3.Zero ? rotation : new Vector3(0, 0, 0);
-    _scale = new Vector3(1, 1, 1);
+    Position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
+    Rotation = rotation != Vector3.Zero ? rotation : new Vector3(0, 0, 0);
+    Scale = new Vector3(1, 1, 1);
   }
 
   public Transform(Vector3 position, Vector3 rotation, Vector3 scale) {
-    _position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
-    _rotation = rotation != Vector3.Zero ? rotation : new Vector3(0, 0, 0);
-    _scale = scale != Vector3.Zero ? scale : new Vector3(1, 1, 1);
+    Position = position != Vector3.Zero ? position : new Vector3(0, 0, 0);
+    Rotation = rotation != Vector3.Zero ? rotation : new Vector3(0, 0, 0);
+    Scale = scale != Vector3.Zero ? scale : new Vector3(1, 1, 1);
   }
 
   public void IncreasePosition(Vector3 position) {
-    _position.X += position.X;
-    _position.Y += position.Y;
-    _position.Z += position.Z;
+    Position.X += position.X;
+    Position.Y += position.Y;
+    Position.Z += position.Z;
   }
 
   public void IncreaseRotation(Vector3 rotation) {
-    _rotation.X += rotation.X;
-    _rotation.Y += rotation.Y;
-    _rotation.Z += rotation.Z;
+    Rotation.X += rotation.X;
+    Rotation.Y += rotation.Y;
+    Rotation.Z += rotation.Z;
 
-    if (_rotation.X > 360) {
-      var offset = _rotation.X - 360;
-      _rotation.X = 0 + offset;
+    if (Rotation.X > 360) {
+      var offset = Rotation.X - 360;
+      Rotation.X = 0 + offset;
     }
 
-    if (_rotation.Y > 360) {
-      var offset = _rotation.Y - 360;
-      _rotation.Y = 0 + offset;
+    if (Rotation.Y > 360) {
+      var offset = Rotation.Y - 360;
+      Rotation.Y = 0 + offset;
     }
 
-    if (_rotation.Z > 360) {
-      var offset = _rotation.Z - 360;
-      _rotation.Z = 0 + offset;
+    if (Rotation.Z > 360) {
+      var offset = Rotation.Z - 360;
+      Rotation.Z = 0 + offset;
     }
   }
 
   public void IncreaseRotationX(float value) {
-    _rotation.X += value;
+    Rotation.X += value;
 
-    if (_rotation.X > 360) {
-      var offset = _rotation.X - 360;
-      _rotation.X = 0 + offset;
+    if (Rotation.X > 360) {
+      var offset = Rotation.X - 360;
+      Rotation.X = 0 + offset;
     }
   }
 
   public void IncreaseRotationY(float value) {
-    _rotation.Y += value;
+    Rotation.Y += value;
 
-    if (_rotation.Y > 360) {
-      var offset = _rotation.Y - 360;
-      _rotation.Y = 0 + offset;
+    if (Rotation.Y > 360) {
+      var offset = Rotation.Y - 360;
+      Rotation.Y = 0 + offset;
     }
   }
 
   public void IncreaseRotationZ(float value) {
-    _rotation.Z += value;
+    Rotation.Z += value;
 
-    if (_rotation.Z > 360) {
-      var offset = _rotation.Z - 360;
-      _rotation.Z = 0 + offset;
+    if (Rotation.Z > 360) {
+      var offset = Rotation.Z - 360;
+      Rotation.Z = 0 + offset;
     }
   }
 
@@ -93,17 +93,17 @@ public class Transform : Component {
   /// </summary>
   /// <param name="position"></param>
   public void LookAtFixed(Vector3 position) {
-    var direction = position - _position;
+    var direction = position - Position;
     direction.Y = 0;
     direction = Vector3.Normalize(direction);
     var yaw = MathF.Atan2(-direction.X, -direction.Z);
     yaw = Converter.RadiansToDegrees(yaw);
-    _rotation.Y = yaw;
+    Rotation.Y = yaw;
   }
 
   public void LookAtFixedRound(Vector3 position) {
     LookAtFixed(position);
-    _rotation.Y = Clamp.ClampToClosestAngle(_rotation.Y);
+    Rotation.Y = Clamp.ClampToClosestAngle(Rotation.Y);
   }
 
   public static Vector3 MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
@@ -117,66 +117,66 @@ public class Transform : Component {
   }
 
   private Matrix4x4 GetMatrix() {
-    var modelPos = _position;
-    var angleX = Converter.DegreesToRadians(_rotation.X);
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
-    var angleZ = Converter.DegreesToRadians(_rotation.Z);
+    var modelPos = Position;
+    var angleX = Converter.DegreesToRadians(Rotation.X);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
+    var angleZ = Converter.DegreesToRadians(Rotation.Z);
     var rotation = Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
-    var worldModel = Matrix4x4.CreateScale(_scale) * rotation * Matrix4x4.CreateTranslation(modelPos);
+    var worldModel = Matrix4x4.CreateScale(Scale) * rotation * Matrix4x4.CreateTranslation(modelPos);
     return worldModel;
   }
 
   private Matrix4x4 GetMatrixWithoutScale() {
-    var modelPos = _position;
-    var angleX = Converter.DegreesToRadians(_rotation.X);
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
-    var angleZ = Converter.DegreesToRadians(_rotation.Z);
+    var modelPos = Position;
+    var angleX = Converter.DegreesToRadians(Rotation.X);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
+    var angleZ = Converter.DegreesToRadians(Rotation.Z);
     var rotation = Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
     var worldModel = rotation * Matrix4x4.CreateTranslation(modelPos);
     return worldModel;
   }
 
   private Matrix4x4 GetMatrixWithYAngleRotation() {
-    var modelPos = _position;
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
+    var modelPos = Position;
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
     var rotation = Matrix4x4.CreateRotationY(angleY);
-    var worldModel = Matrix4x4.CreateScale(_scale) * rotation * Matrix4x4.CreateTranslation(modelPos);
+    var worldModel = Matrix4x4.CreateScale(Scale) * rotation * Matrix4x4.CreateTranslation(modelPos);
     return worldModel;
   }
 
   private Matrix4x4 GetRotation() {
-    var angleX = Converter.DegreesToRadians(_rotation.X);
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
-    var angleZ = Converter.DegreesToRadians(_rotation.Z);
+    var angleX = Converter.DegreesToRadians(Rotation.X);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
+    var angleZ = Converter.DegreesToRadians(Rotation.Z);
     return Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
   }
 
   private Matrix4x4 GetAngleY() {
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
     return Matrix4x4.CreateRotationY(angleY);
   }
 
   private Matrix4x4 GetScale() {
-    return Matrix4x4.CreateScale(_scale);
+    return Matrix4x4.CreateScale(Scale);
   }
 
   private Matrix4x4 GetPosition() {
-    var modelPos = _position;
+    var modelPos = Position;
     return Matrix4x4.CreateTranslation(modelPos);
   }
 
   private Matrix4x4 GetMatrixWithoutRotation() {
-    var modelPos = _position;
-    var worldModel = Matrix4x4.CreateScale(_scale) * Matrix4x4.CreateTranslation(modelPos);
+    var modelPos = Position;
+    var worldModel = Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateTranslation(modelPos);
     return worldModel;
   }
 
   private Matrix4x4 GetNormalMatrix() {
-    var angleX = Converter.DegreesToRadians(_rotation.X);
-    var angleY = Converter.DegreesToRadians(_rotation.Y);
-    var angleZ = Converter.DegreesToRadians(_rotation.Z);
+    var angleX = Converter.DegreesToRadians(Rotation.X);
+    var angleY = Converter.DegreesToRadians(Rotation.Y);
+    var angleZ = Converter.DegreesToRadians(Rotation.Z);
     var rotation = Matrix4x4.CreateRotationX(angleX) * Matrix4x4.CreateRotationY(angleY) * Matrix4x4.CreateRotationZ(angleZ);
-    rotation *= Matrix4x4.CreateScale(_scale);
+    rotation *= Matrix4x4.CreateScale(Scale);
     return rotation;
   }
 
@@ -198,17 +198,19 @@ public class Transform : Component {
   public Matrix4x4 MatrixWithAngleYRotation => GetMatrixWithYAngleRotation();
   public Matrix4x4 NormalMatrix => GetNormalMatrix();
 
+  /*
   public Vector3 Position {
-    get { return _position; }
-    set { _position = value; }
+    get { return Position; }
+    set { Position = value; }
   }
   public Vector3 Rotation {
-    get { return _rotation; }
-    set { _rotation = value; }
+    get { return Rotation; }
+    set { Rotation = value; }
   }
   public Vector3 Scale {
-    get { return _scale; }
-    set { _scale = value; }
+    get { return Scale; }
+    set { Scale = value; }
   }
+  */
 
 }

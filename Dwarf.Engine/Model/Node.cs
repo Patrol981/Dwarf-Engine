@@ -42,11 +42,11 @@ public class Node {
   public void CreateBuffer() {
     Ssbo = new DwarfBuffer(
       Application.Instance.Device,
-      (ulong)8192,
+      (ulong)8192 + 16,
       BufferUsage.UniformBuffer,
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent
     );
-    Ssbo.Map((ulong)8192);
+    Ssbo.Map((ulong)8192 + 16);
   }
 
   public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
@@ -62,15 +62,28 @@ public class Node {
   }
 
   public unsafe void WriteSkeleton() {
-    fixed (Matrix4x4* matrices = new Matrix4x4[128]) {
-      for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
-        matrices[i] = Skin.OutputNodeMatrices[i];
-      }
-      for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
-        matrices[i] = Matrix4x4.Identity;
-      }
-      Ssbo.WriteToBuffer((IntPtr)matrices, 8192);
+    var matrices = stackalloc Matrix4x4[128];
+
+    for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
+      matrices[i] = Skin.OutputNodeMatrices[i];
     }
+    for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
+      matrices[i] = Matrix4x4.Identity;
+    }
+
+
+  }
+
+  public unsafe void WriteSkeleton_Old() {
+    var matrices = stackalloc Matrix4x4[128];
+
+    for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
+      matrices[i] = Skin.OutputNodeMatrices[i];
+    }
+    for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
+      matrices[i] = Matrix4x4.Identity;
+    }
+    Ssbo.WriteToBuffer((IntPtr)matrices, 8192);
   }
 
   public Matrix4x4 GetLocalMatrix() {
@@ -145,11 +158,10 @@ public class Node {
         for (int i = 0; i < numJoints; i++) {
           var jointNode = Skin.Joints[i];
           var jointMat = Skin.InverseBindMatrices[i] * inTransform * jointNode.GetMatrix();
-          // jointMat = Matrix4x4.Transpose(inTransform) * jointMat;
           Skin.OutputNodeMatrices[i] = jointMat;
         }
         Skin.JointsCount = numJoints;
-        WriteSkeleton();
+        // WriteSkeleton();
       } else {
         Mesh.Matrix = m;
       }

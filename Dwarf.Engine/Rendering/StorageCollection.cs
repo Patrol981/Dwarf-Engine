@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -43,6 +44,8 @@ public class StorageCollection : IDisposable {
     ulong offsetAlignment,
     bool mapWholeBuffer = false
   ) {
+    if (bufferCount == 0) return;
+
     pool ??= _dynamicPool;
 
     var storage = new StorageData {
@@ -106,17 +109,25 @@ public class StorageCollection : IDisposable {
       _ = new VulkanDescriptorWriter(layout, _dynamicPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out Storages[key].Descriptors[index]);
+
+      Logger.Info($"[Storage Collection] Updated Sizes of {key}[{index}].");
     }
   }
 
   public void WriteBuffer(string key, int index, nint data, ulong size = VK_WHOLE_SIZE) {
     if (!Storages.TryGetValue(key, out var storage)) return;
     if (storage.Buffers[index] == null) return;
+    Application.Instance.Mutex.WaitOne();
     Storages[key].Buffers[index].WriteToBuffer(data, size);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public VkDescriptorSet GetDescriptor(string key, int index) {
-    return Storages[key].Descriptors[index];
+    // Storages[key].Descriptors[index]
+    if (Storages.TryGetValue(key, out var storageData)) {
+      return storageData.Descriptors[index] != VkDescriptorSet.Null ? storageData.Descriptors[index] : VkDescriptorSet.Null;
+    }
+    return VkDescriptorSet.Null;
   }
 
   public void Dispose() {

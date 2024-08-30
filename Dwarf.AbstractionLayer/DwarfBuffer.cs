@@ -206,7 +206,7 @@ public unsafe class DwarfBuffer : IDisposable {
     _bufferSize = bufferSize;
     _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
 
-    _isStagingBuffer = stagingBuffer; 
+    _isStagingBuffer = stagingBuffer;
     */
 
     /*

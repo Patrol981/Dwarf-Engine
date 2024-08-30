@@ -2,4 +2,5 @@ struct ObjectData {
   mat4 transformMatrix;
   mat4 normalMatrix;
   mat4 nodeMatrix;
+  vec4 jointsBufferOffset;
 };

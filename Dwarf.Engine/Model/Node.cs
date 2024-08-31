@@ -34,32 +34,7 @@ public class Node {
   public glTFLoader.Schema.Node? GltfNodeReference;
   public MeshRenderer ParentRenderer = null!;
 
-  public DwarfBuffer Ssbo = null!;
-  private VkDescriptorSet _descriptorSet = VkDescriptorSet.Null;
-
   public float AnimationTimer = 0.0f;
-
-  public void CreateBuffer() {
-    Ssbo = new DwarfBuffer(
-      Application.Instance.Device,
-      (ulong)8192 + 16,
-      BufferUsage.UniformBuffer,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-    Ssbo.Map((ulong)8192 + 16);
-  }
-
-  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
-    unsafe {
-      var targetSize = (ulong)8192;
-      var range = Ssbo.GetDescriptorBufferInfo(targetSize);
-      range.range = targetSize;
-
-      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
-      .WriteBuffer(0, &range)
-      .Build(out _descriptorSet);
-    }
-  }
 
   public unsafe void WriteSkeleton() {
     var matrices = stackalloc Matrix4x4[128];
@@ -72,18 +47,6 @@ public class Node {
     }
 
 
-  }
-
-  public unsafe void WriteSkeleton_Old() {
-    var matrices = stackalloc Matrix4x4[128];
-
-    for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
-      matrices[i] = Skin.OutputNodeMatrices[i];
-    }
-    for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
-      matrices[i] = Matrix4x4.Identity;
-    }
-    Ssbo.WriteToBuffer((IntPtr)matrices, 8192);
   }
 
   public Matrix4x4 GetLocalMatrix() {
@@ -174,11 +137,8 @@ public class Node {
 
   public bool HasMesh => Mesh != null;
   public bool HasSkin => Skin != null;
-  public VkDescriptorSet DescriptorSet => _descriptorSet;
-
   public void Dispose() {
     Skin?.Dispose();
     Mesh?.Dispose();
-    Ssbo?.Dispose();
   }
 }

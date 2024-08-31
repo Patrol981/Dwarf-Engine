@@ -61,7 +61,7 @@ public class Application {
   private EventCallback? _onLoadPrimaryResources;
   private TextureManager _textureManager = null!;
 
-  private readonly List<Entity> _entities = [];
+  private List<Entity> _entities = [];
   private readonly Queue<Entity> _entitiesQueue = new();
   private readonly object _entitiesLock = new object();
 
@@ -71,7 +71,7 @@ public class Application {
 
   // ubos
   private DescriptorPool _globalPool = null!;
-  private readonly Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
+  private Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
 
@@ -133,7 +133,7 @@ public class Application {
     _newSceneShouldLoad = true;
   }
 
-  private async void SceneLoadReactor() {
+  private async void SceneLoadReactor_Old() {
     await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
 
     Guizmos.Clear();
@@ -176,6 +176,68 @@ public class Application {
       Systems.PhysicsSystem = new();
       Systems.PhysicsSystem.Init(_entities.DistinctInterface<IRender3DElement>());
     }
+
+    _renderShouldClose = true;
+    Logger.Info("Waiting for loading render process to close...");
+    while (_renderShouldClose) {
+
+    }
+
+    _renderThread.Join();
+    _renderThread = new Thread(RenderLoop) {
+      Name = "Render Thread"
+    };
+    _renderThread.Start();
+
+    _newSceneShouldLoad = false;
+  }
+
+  private async void SceneLoadReactor() {
+    await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
+
+    Guizmos.Clear();
+    Guizmos.Free();
+    foreach (var e in _entities) {
+      e.CanBeDisposed = true;
+    }
+
+    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
+    if (_entities.Count() > 0) {
+      return;
+    }
+    _entities.Clear();
+    _entities = [];
+
+    if (!_renderShouldClose) {
+      _renderShouldClose = true;
+      return;
+    }
+
+    Logger.Info("Waiting for render process to close...");
+    while (_renderShouldClose) {
+    }
+    _renderThread?.Join();
+
+    Logger.Info("Waiting for render thread to close...");
+    while (_renderThread!.IsAlive) {
+    }
+
+    _renderThread = new Thread(LoaderLoop) {
+      Name = "App Loading Frontend Thread"
+    };
+    _renderThread.Start();
+
+    Mutex.WaitOne();
+    Systems.Dispose();
+    StorageCollection.Dispose();
+    foreach (var layout in _descriptorSetLayouts) {
+      layout.Value.Dispose();
+    }
+    _descriptorSetLayouts = [];
+
+    StorageCollection = new(Device);
+    Mutex.ReleaseMutex();
+    await Init();
 
     _renderShouldClose = true;
     Logger.Info("Waiting for loading render process to close...");
@@ -363,7 +425,7 @@ public class Application {
       BufferUsage.StorageBuffer,
       Renderer.MAX_FRAMES_IN_FLIGHT,
       (ulong)Unsafe.SizeOf<Matrix4x4>(),
-      (ulong)Systems.Render3DSystem.LastKnownSkinnedElemCount * 128,
+      Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
       _descriptorSetLayouts["JointsBuffer"],
       null!,
       "JointsStorage",
@@ -623,6 +685,7 @@ public class Application {
         );
       }
 
+      // sometimes when scene is reloeaded it throws memory violation exception
       Matrix4x4[] flatArray = [.. flatJoints];
       fixed (Matrix4x4* pMatrices = flatArray) {
         StorageCollection.WriteBuffer(
@@ -640,8 +703,6 @@ public class Application {
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
-      // _uboBuffers[frameIndex].WriteToBuffer((nint)(_ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      // var currentFrame = new FrameInfo();
       _currentFrame.Camera = _camera.GetComponent<Camera>();
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
@@ -649,12 +710,7 @@ public class Application {
       _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
       _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
       _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
-      // _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      // _currentFrame.PointLightsDescriptorSet = _storageDescriptorSets[frameIndex];
-      // _currentFrame.ObjectDataDescriptorSet = _objectDescriptorSets[frameIndex];
       _currentFrame.TextureManager = _textureManager;
-
-      // Logger.Info($"{_ubo->PointLights.LightPosition}");
 
       // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
@@ -673,7 +729,7 @@ public class Application {
       Renderer.EndFrame();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
-      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemCount * 128, _descriptorSetLayouts["JointsBuffer"]);
+      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
 
       Collect();
     }
@@ -754,6 +810,7 @@ public class Application {
   }
 
   internal unsafe void RenderLoop() {
+    Mutex.WaitOne();
     var pool = Device.CreateCommandPool();
     var threadInfo = new ThreadInfo() {
       CommandPool = pool,
@@ -761,6 +818,7 @@ public class Application {
     };
 
     Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+    Mutex.ReleaseMutex();
 
     while (!_renderShouldClose) {
       if (Window.IsMinimalized) continue;
@@ -868,7 +926,7 @@ public class Application {
   public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
-  public StorageCollection StorageCollection { get; } = null!;
+  public StorageCollection StorageCollection { get; private set; } = null!;
   public Scene CurrentScene => _currentScene;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;

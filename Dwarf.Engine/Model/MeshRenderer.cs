@@ -90,12 +90,12 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     RunTasks(createTasks);
   }
 
-  public unsafe long CalculateBufferSize() {
-    long baseSize = sizeof(Matrix4x4);
-    long currentBufferSize = 0;
+  public unsafe ulong CalculateBufferSize() {
+    ulong baseSize = (ulong)sizeof(Matrix4x4);
+    ulong currentBufferSize = 0;
     foreach (var node in MeshedNodes) {
       if (node.HasSkin) {
-        currentBufferSize += (node.Skin!.OutputNodeMatrices.Length * baseSize);
+        currentBufferSize += ((ulong)node.Skin!.OutputNodeMatrices.Length * baseSize);
       }
     }
     return currentBufferSize;

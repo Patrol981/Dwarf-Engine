@@ -127,20 +127,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
   }
-
-  private void BuildTargetDescriptorJointBuffer(Node node) {
-    if (node.Skin == null) return;
-
-    node.BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
-  }
-
-  private void BuildTargetDescriptorJointBuffer(IRender3DElement target) {
-    for (int i = 0; i < target.MeshedNodesCount; i++) {
-      if (!target.MeshedNodes[i].HasSkin) return;
-
-      target.MeshedNodes[i].BuildDescriptor(_jointDescriptorLayout, _descriptorPool);
-    }
-  }
   private static int CalculateNodesLength(ReadOnlySpan<Entity> entities) {
     int len = 0;
     foreach (var entity in entities) {
@@ -150,17 +136,19 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len;
   }
 
-  private static int CalculateNodesLengthWithSkin(ReadOnlySpan<Entity> entities) {
+  private static (int len, int joints) CalculateNodesLengthWithSkin(ReadOnlySpan<Entity> entities) {
     int len = 0;
+    int joints = 0;
     foreach (var entity in entities) {
       var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
       foreach (var mNode in i3d!.MeshedNodes) {
         if (mNode.HasSkin) {
           len += 1;
+          joints += mNode.Skin!.OutputNodeMatrices.Length;
         }
       }
     }
-    return len;
+    return (len, joints);
   }
 
   public void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
@@ -198,7 +186,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     // LastKnownElemCount = entities.Length;
     LastKnownElemCount = CalculateNodesLength(entities);
     LastKnownElemSize = 0;
-    LastKnownSkinnedElemCount = CalculateNodesLengthWithSkin(entities);
+    var result = CalculateNodesLengthWithSkin(entities);
+    LastKnownSkinnedElemCount = (ulong)result.len;
+    LastKnownSkinnedElemJointsCount = (ulong)result.joints;
 
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
@@ -524,6 +514,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   public IRender3DElement[] CachedRenderables => [.. _notSkinnedEntitiesCache, .. _skinnedEntitiesCache];
   public int LastKnownElemCount { get; private set; }
-  public long LastKnownElemSize { get; private set; }
-  public long LastKnownSkinnedElemCount { get; private set; }
+  public ulong LastKnownElemSize { get; private set; }
+  public ulong LastKnownSkinnedElemCount { get; private set; }
+  public ulong LastKnownSkinnedElemJointsCount { get; private set; }
 }

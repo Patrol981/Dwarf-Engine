@@ -25,8 +25,8 @@ public class StorageCollection : IDisposable {
     _device = device;
 
     _dynamicPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(10)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 10)
+      .SetMaxSets(30)
+      .AddPoolSize(VkDescriptorType.StorageBuffer, 30)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
   }
@@ -44,7 +44,7 @@ public class StorageCollection : IDisposable {
     ulong offsetAlignment,
     bool mapWholeBuffer = false
   ) {
-    if (bufferCount == 0) return;
+    if (bufferCount == 0) bufferCount = 1;
 
     pool ??= _dynamicPool;
 
@@ -88,6 +88,7 @@ public class StorageCollection : IDisposable {
     bool mapWholeBuffer = false) {
     if (!Storages.TryGetValue(key, out var storageData)) return;
     if (storageData.Buffers.Length < index) return;
+    if (elemCount < 1) return;
     var buff = storageData.Buffers[index];
 
     if (buff.GetBufferSize() < buff.GetAlignmentSize() * (ulong)elemCount ||
@@ -124,10 +125,9 @@ public class StorageCollection : IDisposable {
 
   public VkDescriptorSet GetDescriptor(string key, int index) {
     // Storages[key].Descriptors[index]
-    if (Storages.TryGetValue(key, out var storageData)) {
-      return storageData.Descriptors[index] != VkDescriptorSet.Null ? storageData.Descriptors[index] : VkDescriptorSet.Null;
-    }
-    return VkDescriptorSet.Null;
+    return Storages.TryGetValue(key, out var storageData)
+      ? storageData.Descriptors[index] != VkDescriptorSet.Null ? storageData.Descriptors[index] : VkDescriptorSet.Null
+      : VkDescriptorSet.Null;
   }
 
   public void Dispose() {

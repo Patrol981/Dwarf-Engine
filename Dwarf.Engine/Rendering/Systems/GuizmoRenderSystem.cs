@@ -35,6 +35,8 @@ public class GuizmoRenderSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
+    if (Guizmos.Data.Count < 1) return;
+
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(
@@ -55,13 +57,13 @@ public class GuizmoRenderSystem : SystemBase {
     Draw(frameInfo, guizmos);
 
     if (perFrameGuizmos != null && perFrameGuizmos.Length > 0) {
-      Draw(frameInfo, perFrameGuizmos);
-      Guizmos.Free();
+      // Draw(frameInfo, perFrameGuizmos);
+      // Guizmos.Free();
     }
   }
 
-  private void Draw(FrameInfo frameInfo, Span<Guizmo> guizmos) {
-    for (int i = 0; i < guizmos.Length; i++) {
+  private void Draw(FrameInfo frameInfo, List<Guizmo> guizmos) {
+    for (int i = 0; i < guizmos.Count; i++) {
       unsafe {
         var color = guizmos[i].Color;
         _bufferObject->ModelMatrix = guizmos[i].Transform.Matrix4;

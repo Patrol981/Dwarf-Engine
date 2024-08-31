@@ -18,7 +18,7 @@ public interface IRender3DElement : IDrawable {
   Node[] LinearNodes { get; }
   bool FinishedInitialization { get; }
   bool IsSkinned { get; }
-  long CalculateBufferSize();
+  ulong CalculateBufferSize();
   DwarfBuffer Ssbo { get; }
   Matrix4x4[] InverseMatrices { get; }
   VkDescriptorSet SkinDescriptor { get; }

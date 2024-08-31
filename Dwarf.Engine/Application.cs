@@ -234,6 +234,9 @@ public class Application {
       layout.Value.Dispose();
     }
     _descriptorSetLayouts = [];
+    _globalPool.Dispose();
+    _globalPool = null!;
+    _skybox?.Dispose();
 
     StorageCollection = new(Device);
     Mutex.ReleaseMutex();

@@ -1,4 +1,4 @@
-using static Dwarf.GLFW.GLFW;
+using static SDL3.SDL3;
 
 namespace Dwarf.Globals;
 
@@ -10,19 +10,26 @@ public static class Time {
   private static double s_time = 0.0f;
   // private static readonly double s_timeDelta = 0.01f;
 
-  private static double s_currentTime = glfwGetTime();
-  private static double s_accumulator = 0.0;
+  private static double s_currentTime = 0.0f;
+  private static double s_accumulator = 0.0f;
+
+  private static double s_frequency = 0.0f;
+
+  public static void Init() {
+    s_frequency = SDL_GetPerformanceFrequency();
+    s_currentTime = SDL_GetPerformanceCounter();
+  }
 
   public static void Tick_() {
-    double currentFrame = glfwGetTime();
-    s_deltaTime = currentFrame - s_lastFrame;
+    double currentFrame = SDL_GetPerformanceCounter();
+    s_deltaTime = (currentFrame - s_lastFrame) / s_frequency;
     s_lastFrame = currentFrame;
   }
 
 
   public static void Tick() {
-    double currentFrame = glfwGetTime();
-    s_deltaTime = currentFrame - s_lastFrame;
+    double currentFrame = SDL_GetPerformanceCounter();
+    s_deltaTime = (currentFrame - s_lastFrame) / s_frequency;
     s_fixedTime = s_deltaTime;
     if (s_deltaTime > 0.25f) {
       s_deltaTime = 0.25f;
@@ -33,7 +40,7 @@ public static class Time {
   }
 
   public static void Tick_2() {
-    double newTime = glfwGetTime();
+    double newTime = SDL_GetTicks();
     double frameTime = newTime - s_currentTime;
     s_currentTime = newTime;
 

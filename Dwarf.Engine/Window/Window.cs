@@ -1,24 +1,174 @@
-using System.Runtime.InteropServices;
-
 using Dwarf.Extensions.Logging;
-using Dwarf.GLFW;
-using Dwarf.GLFW.Core;
 using Dwarf.Globals;
 using Dwarf.Math;
-using Dwarf.Utils;
 
-using StbImageSharp;
+using SDL3;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
+using static SDL3.SDL3;
 
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 
 namespace Dwarf.Windowing;
 
-public unsafe class Window : IDisposable {
+[Flags]
+public enum WindowFlags {
+  None = 0,
+  Fullscreen = 1 << 0,
+  Borderless = 1 << 1,
+  Resizable = 1 << 2,
+  Minimized = 1 << 3,
+  Maximized = 1 << 4,
+}
+
+public class Window : IDisposable {
+  public VkUtf8String AppName = "Dwarf App"u8;
+  public VkUtf8String EngineName = "Dwarf Engine"u8;
+  private DwarfExtent2D _extent;
+  private readonly bool _windowMinimalized = false;
+
+  public Window(int width, int height, string windowName, bool fullscreen) {
+    Size = new Vector2I(width, height);
+    InitWindow(windowName, fullscreen);
+    LoadIcons();
+    Show();
+  }
+
+  private void InitWindow(string windowName, bool fullscreen) {
+    if (SDL_Init(SDL_InitFlags.Video) < 0) {
+      throw new Exception("Failed to initalize Window");
+    }
+
+    SDL_SetLogOutputFunction(Log_SDL);
+
+    if (SDL_Vulkan_LoadLibrary() < 0) {
+      throw new Exception("Failed to initialize Vulkan");
+    }
+
+    var windowFlags = SDL_WindowFlags.Vulkan |
+                      SDL_WindowFlags.Resizable;
+
+    SDLWindow = SDL_CreateWindow(windowName, Size.X, Size.Y, windowFlags);
+    if (SDLWindow.IsNull) {
+      throw new Exception("Failed to create SDL window");
+    }
+
+    _ = SDL_SetWindowPosition(SDLWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+    WindowState.s_Window = this;
+    WindowState.s_Window.Extent = new DwarfExtent2D((uint)Size.X, (uint)Size.Y);
+  }
+
+  private void LoadIcons() {
+
+  }
+
+  public void Terminate() {
+
+  }
+
+  public void Show() {
+    SDL_ShowWindow(SDLWindow);
+  }
+
+  public void Dispose() {
+    SDL_DestroyWindow(SDLWindow);
+  }
+
+  public void ResetWindowResizedFlag() {
+    FramebufferResized = false;
+  }
+
+
+  public void PollEvents() {
+    _ = SDL_PollEvent(out SDL_Event e);
+
+    switch (e.type) {
+      case SDL_EventType.Quit:
+        ShouldClose = true;
+        break;
+      case SDL_EventType.KeyDown:
+        KeyboardState.KeyCallback(SDLWindow, e.key, e.type);
+        break;
+      case SDL_EventType.MouseMotion:
+        MouseState.MouseCallback(e.motion.xrel, e.motion.yrel);
+        break;
+      case SDL_EventType.MouseWheel:
+        MouseState.ScrollCallback(e.wheel.x, e.wheel.y);
+        break;
+      case SDL_EventType.MouseButtonUp:
+        MouseState.MouseButtonCallbackUp(e.button.Button);
+        break;
+      case SDL_EventType.MouseButtonDown:
+        MouseState.MouseButtonCallbackDown(e.button.Button);
+        break;
+      case SDL_EventType.WindowResized:
+        FrambufferResizedCallback(e.window.data1, e.window.data2);
+        break;
+      case SDL_EventType.WindowRestored:
+        break;
+      default:
+        break;
+    }
+  }
+
+  private static unsafe void FrambufferResizedCallback(int width, int height) {
+    if (width <= 0 || height <= 0) return;
+    Logger.Info($"RESISING {width} {height}");
+    WindowState.s_Window.FramebufferResized = true;
+    WindowState.s_Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
+    WindowState.s_Window.OnResizedEvent(null!);
+  }
+
+  private static unsafe void IconifyCallback(int iconified) {
+    WindowState.s_Window.IsMinimalized = iconified != 0;
+    Logger.Info($"Window Minimalized: {WindowState.s_Window.IsMinimalized}");
+    if (!WindowState.s_Window.IsMinimalized) {
+      // Application.Instance.Renderer.RecreateSwapchain();
+    }
+  }
+
+  //[UnmanagedCallersOnly]
+  private static void Log_SDL(SDL_LogCategory category, SDL_LogPriority priority, string description) {
+    if (priority >= SDL_LogPriority.Error) {
+      Logger.Error($"[{priority}] SDL: {description}");
+      throw new Exception(description);
+    } else {
+      Logger.Info($"[{priority}] SDL: {description}");
+    }
+  }
+
+  private void OnResizedEvent(EventArgs e) {
+    WindowState.s_Window.OnResizedEventDispatcher?.Invoke(this, e);
+  }
+
+  public bool WasWindowResized() => FramebufferResized;
+  public bool WasWindowMinimalized() => _windowMinimalized;
+
+  public unsafe VkSurfaceKHR CreateSurface(VkInstance instance) {
+    VkSurfaceKHR surface;
+    return SDL_Vulkan_CreateSurface(SDLWindow, instance, (nint)IntPtr.Zero, (ulong**)&surface) != 0
+      ? throw new Exception("Failed to create SDL Surface")
+      : surface;
+  }
+
+  public DwarfExtent2D Extent {
+    get { return _extent; }
+    private set { _extent = value; }
+  }
+  public Vector2I Size { get; }
+  public bool ShouldClose { get; set; } = false;
+  public bool FramebufferResized { get; private set; } = false;
+  public bool IsMinimalized { get; private set; } = false;
+  public event EventHandler? OnResizedEventDispatcher;
+
+  public SDL_Window SDLWindow { get; private set; }
+}
+
+/*
+public unsafe class Window_Old : IDisposable {
   public VkUtf8String AppName = "Dwarf App"u8;
   public VkUtf8String EngineName = "Dwarf Engine"u8;
   private DwarfExtent2D _extent;
@@ -146,9 +296,9 @@ public unsafe class Window : IDisposable {
   }
 
   private static unsafe void IconifyCallback(GLFWwindow* window, int iconified) {
-    WindowState.s_Window._windowMinimalized = iconified != 0;
-    Logger.Info($"Window Minimalized: {WindowState.s_Window._windowMinimalized}");
-    if (!WindowState.s_Window._windowMinimalized) {
+    WindowState.s_Window.IsMinimalized = iconified != 0;
+    Logger.Info($"Window Minimalized: {WindowState.s_Window.IsMinimalized}");
+    if (!WindowState.s_Window.IsMinimalized) {
       // Application.Instance.Renderer.RecreateSwapchain();
     }
   }
@@ -196,3 +346,4 @@ public unsafe class Window : IDisposable {
   public GLFWmonitor* GLFWmonitor { get; private set; }
   public nint CursorHandle { get; private set; }
 }
+*/

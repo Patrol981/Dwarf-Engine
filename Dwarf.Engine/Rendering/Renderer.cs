@@ -1,20 +1,19 @@
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-using Dwarf.Extensions.Logging;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering;
 
 public unsafe class Renderer : IDisposable {
-  private Window _window = null!;
+  private readonly Window _window = null!;
   // private VulkanDevice _device = null!;
-  private IDevice _device;
+  private readonly IDevice _device;
   private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
 
   private uint _imageIndex = 0;

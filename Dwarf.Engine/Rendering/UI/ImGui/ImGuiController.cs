@@ -366,7 +366,7 @@ public partial class ImGuiController : IDisposable {
     io.MouseDown[1] = MouseState.GetInstance().QuickStateMouseButtons.Right;
     io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
     var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
-    if (WindowState.s_MouseCursorState != GLFW.InputValue.GLFW_CURSOR_DISABLED) {
+    if (WindowState.s_MouseCursorState != CursorState.Centered || WindowState.s_MouseCursorState != CursorState.Hidden) {
       io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
     }
 
@@ -381,9 +381,11 @@ public partial class ImGuiController : IDisposable {
       // io.InputQueueCharacters.
 
       if (KeyboardState.Instance.KeyStates.TryGetValue(key, out var state)) {
-        if (Input.GetKeyDown((Keys)key)) {
+        /*
+        if (Input.GetKeyDown((SDL_Keycode)key)) {
           io.AddInputCharacter((char)key);
         }
+        */
       }
 
 
@@ -392,11 +394,7 @@ public partial class ImGuiController : IDisposable {
 
       if (TryMapKey((Keys)key, out var imKey)) {
         // io.AddKeyEvent(imKey, true);
-        io.AddKeyEvent(imKey, Input.GetKey((Keys)key));
-        if (Input.GetKeyDown(Keys.GLFW_KEY_BACKSPACE)) {
-          Logger.Info("ayo");
-
-        }
+        io.AddKeyEvent(imKey, Input.GetKey((SDL3.SDL_Scancode)key));
       }
     }
   }

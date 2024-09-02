@@ -1,9 +1,11 @@
 using Dwarf.EntityComponentSystem;
-using Dwarf.GLFW.Core;
+// using Dwarf.GLFW.Core;
 using Dwarf.Physics;
 using Dwarf.Testing;
 // using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
+
+using SDL3;
 
 namespace Dwarf.Globals;
 
@@ -22,11 +24,32 @@ public sealed class KeyboardState {
   private static bool s_debug = true;
 
   public KeyboardState() {
-    foreach (var enumValue in Enum.GetValues(typeof(Keys))) {
-      KeyStates.TryAdd((int)enumValue, new());
+    foreach (var enumValue in Enum.GetValues(typeof(SDL_Keycode))) {
+      KeyStates.TryAdd((int)(uint)enumValue, new());
     }
   }
-  public static unsafe void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+
+  public static void KeyCallback(SDL_Window window, SDL_KeyboardEvent e, SDL_EventType a) {
+    switch (a) {
+      case SDL_EventType.KeyDown:
+        s_instance.KeyStates[(int)e.key].KeyDown = true;
+        s_instance.KeyStates[(int)e.key].KeyPressed = true;
+
+        if (e.key == SDL_Keycode.F) WindowState.FocusOnWindow();
+        if (e.key == SDL_Keycode.F1) WindowState.MaximizeWindow();
+        if (e.key == SDL_Keycode.Grave) ChangeWireframeMode();
+        if (e.key == SDL_Keycode._1) ChangeDebugVisiblity();
+
+        break;
+      case SDL_EventType.KeyUp:
+        s_instance.KeyStates[(int)e.key].KeyDown = false;
+        break;
+      default:
+        break;
+    }
+  }
+
+  public static unsafe void KeyCallback(SDL_Window window, int key, int scancode, int action, int mods) {
     switch (action) {
       case (int)KeyAction.GLFW_PRESS:
         if (s_instance.KeyStates.ContainsKey(key)) {

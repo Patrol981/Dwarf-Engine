@@ -1,5 +1,3 @@
-using static Dwarf.GLFW.GLFW;
-
 namespace Dwarf.Globals;
 public static class Frames {
   // private static int s_frameCount = 0;

@@ -1,9 +1,9 @@
 // using Dwarf.Extensions.GLFW;
-using Dwarf.Extensions.GLFW;
-using Dwarf.Extensions.Logging;
-using Dwarf.GLFW.Core;
+// using Dwarf.Extensions.GLFW;
+using SDL3;
+// using Dwarf.GLFW.Core;
 
-using static Dwarf.Extensions.GLFW.MouseButtonMap;
+// using static Dwarf.Extensions.GLFW.MouseButtonMap;
 
 namespace Dwarf.Globals;
 
@@ -20,57 +20,47 @@ public sealed class MouseState {
 
   private OpenTK.Mathematics.Vector2d _lastMousePositionFromCallback = new(0, 0);
 
-  public static unsafe void MouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
+  public static unsafe void MouseCallback(double xpos, double ypos) {
+    // GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
+    GetInstance()._lastMousePositionFromCallback.X += xpos;
+    GetInstance()._lastMousePositionFromCallback.Y += ypos;
   }
 
-  public static unsafe void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+  public static unsafe void ScrollCallback(double xoffset, double yoffset) {
     double currentScrollY = yoffset;
     GetInstance().ScrollDelta = currentScrollY += yoffset;
     GetInstance().PreviousScroll = currentScrollY;
   }
 
-  public static unsafe void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    switch (action) {
-      case (int)MouseButtonMap.Action.GLFW_PRESS:
-        // GetInstance().OnClicked(null!);
-
-        switch (button) {
-          case (int)Buttons.GLFW_MOUSE_BUTTON_LEFT:
-            s_instance.MouseButtons.Left = true;
-            s_instance.QuickStateMouseButtons.Left = true;
-            break;
-          case (int)Buttons.GLFW_MOUSE_BUTTON_RIGHT:
-            s_instance.MouseButtons.Right = true;
-            s_instance.QuickStateMouseButtons.Right = true;
-            break;
-          case (int)Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
-            s_instance.MouseButtons.Middle = true;
-            s_instance.QuickStateMouseButtons.Middle = true;
-            break;
-          default:
-            Logger.Error("Unknown mouse button key");
-            break;
-        }
+  public static void MouseButtonCallbackUp(SDL_Button button) {
+    switch (button) {
+      case SDL_Button.Left:
+        s_instance.QuickStateMouseButtons.Left = false;
         break;
-      case (int)MouseButtonMap.Action.GLFW_RELEASE:
-        switch (button) {
-          case (int)Buttons.GLFW_MOUSE_BUTTON_LEFT:
-            // s_instance._mouseButtons.Left = false;
-            s_instance.QuickStateMouseButtons.Left = false;
-            break;
-          case (int)Buttons.GLFW_MOUSE_BUTTON_RIGHT:
-            // s_instance._mouseButtons.Right = false;
-            s_instance.QuickStateMouseButtons.Right = false;
-            break;
-          case (int)Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
-            // s_instance._mouseButtons.Middle = false;
-            s_instance.QuickStateMouseButtons.Middle = false;
-            break;
-          default:
-            Logger.Error("Unknown mouse button key");
-            break;
-        }
+      case SDL_Button.Middle:
+        s_instance.QuickStateMouseButtons.Middle = false;
+        break;
+      case SDL_Button.Right:
+        s_instance.QuickStateMouseButtons.Right = false;
+        break;
+      default:
+        break;
+    }
+  }
+
+  public static void MouseButtonCallbackDown(SDL_Button button) {
+    switch (button) {
+      case SDL_Button.Left:
+        s_instance.MouseButtons.Left = true;
+        s_instance.QuickStateMouseButtons.Left = true;
+        break;
+      case SDL_Button.Middle:
+        s_instance.MouseButtons.Middle = true;
+        s_instance.QuickStateMouseButtons.Middle = true;
+        break;
+      case SDL_Button.Right:
+        s_instance.MouseButtons.Right = true;
+        s_instance.QuickStateMouseButtons.Right = true;
         break;
       default:
         break;

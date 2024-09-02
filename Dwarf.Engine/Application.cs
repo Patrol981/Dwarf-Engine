@@ -13,11 +13,10 @@ using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-using ImGuiNET;
-using OpenTK.Mathematics;
+
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
+// using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf;
@@ -66,8 +65,6 @@ public class Application {
   private readonly object _entitiesLock = new object();
 
   private Entity _camera = new();
-
-  private Scene _currentScene = null!;
 
   // ubos
   private DescriptorPool _globalPool = null!;
@@ -122,10 +119,12 @@ public class Application {
       DirectRPG.CanvasText("Loading...");
       DirectRPG.EndCanvas();
     };
+
+    Time.Init();
   }
 
   public void SetCurrentScene(Scene scene) {
-    _currentScene = scene;
+    CurrentScene = scene;
   }
 
   public void LoadScene(Scene scene) {
@@ -258,7 +257,7 @@ public class Application {
   }
 
   private async Task<Task> SetupScene() {
-    if (_currentScene == null) return Task.CompletedTask;
+    if (CurrentScene == null) return Task.CompletedTask;
 
     await LoadTextures();
     await LoadEntities();
@@ -301,9 +300,10 @@ public class Application {
     while (!Window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
       if (Window.IsMinimalized) {
-        glfwWaitEvents();
+        // glfwWaitEvents();
       } else {
-        glfwPollEvents();
+        // glfwPollEvents();
+        Window.PollEvents();
       }
 
       Time.Tick();
@@ -461,9 +461,9 @@ public class Application {
   }
 
   private async Task<Task> LoadTextures() {
-    if (_currentScene == null) return Task.CompletedTask;
-    _currentScene.LoadTextures();
-    var paths = _currentScene.GetTexturePaths();
+    if (CurrentScene == null) return Task.CompletedTask;
+    CurrentScene.LoadTextures();
+    var paths = CurrentScene.GetTexturePaths();
 
     var startTime = DateTime.UtcNow;
     List<Task> tasks = [];
@@ -486,12 +486,12 @@ public class Application {
   }
 
   private Task LoadEntities() {
-    if (_currentScene == null) return Task.CompletedTask;
+    if (CurrentScene == null) return Task.CompletedTask;
     var startTime = DateTime.UtcNow;
 
     Mutex.WaitOne();
-    _currentScene.LoadEntities();
-    _entities.AddRange(_currentScene.GetEntities());
+    CurrentScene.LoadEntities();
+    _entities.AddRange(CurrentScene.GetEntities());
     Mutex.ReleaseMutex();
 
     var targetCnv = _entities.Distinct<Canvas>();
@@ -611,6 +611,7 @@ public class Application {
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     Frames.TickStart();
+
     Systems.ValidateSystems(
         _entities.ToArray(),
         Device, Renderer,
@@ -916,7 +917,6 @@ public class Application {
 
     Systems.PhysicsSystem?.Dispose();
 
-    glfwTerminate();
     System.Environment.Exit(1);
   }
 
@@ -930,7 +930,7 @@ public class Application {
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
   public StorageCollection StorageCollection { get; private set; } = null!;
-  public Scene CurrentScene => _currentScene;
+  public Scene CurrentScene { get; private set; } = null!;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
 }

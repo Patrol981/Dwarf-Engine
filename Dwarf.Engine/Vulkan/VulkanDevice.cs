@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
@@ -7,7 +8,8 @@ using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
+using static SDL3.SDL3;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
@@ -20,7 +22,6 @@ public class VulkanDevice : IDevice {
   private VkDebugUtilsMessengerEXT _debugMessenger = VkDebugUtilsMessengerEXT.Null;
 
   private VkInstance _vkInstance = VkInstance.Null;
-  private VkSurfaceKHR _surface = VkSurfaceKHR.Null;
   private VkPhysicalDevice _physicalDevice = VkPhysicalDevice.Null;
   private VkDevice _logicalDevice = VkDevice.Null;
 
@@ -380,7 +381,11 @@ public class VulkanDevice : IDevice {
       pApplicationInfo = &appInfo
     };
 
-    List<VkUtf8String> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
+    List<VkUtf8String> instanceExtensions = [];
+    foreach (var ext in SDL_Vulkan_GetInstanceExtensions()) {
+      ReadOnlySpan<byte> sdlExtSpan = Encoding.UTF8.GetBytes(ext);
+      instanceExtensions.Add(sdlExtSpan);
+    }
 
     List<VkUtf8String> instanceLayers = new();
     // Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
@@ -470,18 +475,16 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateSurface() {
-    VkSurfaceKHR surface;
-    _window.CreateSurface(_vkInstance.Handle, &surface);
-    _surface = surface;
+    Surface = _window.CreateSurface(_vkInstance.Handle);
   }
 
   private unsafe void PickPhysicalDevice() {
-    _physicalDevice = DeviceHelper.GetPhysicalDevice(_vkInstance, _surface);
+    _physicalDevice = DeviceHelper.GetPhysicalDevice(_vkInstance, Surface);
   }
 
   private unsafe void CreateLogicalDevice() {
     vkGetPhysicalDeviceProperties(_physicalDevice, out Properties);
-    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
+    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, Surface);
     var availableDeviceExtensions = vkEnumerateDeviceExtensionProperties(_physicalDevice);
 
     HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily, queueFamilies.presentFamily];
@@ -551,7 +554,7 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe ulong CreateCommandPool() {
-    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
+    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, Surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
       queueFamilyIndex = queueFamilies.graphicsFamily,
@@ -565,14 +568,14 @@ public class VulkanDevice : IDevice {
   public unsafe void Dispose() {
     vkDestroyCommandPool(_logicalDevice, _commandPool);
     vkDestroyDevice(_logicalDevice);
-    vkDestroySurfaceKHR(_vkInstance, _surface);
+    vkDestroySurfaceKHR(_vkInstance, Surface);
     vkDestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger);
     vkDestroyInstance(_vkInstance);
   }
 
   public IntPtr LogicalDevice => _logicalDevice;
   public IntPtr PhysicalDevice => _physicalDevice;
-  public ulong Surface => _surface;
+  public ulong Surface { get; private set; } = VkSurfaceKHR.Null;
 
   public ulong CommandPool {
     get {

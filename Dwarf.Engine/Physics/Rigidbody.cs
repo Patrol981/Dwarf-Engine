@@ -1,6 +1,8 @@
 using System.Numerics;
 
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Vulkan;
@@ -17,7 +19,7 @@ public class Rigidbody : Component, IDisposable {
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
-  private readonly MotionQuality _motionQuality = MotionQuality.Discrete;
+  private readonly MotionQuality _motionQuality = MotionQuality.LinearCast;
   private readonly bool _physicsControlRotation = false;
   private readonly float _inputRadius = 0.0f;
   private readonly float _sizeX = 1.0f;
@@ -205,6 +207,11 @@ public class Rigidbody : Component, IDisposable {
       transform.Rotation = Quat.ToEuler(_bodyInterface.GetRotation(_bodyId));
     }
 
+    var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
+    newVel.X /= 2;
+    newVel.Z /= 2;
+    if (newVel.Y < 0) newVel.Y = 0;
+    _bodyInterface.SetLinearVelocity(_bodyId, newVel);
 
     // freeze rigidbody to X an Z axis
     // _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
@@ -227,7 +234,8 @@ public class Rigidbody : Component, IDisposable {
     pos.X += vec3.X;
     pos.Y += vec3.Y;
     pos.Z += vec3.Z;
-    _bodyInterface.SetPosition(_bodyId, pos, Activation.Activate);
+    // _bodyInterface.SetPosition(_bodyId, pos, Activation.Activate);
+    _bodyInterface.AddLinearVelocity(_bodyId, vec3);
   }
 
   public void Rotate(Vector3 vec3) {
@@ -248,6 +256,12 @@ public class Rigidbody : Component, IDisposable {
 
   public void SetPosition(Vector3 vec3) {
     _bodyInterface.SetPosition(_bodyId, new(vec3.X, vec3.Y, vec3.Z), Activation.Activate);
+  }
+
+  public Vector3 Velocity {
+    get {
+      return _bodyInterface.GetLinearVelocity(_bodyId);
+    }
   }
 
   public static (Entity?, Entity?) GetCollisionData(BodyID body1, BodyID body2) {

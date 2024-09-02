@@ -1,36 +1,41 @@
-using Dwarf.Extensions.GLFW;
+// using Dwarf.Extensions.GLFW;
 using Dwarf.Rendering.UI;
-using static Dwarf.GLFW.GLFW;
+
+using SDL3;
+
+using static SDL3.SDL3;
+// using static Dwarf.GLFW.GLFW;
 
 namespace Dwarf.Globals;
 public static class Input {
-  public static unsafe bool GetKey(Keys key) {
-    return glfwGetKey(WindowState.s_Window.GLFWwindow, (int)key) == (int)KeyAction.GLFW_PRESS;
+  public static unsafe bool GetKey(SDL_Scancode scancode) {
+    var state = SDL_GetKeyboardState(null);
+    return state[(int)scancode] == 1;
   }
 
-  public static unsafe bool GetKeyDown(Keys key) {
+  public static unsafe bool GetKeyDown(SDL_Scancode scancode) {
     var keyboardState = KeyboardState.Instance;
 
-    bool keyPressed = keyboardState.KeyStates[(int)key].KeyPressed;
-    keyboardState.KeyStates[(int)key].KeyPressed = false;
+    bool keyPressed = keyboardState.KeyStates[(int)scancode].KeyPressed;
+    keyboardState.KeyStates[(int)scancode].KeyPressed = false;
 
     return keyPressed;
   }
 
-  public static bool GetMouseButtonDown(MouseButtonMap.Buttons button) {
+  public static bool GetMouseButtonDown(SDL_Button button) {
     var mouseState = MouseState.GetInstance();
     bool mouseBtnPressed = false;
 
     switch (button) {
-      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_LEFT:
+      case SDL_Button.Left:
         mouseBtnPressed = mouseState.MouseButtons.Left;
         mouseState.MouseButtons.Left = false;
         return mouseBtnPressed;
-      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_MIDDLE:
+      case SDL_Button.Middle:
         mouseBtnPressed = mouseState.MouseButtons.Middle;
         mouseState.MouseButtons.Middle = false;
         return mouseBtnPressed;
-      case MouseButtonMap.Buttons.GLFW_MOUSE_BUTTON_RIGHT:
+      case SDL_Button.Right:
         mouseBtnPressed = mouseState.MouseButtons.Right;
         mouseState.MouseButtons.Right = false;
         return mouseBtnPressed;
@@ -39,8 +44,9 @@ public static class Input {
     }
   }
 
-  public static unsafe bool GetMouseButton(MouseButtonMap.Buttons button) {
-    return glfwGetMouseButton(WindowState.s_Window.GLFWwindow, (int)button) == (int)MouseButtonMap.Action.GLFW_PRESS;
+  public static unsafe bool GetMouseButton(SDL_Button button) {
+    var state = SDL_GetMouseState(null, null);
+    return (state & SDL_BUTTON(button)) != 0;
   }
 
   public static bool MouseOverUI() {

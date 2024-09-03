@@ -48,4 +48,6 @@ public static class WindowState {
     Application.Instance.Device.WaitDevice();
     SDL_MaximizeWindow(s_Window.SDLWindow);
   }
+
+  public static CursorState CursorState => s_MouseCursorState;
 }

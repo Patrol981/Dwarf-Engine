@@ -9,7 +9,7 @@ using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using ImGuiNET;
-
+using SDL3;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -366,7 +366,7 @@ public partial class ImGuiController : IDisposable {
     io.MouseDown[1] = MouseState.GetInstance().QuickStateMouseButtons.Right;
     io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
     var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
-    if (WindowState.s_MouseCursorState != CursorState.Centered || WindowState.s_MouseCursorState != CursorState.Hidden) {
+    if (WindowState.s_MouseCursorState != CursorState.Centered && WindowState.s_MouseCursorState != CursorState.Hidden) {
       io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
     }
 
@@ -381,11 +381,9 @@ public partial class ImGuiController : IDisposable {
       // io.InputQueueCharacters.
 
       if (KeyboardState.Instance.KeyStates.TryGetValue(key, out var state)) {
-        /*
-        if (Input.GetKeyDown((SDL_Keycode)key)) {
+        if (Input.GetKeyDown((SDL_Scancode)key)) {
           io.AddInputCharacter((char)key);
         }
-        */
       }
 
 

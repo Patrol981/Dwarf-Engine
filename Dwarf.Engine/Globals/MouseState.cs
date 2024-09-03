@@ -1,5 +1,6 @@
 // using Dwarf.Extensions.GLFW;
 // using Dwarf.Extensions.GLFW;
+using System.Numerics;
 using SDL3;
 // using Dwarf.GLFW.Core;
 
@@ -18,12 +19,17 @@ public sealed class MouseState {
 
   public event EventHandler? ClickEvent;
 
-  private OpenTK.Mathematics.Vector2d _lastMousePositionFromCallback = new(0, 0);
+  private Vector2 _lastMousePositionFromCallback = Vector2.Zero;
+  private Vector2 _lastRelativeMousePositionFromCallback = Vector2.Zero;
 
-  public static unsafe void MouseCallback(double xpos, double ypos) {
-    // GetInstance()._lastMousePositionFromCallback = new(xpos, ypos);
-    GetInstance()._lastMousePositionFromCallback.X += xpos;
-    GetInstance()._lastMousePositionFromCallback.Y += ypos;
+  public static void WindowMouseCallback(float xpos, float ypos) {
+    GetInstance()._lastMousePositionFromCallback.X = xpos;
+    GetInstance()._lastMousePositionFromCallback.Y = ypos;
+  }
+
+  public static void RelativeMouseCallback(float xpos, float ypos) {
+    GetInstance()._lastRelativeMousePositionFromCallback.X += xpos;
+    GetInstance()._lastRelativeMousePositionFromCallback.Y += ypos;
   }
 
   public static unsafe void ScrollCallback(double xoffset, double yoffset) {
@@ -71,7 +77,14 @@ public sealed class MouseState {
     ClickEvent?.Invoke(this, e);
   }
 
-  public OpenTK.Mathematics.Vector2d MousePosition => _lastMousePositionFromCallback;
+  public Vector2 MousePosition {
+    get {
+      return WindowState.CursorState switch {
+        CursorState.Centered => _lastRelativeMousePositionFromCallback,
+        _ => _lastMousePositionFromCallback,
+      };
+    }
+  }
   public double ScrollDelta { get; set; } = 0.0;
   public double PreviousScroll { get; private set; } = 0.0;
 

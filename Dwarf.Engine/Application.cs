@@ -103,7 +103,7 @@ public class Application {
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
-    Window = new Window(1200, 900, appName, Fullscreen);
+    Window = new Window(1200, 900, appName, Fullscreen, debugMode);
     Device = new VulkanDevice(Window);
     Renderer = new Renderer(Window, Device);
     Systems = new SystemCollection();

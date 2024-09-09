@@ -24,24 +24,21 @@ public class SystemCollection : IDisposable {
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
-  private readonly object _renderLock = new object();
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
   public bool ReloadUISystem = false;
 
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
-    lock (_renderLock) {
-      _render3DSystem?.Render(
+    _render3DSystem?.Render(
         frameInfo
       );
-      _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
-      _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
-      _directionaLightSystem?.Render(frameInfo);
-      _pointLightSystem?.Render(frameInfo);
-      _guizmoRenderSystem?.Render(frameInfo);
-      _renderUISystem?.DrawUI(frameInfo, _canvas);
-    }
+    _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
+    _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
+    _directionaLightSystem?.Render(frameInfo);
+    _pointLightSystem?.Render(frameInfo);
+    _guizmoRenderSystem?.Render(frameInfo);
+    _renderUISystem?.DrawUI(frameInfo, _canvas);
   }
 
   public Task UpdateCalculationSystems(Entity[] entities) {

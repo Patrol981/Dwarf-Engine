@@ -56,36 +56,11 @@ public class PhysicsSystem : IDisposable {
 
     var bodyInterface = _physicsSystem.BodyInterface;
 
-    // Next we can create a rigid body to serve as the floor, we make a large box
-    // Create the settings for the collision volume (the shape).
-    // Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
-    BoxShapeSettings floorShapeSettings = new(new System.Numerics.Vector3(100.0f, 1.0f, 100.0f));
-    BodyCreationSettings floorSettings = new(floorShapeSettings, new Vector3(0.0f, 5.0f, 0.0f), Quaternion.Identity, MotionType.Static, Layers.NonMoving);
-
-    var floor = bodyInterface.CreateBody(floorSettings);
-    bodyInterface.AddBody(floor, Activation.DontActivate);
-
-    // BodyCreationSettings sphereSettings = new(new SphereShape(0.5f), new Double3(0.0f, 2.0f, 0.0f), Translator.OpenTKToSystemNumericsQuaternion(Quaternion.Identity), MotionType.Dynamic, Layers.Moving);
-    // BodyID sphereID = bodyInterface.CreateAndAddBody(sphereSettings, Activation.Activate);
-
-    // Now you can interact with the dynamic body, in this case we're going to give it a velocity.
-    // (note that if we had used CreateBody then we could have set the velocity straight on the body before adding it to the physics system)
-    // var vec3 = new Vector3(0.0f, -5.0f, 0.0f);
-    // bodyInterface.SetLinearVelocity(sphereID, Translator.OpenTKToSystemNumericsVector(vec3));
-    // JoltProgram.StackTest(bodyInterface);
-
-    // MeshShapeSettings meshShape = JoltProgram.CreateTorusMesh(3.0f, 1.0f);
-    // BodyCreationSettings settings = new(meshShape, new Double3(0, 10, 0), OpenTKToSystemNumericsQuaternion(Quaternion.Identity), MotionType.Dynamic, Layers.Moving);
-
-
-
     // Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
     // You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
     // _physicsSystem.OptimizeBroadPhase();
     _physicsSystem.Gravity *= -1;
-    // _physicsSystem.BodyInterface.SetGravityFactor(0.01);
-    // _physicsSystem.Gravity /= 25;
     Logger.Info($"[GRAVITY] {_physicsSystem.Gravity}");
   }
 
@@ -101,30 +76,12 @@ public class PhysicsSystem : IDisposable {
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
 
-    // _physicsSystem.OptimizeBroadPhase();
     _physicsSystem.Step(Time.FixedTime * 10, CollisionSteps);
     return Task.CompletedTask;
-
-    // Console.WriteLine(entities.Length);
-    // Logger.Info("Physics Tick");
-    // return Task.CompletedTask;
-  }
-
-  public static void Calculate(object application) {
-    var app = (Application)application;
-    var systems = app.Systems;
-    var entities = app.GetEntities().Distinct<Rigidbody>();
-    // var system = (PhysicsSystem)physicsSystem;
-
-    while (!app.Window.ShouldClose) {
-      // systems.PhysicsSystem.Tick(entities);
-      // Thread.Sleep(50);
-    }
   }
 
   public void Dispose() {
     _physicsSystem?.Dispose();
-
     Foundation.Shutdown();
   }
 

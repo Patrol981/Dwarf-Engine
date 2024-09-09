@@ -19,6 +19,8 @@ public static class WindowState {
   public static CursorState s_MouseCursorState = CursorState.Normal;
 
   public static unsafe void SetCursorMode(CursorState cursorState) {
+    var prevMousePos = MouseState.GetInstance().MousePosition;
+
     s_MouseCursorState = cursorState;
     switch (cursorState) {
       case CursorState.Normal:
@@ -27,6 +29,7 @@ public static class WindowState {
         break;
       case CursorState.Centered:
         SDL_SetWindowRelativeMouseMode(s_Window.SDLWindow, true);
+        MouseState.GetInstance().MousePosition = prevMousePos;
         // SDL_WarpMouseInWindow(s_Window.SDLWindow, s_Window.Size.X / 2, s_Window.Size.Y / 2);
         break;
       case CursorState.Hidden:

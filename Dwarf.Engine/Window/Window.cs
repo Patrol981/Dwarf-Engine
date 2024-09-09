@@ -46,7 +46,8 @@ public class Window : IDisposable {
     }
 
     if (debug) {
-      SDL_SetLogPriorities(SDL_LogPriority.Debug);
+      Logger.Info("Setting Debug For SDL");
+      SDL_SetLogPriorities(SDL_LogPriority.Verbose);
       SDL_SetLogOutputFunction(Log_SDL);
     }
 
@@ -114,42 +115,53 @@ public class Window : IDisposable {
 
 
   public void PollEvents() {
-    _ = SDL_PollEvent(out SDL_Event e);
-
-    switch (e.type) {
-      case SDL_EventType.Quit:
-        ShouldClose = true;
-        break;
-      case SDL_EventType.KeyDown:
-        KeyboardState.KeyCallback(SDLWindow, e.key, e.type);
-        break;
-      case SDL_EventType.MouseMotion:
-        switch (WindowState.CursorState) {
-          case CursorState.Centered:
-            MouseState.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
-            break;
-          default:
-            MouseState.WindowMouseCallback(e.motion.x, e.motion.y);
-            break;
-        }
-        break;
-      case SDL_EventType.MouseWheel:
-        MouseState.ScrollCallback(e.wheel.x, e.wheel.y);
-        break;
-      case SDL_EventType.MouseButtonUp:
-        MouseState.MouseButtonCallbackUp(e.button.Button);
-        break;
-      case SDL_EventType.MouseButtonDown:
-        MouseState.MouseButtonCallbackDown(e.button.Button);
-        break;
-      case SDL_EventType.WindowResized:
-        FrambufferResizedCallback(e.window.data1, e.window.data2);
-        break;
-      case SDL_EventType.WindowRestored:
-        break;
-      default:
-        break;
+    while (SDL_PollEvent(out SDL_Event e)) {
+      switch (e.type) {
+        case SDL_EventType.Quit:
+          ShouldClose = true;
+          break;
+        case SDL_EventType.KeyDown:
+          KeyboardState.KeyCallback(SDLWindow, e.key, e.type);
+          break;
+        case SDL_EventType.MouseMotion:
+          switch (WindowState.CursorState) {
+            case CursorState.Centered:
+              MouseState.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
+              break;
+            default:
+              MouseState.WindowMouseCallback(e.motion.x, e.motion.y);
+              break;
+          }
+          break;
+        case SDL_EventType.MouseWheel:
+          MouseState.ScrollCallback(e.wheel.x, e.wheel.y);
+          break;
+        case SDL_EventType.MouseButtonUp:
+          MouseState.MouseButtonCallbackUp(e.button.Button);
+          break;
+        case SDL_EventType.MouseButtonDown:
+          MouseState.MouseButtonCallbackDown(e.button.Button);
+          break;
+        case SDL_EventType.WindowResized:
+          FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
+        case SDL_EventType.WindowRestored:
+          IsMinimalized = false;
+          // FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
+        case SDL_EventType.WindowMinimized:
+          IsMinimalized = true;
+          break;
+        case SDL_EventType.LowMemory:
+          throw new Exception("Memory Leak");
+        default:
+          break;
+      }
     }
+  }
+
+  public void WaitEvents() {
+    // SDL_WaitEvent()
   }
 
   private static unsafe void FrambufferResizedCallback(int width, int height) {

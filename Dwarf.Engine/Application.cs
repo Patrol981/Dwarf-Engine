@@ -89,6 +89,11 @@ public class Application {
   public bool Fullscreen { get; init; } = false;
   public readonly object ApplicationLock = new object();
 
+  public static bool CalcThreadLifeBit = false;
+  public static bool RenderThreadLifeBit = false;
+
+  public const int ThreadTimeoutTimeMS = 1000;
+
   public Application(
     string appName = "Dwarf Vulkan",
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
@@ -292,23 +297,20 @@ public class Application {
       Name = "Render Thread"
     };
     _renderThread.Start();
-    // _calculationThread = new Thread(CalculationLoop);
 
     Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
     WindowState.FocusOnWindow();
 
     while (!Window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
-      if (Window.IsMinimalized) {
-        // glfwWaitEvents();
+      Time.Tick();
+      Window.PollEvents();
+      if (!Window.IsMinimalized) {
+        Window.Show();
       } else {
-        // glfwPollEvents();
-        Window.PollEvents();
+        Window.WaitEvents();
       }
 
-      Time.Tick();
-
-      // Render();
       PerformCalculations();
 
       _onUpdate?.Invoke();
@@ -323,7 +325,7 @@ public class Application {
         HandleExit();
       }
 
-      GC.Collect(2, GCCollectionMode.Optimized, false);
+      // GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
     Mutex.WaitOne();
@@ -335,7 +337,6 @@ public class Application {
     } finally {
       Mutex.ReleaseMutex();
     }
-
 
     _renderShouldClose = true;
 
@@ -610,7 +611,8 @@ public class Application {
   #endregion ENTITY_FLOW
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
-    Frames.TickStart();
+    // Time.Tick();
+    if (Window.IsMinimalized) return;
 
     Systems.ValidateSystems(
         _entities.ToArray(),
@@ -723,7 +725,7 @@ public class Application {
       _skybox.Render(_currentFrame);
       Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
-      GuiController.Update(Time.DeltaTime);
+      GuiController.Update(Time.StopwatchDelta);
       _onGUI?.Invoke();
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScripts());
@@ -745,13 +747,9 @@ public class Application {
       }
       Mutex.ReleaseMutex();
     }
-
-    Frames.TickEnd();
   }
 
   internal unsafe void RenderLoader() {
-    Frames.TickStart();
-
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = Renderer.GetFrameIndex();
@@ -761,7 +759,7 @@ public class Application {
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
-      GuiController.Update(Time.DeltaTime);
+      GuiController.Update(Time.StopwatchDelta);
       _onAppLoading?.Invoke();
       GuiController.Render(_currentFrame);
 
@@ -770,9 +768,6 @@ public class Application {
       Renderer.EndFrame();
       Mutex.ReleaseMutex();
     }
-
-
-    Frames.TickEnd();
   }
 
   private void PerformCalculations() {

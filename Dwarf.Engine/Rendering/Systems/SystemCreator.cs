@@ -7,12 +7,12 @@ namespace Dwarf.Rendering;
 public enum SystemCreationFlags {
   None = 0,
   Renderer3D = 1,
-  Renderer2D = 2,
-  RendererUI = 4,
-  Physics3D = 8,
-  DirectionalLight = 16,
-  PointLights = 32,
-  Guizmos = 64,
+  Renderer2D = 1 << 1,
+  RendererUI = 1 << 2,
+  Physics3D = 1 << 3,
+  DirectionalLight = 1 << 4,
+  PointLights = 1 << 5,
+  Guizmos = 1 << 6,
 }
 
 public class SystemCreator {
@@ -54,7 +54,7 @@ public class SystemCreator {
     }
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
-      systemCollection.PhysicsSystem = (new());
+      systemCollection.PhysicsSystem = new();
     }
     if (hasDirectionalLight) {
       Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");

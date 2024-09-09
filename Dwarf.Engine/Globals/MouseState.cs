@@ -2,6 +2,7 @@
 // using Dwarf.Extensions.GLFW;
 using System.Numerics;
 using SDL3;
+using static SDL3.SDL3;
 // using Dwarf.GLFW.Core;
 
 // using static Dwarf.Extensions.GLFW.MouseButtonMap;
@@ -83,6 +84,16 @@ public sealed class MouseState {
         CursorState.Centered => _lastRelativeMousePositionFromCallback,
         _ => _lastMousePositionFromCallback,
       };
+    }
+    set {
+      switch (WindowState.CursorState) {
+        case CursorState.Centered:
+          _lastRelativeMousePositionFromCallback = value;
+          break;
+        default:
+          _lastMousePositionFromCallback = value;
+          break;
+      }
     }
   }
   public double ScrollDelta { get; set; } = 0.0;

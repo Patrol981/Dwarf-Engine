@@ -107,7 +107,7 @@ public partial class ImGuiController : IDisposable {
     var io = ImGui.GetIO();
     io.Fonts.ClearFonts();
     var dwarfPath = DwarfPath.AssemblyDirectory;
-    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}./Resources/fonts/PixelifySans-SemiBold.ttf", 14);
+    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}./Resources/fonts/DroidSans.ttf", 14);
     unsafe {
       if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
         Logger.Error("Could not load font!");
@@ -331,13 +331,13 @@ public partial class ImGuiController : IDisposable {
     Logger.Info($"[ImGUI] Window Resized ({_width}{_height})");
   }
 
-  private void SetPerFrameImGuiData(float deltaSeconds) {
+  private void SetPerFrameImGuiData(double deltaSeconds) {
     ImGuiIOPtr io = ImGui.GetIO();
     io.DisplaySize = new System.Numerics.Vector2(
       _width / _scaleFactor.X,
       _height / _scaleFactor.Y);
     io.DisplayFramebufferScale = _scaleFactor;
-    io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
+    io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
   }
 
   public void Render(FrameInfo frameInfo) {
@@ -348,7 +348,7 @@ public partial class ImGuiController : IDisposable {
     }
   }
 
-  public void Update(float deltaSeconds) {
+  public void Update(double deltaSeconds) {
     if (_frameBegun) {
       ImGui.Render();
     }
@@ -408,6 +408,7 @@ public partial class ImGuiController : IDisposable {
     if ((_vertexBuffer.GetBuffer() == VkBuffer.Null) || (_vertexCount < drawData.TotalVtxCount)) {
       _vertexCount = drawData.TotalVtxCount;
 
+      Application.Instance.Mutex.WaitOne();
       _vertexBuffer?.Dispose();
       _vertexBuffer = new(
         _device,
@@ -416,11 +417,13 @@ public partial class ImGuiController : IDisposable {
         BufferUsage.VertexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
+      Application.Instance.Mutex.ReleaseMutex();
     }
 
     if ((_indexBuffer.GetBuffer() == VkBuffer.Null) || (_indexCount < drawData.TotalIdxCount)) {
       _indexCount = drawData.TotalIdxCount;
 
+      Application.Instance.Mutex.WaitOne();
       _indexBuffer?.Dispose();
       _indexBuffer = new(
         _device,
@@ -429,6 +432,7 @@ public partial class ImGuiController : IDisposable {
         BufferUsage.IndexBuffer,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent
       );
+      Application.Instance.Mutex.ReleaseMutex();
     }
 
     ImDrawVert* vtxDst = null;

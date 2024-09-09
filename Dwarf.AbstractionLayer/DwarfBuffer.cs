@@ -278,7 +278,6 @@ public unsafe class DwarfBuffer : IDisposable {
 
   public void Dispose() {
     if (!_isStagingBuffer) {
-      _device.WaitDevice();
       _device.WaitQueue();
     }
     Unmap();

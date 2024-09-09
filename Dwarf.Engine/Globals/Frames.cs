@@ -6,7 +6,7 @@ public static class Frames {
   private static DateTime s_endTime;
   // private static double s_frameRate = 0.0f;
 
-  public static float GetFramesDelta() {
+  public static double GetFramesDelta() {
     var lastUpdate = Time.DeltaTime;
     return lastUpdate;
   }

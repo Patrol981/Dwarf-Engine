@@ -107,6 +107,22 @@ public class Transform : Component {
   }
 
   public static Vector3 MoveTowards(Vector3 current, Vector3 target, float maxDistanceDelta) {
+    // Calculate the vector from current to target
+    Vector3 toTarget = target - current;
+
+    // Get the distance to the target
+    float distanceToTarget = toTarget.Length();
+
+    // If the distance to the target is less than or equal to the max distance delta, return the target
+    if (distanceToTarget <= maxDistanceDelta || distanceToTarget == 0f) {
+      return target;
+    }
+
+    // Otherwise, move the current vector towards the target by maxDistanceDelta
+    return current + toTarget / distanceToTarget * maxDistanceDelta;
+  }
+
+  public static Vector3 MoveTowards_Old(Vector3 current, Vector3 target, float maxDistanceDelta) {
     var vec = target - current;
     var mag = Vector3.Distance(current, target);
 

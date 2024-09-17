@@ -9,7 +9,7 @@ using Dwarf.Model.Animation;
 
 namespace Dwarf.Pathfinding;
 public class Unit : DwarfScript {
-  private float _speed = .02f;
+  private float _speed = 0.5f;
   private Vector3[] _path = [];
   private int _targetIndex;
   private Transform _transform = null!;
@@ -56,7 +56,38 @@ public class Unit : DwarfScript {
     Vector3 currentWaypoint = _path[currentWaypointIndex];
 
     while (true) {
-      if (Vector3.Distance(_transform.Position, currentWaypoint) < 0.01f) { // Use a tolerance value for position comparison
+      var dir = Vector3.Normalize(currentWaypoint - _transform.Position);
+      _transform.Position += dir * _speed * Time.DeltaTime;
+      _transform.LookAtFixed(currentWaypoint);
+
+      if (Vector3.Distance(_transform.Position, currentWaypoint) < 0.1f) {
+        currentWaypointIndex++;
+        if (currentWaypointIndex < _path.Length) {
+          currentWaypoint = _path[currentWaypointIndex];
+          yield return null;
+        } else {
+          _path = null!;
+          IsMoving = false;
+          yield break;
+        }
+      } else {
+        yield return null;
+      }
+    }
+  }
+
+  private IEnumerator FollowPath_() {
+    if (_path == null || _path.Length == 0) {
+      IsMoving = false;
+      yield break;
+    }
+
+    int currentWaypointIndex = 0;
+    Vector3 currentWaypoint = _path[currentWaypointIndex];
+
+    while (true) {
+      _transform.LookAtFixed(currentWaypoint);
+      if (Vector3.Distance(_transform.Position, currentWaypoint) < 0.1f) {
         currentWaypointIndex++;
         if (currentWaypointIndex >= _path.Length) {
           _path = null!;
@@ -64,7 +95,33 @@ public class Unit : DwarfScript {
           yield break;
         }
         currentWaypoint = _path[currentWaypointIndex];
-        _transform.LookAtFixed(currentWaypoint);
+      }
+
+      _transform.Position = Transform.MoveTowards(_transform.Position, currentWaypoint, Time.StopwatchDelta);
+      // _transform.Position = Vector3.Lerp(_transform.Position, currentWaypoint, _speed * Time.DeltaTime);
+      yield return null;
+    }
+  }
+
+  private IEnumerator FollowPath__() {
+    if (_path == null || _path.Length == 0) {
+      IsMoving = false;
+      yield break;
+    }
+
+    int currentWaypointIndex = 0;
+    Vector3 currentWaypoint = _path[currentWaypointIndex];
+
+    while (true) {
+      _transform.LookAtFixed(currentWaypoint);
+      if (Vector3.Distance(_transform.Position, currentWaypoint) < 0.001f) { // Use a tolerance value for position comparison
+        currentWaypointIndex++;
+        if (currentWaypointIndex >= _path.Length) {
+          _path = null!;
+          IsMoving = false;
+          yield break;
+        }
+        currentWaypoint = _path[currentWaypointIndex];
       }
       _transform.Position = Transform.MoveTowards(_transform.Position, currentWaypoint, _speed * Time.DeltaTime);
       yield return null;

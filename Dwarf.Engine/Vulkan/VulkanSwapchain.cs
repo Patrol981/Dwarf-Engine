@@ -1,5 +1,5 @@
 using Dwarf.Extensions.Logging;
-
+using Dwarf.Pathfinding;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
@@ -105,17 +105,14 @@ public class VulkanSwapchain : IDisposable {
 
     var queueFamilies = DeviceHelper.FindQueueFamilies(_device.PhysicalDevice, _device.Surface);
 
-    uint[] indices = new uint[2];
-
-    indices[0] = queueFamilies.graphicsFamily;
-    indices[1] = queueFamilies.presentFamily;
-
     if (queueFamilies.graphicsFamily != queueFamilies.presentFamily) {
+      uint* indices = stackalloc uint[2];
+      indices[0] = queueFamilies.graphicsFamily;
+      indices[1] = queueFamilies.presentFamily;
+
       createInfo.imageSharingMode = VkSharingMode.Concurrent;
       createInfo.queueFamilyIndexCount = 2;
-      fixed (uint* ptr = indices) {
-        createInfo.pQueueFamilyIndices = ptr;
-      }
+      createInfo.pQueueFamilyIndices = indices;
     } else {
       createInfo.imageSharingMode = VkSharingMode.Exclusive;
       createInfo.queueFamilyIndexCount = 0;
@@ -353,6 +350,86 @@ public class VulkanSwapchain : IDisposable {
     return result;
   }
 
+  public void Begin(uint idx) {
+    if (_imagesInFlight[_currentFrame] != VkFence.Null) {
+      vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
+      vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+    }
+  }
+
+  public unsafe VkResult SubmitCommandBuffers_New(VkCommandBuffer buffer, uint imageIndex) {
+    _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+
+    VkPipelineStageFlags2* stageFlags = stackalloc VkPipelineStageFlags2[1];
+    stageFlags[0] = VkPipelineStageFlags2.ColorAttachmentOutput;
+
+    VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
+    waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
+
+    VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
+    signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
+
+    VkSemaphoreSubmitInfo* waitSemaphoresSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
+    waitSemaphoresSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+    waitSemaphoresSubmitInfo[0].semaphore = waitSemaphores[0];
+    waitSemaphoresSubmitInfo[0].pNext = null;
+    waitSemaphoresSubmitInfo[0].stageMask = stageFlags[0];
+    waitSemaphoresSubmitInfo[0].deviceIndex = 0;
+    waitSemaphoresSubmitInfo[0].value = 1;
+
+    VkSemaphoreSubmitInfo* signalSemaphoreSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
+    signalSemaphoreSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+    signalSemaphoreSubmitInfo[0].semaphore = signalSemaphores[0];
+    signalSemaphoreSubmitInfo[0].pNext = null;
+    signalSemaphoreSubmitInfo[0].stageMask = stageFlags[0];
+    signalSemaphoreSubmitInfo[0].deviceIndex = 0;
+    signalSemaphoreSubmitInfo[0].value = 2;
+
+    VkCommandBufferSubmitInfo* bufferSubmitInfo = stackalloc VkCommandBufferSubmitInfo[1];
+    bufferSubmitInfo[0].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
+    bufferSubmitInfo[0].pNext = null;
+    bufferSubmitInfo[0].commandBuffer = buffer;
+    bufferSubmitInfo[0].deviceMask = 0;
+
+    VkSubmitInfo2 submitInfo = new();
+    submitInfo.sType = VkStructureType.SubmitInfo2KHR;
+    submitInfo.pNext = null;
+    submitInfo.flags = VkSubmitFlags.None;
+
+    submitInfo.waitSemaphoreInfoCount = 1;
+    submitInfo.pWaitSemaphoreInfos = waitSemaphoresSubmitInfo;
+
+    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.pSignalSemaphoreInfos = signalSemaphoreSubmitInfo;
+
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = bufferSubmitInfo;
+
+    vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+    _device.SubmitQueue2(1, &submitInfo, _inFlightFences[_currentFrame]);
+
+    VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
+    swapchains[0] = _handle;
+
+    VkPresentInfoKHR presentInfo = new() {
+      pNext = null,
+      pSwapchains = swapchains,
+      swapchainCount = 1,
+
+      waitSemaphoreCount = 1,
+      pWaitSemaphores = waitSemaphores,
+
+      pImageIndices = &imageIndex
+    };
+
+    Application.Instance.Mutex.WaitOne();
+    var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
+    Application.Instance.Mutex.ReleaseMutex();
+    _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+    return result;
+  }
+
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     if (_imagesInFlight[imageIndex] != VkFence.Null) {
       vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
@@ -381,39 +458,46 @@ public class VulkanSwapchain : IDisposable {
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = buffers;
 
-    VkSwapchainKHR[] swapchains = [_handle];
-    VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
+    // VkSwapchainKHR[] swapchains = [_handle];
+    // VkSemaphore[] signalSemaphores = [_renderFinishedSemaphores[_currentFrame]];
 
     //var fenceInfo = new VkFenceCreateInfo();
     //fenceInfo.flags = VkFenceCreateFlags.None;
     //vkCreateFence(_device.LogicalDevice, &fenceInfo, null, out var fence).CheckResult();
 
+    VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
+    swapchains[0] = _handle;
+
+    VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
+    signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
+
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+    _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
+
+    VkPresentInfoKHR presentInfo = new() {
+      waitSemaphoreCount = 1,
+      pWaitSemaphores = signalSemaphores,
+      swapchainCount = 1,
+      pSwapchains = swapchains,
+      pImageIndices = &imageIndex
+    };
+
+    Application.Instance.Mutex.WaitOne();
+    var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
+    Application.Instance.Mutex.ReleaseMutex();
+    _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+    return result;
+
+    /*
     fixed (VkSwapchainKHR* swPtr = swapchains)
     fixed (VkFence* swFlightFencesPtr = _inFlightFences)
     fixed (VkSemaphore* signalPtr = signalSemaphores) {
-      submitInfo.signalSemaphoreCount = 1;
-      submitInfo.pSignalSemaphores = signalPtr;
-
-      vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-      _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
-
-      VkPresentInfoKHR presentInfo = new() {
-        waitSemaphoreCount = 1,
-        pWaitSemaphores = signalPtr
-      };
-
-      presentInfo.swapchainCount = 1;
-      presentInfo.pSwapchains = swPtr;
-
-      presentInfo.pImageIndices = &imageIndex;
-
-      Application.Instance.Mutex.WaitOne();
-      var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
-      Application.Instance.Mutex.ReleaseMutex();
-      _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-      return result;
     }
+    */
   }
 
   private VkFormat FindDepthFormat() {

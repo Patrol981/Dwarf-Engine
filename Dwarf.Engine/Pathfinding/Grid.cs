@@ -9,7 +9,7 @@ namespace Dwarf.Pathfinding.AStar;
 
 public class Grid : DwarfScript {
   public Vector2 GridSizeWorld = new(15, 15);
-  public float NodeRadius = 0.5f;
+  public float NodeRadius = 0.25f;
   public EntityLayer UnwalkableLayer = EntityLayer.Collision;
   private float _nodeDiameter;
   private int _gridSizeX;

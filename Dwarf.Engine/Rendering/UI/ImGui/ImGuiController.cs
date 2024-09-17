@@ -43,6 +43,7 @@ public partial class ImGuiController : IDisposable {
   private VulkanTexture _fontTexture = default!;
 
   private bool _frameBegun = false;
+  private bool _firstFrame = false;
 
   private int _width;
   private int _height;
@@ -63,6 +64,8 @@ public partial class ImGuiController : IDisposable {
   public unsafe ImGuiController(VulkanDevice device, Renderer renderer) {
     _device = device;
     _renderer = renderer;
+
+    _firstFrame = false;
 
     ImGui.CreateContext();
   }
@@ -95,11 +98,15 @@ public partial class ImGuiController : IDisposable {
     return Task.CompletedTask;
   }
 
-  public async Task<Task> Init(int width, int height) {
+  public async Task<Task> Init(int width, int height, bool createBuffers = true) {
     _width = width;
     _height = height;
 
-    CreateBuffers();
+    _firstFrame = false;
+
+    if (createBuffers) {
+      CreateBuffers();
+    }
 
     IntPtr context = ImGui.CreateContext();
     ImGui.SetCurrentContext(context);
@@ -123,7 +130,7 @@ public partial class ImGuiController : IDisposable {
     // InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
     await InitResources();
 
-    SetPerFrameImGuiData(1f / 60f);
+    SetPerFrameImGuiData(Time.StopwatchDelta);
     CreateStyles();
 
     ImGui.NewFrame();
@@ -346,6 +353,8 @@ public partial class ImGuiController : IDisposable {
       ImGui.Render();
       RenderImDrawData(ImGui.GetDrawData(), frameInfo);
     }
+
+    _firstFrame = true;
   }
 
   public void Update(double deltaSeconds) {
@@ -400,6 +409,8 @@ public partial class ImGuiController : IDisposable {
   public unsafe void UpdateBuffers(ImDrawDataPtr drawData) {
     var vertexBufferSize = drawData.TotalVtxCount * sizeof(ImDrawVert);
     var indexBufferSize = drawData.TotalIdxCount * sizeof(ushort);
+
+    // Logger.Info($"{drawData.TotalVtxCount} {drawData.TotalIdxCount}");
 
     if ((vertexBufferSize == 0) || (indexBufferSize == 0)) {
       return;
@@ -459,8 +470,6 @@ public partial class ImGuiController : IDisposable {
     // update buffers
 
     UpdateBuffers(drawData);
-
-
     BindShaderData(frameInfo);
 
     int vertexOffset = 0;
@@ -484,28 +493,14 @@ public partial class ImGuiController : IDisposable {
           if (pcmd.TextureId == 0) {
             BindTexture(frameInfo);
           } else {
-            /*
-            // var target = _userTextures.Where(x => x.Value = pcmd.TextureId)
-            foreach (var userTex in _userTextures) {
-              if (userTex.Value == pcmd.TextureId) {
-                Logger.Error($"{userTex.Key.TextureName} {_userTextures.Count}");
-                BindTexture(frameInfo, userTex.Key.TextureDescriptor);
-                break;
-              }
-            }
-            */
-
             var target = _userTextures.TryGetValue(pcmd.TextureId, out var texture);
             if (target) {
               BindTexture(frameInfo, texture!.TextureDescriptor);
             }
-
           }
 
 
           SetScissorRect(frameInfo, pcmd, drawData);
-          // vkCmdDrawIndexed(frameInfo.CommandBuffer, pcmd.ElemCount, 1, indexOffset, vertexOffset, 0);
-
           vkCmdDrawIndexed(
             frameInfo.CommandBuffer,
             pcmd.ElemCount,

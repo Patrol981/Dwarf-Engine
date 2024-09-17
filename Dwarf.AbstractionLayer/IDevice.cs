@@ -22,6 +22,7 @@ public interface IDevice : IDisposable {
   public Task CopyBuffer(ulong srcBuffer, ulong dstBuffer, ulong size);
 
   public void WaitQueue();
+  public void WaitAllQueues();
   public void WaitDevice();
 
   public nint BeginSingleTimeCommands();

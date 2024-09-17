@@ -25,6 +25,20 @@ public class PhysicsSystem : IDisposable {
 
     Logger.Info($"[CREATING PHYSICS 3D]");
 
+    Foundation.SetTraceHandler((message) => {
+      Logger.Info(message);
+    });
+
+    Foundation.SetAssertFailureHandler((inExpression, inMessage, inFile, inLine) => {
+      string message = inMessage ?? inExpression;
+
+      string outMessage = $"[JoltPhysics] Assertion failure at {inFile}:{inLine}: {message}";
+
+      Logger.Error(outMessage);
+
+      throw new Exception(outMessage);
+    });
+
     // We use only 2 layers: one for non-moving objects and one for moving objects
     var objectLayerPairFilter = new ObjectLayerPairFilterTable(2);
     objectLayerPairFilter.EnableCollision(Layers.NonMoving, Layers.Moving);
@@ -35,9 +49,18 @@ public class PhysicsSystem : IDisposable {
     broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.NonMoving, BroadPhaseLayers.NonMoving);
     broadPhaseLayerInterface.MapObjectToBroadPhaseLayer(Layers.Moving, BroadPhaseLayers.Moving);
 
-    var objectVsBroadPhaseLayerFilter = new ObjectVsBroadPhaseLayerFilterTable(broadPhaseLayerInterface, 2, objectLayerPairFilter, 2);
+    var objectVsBroadPhaseLayerFilter = new ObjectVsBroadPhaseLayerFilterTable(
+      broadPhaseLayerInterface,
+      2,
+      objectLayerPairFilter,
+      2
+    );
 
     PhysicsSystemSettings settings = new() {
+      MaxBodies = MaxBodies,
+      MaxBodyPairs = MaxBodyPairs,
+      MaxContactConstraints = MaxContactConstraints,
+      NumBodyMutexes = NumBodyMutexes,
       ObjectLayerPairFilter = objectLayerPairFilter,
       BroadPhaseLayerInterface = broadPhaseLayerInterface,
       ObjectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter
@@ -76,7 +99,7 @@ public class PhysicsSystem : IDisposable {
       entities[i].GetComponent<Rigidbody>()?.Update();
     }
 
-    _physicsSystem.Step(Time.FixedTime * 10, CollisionSteps);
+    _physicsSystem.Step(DeltaTime, CollisionSteps);
     return Task.CompletedTask;
   }
 

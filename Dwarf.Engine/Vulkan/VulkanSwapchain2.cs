@@ -10,6 +10,7 @@ public class VulkanSwapchain2 : IDisposable {
   private const int MAX_FRAMES_IN_FLIGHT = 2;
 
   private readonly VulkanDevice Device;
+  private VkSwapchainKHR _swapchain;
 
   public void InitSurface() {
 
@@ -20,7 +21,9 @@ public class VulkanSwapchain2 : IDisposable {
   }
 
   public void Create() {
+    VkSwapchainKHR oldSwapchain = _swapchain;
 
+    // VkSurfaceCapabilities2KHR surfCaps =
   }
 
   public VkResult PresentQueue() {

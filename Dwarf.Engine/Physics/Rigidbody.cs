@@ -131,13 +131,6 @@ public class Rigidbody : Component, IDisposable {
         AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
-      case PrimitiveType.Torus:
-        throw new NotImplementedException();
-      // mesh = Primitives.CreateConvex(target.MeshedNodes, Flipped);
-      // ScaleColliderMesh(mesh);
-      // AdjustColliderMesh(mesh);
-      // shapeSettings = JoltProgram.CreateTorusMesh(1, 1, 16, 16);
-      // break;
       default:
         mesh = Primitives.CreateBoxPrimitive(1);
         shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));

@@ -136,67 +136,10 @@ public class Application {
     SetCurrentScene(scene);
     _newSceneShouldLoad = true;
   }
-
-  private async void SceneLoadReactor_Old() {
-    await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
-
-    Guizmos.Clear();
-    Guizmos.Free();
-    foreach (var e in _entities) {
-      e.CanBeDisposed = true;
-    }
-
-    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
-    if (_entities.Count() > 0) {
-      return;
-    }
-
-    if (!_renderShouldClose) {
-      _renderShouldClose = true;
-      return;
-    }
-
-    Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
-    _renderThread?.Join();
-
-    Logger.Info("Waiting for render thread to close...");
-    while (_renderThread!.IsAlive) {
-    }
-    _renderThread = new Thread(LoaderLoop) {
-      Name = "App Loading Frontend Thread"
-    };
-    _renderThread.Start();
-
-    var usedPhysicsBefore = Systems.PhysicsSystem != null;
-    Systems.PhysicsSystem?.Dispose();
-
-    await SetupScene();
-    MasterAwake(_entities.GetScripts());
-    MasterStart(_entities.GetScripts());
-
-    if (usedPhysicsBefore) {
-      Systems.PhysicsSystem = new();
-      Systems.PhysicsSystem.Init(_entities.DistinctInterface<IRender3DElement>());
-    }
-
-    _renderShouldClose = true;
-    Logger.Info("Waiting for loading render process to close...");
-    while (_renderShouldClose) {
-
-    }
-
-    _renderThread.Join();
-    _renderThread = new Thread(RenderLoop) {
-      Name = "Render Thread"
-    };
-    _renderThread.Start();
-
-    _newSceneShouldLoad = false;
-  }
-
   private async void SceneLoadReactor() {
+    Device.WaitDevice();
+    Device.WaitQueue();
+
     await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
 
     Guizmos.Clear();
@@ -290,9 +233,13 @@ public class Application {
     _renderShouldClose = true;
     Logger.Info("Waiting for render process to close...");
     while (_renderShouldClose) {
-
     }
-    _renderThread.Join();
+    _renderThread?.Join();
+
+    Logger.Info("Waiting for render thread to close...");
+    while (_renderThread!.IsAlive) {
+    }
+
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };

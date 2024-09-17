@@ -188,14 +188,14 @@ public partial class ImGuiController {
   public void CreateBuffers() {
     _vertexBuffer = new(
       _device,
-      (ulong)Unsafe.SizeOf<ImDrawVert>(),
+      (ulong)Unsafe.SizeOf<ImDrawVert>() * 5000,
       BufferUsage.VertexBuffer,
       MemoryProperty.HostVisible
     );
 
     _indexBuffer = new(
       _device,
-      (ulong)Unsafe.SizeOf<ImDrawVert>(),
+      (ulong)Unsafe.SizeOf<ushort>() * 10000,
       BufferUsage.IndexBuffer,
       MemoryProperty.HostVisible
     );

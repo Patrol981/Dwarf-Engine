@@ -30,13 +30,13 @@ public class VulkanDevice : IDevice {
 
   private VkQueue _graphicsQueue = VkQueue.Null;
   private VkQueue _presentQueue = VkQueue.Null;
-  private readonly VkQueue _transferQueue = VkQueue.Null;
+  // private readonly VkQueue _transferQueue = VkQueue.Null;
 
   internal readonly object _queueLock = new object();
 
-  private readonly VkFence _singleTimeFence = VkFence.Null;
+  // private readonly VkFence _singleTimeFence = VkFence.Null;
 
-  private readonly VkSemaphore _semaphore = VkSemaphore.Null;
+  // private readonly VkSemaphore _semaphore = VkSemaphore.Null;
   // private readonly ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
@@ -301,6 +301,11 @@ public class VulkanDevice : IDevice {
   }
 
   public void WaitQueue() {
+    WaitQueue(_graphicsQueue);
+  }
+
+  public void WaitAllQueues() {
+    WaitQueue(_graphicsQueue);
     WaitQueue(_presentQueue);
   }
 
@@ -322,7 +327,20 @@ public class VulkanDevice : IDevice {
     try {
       Application.Instance.Mutex.WaitOne();
       vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
-      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
+      if (destroy) {
+        vkDestroyFence(_logicalDevice, fence);
+      }
+    } finally {
+      Application.Instance.Mutex.ReleaseMutex();
+    }
+  }
+
+  public unsafe void SubmitQueue2(uint submitCount, VkSubmitInfo2* pSubmits, VkFence fence, bool destroy = false) {
+    try {
+      Application.Instance.Mutex.WaitOne();
+      vkQueueSubmit2(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
       if (destroy) {
         vkDestroyFence(_logicalDevice, fence);
       }
@@ -497,7 +515,8 @@ public class VulkanDevice : IDevice {
       VkDeviceQueueCreateInfo queueCreateInfo = new() {
         queueFamilyIndex = queueFamily,
         queueCount = 1,
-        pQueuePriorities = &priority
+        pQueuePriorities = &priority,
+        flags = VkDeviceQueueCreateFlags.None
       };
 
       queueCreateInfos[queueCount++] = queueCreateInfo;
@@ -519,13 +538,18 @@ public class VulkanDevice : IDevice {
 
     VkPhysicalDeviceVulkan12Features vk12Features = new() {
       timelineSemaphore = true,
-      pNext = &vk11Features
+      pNext = &vk11Features,
+    };
+
+    VkPhysicalDeviceVulkan13Features vk13Features = new() {
+      synchronization2 = true,
+      pNext = &vk12Features,
     };
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
     };
-    createInfo.pNext = &vk12Features;
+    createInfo.pNext = &vk13Features;
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;

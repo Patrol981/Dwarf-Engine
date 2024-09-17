@@ -14,7 +14,7 @@ public unsafe class Renderer : IDisposable {
   private readonly Window _window = null!;
   // private VulkanDevice _device = null!;
   private readonly IDevice _device;
-  private VkCommandBuffer[] _commandBuffers = new VkCommandBuffer[0];
+  private VkCommandBuffer[] _commandBuffers = [];
 
   private uint _imageIndex = 0;
   private int _frameIndex = 0;

@@ -70,7 +70,7 @@ public static class Time {
     }
   }
 
-  public static float DeltaTime => (float)s_deltaTime;
+  public static float DeltaTime => s_stopwatchDelta;
   public static float FixedTime => (float)s_fixedTime;
   public static long StopwatchTick => s_lastStopwatchTick;
   public static float StopwatchDelta => s_stopwatchDelta;

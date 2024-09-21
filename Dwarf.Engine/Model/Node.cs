@@ -1,15 +1,5 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Dwarf.AbstractionLayer;
-using Dwarf.Extensions.Logging;
-using Dwarf.Globals;
-using Dwarf.Math;
 using Dwarf.Model.Animation;
-using Dwarf.Rendering;
-using Dwarf.Utils;
-using Dwarf.Vulkan;
-using Vortice.Vulkan;
 
 namespace Dwarf.Model;
 
@@ -31,23 +21,9 @@ public class Node {
   public Matrix4x4 CachedLocalMatrix = Matrix4x4.Identity;
   public Matrix4x4 CachedMatrix = Matrix4x4.Identity;
 
-  public glTFLoader.Schema.Node? GltfNodeReference;
   public MeshRenderer ParentRenderer = null!;
 
   public float AnimationTimer = 0.0f;
-
-  public unsafe void WriteSkeleton() {
-    var matrices = stackalloc Matrix4x4[128];
-
-    for (int i = 0; i < Skin!.OutputNodeMatrices.Length; i++) {
-      matrices[i] = Skin.OutputNodeMatrices[i];
-    }
-    for (int i = Skin.OutputNodeMatrices.Length; i < 128; i++) {
-      matrices[i] = Matrix4x4.Identity;
-    }
-
-
-  }
 
   public Matrix4x4 GetLocalMatrix() {
     if (!UseCachedMatrix) {
@@ -56,17 +32,6 @@ public class Node {
         Matrix4x4.CreateScale(Scale) *
         Matrix4x4.CreateFromQuaternion(Rotation) *
         Matrix4x4.CreateTranslation(Translation);
-    }
-    return CachedLocalMatrix;
-  }
-
-  public Matrix4x4 GetLocalMatrix_1() {
-    if (!UseCachedMatrix) {
-      CachedLocalMatrix =
-        NodeMatrix *
-        Matrix4x4.CreateTranslation(Translation) *
-        Matrix4x4.CreateFromQuaternion(Rotation) *
-        Matrix4x4.CreateScale(Scale);
     }
     return CachedLocalMatrix;
   }
@@ -124,7 +89,6 @@ public class Node {
           Skin.OutputNodeMatrices[i] = jointMat;
         }
         Skin.JointsCount = numJoints;
-        // WriteSkeleton();
       } else {
         Mesh.Matrix = m;
       }

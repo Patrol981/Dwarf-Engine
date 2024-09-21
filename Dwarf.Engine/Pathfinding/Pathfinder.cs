@@ -30,10 +30,11 @@ public class Pathfinder : DwarfScript {
 
   public void StartFindPath(Vector3 start, Vector3 end) {
     // CoroutineRunner.Instance.StartCoroutine(FindPath(start, end));
-    FindPath(start, end);
+    CoroutineRunner.Instance.StartCoroutine(FindPath(start, end));
+    // FindPath(start, end);
   }
 
-  public void FindPath(Vector3 start, Vector3 end) {
+  public IEnumerator FindPath(Vector3 start, Vector3 end) {
     var waypoints = Array.Empty<Vector3>();
     var pathSuccess = false;
 
@@ -74,6 +75,8 @@ public class Pathfinder : DwarfScript {
       waypoints = RetracePath(startNode, endNode);
     }
     PathRequestManager.Instance.FinishedProcessingPath(waypoints, pathSuccess);
+
+    yield break;
   }
 
   private Vector3[] RetracePath(Node startNode, Node endNode) {

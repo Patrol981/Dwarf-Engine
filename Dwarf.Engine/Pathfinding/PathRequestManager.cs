@@ -21,6 +21,8 @@ public class PathRequestManager : DwarfScript {
   }
 
   public void PaintGuizmos() {
+    return;
+
     foreach (var node in _grid.GridData) {
       _grid.GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
       if (_tmpPath != null && _tmpPath.Count > 0) {
@@ -38,10 +40,12 @@ public class PathRequestManager : DwarfScript {
   }
 
   public static void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<Vector3[], bool> callback) {
-    Instance._grid.CreateGrid();
-    var newRequest = new PathRequest(pathStart, pathEnd, callback);
-    Instance._pathRequestQueue.Enqueue(newRequest);
-    Instance.TryProcessNext();
+    Task.Run(() => {
+      Instance._grid.CreateGrid();
+      var newRequest = new PathRequest(pathStart, pathEnd, callback);
+      Instance._pathRequestQueue.Enqueue(newRequest);
+      Instance.TryProcessNext();
+    });
   }
 
   public void FinishedProcessingPath(Vector3[] path, bool success) {

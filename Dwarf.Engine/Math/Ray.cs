@@ -125,6 +125,8 @@ public class Ray {
     MeshRenderer model,
     float maxDistance
   ) {
+    if (model == null) return hitResult;
+
     float tMin = 0.0f;
     float tMax = maxDistance;
 

@@ -21,7 +21,6 @@ public class Mesh : IDisposable {
   public bool HasIndexBuffer => IndexCount > 0;
 
   public Guid TextureIdReference = Guid.Empty;
-  public string TextureName = string.Empty;
 
   public Matrix4x4 Matrix = Matrix4x4.Identity;
 

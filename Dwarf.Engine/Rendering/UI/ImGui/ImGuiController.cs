@@ -420,7 +420,14 @@ public partial class ImGuiController : IDisposable {
       _vertexCount = drawData.TotalVtxCount;
 
       Application.Instance.Mutex.WaitOne();
+
+      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
+      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+
       _vertexBuffer?.Dispose();
+
+      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+
       _vertexBuffer = new(
         _device,
         (ulong)sizeof(ImDrawVert),
@@ -435,7 +442,14 @@ public partial class ImGuiController : IDisposable {
       _indexCount = drawData.TotalIdxCount;
 
       Application.Instance.Mutex.WaitOne();
+
+      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
+      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+
       _indexBuffer?.Dispose();
+
+      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+
       _indexBuffer = new(
         _device,
         (ulong)sizeof(ushort),

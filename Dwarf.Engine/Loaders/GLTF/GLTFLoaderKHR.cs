@@ -219,12 +219,6 @@ public static partial class GLTFLoaderKHR {
       floats[8], floats[9], floats[10], floats[11],
       floats[12], floats[13], floats[14], floats[15]
     );
-    var alt = new Matrix4x4(
-      floats[0], floats[4], floats[8], floats[12],
-      floats[1], floats[5], floats[9], floats[13],
-      floats[2], floats[6], floats[10], floats[14],
-      floats[3], floats[7], floats[11], floats[15]
-    );
 
     return std;
   }

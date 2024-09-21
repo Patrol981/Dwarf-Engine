@@ -592,22 +592,12 @@ public class Application {
       _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
       _ubo->Layer = 1;
 
-      // _ubo.LightPosition = DirectionalLight.LightPosition;
-      // _ubo.LightColor = DirectionalLight.LightColor;
-      // _ubo.AmbientColor = DirectionalLight.AmbientColor;
-
       _ubo->DirectionalLight = DirectionalLight;
-      /*
-      _ubo.LightPosition = DirectionalLight.LightPosition;
-      _ubo.LightColor = DirectionalLight.LightColor;
-      _ubo.AmientLightColor = DirectionalLight.AmbientColor;
-      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
-      */
 
-      // Systems.PointLightSystem?.Update(ref _currentFrame, ref *_ubo, _entities.ToArray());
+      ReadOnlySpan<Entity> entities = _entities.ToArray();
 
       if (Systems.PointLightSystem != null) {
-        Systems.PointLightSystem.Update(_entities.ToArray(), out var pointLights);
+        Systems.PointLightSystem.Update(entities, out var pointLights);
         if (pointLights.Length > 1) {
           _ubo->PointLightsLength = pointLights.Length;
           fixed (PointLight* pPointLights = pointLights) {
@@ -615,7 +605,7 @@ public class Application {
               "PointStorage",
               frameIndex,
               (nint)pPointLights,
-              (ulong)Unsafe.SizeOf<PointLight>() * (ulong)MAX_POINT_LIGHTS_COUNT
+              (ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT
             );
           }
         } else {
@@ -638,8 +628,7 @@ public class Application {
         );
       }
 
-      // sometimes when scene is reloeaded it throws memory violation exception
-      Matrix4x4[] flatArray = [.. flatJoints];
+      ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
       fixed (Matrix4x4* pMatrices = flatArray) {
         StorageCollection.WriteBuffer(
           "JointsStorage",
@@ -652,7 +641,7 @@ public class Application {
       StorageCollection.WriteBuffer(
         "GlobalStorage",
         frameIndex,
-        (nint)(_ubo),
+        (nint)_ubo,
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
@@ -728,10 +717,11 @@ public class Application {
       CommandBuffer = [Renderer.MAX_FRAMES_IN_FLIGHT]
     };
 
-    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
-    secondaryCmdBufAllocateInfo.level = VkCommandBufferLevel.Primary;
-    secondaryCmdBufAllocateInfo.commandPool = threadInfo.CommandPool;
-    secondaryCmdBufAllocateInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new() {
+      level = VkCommandBufferLevel.Primary,
+      commandPool = threadInfo.CommandPool,
+      commandBufferCount = 1
+    };
 
     fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
       vkAllocateCommandBuffers(Device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();

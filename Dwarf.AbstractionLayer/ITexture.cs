@@ -1,5 +1,6 @@
 namespace Dwarf.AbstractionLayer;
-public interface ITexture : IDisposable {
+public interface ITexture : IDisposable
+{
   public string TextureName { get; }
 
   public void SetTextureData(nint dataPtr);
@@ -17,4 +18,5 @@ public interface ITexture : IDisposable {
   public int Width { get; }
   public int Height { get; }
   public int Size { get; }
+  public byte[] TextureData { get; }
 }

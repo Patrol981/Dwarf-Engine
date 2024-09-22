@@ -131,6 +131,7 @@ public class VulkanTexture : ITexture {
 
     stagingBuffer.Map();
 
+    TextureData = data;
     unsafe {
       fixed (byte* dataPtr = data) {
         stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_size);
@@ -198,12 +199,11 @@ public class VulkanTexture : ITexture {
     VulkanDevice device,
     byte[] data,
     string textureName,
-    int flip = 1,
-    VkImageCreateFlags imageCreateFlags = VkImageCreateFlags.None
+    int flip = 1
   ) {
     var texInfo = LoadDataFromBytes(data, flip);
     var texture = new VulkanTexture(device, texInfo.Width, texInfo.Height, textureName);
-    texture.SetTextureData(texInfo.Data, imageCreateFlags);
+    texture.SetTextureData(texInfo.Data);
     return texture;
   }
 
@@ -438,5 +438,6 @@ public class VulkanTexture : ITexture {
     get => _size;
     set => _size = value;
   }
+  public byte[] TextureData { get; private set; } = [];
   public string TextureName { get; }
 }

@@ -48,6 +48,8 @@ public static class DwarfFileParser {
       node.Mesh.BinaryOffset = (ulong)writer.BaseStream.Position;
       node.Mesh.BinaryTextureSize = (ulong)node.Mesh.Texture.Size;
       node.Mesh.TextureFileName = node.Mesh.Texture.TextureName;
+      node.Mesh.TextureWidth = node.Mesh.Texture.Width;
+      node.Mesh.TextureHeight = node.Mesh.Texture.Height;
 
       writer.Write(uid.ToString());
       writer.Write(node.Mesh.Texture.TextureData);

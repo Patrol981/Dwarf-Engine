@@ -61,6 +61,8 @@ public class FileMesh {
   public ulong BinaryOffset { get; set; }
   public ulong BinaryTextureSize { get; set; }
   public string TextureFileName { get; set; } = string.Empty;
+  public int TextureWidth { get; set; }
+  public int TextureHeight { get; set; }
 
   public static byte[] GetTextureDataOutOfId(TextureManager textureManager, Guid texId) {
     if (texId == Guid.Empty) return null!;
@@ -165,11 +167,11 @@ public class FileNode {
       node.Mesh = FileMesh.FromFileMesh(fileNode.Mesh!);
     }
 
-    if (fileNode.Children != null && fileNode.Children.Count > 0) {
-      foreach (var childNode in fileNode.Children) {
-        node.Children.Add(FromFileNode(childNode, node));
-      }
-    }
+    // if (fileNode.Children != null && fileNode.Children.Count > 0) {
+    //   foreach (var childNode in fileNode.Children) {
+    //     node.Children.Add(FromFileNode(childNode, node));
+    //   }
+    // }
 
     return node;
   }

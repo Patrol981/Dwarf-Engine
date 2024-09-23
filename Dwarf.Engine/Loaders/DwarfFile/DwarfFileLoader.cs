@@ -9,7 +9,7 @@ public static class DwarfFileLoader {
     var meshRenderer = new MeshRenderer(app.Device, app.Renderer);
 
     // Load Textures From binary file
-    var stream = new FileStream($"./{dwarfFile.BinaryDataRef}", FileMode.Open);
+    var stream = new FileStream($"./Resources/{dwarfFile.BinaryDataRef}", FileMode.Open);
     var reader = new BinaryReader(stream);
 
     if (dwarfFile.Nodes?.Count == 0) {
@@ -43,7 +43,7 @@ public static class DwarfFileLoader {
     ref MeshRenderer meshRenderer,
     BinaryReader reader,
     Application app,
-    in DwarfFile dwarfFiile
+    in DwarfFile dwarfFile
   ) {
     var newNode = FileNode.FromFileNode(fileNode, parentNode);
 
@@ -51,10 +51,11 @@ public static class DwarfFileLoader {
       var offset = fileNode.Mesh.BinaryOffset;
       var refId = fileNode.Mesh.BinaryReferenceName;
 
-      reader.BaseStream.Seek((long)offset, SeekOrigin.Begin);
+      reader.BaseStream.Seek((long)offset + 1, SeekOrigin.Begin);
 
       var guidBytes = reader.ReadBytes(36);
-      Guid guid = Guid.Parse(Encoding.UTF8.GetString(guidBytes));
+      var guidString = Encoding.UTF8.GetString(guidBytes);
+      Guid guid = Guid.Parse(guidString);
 
       if (guid.ToString() != fileNode.Mesh.BinaryReferenceName) {
         throw new ArgumentException("Mismatch between guid of texture.");
@@ -62,11 +63,13 @@ public static class DwarfFileLoader {
 
       byte[] textureData = reader.ReadBytes((int)fileNode.Mesh.BinaryTextureSize);
 
-      var texture = VulkanTexture.LoadFromBytes(
+      var texture = VulkanTexture.LoadFromBytesDirect(
         app.Device,
         textureData,
-        fileNode.Mesh.TextureFileName,
-        dwarfFiile.TextureFlipped
+        (int)fileNode.Mesh.BinaryTextureSize,
+        fileNode.Mesh.TextureWidth,
+        fileNode.Mesh.TextureHeight,
+        fileNode.Mesh.TextureFileName
       );
       var id = app.TextureManager.AddTexture(texture);
 
@@ -76,7 +79,15 @@ public static class DwarfFileLoader {
 
     if (parentNode == null) {
       meshRenderer.AddNode(newNode);
+    } else {
+      parentNode.Children.Add(newNode);
     }
     meshRenderer.AddLinearNode(newNode);
+
+    if (fileNode.Children != null && fileNode.Children?.Count != 0) {
+      foreach (var childNode in fileNode.Children!) {
+        LoadNode(newNode, childNode, ref meshRenderer, reader, app, in dwarfFile);
+      }
+    }
   }
 }

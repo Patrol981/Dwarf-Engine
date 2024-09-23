@@ -46,6 +46,14 @@ public class VulkanTexture : ITexture {
     _size = _width * _height * 4;
   }
 
+  public VulkanTexture(VulkanDevice device, int size, int width, int height, string textureName = "") {
+    _device = device;
+    TextureName = textureName;
+    _size = size;
+    _width = width;
+    _height = height;
+  }
+
   public void SetTextureData(nint dataPtr) {
     SetTextureData(dataPtr, VkImageCreateFlags.None);
   }
@@ -204,6 +212,19 @@ public class VulkanTexture : ITexture {
     var texInfo = LoadDataFromBytes(data, flip);
     var texture = new VulkanTexture(device, texInfo.Width, texInfo.Height, textureName);
     texture.SetTextureData(texInfo.Data);
+    return texture;
+  }
+
+  public static ITexture LoadFromBytesDirect(
+    VulkanDevice device,
+    byte[] data,
+    int size,
+    int width,
+    int height,
+    string textureName
+  ) {
+    var texture = new VulkanTexture(device, size, width, height, textureName);
+    texture.SetTextureData(data);
     return texture;
   }
 

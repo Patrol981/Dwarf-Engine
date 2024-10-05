@@ -12,12 +12,35 @@ public static class DwarfFileLoader {
     var stream = new FileStream($"./Resources/{dwarfFile.BinaryDataRef}", FileMode.Open);
     var reader = new BinaryReader(stream);
 
+    if (dwarfFile.Animations?.Count != 0) {
+      meshRenderer.Animations = FileAnimation.FromFileAnimations(dwarfFile.Animations!);
+    }
+
+    if (dwarfFile.Skins?.Count != 0) {
+      meshRenderer.Skins = FileSkin.FromFileSkins(dwarfFile.Skins!);
+    }
+
     if (dwarfFile.Nodes?.Count == 0) {
       throw new ArgumentException(nameof(dwarfFile.Nodes));
     }
     foreach (var node in dwarfFile.Nodes!) {
       LoadNode(null!, node, ref meshRenderer, reader, app, in dwarfFile);
     }
+
+    foreach (var node in meshRenderer.LinearNodes) {
+      if (node.SkinIndex > -1) {
+        node.Skin = meshRenderer.Skins[node.SkinIndex];
+        node.Skin.Init();
+      }
+
+      if (node.Mesh != null) {
+        node.Update();
+      }
+    }
+
+    LoadAnimations(ref meshRenderer, in dwarfFile);
+
+    meshRenderer.Init();
 
     return meshRenderer;
   }
@@ -35,6 +58,18 @@ public static class DwarfFileLoader {
 
   private static string LoadFromFile(string path) {
     return File.ReadAllText(path);
+  }
+
+  private static void LoadAnimations(ref MeshRenderer meshRenderer, in DwarfFile dwarfFile) {
+    for (int i = 0; i < meshRenderer.Animations.Count; i++) {
+      for (int j = 0; j < meshRenderer.Animations[i].Channels.Count; j++) {
+        var targetId = dwarfFile.Animations?[i].Channels[j].NodeIndex;
+        if (targetId.HasValue) {
+          var targetNode = meshRenderer.NodeFromIndex(targetId.Value);
+          meshRenderer.Animations[i].Channels[j].Node = targetNode ?? null!;
+        }
+      }
+    }
   }
 
   private static void LoadNode(
@@ -71,10 +106,20 @@ public static class DwarfFileLoader {
         fileNode.Mesh.TextureHeight,
         fileNode.Mesh.TextureFileName
       );
-      var id = app.TextureManager.AddTexture(texture);
 
-      // newNode.Mesh!.TextureIdReference = id;
+      Guid id;
+      if (!app.TextureManager.TextureExists(texture)) {
+        id = app.TextureManager.AddTexture(texture);
+      } else {
+        id = app.TextureManager.GetTextureId(texture.TextureName);
+        texture.Dispose();
+      }
+
       newNode.Mesh!.BindToTexture(app.TextureManager, id);
+    }
+
+    if (fileNode.Skin != null) {
+      newNode.Skin = meshRenderer.Skins[newNode.SkinIndex];
     }
 
     if (parentNode == null) {

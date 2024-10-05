@@ -56,6 +56,10 @@ public class Window : IDisposable {
     }
 
     var windowFlags = SDL_WindowFlags.Vulkan |
+                      // SDL_WindowFlags.Maximized |
+                      SDL_WindowFlags.Occluded |
+                      SDL_WindowFlags.MouseFocus |
+                      SDL_WindowFlags.InputFocus |
                       SDL_WindowFlags.Resizable;
 
     if (fullscreen) {

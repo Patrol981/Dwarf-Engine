@@ -159,9 +159,9 @@ public class FileNode {
       node.Parent = parent;
     }
 
-    if (fileNode.Skin != null) {
-      node.Skin = FileSkin.FromFileSkin(fileNode.Skin!);
-    }
+    // if (fileNode.Skin != null) {
+    //   node.Skin = FileSkin.FromFileSkin(fileNode.Skin!);
+    // }
 
     if (fileNode.Mesh != null) {
       node.Mesh = FileMesh.FromFileMesh(fileNode.Mesh!);
@@ -265,6 +265,7 @@ public class FileMatrix4x4 {
 
   public static List<Matrix4x4> FromFileMatrices(List<FileMatrix4x4> matrices) {
     return matrices.Select(mat => { return FromFileMatrix4x4(mat); }).ToList();
+    // return matrices.Select(mat => { return Matrix4x4.Identity; }).ToList();
   }
 }
 
@@ -312,6 +313,10 @@ public class FileVector4 {
     };
   }
 
+  public static List<FileVector4> GetFileVectors4(List<Vector4> vector4s) {
+    return vector4s.Select(x => { return GetFileVector4(x); }).ToList();
+  }
+
   public static Vector4 ParseFileVector4(FileVector4 fileVector4) {
     return new Vector4 {
       X = fileVector4.Values[0],
@@ -319,6 +324,10 @@ public class FileVector4 {
       Z = fileVector4.Values[2],
       W = fileVector4.Values[3],
     };
+  }
+
+  public static List<Vector4> ParseFileVectors4(List<FileVector4> fileVector4s) {
+    return fileVector4s.Select(x => { return ParseFileVector4(x); }).ToList();
   }
 }
 
@@ -360,18 +369,80 @@ public class FileQuaternion {
   }
 }
 
+public class FileAnimationChannel {
+  public int PathType { get; set; }
+  public int NodeIndex { get; set; }
+  public int SamplerIndex { get; set; }
+
+  public static FileAnimationChannel ToFileAnimationChannel(AnimationChannel animationChannel) {
+    return new FileAnimationChannel() {
+      PathType = (int)animationChannel.Path,
+      NodeIndex = animationChannel.Node.Index,
+      SamplerIndex = animationChannel.SamplerIndex,
+    };
+  }
+
+  public static List<FileAnimationChannel> ToFileAnimationChannels(List<AnimationChannel> animationChannels) {
+    return animationChannels.Select(x => { return ToFileAnimationChannel(x); }).ToList();
+  }
+
+  public static AnimationChannel FromFileAnimationChannel(FileAnimationChannel fileAnimationChannel) {
+    return new AnimationChannel() {
+      Path = (AnimationChannel.PathType)fileAnimationChannel.PathType,
+      SamplerIndex = fileAnimationChannel.SamplerIndex
+    };
+  }
+
+  public static List<AnimationChannel> FromFileAnimationChannels(List<FileAnimationChannel> fileAnimationChannels) {
+    return fileAnimationChannels.Select(x => { return FromFileAnimationChannel(x); }).ToList();
+  }
+}
+
+public class FileAnimationSampler {
+  public int InterpolationType { get; set; }
+  public List<float> Inputs { get; set; } = [];
+  public List<FileVector4> OutputVec4 { get; set; } = [];
+  public List<float> Outputs { get; set; } = [];
+
+  public static FileAnimationSampler ToFileAnimationSampler(AnimationSampler animationSampler) {
+    return new FileAnimationSampler() {
+      InterpolationType = (int)animationSampler.Interpolation,
+      Inputs = animationSampler.Inputs,
+      OutputVec4 = FileVector4.GetFileVectors4(animationSampler.OutputsVec4),
+      Outputs = animationSampler.Outputs
+    };
+  }
+
+  public static List<FileAnimationSampler> ToFileAnimationSamplers(List<AnimationSampler> animationSamplers) {
+    return animationSamplers.Select(x => { return ToFileAnimationSampler(x); }).ToList();
+  }
+
+  public static AnimationSampler FromFileAnimationSampler(FileAnimationSampler fileAnimationSampler) {
+    return new AnimationSampler() {
+      Interpolation = (AnimationSampler.InterpolationType)fileAnimationSampler.InterpolationType,
+      Inputs = fileAnimationSampler.Inputs,
+      OutputsVec4 = FileVector4.ParseFileVectors4(fileAnimationSampler.OutputVec4),
+      Outputs = fileAnimationSampler.Outputs
+    };
+  }
+
+  public static List<AnimationSampler> FromFileAnimationSamplers(List<FileAnimationSampler> fileAnimationSamplers) {
+    return fileAnimationSamplers.Select(x => { return FromFileAnimationSampler(x); }).ToList();
+  }
+}
+
 public class FileAnimation {
   public string Name { get; set; } = string.Empty;
-  public List<AnimationSampler> Samplers { get; set; } = [];
-  public List<AnimationChannel> Channels { get; set; } = [];
+  public List<FileAnimationSampler> Samplers { get; set; } = [];
+  public List<FileAnimationChannel> Channels { get; set; } = [];
   public float Start { get; set; }
   public float End { get; set; }
 
   public static FileAnimation ToFileAnimation(Animation animation) {
     return new FileAnimation {
       Name = animation.Name,
-      Samplers = animation.Samplers,
-      Channels = animation.Channels,
+      Samplers = FileAnimationSampler.ToFileAnimationSamplers(animation.Samplers),
+      Channels = FileAnimationChannel.ToFileAnimationChannels(animation.Channels),
       Start = animation.Start,
       End = animation.End,
     };
@@ -380,8 +451,8 @@ public class FileAnimation {
   public static Animation FromFileAnimation(FileAnimation animation) {
     return new Animation {
       Name = animation.Name,
-      Samplers = animation.Samplers,
-      Channels = animation.Channels,
+      Samplers = FileAnimationSampler.FromFileAnimationSamplers(animation.Samplers),
+      Channels = FileAnimationChannel.FromFileAnimationChannels(animation.Channels),
       Start = animation.Start,
       End = animation.End,
     };

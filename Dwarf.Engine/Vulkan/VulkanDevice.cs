@@ -301,7 +301,8 @@ public class VulkanDevice : IDevice {
   }
 
   public void WaitQueue() {
-    WaitQueue(_graphicsQueue);
+    // WaitQueue(_graphicsQueue);
+    WaitAllQueues();
   }
 
   public void WaitAllQueues() {
@@ -324,15 +325,10 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
-    try {
-      Application.Instance.Mutex.WaitOne();
-      vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
-      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
-      if (destroy) {
-        vkDestroyFence(_logicalDevice, fence);
-      }
-    } finally {
-      Application.Instance.Mutex.ReleaseMutex();
+    vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
+    if (destroy) {
+      vkDestroyFence(_logicalDevice, fence);
     }
   }
 

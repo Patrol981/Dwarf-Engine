@@ -216,20 +216,23 @@ public class VulkanSwapchain : IDisposable {
       pDepthStencilAttachment = &depthAttachmentRef
     };
 
-    VkSubpassDependency dependency = new() {
-      srcSubpass = VK_SUBPASS_EXTERNAL,
-      srcAccessMask = 0,
-      srcStageMask =
-        VkPipelineStageFlags.ColorAttachmentOutput |
-        VkPipelineStageFlags.EarlyFragmentTests,
-      dstSubpass = 0,
-      dstStageMask =
-        VkPipelineStageFlags.ColorAttachmentOutput |
-        VkPipelineStageFlags.EarlyFragmentTests,
-      dstAccessMask =
-        VkAccessFlags.ColorAttachmentWrite |
-        VkAccessFlags.DepthStencilAttachmentWrite
-    };
+    VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[2];
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependencies[0].dependencyFlags = 0;
+
+    dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].dstSubpass = 0;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].srcAccessMask = 0;
+    dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependencies[1].dependencyFlags = 0;
+
 
     VkAttachmentDescription[] attachments = [colorAttachment, depthAttachment];
     VkRenderPassCreateInfo renderPassInfo = new() {
@@ -240,8 +243,8 @@ public class VulkanSwapchain : IDisposable {
     }
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies = dependencies;
 
     var result = vkCreateRenderPass(_device.LogicalDevice, &renderPassInfo, null, out _renderPass);
     if (result != VkResult.Success) throw new Exception("Failed to create render pass!");
@@ -335,13 +338,20 @@ public class VulkanSwapchain : IDisposable {
 
   public unsafe VkResult AcquireNextImage(out uint imageIndex) {
     fixed (VkFence* fencePtr = _inFlightFences) {
-      vkWaitForFences(_device.LogicalDevice, (uint)_inFlightFences.Length, fencePtr, true, ulong.MaxValue);
+      vkWaitForFences(_device.LogicalDevice, (uint)_inFlightFences.Length, fencePtr, true, UInt64.MaxValue);
     }
+
+    // vkWaitForFences(
+    //   _device.LogicalDevice,
+    //   _inFlightFences[_currentFrame],
+    //   true,
+    //   UInt64.MaxValue
+    // );
 
     VkResult result = vkAcquireNextImageKHR(
       _device.LogicalDevice,
       _handle,
-      ulong.MaxValue,
+      UInt64.MaxValue,
       _imageAvailableSemaphores[_currentFrame],
       VkFence.Null,
       out imageIndex
@@ -432,7 +442,7 @@ public class VulkanSwapchain : IDisposable {
 
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     if (_imagesInFlight[imageIndex] != VkFence.Null) {
-      vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, ulong.MaxValue);
+      vkWaitForFences(_device.LogicalDevice, _inFlightFences, true, UInt64.MaxValue);
     }
     _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
@@ -475,7 +485,8 @@ public class VulkanSwapchain : IDisposable {
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-    _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
+    // _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
+    vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]).CheckResult();
 
     VkPresentInfoKHR presentInfo = new() {
       waitSemaphoreCount = 1,
@@ -529,7 +540,7 @@ public class VulkanSwapchain : IDisposable {
     return availableFormats[0];
   }
 
-  private VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
+  private static VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
     if (Application.Instance.VSync) {
       Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
       return VkPresentModeKHR.Fifo;
@@ -635,6 +646,7 @@ public class VulkanSwapchain : IDisposable {
   public VkSwapchainKHR Handle => _handle;
   public VkExtent2D Extent2D { get; }
   public VkFence CurrentFence => _inFlightFences[_currentFrame];
+  public ulong CurrentSemaphore => _renderFinishedSemaphores[_currentFrame].Handle;
   public VkRenderPass RenderPass => _renderPass;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;

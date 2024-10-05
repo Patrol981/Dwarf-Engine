@@ -89,10 +89,8 @@ public class Application {
   public bool Fullscreen { get; init; } = false;
   public readonly object ApplicationLock = new object();
 
-  public static bool CalcThreadLifeBit = false;
-  public static bool RenderThreadLifeBit = false;
-
   public const int ThreadTimeoutTimeMS = 1000;
+  private bool _useImGui = true;
 
   public Application(
     string appName = "Dwarf Vulkan",
@@ -221,8 +219,10 @@ public class Application {
 
     _onLoadPrimaryResources?.Invoke();
 
-    GuiController = new(Device, Renderer);
-    await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    if (_useImGui) {
+      GuiController = new(Device, Renderer);
+      await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    }
 
     _renderThread = new Thread(LoaderLoop);
     _renderThread.Name = "App Loading Frontend Thread";
@@ -661,14 +661,21 @@ public class Application {
       _skybox.Render(_currentFrame);
       Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
-      GuiController.Update(Time.StopwatchDelta);
-      _onGUI?.Invoke();
+      if (_useImGui) {
+        GuiController.Update(Time.StopwatchDelta);
+        _onGUI?.Invoke();
+      }
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScripts());
-      GuiController.Render(_currentFrame);
 
+      if (_useImGui) {
+        GuiController.Render(_currentFrame);
+      }
+
+      Mutex.WaitOne();
       Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
+      Mutex.ReleaseMutex();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
       StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
@@ -695,9 +702,11 @@ public class Application {
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
-      GuiController.Update(Time.StopwatchDelta);
-      _onAppLoading?.Invoke();
-      GuiController.Render(_currentFrame);
+      if (_useImGui) {
+        GuiController.Update(Time.StopwatchDelta);
+        _onAppLoading?.Invoke();
+        GuiController.Render(_currentFrame);
+      }
 
       Mutex.WaitOne();
       Renderer.EndSwapchainRenderPass(commandBuffer);
@@ -863,6 +872,7 @@ public class Application {
   public SystemCollection Systems { get; } = null!;
   public StorageCollection StorageCollection { get; private set; } = null!;
   public Scene CurrentScene { get; private set; } = null!;
+  public bool UseImGui => _useImGui;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
 }

@@ -139,6 +139,19 @@ public unsafe class Renderer : IDisposable {
       return;
     }
 
+    // vkCmdPipelineBarrier(
+    //   commandBuffer,
+    //   VkPipelineStageFlags.EarlyFragmentTests,
+    //   VkPipelineStageFlags.LateFragmentTests,
+    //   0,
+    //   0,
+    //   null,
+    //   0,
+    //   null,
+    //   0,
+    //   null
+    // );
+
     vkCmdEndRenderPass(commandBuffer);
   }
 

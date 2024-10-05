@@ -52,6 +52,16 @@ public class TextureManager : IDisposable {
     return guid;
   }
 
+  public bool TextureExists(ITexture texture) {
+    foreach (var tex in LoadedTextures) {
+      if (tex.Value.TextureName == texture.TextureName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   public static async Task<ITexture[]> AddTextures(IDevice device, string[] paths, int flip = 1) {
     var textures = new ITexture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {

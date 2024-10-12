@@ -104,8 +104,8 @@ public class FileMesh {
 }
 
 public class FileNode {
-  public FileNode? Parent { get; set; }
   public int Index { get; set; }
+  public int ParentIndex { get; set; } = -1;
   public List<FileNode>? Children { get; set; }
   public string Name { get; set; } = string.Empty;
   public FileMesh? Mesh { get; set; }
@@ -123,7 +123,9 @@ public class FileNode {
       SkinIndex = node.SkinIndex,
       Translation = FileVector3.GetFileVector3(node.Translation),
       Rotation = FileQuaternion.GetFileQuaternion(node.Rotation),
-      Scale = FileVector3.GetFileVector3(node.Scale)
+      Scale = FileVector3.GetFileVector3(node.Scale),
+      Name = node.Name,
+      ParentIndex = node.Parent != null ? node.Parent.Index : -1,
     };
 
     if (node.Children != null && node.Children.Count != 0) {
@@ -153,25 +155,16 @@ public class FileNode {
       Translation = fileNode.Translation != null ? FileVector3.ParseFileVector3(fileNode.Translation) : Vector3.Zero,
       Rotation = fileNode.Rotation != null ? FileQuaternion.ParseQuaternion(fileNode.Rotation) : Quaternion.Identity,
       Scale = fileNode.Scale != null ? FileVector3.ParseFileVector3(fileNode.Scale) : Vector3.One,
+      Name = fileNode.Name,
     };
 
     if (parent != null) {
       node.Parent = parent;
     }
 
-    // if (fileNode.Skin != null) {
-    //   node.Skin = FileSkin.FromFileSkin(fileNode.Skin!);
-    // }
-
     if (fileNode.Mesh != null) {
       node.Mesh = FileMesh.FromFileMesh(fileNode.Mesh!);
     }
-
-    // if (fileNode.Children != null && fileNode.Children.Count > 0) {
-    //   foreach (var childNode in fileNode.Children) {
-    //     node.Children.Add(FromFileNode(childNode, node));
-    //   }
-    // }
 
     return node;
   }
@@ -199,7 +192,7 @@ public class FileNode {
 
 public class FileSkin {
   public string Name { get; set; } = default!;
-  public FileNode? SkeletonRoot { get; set; }
+  public int SkeletonRoot { get; set; }
   public List<FileMatrix4x4>? InverseBindMatrices { get; set; }
   public List<FileNode>? Joints { get; set; }
   public List<FileMatrix4x4>? OutputNodeMatrices { get; set; }
@@ -208,7 +201,7 @@ public class FileSkin {
   public static FileSkin ToFileSkin(Skin skin) {
     return new FileSkin {
       Name = skin.Name,
-      SkeletonRoot = skin.SkeletonRoot != null ? FileNode.ToFileNode(skin.SkeletonRoot) : null,
+      SkeletonRoot = skin.SkeletonRoot != null ? skin.SkeletonRoot.Index : -1,
       InverseBindMatrices = FileMatrix4x4.GetFileMatrices(skin.InverseBindMatrices),
       Joints = FileNode.ToFileNodes(skin.Joints),
       OutputNodeMatrices = FileMatrix4x4.GetFileMatrices([.. skin.OutputNodeMatrices]),
@@ -219,7 +212,6 @@ public class FileSkin {
   public static Skin FromFileSkin(FileSkin fileSkin) {
     return new Skin {
       Name = fileSkin.Name,
-      SkeletonRoot = fileSkin.SkeletonRoot != null ? FileNode.FromFileNode(fileSkin.SkeletonRoot) : null!,
       InverseBindMatrices = fileSkin.InverseBindMatrices != null ? FileMatrix4x4.FromFileMatrices(fileSkin.InverseBindMatrices) : null!,
       Joints = fileSkin.Joints?.Count > 0 ? FileNode.FromFileNodes(fileSkin.Joints) : null!,
       OutputNodeMatrices = fileSkin.JointsCount > 0 ? [.. FileMatrix4x4.FromFileMatrices(fileSkin.OutputNodeMatrices!)] : null!,

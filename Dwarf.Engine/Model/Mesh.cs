@@ -29,10 +29,6 @@ public class Mesh : IDisposable {
     Matrix = matrix;
   }
 
-  public void BuildDescriptors() {
-
-  }
-
   public unsafe Task CreateVertexBuffer() {
     VertexCount = (ulong)Vertices.Length;
     ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * VertexCount;

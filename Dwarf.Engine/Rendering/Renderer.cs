@@ -52,9 +52,12 @@ public unsafe class Renderer : IDisposable {
 
     var commandBuffer = GetCurrentCommandBuffer();
 
+    // vkResetFences(_device.LogicalDevice, 1, Swapchain.CurrentFence);
+    vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None);
+
     VkCommandBufferBeginInfo beginInfo = new();
     if (level == VkCommandBufferLevel.Secondary) {
-      beginInfo.flags = VkCommandBufferUsageFlags.RenderPassContinue;
+      beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUse;
       // beginInfo.pInheritanceInfo
     }
     // beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
@@ -84,8 +87,8 @@ public unsafe class Renderer : IDisposable {
 
     IsFrameInProgress = false;
     // PREV
-    _frameIndex = (_frameIndex + 1) % Swapchain.GetMaxFramesInFlight();
-    // _frameIndex = (_frameIndex) % _swapchain.GetMaxFramesInFlight();
+    // _frameIndex = (_frameIndex + 1) % Swapchain.GetMaxFramesInFlight();
+    _frameIndex = (_frameIndex) % Swapchain.GetMaxFramesInFlight();
   }
 
   public void BeginSwapchainRenderPass(VkCommandBuffer commandBuffer) {

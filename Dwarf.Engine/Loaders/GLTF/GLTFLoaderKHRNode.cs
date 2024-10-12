@@ -214,6 +214,8 @@ public static partial class GLTFLoaderKHR {
   }
 
   private static void LoadSkins(Gltf gltf, byte[] globalBuffer, MeshRenderer meshRenderer) {
+    if (gltf.Skins == null) return;
+
     foreach (var source in gltf.Skins) {
       var newSkin = new Dwarf.Model.Animation.Skin();
       newSkin.Name = source.Name;

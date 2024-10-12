@@ -135,8 +135,10 @@ public class Application {
     _newSceneShouldLoad = true;
   }
   private async void SceneLoadReactor() {
+    Mutex.WaitOne();
     Device.WaitDevice();
     Device.WaitQueue();
+    Mutex.ReleaseMutex();
 
     await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
 

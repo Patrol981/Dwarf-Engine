@@ -279,11 +279,9 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void WaitDevice() {
-    lock (_queueLock) {
-      var result = vkDeviceWaitIdle(_logicalDevice);
-      if (result == VkResult.ErrorDeviceLost) {
-        throw new VkException($"Device Lost! {result.ToString()}");
-      }
+    var result = vkDeviceWaitIdle(_logicalDevice);
+    if (result == VkResult.ErrorDeviceLost) {
+      throw new VkException($"[DWARF] Device Lost! {result.ToString()}");
     }
   }
 
@@ -294,10 +292,8 @@ public class VulkanDevice : IDevice {
     return fence;
   }
 
-  private unsafe void WaitQueue(VkQueue queue) {
-    lock (_queueLock) {
-      vkQueueWaitIdle(queue);
-    }
+  public unsafe void WaitQueue(VkQueue queue) {
+    vkQueueWaitIdle(queue);
   }
 
   public void WaitQueue() {

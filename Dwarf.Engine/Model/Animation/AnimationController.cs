@@ -25,6 +25,11 @@ public class AnimationController : Component {
     }
   }
 
+  public void PlayFirstAnimation() {
+    if (_animations.Count < 1) return;
+    _currentAnimation = _animations.First().Value;
+  }
+
   public void SetCurrentAnimation(string animationName) {
     _animations.TryGetValue(animationName, out var animation);
     if (animation == null) {

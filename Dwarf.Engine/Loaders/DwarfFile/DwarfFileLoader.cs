@@ -20,6 +20,19 @@ public static class DwarfFileLoader {
       meshRenderer.Skins = FileSkin.FromFileSkins(dwarfFile.Skins!);
     }
 
+    if (dwarfFile.Skins != null && dwarfFile.Skins.Count > 0) {
+      for (int i = 0; i < meshRenderer.Skins.Count; i++) {
+        if (dwarfFile.Skins[i].JointIndices != null && dwarfFile.Skins[i].JointIndices!.Count > 0) {
+          for (int j = 0; j < dwarfFile.Skins[i]!.JointIndices!.Count; j++) {
+            var target = meshRenderer.NodeFromIndex(dwarfFile.Skins[i]!.JointIndices[j]!);
+            if (target != null) {
+              meshRenderer.Skins[i].Joints.Add(target);
+            }
+          }
+        }
+      }
+    }
+
     for (int i = 0; i < meshRenderer.Skins.Count; i++) {
       try {
         var node = meshRenderer.NodeFromIndex(dwarfFile.Skins![i].SkeletonRoot);

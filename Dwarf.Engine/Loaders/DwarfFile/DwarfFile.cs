@@ -194,7 +194,7 @@ public class FileSkin {
   public string Name { get; set; } = default!;
   public int SkeletonRoot { get; set; }
   public List<FileMatrix4x4>? InverseBindMatrices { get; set; }
-  public List<FileNode>? Joints { get; set; }
+  public List<int> JointIndices { get; set; } = [];
   public List<FileMatrix4x4>? OutputNodeMatrices { get; set; }
   public int JointsCount { get; set; }
 
@@ -203,7 +203,7 @@ public class FileSkin {
       Name = skin.Name,
       SkeletonRoot = skin.SkeletonRoot != null ? skin.SkeletonRoot.Index : -1,
       InverseBindMatrices = FileMatrix4x4.GetFileMatrices(skin.InverseBindMatrices),
-      Joints = FileNode.ToFileNodes(skin.Joints),
+      JointIndices = skin.Joints.Select(x => x.Index).ToList(),
       OutputNodeMatrices = FileMatrix4x4.GetFileMatrices([.. skin.OutputNodeMatrices]),
       JointsCount = skin.JointsCount
     };
@@ -213,7 +213,6 @@ public class FileSkin {
     return new Skin {
       Name = fileSkin.Name,
       InverseBindMatrices = fileSkin.InverseBindMatrices != null ? FileMatrix4x4.FromFileMatrices(fileSkin.InverseBindMatrices) : null!,
-      Joints = fileSkin.Joints?.Count > 0 ? FileNode.FromFileNodes(fileSkin.Joints) : null!,
       OutputNodeMatrices = fileSkin.JointsCount > 0 ? [.. FileMatrix4x4.FromFileMatrices(fileSkin.OutputNodeMatrices!)] : null!,
       JointsCount = fileSkin.JointsCount
     };

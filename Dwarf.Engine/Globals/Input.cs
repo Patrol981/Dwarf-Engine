@@ -10,7 +10,7 @@ namespace Dwarf.Globals;
 public static class Input {
   public static unsafe bool GetKey(SDL_Scancode scancode) {
     var state = SDL_GetKeyboardState(null);
-    return state[(int)scancode] == 1;
+    return state[(int)scancode];
   }
 
   public static unsafe bool GetKeyDown(SDL_Scancode scancode) {

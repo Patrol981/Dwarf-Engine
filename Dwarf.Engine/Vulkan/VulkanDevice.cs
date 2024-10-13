@@ -535,6 +535,8 @@ public class VulkanDevice : IDevice {
 
     VkPhysicalDeviceVulkan13Features vk13Features = new() {
       synchronization2 = true,
+      dynamicRendering = true,
+      inlineUniformBlock = true,
       pNext = &vk12Features,
     };
 
@@ -547,9 +549,17 @@ public class VulkanDevice : IDevice {
       createInfo.pQueueCreateInfos = ptr;
     }
 
-    List<VkUtf8String> enabledExtensions = [
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    ];
+    List<VkUtf8String> enabledExtensions;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+      enabledExtensions = [
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+      ];
+    } else {
+      enabledExtensions = [
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+      ];
+    }
 
     using var deviceExtensionNames = new VkStringArray(enabledExtensions);
 

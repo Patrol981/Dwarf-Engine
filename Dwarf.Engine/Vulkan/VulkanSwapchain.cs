@@ -319,15 +319,10 @@ public class VulkanSwapchain : IDisposable {
 
   private unsafe void CreateSyncObjects() {
     ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
-    // _imageAvailableSemaphores = new VkSemaphore[MAX_FRAMES_IN_FLIGHT];
-    // _renderFinishedSemaphores = new VkSemaphore[MAX_FRAMES_IN_FLIGHT];
-    // _inFlightFences = new VkFence[MAX_FRAMES_IN_FLIGHT];
-    // _imagesInFlight = new VkFence[swapChainImages.Length];
     _imageAvailableSemaphores = MemoryUtils.AllocateMemory<VkSemaphore>(MAX_FRAMES_IN_FLIGHT);
     _renderFinishedSemaphores = MemoryUtils.AllocateMemory<VkSemaphore>(MAX_FRAMES_IN_FLIGHT);
     _inFlightFences = MemoryUtils.AllocateMemory<VkFence>(MAX_FRAMES_IN_FLIGHT);
     _imagesInFlight = MemoryUtils.AllocateMemory<VkFence>(swapChainImages.Length);
-    // Array.Fill(_imagesInFlight, VkFence.Null);
     for (int i = 0; i < swapChainImages.Length; i++) {
       _imagesInFlight[i] = VkFence.Null;
     }
@@ -442,13 +437,7 @@ public class VulkanSwapchain : IDisposable {
     }
     _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
-    // var waitStages = new VkPipelineStageFlags[1];
-    // waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
-
     VkSubmitInfo submitInfo = new();
-
-    // VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
-    // waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
 
     VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
     waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;

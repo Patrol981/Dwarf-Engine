@@ -104,15 +104,17 @@ public class Ray {
     var transform = entity.GetComponent<Transform>();
     var model = entity.GetComponent<MeshRenderer>();
 
-    var modelMatrix = transform.Matrix4;
-    var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);
-    var delta = positionWorldspace - rayData.RayOrigin;
-
     var collisionPoint = Vector3.Zero;
     var hitResult = new RaycastHitResult {
       Present = false,
       Point = collisionPoint
     };
+
+    if (model == null || transform == null) return hitResult;
+
+    var modelMatrix = transform.Matrix4;
+    var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);
+    var delta = positionWorldspace - rayData.RayOrigin;
 
     return AABBIntersection(hitResult, modelMatrix, rayData, delta, model, maxDistance);
   }

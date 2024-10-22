@@ -44,7 +44,7 @@ public static class Time {
     s_fixedTime = s_deltaTime;
 
     if (s_deltaTime > 0.25) {
-      s_deltaTime = 0.25;
+      s_deltaTime = 0.25f;
     }
 
     s_lastFrame = currentFrame;
@@ -55,6 +55,10 @@ public static class Time {
     long frameTick = currentFrameTick - s_lastStopwatchTick;
     s_stopwatchDelta = (float)frameTick / Stopwatch.Frequency;
     s_lastStopwatchTick = currentFrameTick;
+
+    if (s_stopwatchDelta > 0.25f) {
+      s_stopwatchDelta = 0.25f;
+    }
   }
 
   public static void Tick_2() {

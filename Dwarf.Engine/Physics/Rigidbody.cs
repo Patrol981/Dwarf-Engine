@@ -150,6 +150,7 @@ public class Rigidbody : Component, IDisposable {
 
     _bodyInterface.SetGravityFactor(_bodyId, 0.1f);
     _bodyInterface.SetMotionQuality(_bodyId, _motionQuality);
+    _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
   }
 
   private void AdjustColliderMesh(Mesh colliderMesh) {
@@ -189,10 +190,6 @@ public class Rigidbody : Component, IDisposable {
 
     transform.Position = pos;
 
-    if (_bodyInterface.GetMotionType(_bodyId) != _motionType) {
-      _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
-    }
-
     if (!_physicsControlRotation) {
       var quat = Quaternion.CreateFromRotationMatrix(transform.AngleYMatrix);
       _bodyInterface.SetRotation(_bodyId, quat, Activation.Activate);
@@ -200,11 +197,19 @@ public class Rigidbody : Component, IDisposable {
       transform.Rotation = Quat.ToEuler(_bodyInterface.GetRotation(_bodyId));
     }
 
-    var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
-    newVel.X /= 2;
-    newVel.Z /= 2;
-    if (newVel.Y < 0) newVel.Y = 0;
-    _bodyInterface.SetLinearVelocity(_bodyId, newVel);
+    if (_motionType == MotionType.Dynamic) {
+      var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
+      newVel.X /= 2;
+      newVel.Z /= 2;
+      if (newVel.Y < 0) newVel.Y = 0;
+      _bodyInterface.SetLinearVelocity(_bodyId, newVel);
+    } else {
+      var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
+      newVel.X /= 2;
+      newVel.Z /= 2;
+      newVel.Y = transform.Position.Y;
+      _bodyInterface.SetLinearVelocity(_bodyId, newVel);
+    }
 
     // freeze rigidbody to X an Z axis
     // _bodyInterface.SetRotation(_bodyId, new System.Numerics.Quaternion(0.0f, rot.Y, 0.0f, 1.0f), Activation.Activate);
@@ -293,6 +298,8 @@ public class Rigidbody : Component, IDisposable {
       _motionType = value ? MotionType.Static : MotionType.Dynamic;
     }
   }
+
+  public MotionType MotionType => _motionType;
 
   public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
   public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);

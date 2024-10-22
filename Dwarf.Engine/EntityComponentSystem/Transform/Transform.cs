@@ -203,7 +203,15 @@ public class Transform : Component {
     return forward;
   }
 
+  private Vector3 GetRight() {
+    var modelMatrix = Matrix4;
+    var right = new Vector3(modelMatrix[2, 0], modelMatrix[2, 1], modelMatrix[2, 2]);
+    right = Vector3.Normalize(right);
+    return right;
+  }
+
   public Vector3 Forward => GetForward();
+  public Vector3 Right => GetRight();
   public Matrix4x4 Matrix4 => GetMatrix();
   public Matrix4x4 NoScale => GetMatrixWithoutScale();
   public Matrix4x4 ScaleMatrix => GetScale();

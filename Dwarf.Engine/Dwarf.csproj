@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -50,6 +50,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dwarf.Utils\Dwarf.Utils.csproj" />
     <ProjectReference Include="..\Dwarf.AbstractionLayer\Dwarf.AbstractionLayer.csproj" />
+    <ProjectReference Include="..\Dwarf.WebApi\Dwarf.WebApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>

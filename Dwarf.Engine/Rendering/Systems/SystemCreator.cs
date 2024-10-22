@@ -13,6 +13,7 @@ public enum SystemCreationFlags {
   DirectionalLight = 1 << 4,
   PointLights = 1 << 5,
   Guizmos = 1 << 6,
+  WebApi = 1 << 7,
 }
 
 public class SystemCreator {
@@ -31,6 +32,7 @@ public class SystemCreator {
     var hasDirectionalLight = flags.HasFlag(SystemCreationFlags.DirectionalLight);
     var hasPointLights = flags.HasFlag(SystemCreationFlags.PointLights);
     var hasGuizmos = flags.HasFlag(SystemCreationFlags.Guizmos);
+    var hasWebApi = flags.HasFlag(SystemCreationFlags.WebApi);
 
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
@@ -70,6 +72,10 @@ public class SystemCreator {
       Logger.Info("[SYSTEM CREATOR] Creating Guizmos Rendering System");
       systemCollection.GuizmoRenderSystem =
         new(device, renderer, layouts["Global"].GetDescriptorSetLayout());
+    }
+    if (hasWebApi) {
+      Logger.Info("[SYSTEM CREATOR] Creating WebApi");
+      systemCollection.WebApi = new(app: Application.Instance);
     }
   }
 }

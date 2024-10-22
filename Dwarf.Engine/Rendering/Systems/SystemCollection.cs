@@ -1,5 +1,6 @@
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Networking;
 using Dwarf.Physics;
 using Dwarf.Rendering.Systems;
 using Dwarf.Rendering.UI;
@@ -19,6 +20,8 @@ public class SystemCollection : IDisposable {
   private PointLightSystem? _pointLightSystem;
 
   private GuizmoRenderSystem? _guizmoRenderSystem;
+
+  private WebApiSystem? _webApi;
 
   private Canvas? _canvas = null;
 
@@ -227,6 +230,11 @@ public class SystemCollection : IDisposable {
     set { _guizmoRenderSystem = value; }
   }
 
+  public WebApiSystem WebApi {
+    get { return _webApi ?? null!; }
+    set { _webApi = value; }
+  }
+
   public Canvas Canvas {
     get { return _canvas ?? null!; }
     set { _canvas = value; }
@@ -242,5 +250,6 @@ public class SystemCollection : IDisposable {
     _guizmoRenderSystem?.Dispose();
     _directionaLightSystem?.Dispose();
     _pointLightSystem?.Dispose();
+    _webApi?.Dispose();
   }
 }

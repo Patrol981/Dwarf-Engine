@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
 
@@ -57,9 +58,13 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
         // pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
         // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
 
-        ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
-          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
-          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
+        // ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
+        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
+        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
+
+        // ModelMatrix = entities[i].GetComponent<MeshRenderer>().
+
+        ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
       };
 
       vkCmdPushConstants(

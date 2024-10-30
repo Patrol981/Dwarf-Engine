@@ -70,18 +70,21 @@ public class Sprite : Component, IDisposable, I2DCollision {
   public void BindToTexture(
     TextureManager textureManager,
     string texturePath,
-    bool useLocalPath = false,
-    int modelPart = 0
+    bool useLocalPath = false
   ) {
     _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       UsesTexture = true;
-      if (useLocalPath) {
-        SetupProportions($"./Textures/{texturePath}");
-      } else {
-        SetupProportions(texturePath);
-      }
+      // if (useLocalPath) {
+      //   SetupProportions($"./Textures/{texturePath}");
+      // } else {
+      //   SetupProportions(texturePath);
+      // }
+
+      Dispose();
+      CreateVertexBuffer(_spriteMesh.Vertices);
+      CreateIndexBuffer(_spriteMesh.Indices);
 
     } else {
       Logger.Warn($"Could not bind texture to sprite ({texturePath}) - no such texture in manager");

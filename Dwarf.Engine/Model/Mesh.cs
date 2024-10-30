@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Math;
 
 namespace Dwarf;
 
@@ -23,6 +24,8 @@ public class Mesh : IDisposable {
   public Guid TextureIdReference = Guid.Empty;
 
   public Matrix4x4 Matrix = Matrix4x4.Identity;
+
+  public BoundingBox BoundingBox;
 
   public Mesh(IDevice device, Matrix4x4 matrix = default) {
     _device = device;

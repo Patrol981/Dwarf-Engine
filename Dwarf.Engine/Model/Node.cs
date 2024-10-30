@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dwarf.Math;
 using Dwarf.Model.Animation;
 
 namespace Dwarf.Model;
@@ -22,6 +23,8 @@ public class Node {
   public Matrix4x4 CachedMatrix = Matrix4x4.Identity;
 
   public MeshRenderer ParentRenderer = null!;
+  public BoundingBox BoundingVolume;
+  public BoundingBox AABB;
 
   public float AnimationTimer = 0.0f;
 

@@ -83,10 +83,19 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
         AABBArray[i] = new();
         AABBArray[i].Update(MeshedNodes[i].Mesh!);
+
+        _mergedAABB.GetBounds(MeshedNodes[i].GetMatrix());
       }
     }
 
-    _mergedAABB.Update(AABBArray);
+    // foreach (var node in LinearNodes) {
+    //   CalculateBoundingBox(node, null!);
+    // }
+
+    // _mergedAABB.Update(AABBArray);
+    // var scale = Owner!.GetComponent<Transform>().Scale;
+    // _mergedAABB.Min *= scale;
+    // _mergedAABB.Max *= scale;
     RunTasks(createTasks);
   }
 
@@ -214,6 +223,30 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
+  public void CalculateBoundingBox(Node node, Node parent) {
+    BoundingBox parentBB = parent != null ? parent.BoundingVolume : new BoundingBox(float.MaxValue, -float.MaxValue);
+
+    if (node.HasMesh) {
+      if (node.Mesh!.BoundingBox.IsValid) {
+        node.AABB = node.Mesh!.BoundingBox.GetBoundingBox(node.GetMatrix());
+        if (node.Children?.Count > 0) {
+          node.BoundingVolume.Min = node.AABB.Min;
+          node.BoundingVolume.Max = node.AABB.Max;
+          node.BoundingVolume.IsValid = true;
+        }
+      }
+    }
+
+    parentBB.Min = Vector3.Min(parentBB.Min, node.BoundingVolume.Min);
+    parentBB.Max = Vector3.Max(parentBB.Max, node.BoundingVolume.Max);
+
+    if (node.Children?.Count < 1) return;
+
+    foreach (var child in node.Children!) {
+      CalculateBoundingBox(child, node);
+    }
+  }
+
   public unsafe void Dispose() {
     foreach (var node in LinearNodes) {
       _device.WaitQueue();
@@ -303,10 +336,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public AABB[] AABBArray { get; private set; } = [];
 
   public AABB AABB {
+    // get {
+    //   return Owner!.HasComponent<ColliderMesh>()
+    //     ? AABB.CalculateOnFlyWithMatrix(Owner!.GetComponent<ColliderMesh>().Mesh, Owner!.GetComponent<Transform>())
+    //     : _mergedAABB;
+    // }
+    // get => _mergedAABB;
     get {
-      return Owner!.HasComponent<ColliderMesh>()
-        ? AABB.CalculateOnFlyWithMatrix(Owner!.GetComponent<ColliderMesh>().Mesh, Owner!.GetComponent<Transform>())
-        : _mergedAABB;
+      _mergedAABB.CalculateOnFly(
+        colliderMesh: Owner!.GetComponent<ColliderMesh>(),
+        transform: Owner!.GetComponent<Transform>()
+      );
+      return _mergedAABB;
     }
   }
 }

@@ -11,6 +11,12 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.Systems;
+
+public struct GuizmoIndirectBatch {
+  public uint First;
+  public uint Count;
+};
+
 public class GuizmoRenderSystem : SystemBase {
   private readonly unsafe GuizmoBufferObject* _bufferObject =
     (GuizmoBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<GuizmoBufferObject>());

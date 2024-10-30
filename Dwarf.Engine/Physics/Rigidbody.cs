@@ -99,6 +99,39 @@ public class Rigidbody : Component, IDisposable {
     _physicsControlRotation = physicsControlRotation;
   }
 
+  public void InitBase() {
+    if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
+    if (_device == null) throw new Exception("Device cannot be null!");
+
+    if (Owner?.GetDrawable<IRender3DElement>() == null) return;
+    var target = Owner!.GetDrawable<IRender3DElement>() as IRender3DElement;
+
+    Mesh mesh;
+
+    switch (PrimitiveType) {
+      case PrimitiveType.Cylinder:
+        mesh = Primitives.CreateCylinderPrimitive(1, 1, 20);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
+        break;
+      case PrimitiveType.Convex:
+        mesh = Primitives.CreateConvex(target!.MeshedNodes, Flipped);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
+        break;
+      case PrimitiveType.Box:
+        mesh = Primitives.CreateBoxPrimitive(1);
+        ScaleColliderMesh(mesh);
+        AdjustColliderMesh(mesh);
+        break;
+      default:
+        mesh = Primitives.CreateBoxPrimitive(1);
+        break;
+    }
+
+    Owner!.AddComponent(new ColliderMesh(_device, mesh));
+  }
+
   public unsafe void Init(in BodyInterface bodyInterface) {
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
@@ -106,38 +139,23 @@ public class Rigidbody : Component, IDisposable {
     _bodyInterface = bodyInterface;
 
     var pos = Owner!.GetComponent<Transform>().Position;
-
-    var target = Owner.GetDrawable<IRender3DElement>() as IRender3DElement;
-    var height = target!.CalculateHeightOfAnModel();
-    Mesh mesh;
+    Mesh mesh = Owner!.GetComponent<ColliderMesh>().Mesh;
     ShapeSettings shapeSettings;
 
     switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
-        mesh = Primitives.CreateCylinderPrimitive(1, 1, 20);
-        ScaleColliderMesh(mesh);
-        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(target.MeshedNodes, Flipped);
-        ScaleColliderMesh(mesh);
-        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Box:
-        mesh = Primitives.CreateBoxPrimitive(1);
-        ScaleColliderMesh(mesh);
-        AdjustColliderMesh(mesh);
         shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       default:
-        mesh = Primitives.CreateBoxPrimitive(1);
         shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));
         break;
     }
-
-    Owner!.AddComponent(new ColliderMesh(_device, mesh));
 
     BodyCreationSettings settings = new(
         shapeSettings,

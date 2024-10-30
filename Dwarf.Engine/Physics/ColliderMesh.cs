@@ -3,7 +3,10 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
 using Dwarf.Vulkan;
+
+using System.Numerics;
 
 using Vortice.Vulkan;
 
@@ -11,7 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Physics;
 public class ColliderMesh : Component, IDebugRender3DObject {
-  private readonly VulkanDevice _device = null!;
+  private readonly IDevice _device = null!;
 
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
@@ -21,12 +24,21 @@ public class ColliderMesh : Component, IDebugRender3DObject {
 
   public ColliderMesh() { }
 
-  public ColliderMesh(VulkanDevice device, Mesh mesh) {
+  public ColliderMesh(IDevice device, Mesh mesh) {
     _device = device;
     Mesh = mesh;
 
     if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
 
+    Init();
+  }
+
+  public ColliderMesh(IDevice device, AABB aabb) {
+    _device = device;
+
+    Mesh = CreateMeshOutOfAABB(device, aabb);
+
+    if (Mesh.Indices.Length > 0) _hasIndexBuffer = true;
     Init();
   }
 
@@ -150,6 +162,124 @@ public class ColliderMesh : Component, IDebugRender3DObject {
 
     stagingBuffer.Dispose();
     return Task.CompletedTask;
+  }
+
+  private static Mesh CreateMeshOutOfAABB(IDevice device, AABB aabb) {
+    Vector3[] normals = [
+      new(-1, -1, -1),
+      new(1, -1, -1),
+      new(1, 1, -1),
+      new(-1, 1, -1),
+
+      new(-1, -1, 1),
+      new(1, -1, 1),
+      new(1, 1, 1),
+      new(-1, 1, 1),
+    ];
+
+    Vertex[] vertices =
+    [
+      new Vertex {
+        Position = new(aabb.Min.X, aabb.Min.Y, aabb.Min.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[0],
+      },
+      new Vertex {
+        Position = new(aabb.Max.X, aabb.Min.Y, aabb.Min.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[1],
+      },
+      new Vertex {
+        Position = new(aabb.Max.X, aabb.Max.Y, aabb.Min.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[2],
+      },
+      new Vertex {
+        Position = new(aabb.Min.X, aabb.Max.Y, aabb.Min.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[3],
+      },
+
+      new Vertex {
+        Position = new(aabb.Min.X, aabb.Min.Y, aabb.Max.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[4],
+      },
+      new Vertex {
+        Position = new(aabb.Max.X, aabb.Min.Y, aabb.Max.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[5],
+      },
+      new Vertex {
+        Position = new(aabb.Max.X, aabb.Max.Y, aabb.Max.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[6],
+      },
+      new Vertex {
+        Position = new(aabb.Min.X, aabb.Max.Y, aabb.Max.Z),
+        Color = new(1, 1, 1),
+        Normal = normals[7],
+      },
+    ];
+
+    uint[] indices = [
+      // Front face
+      0,
+      3,
+      2,
+      2,
+      1,
+      0,
+
+      // Back face
+      4,
+      5,
+      6,
+      6,
+      7,
+      4,
+
+      // Left face
+      0,
+      4,
+      7,
+      7,
+      3,
+      0,
+
+      // Right face
+      1,
+      2,
+      6,
+      6,
+      5,
+      1,
+
+      // Top face
+      3,
+      7,
+      6,
+      6,
+      2,
+      3,
+
+      // Bottom face
+      0,
+      1,
+      5,
+      5,
+      4,
+      0
+    ];
+
+    var mesh = new Mesh(device) {
+      Vertices = vertices,
+      Indices = indices,
+      IndexCount = (ulong)indices.Length,
+      VertexCount = (ulong)vertices.Length,
+    };
+
+    return mesh;
   }
 
   public bool UsesTexture => false;

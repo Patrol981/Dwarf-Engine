@@ -95,6 +95,29 @@ public class Ray {
     return hitResult;
   }
 
+  public static ReadOnlySpan<Entity> Raycast() {
+    var entities = Application.Instance.GetEntities();
+    var result = new Dictionary<Entity, RaycastHitResult>();
+
+    foreach (var entity in entities) {
+      var enTransform = entity.TryGetComponent<Transform>();
+      var enDistance = Vector3.Distance(
+        CameraState.GetCameraEntity().GetComponent<Transform>().Position,
+        enTransform != null ? enTransform.Position : Vector3.Zero
+      );
+
+      var enResult = Ray.CastRayIntersect(entity, enDistance);
+      if (enResult.Present) {
+        result.TryAdd(entity, enResult);
+      }
+    }
+
+    return result
+      .OrderBy(pair => pair.Value.Distance)
+      .Select(pair => pair.Key)
+      .ToArray();
+  }
+
   public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;

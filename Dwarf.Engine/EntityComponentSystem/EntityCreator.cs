@@ -211,6 +211,7 @@ public static class EntityCreator {
     if (entity == null) return;
 
     entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, kinematic, flip));
+    entity.GetComponent<Rigidbody>().InitBase();
   }
 
   public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, bool kinematic = false, float radius = 1) {

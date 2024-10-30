@@ -1,5 +1,6 @@
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Math;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using glTFLoader.Schema;
@@ -76,6 +77,61 @@ public class VulkanTexture : ITexture {
     SetTextureData(data, VkImageCreateFlags.None);
   }
 
+  private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
+    var stagingBuffer = new DwarfBuffer(
+      _device,
+      (ulong)_size,
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+    );
+
+    stagingBuffer.Map();
+
+    TextureData = data;
+    unsafe {
+      fixed (byte* dataPtr = data) {
+        stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_size);
+      }
+    }
+
+    stagingBuffer.Unmap();
+    ProcessTexture(stagingBuffer, createFlags);
+  }
+
+  public void SetTextureData(int[,] data, Vector4I frontColor, Vector4I backColor, int scale) {
+    int width = data.GetLength(0);
+    int height = data.GetLength(1);
+    int scaledWidth = width * scale;
+    int scaledHeight = height * scale;
+
+    byte[] rgbaData = new byte[scaledWidth * scaledHeight * 4];
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        bool isPainted = data[x, y] == 1;
+        var r = isPainted ? (byte)frontColor.X : (byte)backColor.X;
+        var g = isPainted ? (byte)frontColor.Y : (byte)backColor.Y;
+        var b = isPainted ? (byte)frontColor.Z : (byte)backColor.Z;
+        var a = isPainted ? (byte)frontColor.W : (byte)backColor.W;
+
+        for (int dy = 0; dy < scale; dy++) {
+          for (int dx = 0; dx < scale; dx++) {
+            int scaledX = x * scale + dx;
+            int scaledY = y * scale + dy;
+            int index = (scaledY * scaledWidth + scaledX) * 4;
+
+            rgbaData[index] = r;
+            rgbaData[index + 1] = g;
+            rgbaData[index + 2] = b;
+            rgbaData[index + 3] = a;
+          }
+        }
+      }
+    }
+
+    SetTextureData(rgbaData);
+  }
+
   public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
     VkDescriptorImageInfo imageInfo = new() {
       sampler = _textureSampler.ImageSampler,
@@ -127,27 +183,6 @@ public class VulkanTexture : ITexture {
     vkUpdateDescriptorSets(_device.LogicalDevice, writeDesc);
 
     _textureDescriptor = descriptorSet;
-  }
-
-  private void SetTextureData(byte[] data, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
-    var stagingBuffer = new DwarfBuffer(
-      _device,
-      (ulong)_size,
-      BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-
-    stagingBuffer.Map();
-
-    TextureData = data;
-    unsafe {
-      fixed (byte* dataPtr = data) {
-        stagingBuffer.WriteToBuffer((nint)dataPtr, (ulong)_size);
-      }
-    }
-
-    stagingBuffer.Unmap();
-    ProcessTexture(stagingBuffer, createFlags);
   }
 
   private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {

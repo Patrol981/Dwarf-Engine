@@ -399,8 +399,8 @@ public class Application {
 
   private async Task<Task> Init() {
     var tasks = new Task[] {
-      InitResources(),
       await SetupScene(),
+      InitResources()
     };
 
     // await SetupScene();

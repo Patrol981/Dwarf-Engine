@@ -1,5 +1,6 @@
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 using Dwarf.Rendering;
 
 namespace Dwarf.Math;
@@ -150,5 +151,11 @@ public struct Frustum {
     frustum.Bottom.D = Vector3.Cross(frontMultFar - camera.Up * halfVerticalSide, camera.Right).Y;
 
     return frustum;
+  }
+
+  public static void GetFrustrum() {
+    var camera = CameraState.GetCamera();
+    var cameraView = camera.GetViewMatrix();
+    var cameraProj = camera.GetProjectionMatrix();
   }
 }

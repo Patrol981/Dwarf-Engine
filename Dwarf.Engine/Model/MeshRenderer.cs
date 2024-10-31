@@ -153,7 +153,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   }
 
   public void BindMultipleModelPartsToTexture(TextureManager textureManager, string path) {
-    for (int i = 0; i < NodesCount; i++) {
+    for (int i = 0; i < MeshedNodesCount; i++) {
       BindToTexture(textureManager, path, i);
     }
   }

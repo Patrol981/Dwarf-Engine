@@ -122,7 +122,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   private void BuildTargetDescriptorTexture(IRender3DElement target, ref TextureManager textureManager) {
     for (int i = 0; i < target.MeshedNodesCount; i++) {
-      var textureId = target.GetTextureIdReference();
+      var textureId = target.GetTextureIdReference(i);
       var texture = (VulkanTexture)textureManager.GetTexture(textureId);
       texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }

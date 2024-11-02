@@ -47,17 +47,17 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     Init(nodes, linearNodes);
   }
 
-  public void Init() {
+  public void Init(AABBFilter aabbFilter = AABBFilter.None) {
     NodesCount = Nodes.Length;
     MeshedNodesCount = LinearNodes.Where(x => x.HasMesh).Count();
     LinearNodesCount = LinearNodes.Length;
 
     MeshedNodes = LinearNodes.Where(x => x.HasMesh).ToArray();
 
-    InitBase();
+    InitBase(aabbFilter);
   }
 
-  protected void Init(Node[] nodes, Node[] linearNodes) {
+  protected void Init(Node[] nodes, Node[] linearNodes, AABBFilter aabbFilter = AABBFilter.None) {
     NodesCount = nodes.Length;
     MeshedNodesCount = linearNodes.Where(x => x.HasMesh).Count();
     LinearNodesCount = linearNodes.Length;
@@ -66,10 +66,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     LinearNodes = linearNodes;
     MeshedNodes = LinearNodes.Where(x => x.HasMesh).ToArray();
 
-    InitBase();
+    InitBase(aabbFilter);
   }
 
-  private void InitBase() {
+  private void InitBase(AABBFilter aabbFilter = AABBFilter.None) {
+    AABBFilter = aabbFilter;
     AABBArray = new AABB[MeshedNodesCount];
 
     List<Task> createTasks = [];
@@ -335,6 +336,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public AABB[] AABBArray { get; private set; } = [];
 
+  public AABBFilter AABBFilter { get; set; } = AABBFilter.Default;
   public AABB AABB {
     // get {
     //   return Owner!.HasComponent<ColliderMesh>()

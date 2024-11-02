@@ -95,7 +95,7 @@ public class Ray {
     return hitResult;
   }
 
-  public static ReadOnlySpan<Entity> Raycast() {
+  public static ReadOnlySpan<Entity> Raycast(AABBFilter aabbFilter = AABBFilter.None) {
     var entities = Application.Instance.GetEntities();
     var result = new Dictionary<Entity, RaycastHitResult>();
 
@@ -106,7 +106,7 @@ public class Ray {
         enTransform != null ? enTransform.Position : Vector3.Zero
       );
 
-      var enResult = Ray.CastRayIntersect(entity, enDistance);
+      var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
       if (enResult.Present) {
         result.TryAdd(entity, enResult);
       }
@@ -118,7 +118,7 @@ public class Ray {
       .ToArray();
   }
 
-  public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance) {
+  public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance, AABBFilter aabbFilter = AABBFilter.None) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
 
@@ -134,6 +134,7 @@ public class Ray {
     };
 
     if (model == null || transform == null) return hitResult;
+    if (model.AABBFilter != aabbFilter && model.AABBFilter != AABBFilter.None) return hitResult;
 
     var modelMatrix = transform.Matrix4;
     var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);

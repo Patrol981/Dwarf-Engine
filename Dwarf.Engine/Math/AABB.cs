@@ -3,6 +3,15 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
 
 namespace Dwarf.Math;
+
+public enum AABBFilter {
+  None,
+  Default,
+  Actors,
+  Environment,
+  Terrain
+}
+
 public class AABB {
   public static Vector3 MIN = new Vector3(-1, 1, -1);
   public static Vector3 MAX = new Vector3(1, -1, 1);

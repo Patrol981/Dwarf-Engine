@@ -1,7 +1,9 @@
 using System.Numerics;
 using Dwarf.AbstractionLayer;
+using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Math;
 
 namespace Dwarf.Procedural.Cave;
 
@@ -10,9 +12,15 @@ public class CaveGenerator {
   public int SmoothIterationCount { get; private set; }
   public int BorderSize { get; private set; }
   public int WallHeight { get; private set; }
+  public int WallThresholdSize { get; private set; }
+  public int RoomThresholdSize { get; private set; }
+  public int PassageRadius { get; private set; }
+  public int SquareSize { get; private set; }
+  public int TileSize { get; private set; }
   public int Width { get; init; }
   public int Height { get; init; }
   public string Seed { get; init; }
+
   public int[,] Map { get; private set; }
 
   public class GeneratorOptions {
@@ -22,9 +30,15 @@ public class CaveGenerator {
     public int WallHeight = 50;
     public int MapWidth = 64;
     public int MapHeight = 64;
+    public int WallThresholdSize = 50;
+    public int RoomThresholdSize = 50;
+    public int PassageRadius = 2;
+    public int SquareSize = 20;
+    public int TileSize = 10;
     public string Seed = default!;
   }
 
+  #region  CLASSES
   internal struct Coord {
     internal int TileX;
     internal int TileY;
@@ -125,11 +139,19 @@ public class CaveGenerator {
     internal List<List<int>> Outlines;
     internal HashSet<int> CheckedVertices;
 
-    internal SquareGrid(int[,] map, float squareSize) {
+    private readonly int[,] _map;
+    private readonly float _squareSize;
+    private readonly int _tileSize;
+
+    internal SquareGrid(int[,] map, float squareSize, int tileSize) {
       int nodeCountX = map.GetLength(0);
       int nodeCountY = map.GetLength(1);
       float mapWidth = nodeCountX * squareSize;
       float mapHeight = nodeCountY * squareSize;
+
+      _map = map;
+      _squareSize = squareSize;
+      _tileSize = tileSize;
 
       var controlNodes = new ControlNode[nodeCountX, nodeCountY];
 
@@ -210,6 +232,20 @@ public class CaveGenerator {
       wallMesh.VertexCount = (ulong)wallVertices.Count;
       wallMesh.Indices = [.. wallTriangles];
       wallMesh.IndexCount = (ulong)wallTriangles.Count;
+
+      for (int i = 0; i < wallVertices.Count; i++) {
+        float percentX = Float.InverseLerp(
+          -_map.GetLength(0) / 2 * _squareSize,
+          _map.GetLength(0) / 2 * _squareSize,
+          wallVertices[i].X
+        ) * _tileSize;
+        float percentY = Float.InverseLerp(
+          -_map.GetLength(1) / 2 * _squareSize,
+          _map.GetLength(1) / 2 * _squareSize,
+          wallVertices[i].Y
+        ) * _tileSize;
+        wallMesh.Vertices[i].Uv = new(percentX, percentY);
+      }
     }
 
     internal void TriangulateSquare(Square square) {
@@ -379,6 +415,72 @@ public class CaveGenerator {
     }
   }
 
+  internal class Room : IComparable<Room> {
+    internal List<Coord> Tiles;
+    internal List<Coord> EdgeTiles;
+    internal List<Room> ConnectedRooms;
+    internal int RoomSize;
+    internal bool IsAccessableFromMainRoom;
+    internal bool IsMainRoom;
+
+    internal Room() {
+      Tiles = [];
+      EdgeTiles = [];
+      ConnectedRooms = [];
+      RoomSize = 0;
+    }
+
+    internal Room(List<Coord> roomTiles, int[,] map) {
+      Tiles = roomTiles;
+      RoomSize = Tiles.Count;
+      ConnectedRooms = [];
+      EdgeTiles = [];
+      foreach (var tile in Tiles) {
+        for (int x = tile.TileX - 1; x <= tile.TileX + 1; x++) {
+          for (int y = tile.TileY - 1; y <= tile.TileY + 1; y++) {
+            if (x == tile.TileX || y == tile.TileY) {
+              if (map[x, y] == 1) {
+                EdgeTiles.Add(tile);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    internal static void ConnectRoom(Room a, Room b) {
+      if (a.IsAccessableFromMainRoom) {
+        b.SetAccessableFromMainRoom();
+      } else if (b.IsAccessableFromMainRoom) {
+        a.SetAccessableFromMainRoom();
+      }
+      a.ConnectedRooms.Add(b);
+      b.ConnectedRooms.Add(a);
+    }
+
+    internal bool IsConnected(Room other) {
+      return ConnectedRooms.Contains(other);
+    }
+
+    internal void SetAccessableFromMainRoom() {
+      if (!IsAccessableFromMainRoom) {
+        IsAccessableFromMainRoom = true;
+        foreach (var connectedRoom in ConnectedRooms) {
+          connectedRoom.SetAccessableFromMainRoom();
+        }
+      }
+    }
+
+    public int CompareTo(Room? other) {
+      if (other == null) {
+        return 0;
+      }
+      return other.RoomSize.CompareTo(RoomSize);
+    }
+  }
+
+  #endregion
+  #region  CAVE GENERATOR
   public CaveGenerator(Action<GeneratorOptions> options) {
     var config = new GeneratorOptions();
     options(config);
@@ -389,6 +491,11 @@ public class CaveGenerator {
     SmoothIterationCount = config.SmoothIterationCount;
     BorderSize = config.BorderSize;
     WallHeight = config.WallHeight;
+    WallThresholdSize = config.WallThresholdSize;
+    RoomThresholdSize = config.RoomThresholdSize;
+    PassageRadius = config.PassageRadius;
+    SquareSize = config.SquareSize;
+    TileSize = config.TileSize;
 
     Seed = config.Seed;
     if (string.IsNullOrEmpty(Seed)) {
@@ -397,11 +504,27 @@ public class CaveGenerator {
     Map = new int[Width, Height];
   }
 
+  public void GenerateMap(Application app, string topTexture, string wallTexture, ref Entity dstTarget) {
+    GenerateMap(app.Device, out var cave, out var wall);
+
+    var meshRenderer = new MeshRenderer(app.Device, app.Renderer);
+    meshRenderer.AddLinearNode(new() { Mesh = cave });
+    meshRenderer.AddLinearNode(new() { Mesh = wall });
+
+    dstTarget.AddComponent(meshRenderer);
+    dstTarget.GetComponent<MeshRenderer>().Init(AABBFilter.Terrain);
+    dstTarget.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, topTexture, 0);
+    dstTarget.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, wallTexture, 1);
+    // dstTarget.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, textureName);
+  }
+
   public void GenerateMap(IDevice device, out Mesh mesh, out Mesh wallMesh) {
     RandomFillMap();
     for (int i = 0; i < SmoothIterationCount; i++) {
       SmoothMap();
     }
+
+    ProcessMap();
 
     var borderedMap = new int[Width + BorderSize * 2, Height + BorderSize * 2];
 
@@ -437,7 +560,7 @@ public class CaveGenerator {
 
     for (int neighbourX = gX - 1; neighbourX <= gX + 1; neighbourX++) {
       for (int neighbourY = gY - 1; neighbourY <= gY + 1; neighbourY++) {
-        if (neighbourX >= 0 && neighbourX < Width && neighbourY >= 0 && neighbourY < Height) {
+        if (IsInMapRange(neighbourX, neighbourY)) {
           if (neighbourX != gX || neighbourY != gY) {
             wallCount += Map[neighbourX, neighbourY];
           }
@@ -464,15 +587,225 @@ public class CaveGenerator {
     }
   }
 
+  private void ProcessMap() {
+    var wallRegions = GetRegions(1);
+    foreach (var wallRegion in wallRegions) {
+      if (wallRegion.Count < WallThresholdSize) {
+        foreach (var tile in wallRegion) {
+          Map[tile.TileX, tile.TileY] = 0;
+        }
+      }
+    }
+
+    var roomRegions = GetRegions(0);
+    var roomsRemaining = new List<Room>();
+    foreach (var roomRegion in roomRegions) {
+      if (roomRegion.Count < RoomThresholdSize) {
+        foreach (var tile in roomRegion) {
+          Map[tile.TileX, tile.TileY] = 1;
+        }
+      } else {
+        roomsRemaining.Add(new Room(roomRegion, Map));
+      }
+    }
+    roomsRemaining.Sort();
+    roomsRemaining[0].IsMainRoom = true;
+    roomsRemaining[0].IsAccessableFromMainRoom = true;
+    ConnectClosestRooms(roomsRemaining);
+  }
+
+  private void ConnectClosestRooms(List<Room> rooms, bool forceAccessibilityFromMainRoom = false) {
+    var roomListA = new List<Room>();
+    var roomListB = new List<Room>();
+
+    if (forceAccessibilityFromMainRoom) {
+      foreach (var room in rooms) {
+        if (room.IsAccessableFromMainRoom) {
+          roomListB.Add(room);
+        } else {
+          roomListA.Add(room);
+        }
+      }
+    } else {
+      roomListA = rooms;
+      roomListB = rooms;
+    }
+
+    int bestDistance = 0;
+    var bestCoordA = new Coord();
+    var bestCoordB = new Coord();
+    var bestRoomA = new Room();
+    var bestRoomB = new Room();
+    var possibleConnectionFound = false;
+
+    foreach (var roomA in roomListA) {
+      if (!forceAccessibilityFromMainRoom) {
+        possibleConnectionFound = false;
+        if (roomA.ConnectedRooms.Count > 0) {
+          continue;
+        }
+      }
+      foreach (var roomB in roomListB) {
+        if (roomA == roomB || roomA.IsConnected(roomB)) continue;
+        for (int tileIndexA = 0; tileIndexA < roomA.EdgeTiles.Count; tileIndexA++) {
+          for (int tileIndexB = 0; tileIndexB < roomB.EdgeTiles.Count; tileIndexB++) {
+            var tileA = roomA.EdgeTiles[tileIndexA];
+            var tileB = roomB.EdgeTiles[tileIndexB];
+            int distanceBetweenRooms =
+              (int)MathF.Pow(tileA.TileX - tileB.TileX, 2) +
+              (int)MathF.Pow(tileA.TileY - tileB.TileY, 2);
+
+            if (distanceBetweenRooms < bestDistance || !possibleConnectionFound) {
+              bestDistance = distanceBetweenRooms;
+              possibleConnectionFound = true;
+              bestCoordA = tileA;
+              bestCoordB = tileB;
+              bestRoomA = roomA;
+              bestRoomB = roomB;
+            }
+          }
+        }
+      }
+      if (possibleConnectionFound && !forceAccessibilityFromMainRoom) {
+        CreatePassage(bestRoomA, bestRoomB, bestCoordA, bestCoordB);
+      }
+    }
+
+    if (possibleConnectionFound && forceAccessibilityFromMainRoom) {
+      CreatePassage(bestRoomA, bestRoomB, bestCoordA, bestCoordB);
+      ConnectClosestRooms(rooms, true);
+    }
+
+    if (!forceAccessibilityFromMainRoom) {
+      ConnectClosestRooms(rooms, true);
+    }
+  }
+
+  private void CreatePassage(Room roomA, Room roomB, Coord tileA, Coord tileB) {
+    Room.ConnectRoom(roomA, roomB);
+
+    var line = GetLine(tileA, tileB);
+    foreach (var coord in line) {
+      DrawCircle(coord, PassageRadius);
+    }
+  }
+
+  private void DrawCircle(Coord c, int r) {
+    for (int x = -r; x <= r; x++) {
+      for (int y = -r; y <= r; y++) {
+        if (x * x + y * y <= r * r) {
+          var drawX = c.TileX + x;
+          var drawY = c.TileY + y;
+
+          if (IsInMapRange(drawX, drawY)) {
+            Map[drawX, drawY] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  private List<Coord> GetLine(Coord src, Coord dst) {
+    var line = new List<Coord>();
+
+    var x = src.TileX;
+    var y = src.TileY;
+
+    var dx = dst.TileX - src.TileX;
+    var dy = dst.TileY - src.TileY;
+
+    var step = (int)MathF.Sign(dx);
+    var gradStep = (int)MathF.Sign(dy);
+
+    var longest = (int)MathF.Abs(dx);
+    var shortest = (int)MathF.Abs(dy);
+
+    var inverted = false;
+
+    if (longest < shortest) {
+      inverted = true;
+      longest = (int)MathF.Abs(dy);
+      shortest = (int)MathF.Abs(dx);
+      step = (int)MathF.Sign(dy);
+      gradStep = (int)MathF.Sign(dx);
+    }
+
+    int gradAcc = longest / 2;
+    for (int i = 0; i < longest; i++) {
+      line.Add(new(x, y));
+      if (inverted) {
+        y += step;
+      } else {
+        x += step;
+      }
+
+      gradAcc += shortest;
+      if (gradAcc >= longest) {
+        if (inverted) {
+          x += gradStep;
+        } else {
+          y += gradStep;
+        }
+        gradAcc -= longest;
+      }
+    }
+
+    return line;
+  }
+
+  private List<List<Coord>> GetRegions(int tileType) {
+    var regions = new List<List<Coord>>();
+    var mapFlags = new int[Width, Height];
+
+    for (int x = 0; x < Width; x++) {
+      for (int y = 0; y < Height; y++) {
+        if (mapFlags[x, y] == 0 && Map[x, y] == tileType) {
+          var newRegion = GetRegionTiles(x, y);
+          regions.Add(newRegion);
+          foreach (var tile in newRegion) {
+            mapFlags[tile.TileX, tile.TileY] = 1;
+          }
+        }
+      }
+    }
+
+    return regions;
+  }
+
   private List<Coord> GetRegionTiles(int startX, int startY) {
     var tiles = new List<Coord>();
     var mapFlags = new int[Width, Height];
+    var tileType = Map[startX, startY];
+
+    var queue = new Queue<Coord>();
+    queue.Enqueue(new Coord(startX, startY));
+    mapFlags[startX, startY] = 1;
+
+    while (queue.Count > 0) {
+      var tile = queue.Dequeue();
+      tiles.Add(tile);
+
+      for (int x = tile.TileX - 1; x <= tile.TileX + 1; x++) {
+        for (int y = tile.TileY - 1; y <= tile.TileY + 1; y++) {
+          if (IsInMapRange(x, y) && (y == tile.TileY || x == tile.TileX)) {
+            if (mapFlags[x, y] == 0 && Map[x, y] == tileType) {
+              mapFlags[x, y] = 1;
+              queue.Enqueue(new Coord(x, y));
+            }
+          }
+        }
+      }
+    }
 
     return tiles;
   }
 
+  private bool IsInMapRange(int x, int y) {
+    return x >= 0 && x < Width && y >= 0 && y < Height;
+  }
+
   private void GenerateMesh(IDevice device, int[,] map, out Mesh mesh, out Mesh wallMesh) {
-    var grid = new SquareGrid(map, 20);
+    var grid = new SquareGrid(map, SquareSize, TileSize);
     grid.GenerateMesh();
 
     mesh = new Mesh(Application.Instance.Device, Matrix4x4.Identity) {
@@ -488,6 +821,21 @@ public class CaveGenerator {
       IndexCount = (ulong)grid.Triangles.Count
     };
 
+    for (int i = 0; i < grid.Vertices.Count; i++) {
+      float percentX = Float.InverseLerp(
+        -map.GetLength(0) / 2 * SquareSize,
+        map.GetLength(0) / 2 * SquareSize,
+        grid.Vertices[i].X
+      ) * TileSize;
+      float percentY = Float.InverseLerp(
+        -map.GetLength(0) / 2 * SquareSize,
+        map.GetLength(0) / 2 * SquareSize,
+        grid.Vertices[i].Z
+      ) * TileSize;
+      mesh.Vertices[i].Uv = new(percentX, percentY);
+    }
+
     grid.GenerateWallMesh(device, WallHeight, out wallMesh);
   }
+  #endregion
 }

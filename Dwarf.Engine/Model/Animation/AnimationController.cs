@@ -74,6 +74,19 @@ public class AnimationController : Component {
                 sampler.Scale(i, time, channel.Node);
                 break;
             }
+
+            if (channel.Node.ParentRenderer != null) {
+              var target = channel.Node.ParentRenderer.AddedNodes.Where(x => x.Value == channel.Node).ToArray();
+              if (target.Length > 0) {
+                // Logger.Info(target);
+                foreach (var t in target) {
+                  t.Key.Translation = t.Value.Translation + t.Key.TranslationOffset;
+                  t.Key.Rotation = t.Value.Rotation;
+                  t.Key.Scale = t.Value.Scale;
+                }
+              }
+            }
+
             updated = true;
           }
         }

@@ -35,7 +35,7 @@ public class Rigidbody : Component, IDisposable {
     VulkanDevice device,
     PrimitiveType colliderShape,
     float inputRadius,
-    bool kinematic = false,
+    MotionType motionType,
     bool flip = false,
     bool physicsControlRotation = false
   ) {
@@ -43,9 +43,7 @@ public class Rigidbody : Component, IDisposable {
     _device = device;
     _inputRadius = inputRadius;
     Flipped = flip;
-    if (kinematic) {
-      _motionType = MotionType.Kinematic;
-    }
+    _motionType = motionType;
     _physicsControlRotation = physicsControlRotation;
   }
 
@@ -55,16 +53,14 @@ public class Rigidbody : Component, IDisposable {
     float sizeX,
     float sizeY,
     float sizeZ,
-    bool kinematic,
+    MotionType motionType,
     bool flip,
     bool physicsControlRotation = false
   ) {
     _device = device;
     PrimitiveType = primitiveType;
     Flipped = flip;
-    if (kinematic) {
-      _motionType = MotionType.Kinematic;
-    }
+    _motionType = motionType;
     _sizeX = sizeX;
     _sizeY = sizeY;
     _sizeZ = sizeZ;
@@ -80,16 +76,14 @@ public class Rigidbody : Component, IDisposable {
     float offsetX,
     float offsetY,
     float offsetZ,
-    bool kinematic,
+    MotionType motionType,
     bool flip,
     bool physicsControlRotation = false
   ) {
     _device = device;
     PrimitiveType = primitiveType;
     Flipped = flip;
-    if (kinematic) {
-      _motionType = MotionType.Kinematic;
-    }
+    _motionType = motionType;
     _sizeX = sizeX;
     _sizeY = sizeY;
     _sizeZ = sizeZ;
@@ -161,14 +155,14 @@ public class Rigidbody : Component, IDisposable {
         shapeSettings,
         pos,
         Quaternion.Identity,
-        _motionType,
+        (JoltPhysicsSharp.MotionType)_motionType,
         Layers.Moving
       );
     _bodyId = _bodyInterface.CreateAndAddBody(settings, Activation.Activate);
 
     _bodyInterface.SetGravityFactor(_bodyId, 0.1f);
     _bodyInterface.SetMotionQuality(_bodyId, _motionQuality);
-    _bodyInterface.SetMotionType(_bodyId, _motionType, Activation.Activate);
+    _bodyInterface.SetMotionType(_bodyId, (JoltPhysicsSharp.MotionType)_motionType, Activation.Activate);
   }
 
   private void AdjustColliderMesh(Mesh colliderMesh) {

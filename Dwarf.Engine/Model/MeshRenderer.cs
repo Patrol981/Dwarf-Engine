@@ -3,6 +3,7 @@ using System.Numerics;
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Loaders;
 using Dwarf.Math;
 using Dwarf.Model;
 using Dwarf.Model.Animation;
@@ -98,6 +99,41 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     // _mergedAABB.Min *= scale;
     // _mergedAABB.Max *= scale;
     RunTasks(createTasks);
+  }
+
+  public async void AddModelToTargetNode(string path, int idx) {
+    var modelToAdd = await GLTFLoaderKHR.LoadGLTF(Application.Instance, path);
+    var target = NodeFromIndex(idx);
+    // LinearNodes.Where(x => x.Index == idx).First().Children.AddRange(modelToAdd.LinearNodes);
+    var newLinear = LinearNodes.ToList();
+    var toCopy = modelToAdd.LinearNodes.ToList();
+    foreach (var node in toCopy) {
+      // node.ParentRenderer = this;
+      AddLinearNode(node);
+      AddNode(node, idx);
+      AddedNodes.Add(node, target!);
+
+      node.Translation = target!.Translation;
+      node.Rotation = target!.Rotation;
+      node.Scale = target!.Scale;
+
+      node.TranslationOffset = new(.55f, .55f, 0);
+
+      node.NodeMatrix = target!.NodeMatrix;
+      node.Update();
+    }
+
+    Logger.Info($"BEFORE {MeshedNodes.Length}");
+    MeshedNodes = LinearNodes.Where(x => x.HasMesh).ToArray();
+    Logger.Info($"AFTER {MeshedNodes.Length}");
+
+    foreach (var node in Nodes) {
+      node.Update();
+    }
+    // modelToAdd.Dispose();
+
+    Application.Instance.AddModelToReloadQueue(this);
+    Application.Instance.Systems.Reload3DRenderSystem = true;
   }
 
   public unsafe ulong CalculateBufferSize() {
@@ -264,6 +300,11 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public Node[] Nodes { get; private set; } = [];
   public Node[] LinearNodes { get; private set; } = [];
   public Node[] MeshedNodes { get; private set; } = [];
+  /// <summary>
+  /// Node Key = added node
+  /// Node Value = referenced node
+  /// </summary>
+  public Dictionary<Node, Node> AddedNodes { get; private set; } = [];
 
   public List<Animation> Animations = [];
   public List<Skin> Skins = [];
@@ -282,11 +323,22 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     tmp.Add(node);
     Nodes = [.. tmp];
   }
+  public void AddNode(Node node, int parentIdx) {
+    node.ParentRenderer = this;
+    var targetParent = NodeFromIndex(parentIdx);
+    targetParent?.Children.Add(node);
+  }
   public void AddLinearNode(Node node) {
     node.ParentRenderer = this;
     var tmp = LinearNodes.ToList();
     tmp.Add(node);
     LinearNodes = [.. tmp];
+  }
+  public void AddJoint(Node[] jointsToAdd, int nodeIdx, int jointIdx) {
+    // node.ParentRenderer = this;
+    var targetNode = NodeFromIndex(nodeIdx);
+    var joints = targetNode.Skin.Joints;
+    // targetNode.Skin.Joints.Where(x => x.Index == jointIdx).First().
   }
 
   public Node? FindNode(Node parent, int idx) {
@@ -331,9 +383,10 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
+  public bool FilterMeInShader { get; set; }
+
   public Entity GetOwner() => Owner!;
   public Renderer Renderer => _renderer;
-
   public AABB[] AABBArray { get; private set; } = [];
 
   public AABBFilter AABBFilter { get; set; } = AABBFilter.Default;

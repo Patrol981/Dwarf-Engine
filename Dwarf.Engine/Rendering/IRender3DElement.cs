@@ -27,5 +27,6 @@ public interface IRender3DElement : IDrawable {
   Guid GetTextureIdReference(int index = 0);
   float CalculateHeightOfAnModel();
   AABB AABB { get; }
+  bool FilterMeInShader { get; }
   // public void DrawIndirect(VkCommandBuffer commandBuffer, VkBuffer buffer, ulong offset, uint drawCount, uint stride);
 }

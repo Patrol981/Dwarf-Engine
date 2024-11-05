@@ -210,6 +210,18 @@ public class Transform : Component {
     return right;
   }
 
+  public Vector2 GetClipSpace(FrameInfo frameInfo) {
+    var model = Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateTranslation(Position);
+    var mvp = model * frameInfo.Camera.GetViewMatrix() * frameInfo.Camera.GetProjectionMatrix();
+    // var pvm = frameInfo.Camera.GetProjectionMatrix() * frameInfo.Camera.GetViewMatrix() * modelMatrix;
+    // var clip = mvp * new Vector4(Position, 1.0f);
+    var clip = Vector4.Transform(new Vector4(Position, 1.0f), mvp);
+    var ndc = new Vector3(clip.X, clip.Y, clip.Z) / clip.W;
+    var screenPos = new Vector2(ndc.X * 0.5f + 0.5f, ndc.Y * 0.5f + 0.5f);
+
+    return Vector2.Normalize(new Vector2(clip.X, clip.Z));
+  }
+
   public Vector3 Forward => GetForward();
   public Vector3 Right => GetRight();
   public Matrix4x4 Matrix4 => GetMatrix();

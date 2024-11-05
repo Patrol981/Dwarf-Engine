@@ -264,7 +264,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             ModelMatrix = transform.Matrix4,
             NormalMatrix = transform.NormalMatrix,
             NodeMatrix = node.Mesh!.Matrix,
-            JointsBufferOffset = new Vector4(offset, 0, 0, 0)
+            JointsBufferOffset = new Vector4(offset, 0, 0, 0),
+            FilterFlag = entity.FilterMeInShader == true ? 1 : 0
           });
           flatJoints.AddRange(node.Skin!.OutputNodeMatrices);
           offset += node.Skin!.OutputNodeMatrices.Length;
@@ -275,6 +276,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             NormalMatrix = transform.NormalMatrix,
             NodeMatrix = node.Mesh!.Matrix,
             JointsBufferOffset = Vector4.Zero,
+            FilterFlag = entity.FilterMeInShader == true ? 1 : 0
           });
         }
       }

@@ -5,4 +5,14 @@ uniform GlobalUbo {
   int layer;
   DirectionalLight directionalLight;
   int pointLightLength;
+  int hasImportantEntity;
+  vec3 importantEntityPosition;
 } ubo;
+
+vec2 worldToScreenPos(vec3 worldPos, mat4 mvp) {
+  vec4 clipSpacePos = mvp * vec4(worldPos, 1.0);
+  vec3 ndc = clipSpacePos.xyz / clipSpacePos.w;
+  vec2 screenPos = ndc.xy * 0.5 + 0.5;
+
+  return screenPos;
+}

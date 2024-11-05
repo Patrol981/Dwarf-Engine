@@ -14,7 +14,7 @@ public static class JoltProgram {
         new BoxShapeSettings(scale * new Vector3(0.5f * size, 1.0f, 0.5f * size), 0.0f),
         scale * new Double3(0.0, 1.0, 0.0),
         Quaternion.Identity,
-        MotionType.Static,
+        (JoltPhysicsSharp.MotionType)MotionType.Static,
         Layers.NonMoving)
         );
     bodyInterface.AddBody(floor.ID, Activation.DontActivate);

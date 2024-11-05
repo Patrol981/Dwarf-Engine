@@ -16,6 +16,7 @@ public class Node {
   public Skin? Skin;
   public int SkinIndex = -1;
   public Vector3 Translation = Vector3.Zero;
+  public Vector3 TranslationOffset = Vector3.Zero;
   public Quaternion Rotation = Quaternion.Identity;
   public Vector3 Scale = Vector3.One;
   public bool UseCachedMatrix = false;

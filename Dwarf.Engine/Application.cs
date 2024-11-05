@@ -62,6 +62,7 @@ public class Application {
 
   private List<Entity> _entities = [];
   private readonly Queue<Entity> _entitiesQueue = new();
+  private readonly Queue<MeshRenderer> _reloadQueue = new();
   private readonly object _entitiesLock = new object();
 
   private Entity _camera = new();
@@ -557,6 +558,10 @@ public class Application {
       _entities.RemoveRange(index, count);
     }
   }
+
+  public void AddModelToReloadQueue(MeshRenderer meshRenderer) {
+    _reloadQueue.Enqueue(meshRenderer);
+  }
   #endregion ENTITY_FLOW
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
@@ -589,10 +594,24 @@ public class Application {
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
       int frameIndex = Renderer.GetFrameIndex();
+      _currentFrame.Camera = _camera.GetComponent<Camera>();
+      _currentFrame.CommandBuffer = commandBuffer;
+      _currentFrame.FrameIndex = frameIndex;
+      _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
+      _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
+      _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
+      _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
+      _currentFrame.TextureManager = _textureManager;
+      _currentFrame.ImportantEntity = _entities.Where(x => x.IsImportant).FirstOrDefault() ?? null!;
+
       _ubo->Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
       _ubo->View = _camera.GetComponent<Camera>().GetViewMatrix();
       _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
       _ubo->Layer = 1;
+      _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Position : Vector3.Zero;
+      _ubo->ImportantEntityPosition.Z += 2.0f;
+      _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
+      // _ubo->ImportantEntityPosition = new(6, 9);
 
       _ubo->DirectionalLight = DirectionalLight;
 
@@ -647,15 +666,6 @@ public class Application {
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
-      _currentFrame.Camera = _camera.GetComponent<Camera>();
-      _currentFrame.CommandBuffer = commandBuffer;
-      _currentFrame.FrameIndex = frameIndex;
-      _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
-      _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
-      _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
-      _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
-      _currentFrame.TextureManager = _textureManager;
-
       // render
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
@@ -681,6 +691,12 @@ public class Application {
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
       StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+
+      while (_reloadQueue.Count > 0) {
+        var item = _reloadQueue.Dequeue();
+        item.Dispose();
+        item.Init(item.AABBFilter);
+      }
 
       Collect();
     }

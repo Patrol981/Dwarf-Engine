@@ -12,7 +12,7 @@ namespace Dwarf.AssetSystem;
 public struct GameAssetRigidbodyData {
   public Vector3 Size;
   public Vector3 Offset;
-  public bool IsKinematic;
+  public MotionType MotionType;
   public PrimitiveType PrimitiveType;
   public bool Flip;
 }
@@ -118,7 +118,7 @@ public class GameAsset {
         Size = rigidbody.Size,
         Offset = rigidbody.Offset,
         PrimitiveType = rigidbody.PrimitiveType,
-        IsKinematic = rigidbody.Kinematic,
+        MotionType = rigidbody.MotionType,
         Flip = rigidbody.Flipped
       };
     }
@@ -178,7 +178,7 @@ public class GameAsset {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
       entity.GetComponent<Terrain3D>().Setup(new(150, 150), default);
-      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic, false);
+      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.MotionType, false);
     }
   }
 
@@ -186,7 +186,7 @@ public class GameAsset {
     if (RigidbodyData == null) return;
     var rbData = RigidbodyData!.Value;
 
-    entity.AddRigdbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.IsKinematic);
+    entity.AddRigdbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.MotionType);
   }
 
   private void HandleCamera(Entity entity) {

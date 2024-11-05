@@ -515,6 +515,9 @@ public class CaveGenerator {
     dstTarget.GetComponent<MeshRenderer>().Init(AABBFilter.Terrain);
     dstTarget.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, topTexture, 0);
     dstTarget.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, wallTexture, 1);
+    dstTarget.GetComponent<MeshRenderer>().FilterMeInShader = true;
+
+    // dstTarget.AddRigdbody(PrimitiveType.Convex, true, false);
     // dstTarget.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, textureName);
   }
 

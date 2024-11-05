@@ -4,6 +4,7 @@ layout (location = 0) in vec3 fragColor;
 layout (location = 1) in vec3 fragPositionWorld;
 layout (location = 2) in vec3 fragNormalWorld;
 layout (location = 3) in vec2 texCoord;
+layout(location = 4) flat in int filterFlag;
 
 layout (location = 0) out vec4 outColor;
 
@@ -38,7 +39,21 @@ void main() {
   vec3 lightColor = ubo.directionalLight.lightColor.xyz;
   vec3 result = vec3(0,0,0);
 
-  // vec3 result = (ambient + diffuse + specular) * fragColor * modelUBO.color;
+  float alpha = 1.0;
+
+  if (ubo.hasImportantEntity == 1 && filterFlag == 1) {
+      float radiusHorizontal = 1.0;
+
+      float dist = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);
+
+      float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
+      float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
+
+      if(fragToCamera <= entityToCamera && dist < radiusHorizontal) {
+        alpha = 0.5;
+      }
+  }
+
   result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);
   for(int i = 0; i < ubo.pointLightLength; i++) {
     PointLight light = pointLightBuffer.pointLights[i];

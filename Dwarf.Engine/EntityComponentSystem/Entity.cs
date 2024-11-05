@@ -4,6 +4,7 @@ namespace Dwarf.EntityComponentSystem;
 public class Entity {
   public bool CanBeDisposed = false;
   public EntityLayer Layer = EntityLayer.Default;
+  public bool IsImportant = false;
 
   private readonly ComponentManager _componentManager;
   private readonly object _componentLock = new object();

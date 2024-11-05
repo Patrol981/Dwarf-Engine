@@ -11,6 +11,7 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragPositionWorld;
 layout(location = 2) out vec3 fragNormalWorld;
 layout(location = 3) out vec2 texCoord;
+layout(location = 4) flat out int filterFlag;
 
 #include material
 
@@ -42,4 +43,5 @@ void main() {
     fragPositionWorld = positionWorld.xyz;
     fragColor = color;
     texCoord = uv;
+    filterFlag = objectBuffer.objectData[gl_BaseInstance].filterFlag;
 }

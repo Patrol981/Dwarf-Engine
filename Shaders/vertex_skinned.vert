@@ -11,6 +11,7 @@ layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec3 fragPositionWorld;
 layout(location = 2) out vec3 fragNormalWorld;
 layout(location = 3) out vec2 texCoord;
+layout(location = 4) flat out int filterFlag;
 
 #include material
 
@@ -45,12 +46,6 @@ vec3 applyBoneTransform(vec4 p) {
 }
 
 void main() {
-    // mat4 skinMat =
-    //     jointWeights.x * jointBuffer.jointMatrices[jointIndices.x] +
-    //         jointWeights.y * jointBuffer.jointMatrices[jointIndices.y] +
-    //         jointWeights.z * jointBuffer.jointMatrices[jointIndices.z] +
-    //         jointWeights.w * jointBuffer.jointMatrices[jointIndices.w];
-
     int offset = int(objectBuffer.objectData[gl_BaseInstance].jointsBufferOffset.x);
     mat4 skinMat =
         jointWeights.x * jointBuffer.jointMatrices[jointIndices.x + offset] +
@@ -72,4 +67,5 @@ void main() {
     fragPositionWorld = positionWorld.xyz;
     fragColor = color;
     texCoord = uv;
+    filterFlag = objectBuffer.objectData[gl_BaseInstance].filterFlag;
 }

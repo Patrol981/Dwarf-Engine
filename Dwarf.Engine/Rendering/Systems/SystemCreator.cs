@@ -16,10 +16,23 @@ public enum SystemCreationFlags {
   WebApi = 1 << 7,
 }
 
+public record SystemConfiguration {
+  public Dwarf.Physics.Backends.BackendKind PhysiscsBackend { get; init; }
+
+  public static SystemConfiguration Default => new() {
+    PhysiscsBackend = Physics.Backends.BackendKind.Default,
+  };
+
+  public static SystemConfiguration GetDefault() => new() {
+    PhysiscsBackend = Physics.Backends.BackendKind.Default,
+  };
+}
+
 public class SystemCreator {
   public static void CreateSystems(
     SystemCollection systemCollection,
     SystemCreationFlags flags,
+    SystemConfiguration systemConfig,
     VulkanDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
@@ -56,7 +69,7 @@ public class SystemCreator {
     }
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
-      systemCollection.PhysicsSystem = new();
+      systemCollection.PhysicsSystem = new(systemConfig.PhysiscsBackend);
     }
     if (hasDirectionalLight) {
       Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");

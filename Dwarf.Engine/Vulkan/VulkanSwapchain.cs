@@ -618,6 +618,6 @@ public class VulkanSwapchain : IDisposable {
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;
   public float ExtentAspectRatio() {
-    return _swapchainExtent.width / _swapchainExtent.height;
+    return _swapchainExtent.width / (float)_swapchainExtent.height;
   }
 }

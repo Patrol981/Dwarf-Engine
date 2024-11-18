@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
@@ -81,8 +82,12 @@ public class AnimationController : Component {
                 // Logger.Info(target);
                 foreach (var t in target) {
                   t.Key.Translation = t.Value.Translation + t.Key.TranslationOffset;
-                  t.Key.Rotation = t.Value.Rotation;
-                  t.Key.Scale = t.Value.Scale;
+                  // t.Key.Rotation.X = t.Value.Rotation.X + t.Key.RotationOffset.X;
+                  // t.Key.Rotation.Y = t.Value.Rotation.Y + t.Key.RotationOffset.Y;
+                  // t.Key.Rotation.Z = t.Value.Rotation.Z + t.Key.RotationOffset.Z;
+                  t.Key.Rotation = Quaternion.Normalize(t.Value.Rotation) + Quaternion.Normalize(t.Key.RotationOffset);
+                  // t.Key.Rotation.W = t.Value.Rotation.W + t.Key.RotationOffset.W;
+                  // t.Key.Scale = t.Value.Scale;
                 }
               }
             }

@@ -4,6 +4,18 @@ using Dwarf.Model.Animation;
 
 namespace Dwarf.Model;
 
+public struct NodeInfo {
+  public Vector3 Translation;
+  public Quaternion Rotation;
+  public Vector3 Scale;
+
+  public NodeInfo() {
+    Translation = Vector3.Zero;
+    Rotation = Quaternion.Identity;
+    Scale = Vector3.Zero;
+  }
+}
+
 public class Node {
   public const int MAX_NUM_JOINTS = 128;
 
@@ -16,9 +28,11 @@ public class Node {
   public Skin? Skin;
   public int SkinIndex = -1;
   public Vector3 Translation = Vector3.Zero;
-  public Vector3 TranslationOffset = Vector3.Zero;
   public Quaternion Rotation = Quaternion.Identity;
   public Vector3 Scale = Vector3.One;
+  public Vector3 TranslationOffset = Vector3.Zero;
+  public Quaternion RotationOffset = Quaternion.Identity;
+  public Vector3 ScaleOffset = Vector3.One;
   public bool UseCachedMatrix = false;
   public Matrix4x4 CachedLocalMatrix = Matrix4x4.Identity;
   public Matrix4x4 CachedMatrix = Matrix4x4.Identity;
@@ -26,6 +40,8 @@ public class Node {
   public MeshRenderer ParentRenderer = null!;
   public BoundingBox BoundingVolume;
   public BoundingBox AABB;
+
+  public bool Enabled { get; set; } = true;
 
   public float AnimationTimer = 0.0f;
 
@@ -57,7 +73,7 @@ public class Node {
   }
 
   public Task DrawNode(IntPtr commandBuffer, uint firstInstance = 0) {
-    if (!HasMesh) return Task.CompletedTask;
+    if (!HasMesh || !Enabled) return Task.CompletedTask;
 
     if (Mesh!.HasIndexBuffer) {
       ParentRenderer.Renderer.CommandList.DrawIndexed(commandBuffer, Mesh!.IndexCount, 1, 0, 0, firstInstance);
@@ -68,7 +84,7 @@ public class Node {
   }
 
   public Task BindNode(IntPtr commandBuffer) {
-    if (!HasMesh) return Task.CompletedTask;
+    if (!HasMesh || !Enabled) return Task.CompletedTask;
 
     ParentRenderer.Renderer.CommandList.BindVertex(commandBuffer, Mesh!.VertexBuffer!, 0);
 

@@ -15,7 +15,7 @@ namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
   private readonly VulkanDevice _device = null!;
-  private BodyInterface _bodyInterface;
+  private IPhysicsBody _bodyInterface;
 
   private BodyID _bodyId;
   private MotionType _motionType = MotionType.Dynamic;
@@ -126,7 +126,7 @@ public class Rigidbody : Component, IDisposable {
     Owner!.AddComponent(new ColliderMesh(_device, mesh));
   }
 
-  public unsafe void Init(in BodyInterface bodyInterface) {
+  public unsafe void Init(IPhysicsBody bodyInterface) {
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
 
@@ -134,35 +134,28 @@ public class Rigidbody : Component, IDisposable {
 
     var pos = Owner!.GetComponent<Transform>().Position;
     Mesh mesh = Owner!.GetComponent<ColliderMesh>().Mesh;
-    ShapeSettings shapeSettings;
+    object shapeSettings;
 
     switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
-        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Convex:
-        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       case PrimitiveType.Box:
-        shapeSettings = ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
         break;
       default:
-        shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));
-        break;
+        // shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));
+        throw new NotImplementedException();
     }
 
-    BodyCreationSettings settings = new(
-        shapeSettings,
-        pos,
-        Quaternion.Identity,
-        (JoltPhysicsSharp.MotionType)_motionType,
-        Layers.Moving
-      );
-    _bodyId = _bodyInterface.CreateAndAddBody(settings, Activation.Activate);
+    _bodyInterface.CreateAndAddBody(_motionType, shapeSettings, pos);
 
-    _bodyInterface.SetGravityFactor(_bodyId, 0.1f);
-    _bodyInterface.SetMotionQuality(_bodyId, _motionQuality);
-    _bodyInterface.SetMotionType(_bodyId, (JoltPhysicsSharp.MotionType)_motionType, Activation.Activate);
+    _bodyInterface.GravityFactor = 0.1f;
+    _bodyInterface.MotionQuality = _motionQuality;
+    _bodyInterface.MotionType = _motionType;
   }
 
   private void AdjustColliderMesh(Mesh colliderMesh) {
@@ -181,46 +174,31 @@ public class Rigidbody : Component, IDisposable {
     }
   }
 
-  private ConvexHullShapeSettings ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
-    List<Vector3> vertices = [];
-    var scale = entity.GetComponent<Transform>().Scale;
-    foreach (var m in colliderMesh.Vertices) {
-      Vertex v = new();
-      v.Position.X = m.Position.X * scale.X;
-      v.Position.Y = m.Position.Y * scale.Y;
-      v.Position.Z = m.Position.Z * scale.Z;
-      vertices.Add(v.Position);
-    }
-
-    ConvexHullShapeSettings settings = new(vertices.ToArray(), 0.01f);
-    return settings;
-  }
-
   public void Update() {
-    var pos = _bodyInterface.GetPosition(_bodyId);
+    var pos = _bodyInterface.Position;
     var transform = Owner!.GetComponent<Transform>();
 
     transform.Position = pos;
 
     if (!_physicsControlRotation) {
       var quat = Quaternion.CreateFromRotationMatrix(transform.AngleYMatrix);
-      _bodyInterface.SetRotation(_bodyId, quat, Activation.Activate);
+      _bodyInterface.Rotation = quat;
     } else {
-      transform.Rotation = Quat.ToEuler(_bodyInterface.GetRotation(_bodyId));
+      transform.Rotation = Quat.ToEuler(_bodyInterface.Rotation);
     }
 
     if (_motionType == MotionType.Dynamic) {
-      var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
+      var newVel = _bodyInterface.LinearVelocity;
       newVel.X /= 2;
       newVel.Z /= 2;
       if (newVel.Y < 0) newVel.Y = 0;
-      _bodyInterface.SetLinearVelocity(_bodyId, newVel);
+      _bodyInterface.LinearVelocity = newVel;
     } else {
-      var newVel = _bodyInterface.GetLinearVelocity(_bodyId);
+      var newVel = _bodyInterface.LinearVelocity;
       newVel.X /= 2;
       newVel.Z /= 2;
       newVel.Y = transform.Position.Y;
-      _bodyInterface.SetLinearVelocity(_bodyId, newVel);
+      _bodyInterface.LinearVelocity = newVel;
     }
 
     // freeze rigidbody to X an Z axis
@@ -228,49 +206,41 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void AddForce(Vector3 vec3) {
-    _bodyInterface.AddForce(_bodyId, vec3);
+    _bodyInterface.AddForce(vec3);
   }
 
   public void AddVelocity(Vector3 vec3) {
-    _bodyInterface.AddLinearVelocity(_bodyId, vec3);
+    _bodyInterface.AddLinearVelocity(vec3);
   }
 
   public void AddImpulse(Vector3 vec3) {
-    _bodyInterface.AddImpulse(_bodyId, vec3);
+    _bodyInterface.AddImpulse(vec3);
   }
 
   public void Translate(Vector3 vec3) {
-    var pos = _bodyInterface.GetPosition(_bodyId);
-    pos.X += vec3.X;
-    pos.Y += vec3.Y;
-    pos.Z += vec3.Z;
-    // _bodyInterface.SetPosition(_bodyId, pos, Activation.Activate);
-    _bodyInterface.AddLinearVelocity(_bodyId, vec3);
+    _bodyInterface.AddLinearVelocity(vec3);
   }
 
   public void Rotate(Vector3 vec3) {
-    var rot = _bodyInterface.GetRotation(_bodyId);
+    var rot = _bodyInterface.Rotation;
     rot.X += vec3.X;
     rot.Y += vec3.Y;
     rot.Z += vec3.Z;
-    _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
+    _bodyInterface.Rotation = rot;
   }
 
   public void SetRotation(Vector3 vec3) {
-    var rot = _bodyInterface.GetRotation(_bodyId);
-    rot.X = vec3.X;
-    rot.Y = vec3.Y;
-    rot.Z = vec3.Z;
-    _bodyInterface.SetRotation(_bodyId, rot, Activation.Activate);
+    var rot = _bodyInterface.Rotation;
+    _bodyInterface.Rotation = new(vec3, rot.Z);
   }
 
   public void SetPosition(Vector3 vec3) {
-    _bodyInterface.SetPosition(_bodyId, new(vec3.X, vec3.Y, vec3.Z), Activation.Activate);
+    _bodyInterface.Position = vec3;
   }
 
   public Vector3 Velocity {
     get {
-      return _bodyInterface.GetLinearVelocity(_bodyId);
+      return _bodyInterface.LinearVelocity;
     }
   }
 
@@ -315,16 +285,13 @@ public class Rigidbody : Component, IDisposable {
 
   public Vector3 Offset => new(_offsetX, _offsetY, _offsetZ);
   public Vector3 Size => new(_sizeX, _sizeY, _sizeZ);
-  public Quaternion Rotation => _bodyInterface.GetRotation(_bodyId);
+  public Quaternion Rotation => _bodyInterface.Rotation;
   public bool Flipped { get; } = false;
 
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;
 
   public void Dispose() {
-    if (!_bodyInterface.IsNull) {
-      _bodyInterface.DeactivateBody(_bodyId);
-      _bodyInterface.RemoveBody(_bodyId);
-      _bodyInterface.DestroyBody(_bodyId);
-    }
+    _bodyInterface.Dispose();
+    GC.SuppressFinalize(this);
   }
 }

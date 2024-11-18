@@ -14,6 +14,8 @@ public class Terrain3D : Component {
 
   private Vector2 _size = Vector2.Zero;
   private string _texturePath = string.Empty;
+  private int _repX;
+  private int _repY;
 
   public Terrain3D() {
     _points = new double[HEIGHT, WIDTH];
@@ -24,8 +26,10 @@ public class Terrain3D : Component {
     _points = new double[HEIGHT, WIDTH];
   }
 
-  public void Setup(Vector2 size, string? texturePath = default) {
+  public void Setup(Vector2 size, string? texturePath = default, int repX = 15, int repY = 15) {
     _size = size;
+    _repX = repX;
+    _repY = repY;
     _texturePath = texturePath != null ? texturePath : "./Resources/Textures/base/no_texture.png";
     var mesh = Generate(_app);
     SetupTexture(_app);
@@ -50,7 +54,7 @@ public class Terrain3D : Component {
       new(0, 0, 0),
       new(100, 100),
       new(_size.X, _size.Y),
-      new(15, 15)
+      new(_repX, _repY)
     );
 
     // ApplyPerlinNoiseToMesh(ref mesh, _points, _size, new(WIDTH, HEIGHT));

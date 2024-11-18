@@ -6,6 +6,7 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Rendering.UI;
@@ -72,6 +73,7 @@ public class Application {
   private Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
+  private readonly SystemConfiguration _systemConfiguration;
 
   private Thread? _renderThread;
   private bool _renderShouldClose = false;
@@ -95,7 +97,9 @@ public class Application {
 
   public Application(
     string appName = "Dwarf Vulkan",
+    Vector2I windowSize = default!,
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
+    SystemConfiguration? systemConfiguration = default,
     bool vsync = false,
     bool fullscreen = false,
     bool debugMode = true
@@ -107,7 +111,9 @@ public class Application {
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
-    Window = new Window(1200, 900, appName, Fullscreen, debugMode);
+    windowSize ??= new(1200, 900);
+
+    Window = new Window(windowSize.X, windowSize.Y, appName, Fullscreen, debugMode);
     Device = new VulkanDevice(Window);
     Renderer = new Renderer(Window, Device);
     Systems = new SystemCollection();
@@ -115,6 +121,9 @@ public class Application {
 
     _textureManager = new(Device);
     _systemCreationFlags = systemCreationFlags;
+
+    systemConfiguration ??= SystemConfiguration.Default;
+    _systemConfiguration = systemConfiguration;
 
     Mutex = new Mutex(false);
 
@@ -357,7 +366,16 @@ public class Application {
 
     Mutex.WaitOne();
     // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
-    Systems.Setup(this, _systemCreationFlags, Device, Renderer, _descriptorSetLayouts, null!, ref _textureManager);
+    Systems.Setup(
+      this,
+      _systemCreationFlags,
+      _systemConfiguration,
+      Device,
+      Renderer,
+      _descriptorSetLayouts,
+      null!,
+      ref _textureManager
+    );
 
     StorageCollection.CreateStorage(
       Device,
@@ -609,7 +627,7 @@ public class Application {
       _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
       _ubo->Layer = 1;
       _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Position : Vector3.Zero;
-      _ubo->ImportantEntityPosition.Z += 2.0f;
+      _ubo->ImportantEntityPosition.Z += 1.0f;
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
 

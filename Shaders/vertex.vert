@@ -21,8 +21,6 @@ layout(location = 4) flat out int filterFlag;
 
 layout(set = 1, binding = 0) #include global_ubo
 
-// 500 FPS on avg
-// TODO: optimize set, so its reusable across all models?
 layout(set = 3, binding = 0) #include model_ubo
 
 layout(std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
@@ -34,8 +32,9 @@ layout(std140, set = 2, binding = 0) readonly buffer ObjectBuffer {
 } objectBuffer;
 
 void main() {
-    // vec4 positionWorld = push.transform * vec4(position, 1.0);
-    vec4 positionWorld = objectBuffer.objectData[gl_BaseInstance].transformMatrix * objectBuffer.objectData[gl_BaseInstance].nodeMatrix * vec4(position, 1.0);
+    vec4 positionWorld = objectBuffer.objectData[gl_BaseInstance].transformMatrix *
+            objectBuffer.objectData[gl_BaseInstance].nodeMatrix *
+            vec4(position, 1.0);
 
     gl_Position = ubo.projection * ubo.view * positionWorld;
 

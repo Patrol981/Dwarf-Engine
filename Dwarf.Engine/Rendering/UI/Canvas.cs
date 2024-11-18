@@ -83,9 +83,6 @@ public class Canvas : Component, IDisposable {
     await CheckResolution();
 
     foreach (var entity in _entities) {
-      if (entity.HasComponent<FreeTypeText>()) {
-        continue;
-      }
       var rect = entity.GetComponent<RectTransform>();
       await CheckScale(rect);
       await CheckAnchor(rect);

@@ -101,14 +101,13 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     RunTasks(createTasks);
   }
 
-  public async void AddModelToTargetNode(string path, int idx) {
+  public async void AddModelToTargetNode(string path, int idx, NodeInfo overrideInfo) {
     var modelToAdd = await GLTFLoaderKHR.LoadGLTF(Application.Instance, path);
     var target = NodeFromIndex(idx);
-    // LinearNodes.Where(x => x.Index == idx).First().Children.AddRange(modelToAdd.LinearNodes);
+
     var newLinear = LinearNodes.ToList();
     var toCopy = modelToAdd.LinearNodes.ToList();
     foreach (var node in toCopy) {
-      // node.ParentRenderer = this;
       AddLinearNode(node);
       AddNode(node, idx);
       AddedNodes.Add(node, target!);
@@ -117,23 +116,27 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       node.Rotation = target!.Rotation;
       node.Scale = target!.Scale;
 
-      node.TranslationOffset = new(.55f, .55f, 0);
+      node.TranslationOffset = overrideInfo.Translation;
+      node.RotationOffset =
+        Quaternion.Identity *
+        new Quaternion(overrideInfo.Rotation.X, overrideInfo.Rotation.Y, overrideInfo.Rotation.Z, overrideInfo.Rotation.W);
+      node.ScaleOffset = overrideInfo.Scale;
 
       node.NodeMatrix = target!.NodeMatrix;
       node.Update();
     }
 
-    Logger.Info($"BEFORE {MeshedNodes.Length}");
     MeshedNodes = LinearNodes.Where(x => x.HasMesh).ToArray();
-    Logger.Info($"AFTER {MeshedNodes.Length}");
-
-    foreach (var node in Nodes) {
-      node.Update();
-    }
-    // modelToAdd.Dispose();
 
     Application.Instance.AddModelToReloadQueue(this);
     Application.Instance.Systems.Reload3DRenderSystem = true;
+  }
+
+  public void EnableNode(Func<Node, bool> predicate, bool enabled) {
+    var nodes = MeshedNodes.Where(predicate);
+    foreach (var node in nodes) {
+      node.Enabled = enabled;
+    }
   }
 
   public unsafe ulong CalculateBufferSize() {

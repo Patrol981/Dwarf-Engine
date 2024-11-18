@@ -96,6 +96,7 @@ public class SystemCollection : IDisposable {
   public void Setup(
     Application app,
     SystemCreationFlags creationFlags,
+    SystemConfiguration systemConfiguration,
     IDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
@@ -105,6 +106,7 @@ public class SystemCollection : IDisposable {
     SystemCreator.CreateSystems(
       app.Systems,
       creationFlags,
+      systemConfiguration,
       (VulkanDevice)device,
       renderer,
       layouts,

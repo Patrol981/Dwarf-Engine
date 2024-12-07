@@ -90,30 +90,18 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       }
     }
 
-    // foreach (var node in Nodes) {
-    //   CalculateBoundingBox(node, null!);
-    // }
-
     var bb = new BoundingBox(float.MaxValue, float.MinValue);
     for (int i = 0; i < MeshedNodesCount; i++) {
       CalculateBoundingBox(ref MeshedNodes[i], ref bb);
     }
 
-    // var aabb = MeshedNodes.First().BoundingVolume;
     var x = MathF.Abs(MathF.Abs(bb.Min.X) + MathF.Abs(bb.Max.X));
     var y = MathF.Abs(MathF.Abs(bb.Min.Y) + MathF.Abs(bb.Max.Y));
-    // Radius = x > y ? x / 2 : y / 2;
     if (x > y) {
       Radius = x / 2;
     } else {
       Radius = y / 2;
     }
-    // Radius = 2;
-
-    // _mergedAABB.Update(AABBArray);
-    // var scale = Owner!.GetComponent<Transform>().Scale;
-    // _mergedAABB.Min *= scale;
-    // _mergedAABB.Max *= scale;
     RunTasks(createTasks);
   }
 

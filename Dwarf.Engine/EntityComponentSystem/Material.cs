@@ -25,17 +25,39 @@ public struct MaterialData {
   public float Shininess;
 }
 
-public class Material : Component {
+public struct TexCoordSets {
+  public uint BaseColor;
+  public uint MetallicRoughness;
+  public uint SpecularGlossiness;
+  public uint Normal;
+  public uint Occlusion;
+  public uint Emissive;
+}
+
+public enum AlphaMode {
+  Opaque,
+  Mask,
+  Blend
+}
+
+public class MaterialComponent : Component {
+  public Material Material { get; set; }
   private MaterialData _materialData;
 
-  public Material(Vector3 color) {
+  public MaterialComponent() {
     Init();
-
-    _materialData.Color = color;
+    Material = new Material();
   }
 
-  public Material() {
+  public MaterialComponent(Material material) {
     Init();
+    Material = material;
+  }
+
+  public MaterialComponent(Vector3 color) {
+    Init();
+    _materialData.Color = color;
+    Material = new Material();
   }
 
   private void Init() {
@@ -74,4 +96,17 @@ public class Material : Component {
   }
 
   public MaterialData Data => _materialData;
+}
+
+public class Material(string name = Material.NO_MATERIAL) {
+  const string NO_MATERIAL = "no_material";
+  public string Name { get; init; } = name;
+
+  public AlphaMode AlphaMode = AlphaMode.Opaque;
+  public TexCoordSets TexCoordSets { get; set; }
+  public bool DoubleSided { get; set; }
+
+  public float AlphaCutoff = 1.0f;
+  public float MetallicFactor = 1.0f;
+  public float RoughnessFactor = 1.0f;
 }

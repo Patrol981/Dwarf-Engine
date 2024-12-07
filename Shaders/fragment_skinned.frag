@@ -20,7 +20,9 @@ layout (push_constant) uniform Push {
   mat4 normalMatrix;
 } push;
 
-layout (set = 0, binding = 0) uniform sampler2D textureSampler;
+// layout (set = 0, binding = 0) uniform sampler2D textureSampler;
+layout(set = 0, binding = 0) uniform texture2D _texture;
+layout(set = 0, binding = 1) uniform sampler _sampler;
 // layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
 layout (set = 1, binding = 0) #include global_ubo
@@ -63,6 +65,6 @@ void main() {
   if(ubo.layer == 0) {
     outColor = vec4(result, 1.0);
   } else if(ubo.layer == 1) {
-    outColor = texture(textureSampler, texCoord) * vec4(result, 1.0);
+    outColor = texture(sampler2D(_texture, _sampler), texCoord) * vec4(result, 1.0);
   }
 }

@@ -137,7 +137,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
       var pushConstantData = new SpriteUniformBufferObject {
         SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4,
-        SpriteColor = entities[i].GetComponent<Material>().Color,
+        SpriteColor = entities[i].GetComponent<MaterialComponent>().Color,
         UseTexture = true
       };
 

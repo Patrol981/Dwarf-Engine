@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
@@ -220,7 +221,7 @@ public class Skybox : IDisposable {
   ];
   private readonly SkyboxMesh _mesh;
   private readonly Transform _transform;
-  private readonly Material _material;
+  private readonly MaterialComponent _material;
 
   private PipelineConfigInfo _pipelineConfigInfo = null!;
   private VkPipelineLayout _pipelineLayout;
@@ -243,7 +244,7 @@ public class Skybox : IDisposable {
     _textureManager = textureManager;
     _renderer = renderer;
     _transform = new();
-    _material = new(new(1.0f, 1.0f, 1.0f));
+    _material = new(new Vector3(1.0f, 1.0f, 1.0f));
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
     .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)

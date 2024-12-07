@@ -147,13 +147,14 @@ public class VulkanTexture : ITexture {
 
   public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
     VkDescriptorImageInfo imageInfo = new() {
-      sampler = _textureSampler.ImageSampler,
+      // sampler = _textureSampler.ImageSampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
       imageView = _textureSampler.ImageView
     };
     unsafe {
       _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
       .WriteImage(0, &imageInfo)
+      .WriteSampler(1, _textureSampler.ImageSampler)
       .Build(out _textureDescriptor);
     }
   }

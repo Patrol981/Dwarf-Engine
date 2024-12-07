@@ -34,7 +34,7 @@ public class VulkanDescriptorWriter {
 
     var tmp = _writes.ToList();
     tmp.Add(write);
-    _writes = tmp.ToArray();
+    _writes = [.. tmp];
     return this;
   }
 
@@ -50,7 +50,27 @@ public class VulkanDescriptorWriter {
 
     var tmp = _writes.ToList();
     tmp.Add(write);
-    _writes = tmp.ToArray();
+    _writes = [.. tmp];
+    return this;
+  }
+
+  public unsafe VulkanDescriptorWriter WriteSampler(uint binding, VkSampler sampler) {
+    var bindingDescription = _setLayout.Bindings[binding];
+
+    VkDescriptorImageInfo samplerInfo = new() {
+      sampler = sampler
+    };
+
+    VkWriteDescriptorSet imageWriteDescriptorSet = new() {
+      descriptorType = bindingDescription.descriptorType,
+      dstBinding = binding,
+      descriptorCount = 1,
+      pImageInfo = &samplerInfo
+    };
+
+    var tmp = _writes.ToList();
+    tmp.Add(imageWriteDescriptorSet);
+    _writes = [.. tmp];
     return this;
   }
 

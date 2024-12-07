@@ -95,8 +95,9 @@ public class JoltBodyWrapper : IPhysicsBody {
   public void Dispose() {
     if (!_bodyInterface.IsNull) {
       _bodyInterface.DeactivateBody(_bodyID);
-      _bodyInterface.RemoveBody(_bodyID);
-      _bodyInterface.DestroyBody(_bodyID);
+      // _bodyInterface.RemoveBody(_bodyID);
+      // _bodyInterface.DestroyBody(_bodyID);
+      _bodyInterface.RemoveAndDestroyBody(_bodyID);
     }
     GC.SuppressFinalize(this);
   }

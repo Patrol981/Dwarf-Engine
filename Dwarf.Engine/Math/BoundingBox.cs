@@ -22,6 +22,21 @@ public struct BoundingBox {
     Max = max;
   }
 
+  public static BoundingBox? GetBoundingBox(in Vertex[]? vertices) {
+    if (vertices == null || vertices.Length == 0)
+      throw new InvalidOperationException("Mesh has no vertices.");
+
+    Vector3 min = vertices[0].Position;
+    Vector3 max = vertices[0].Position;
+
+    foreach (var vertex in vertices) {
+      min = Vector3.Min(min, vertex.Position);
+      max = Vector3.Max(max, vertex.Position);
+    }
+
+    return new BoundingBox(min, max);
+  }
+
   public BoundingBox GetBoundingBox(Matrix4x4 m) {
     var min = new Vector3(m[3, 0], m[3, 1], m[3, 2]);
     var max = min;

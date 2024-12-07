@@ -126,7 +126,7 @@ public class Rigidbody : Component, IDisposable {
     Owner!.AddComponent(new ColliderMesh(_device, mesh));
   }
 
-  public unsafe void Init(IPhysicsBody bodyInterface) {
+  public unsafe void Init(in IPhysicsBody bodyInterface) {
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
 
@@ -291,7 +291,6 @@ public class Rigidbody : Component, IDisposable {
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;
 
   public void Dispose() {
-    _bodyInterface.Dispose();
     GC.SuppressFinalize(this);
   }
 }

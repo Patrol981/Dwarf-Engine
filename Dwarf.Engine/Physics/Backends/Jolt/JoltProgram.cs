@@ -16,7 +16,7 @@ public class JoltProgram : IPhysicsProgram {
   public PhysicsSystemSettings JoltSettings;
   public readonly JoltPhysicsSharp.PhysicsSystem PhysicsSystem;
   public BodyInterface BodyInterface => PhysicsSystem.BodyInterface!;
-  public List<Entity> Bodies { get; private set; } = [];
+  public Dictionary<Entity, JoltBodyWrapper> Bodies { get; private set; } = [];
 
   public JoltProgram() {
     if (!Foundation.Init(false)) {
@@ -70,7 +70,7 @@ public class JoltProgram : IPhysicsProgram {
   public void Init(Span<Entity> entities) {
     foreach (var entity in entities) {
       var wrapper = new JoltBodyWrapper(BodyInterface);
-      Bodies.Add(entity);
+      Bodies.Add(entity, wrapper);
       entity.GetComponent<Rigidbody>()?.Init(wrapper);
     }
   }
@@ -130,7 +130,8 @@ public class JoltProgram : IPhysicsProgram {
 
   public void Dispose() {
     foreach (var body in Bodies) {
-      body.GetComponent<Rigidbody>().Dispose();
+      body.Value.Dispose();
+      body.Key.GetComponent<Rigidbody>().Dispose();
     }
     JobSystem?.Dispose();
     PhysicsSystem?.Dispose();

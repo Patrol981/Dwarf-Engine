@@ -18,7 +18,7 @@ public static partial class GLTFLoaderKHR {
 
     LoadTextureSamplers(gltf, out var textureSamplers);
     LoadTextures(app, path, gltf, glb, textureSamplers, flip, out var textureIds);
-    LoadMaterials();
+    LoadMaterials(gltf, out var materials);
 
     var meshRenderer = new MeshRenderer(app.Device, app.Renderer);
     var scene = gltf.Scenes[gltf.Scene.HasValue ? gltf.Scene.Value : 0];
@@ -111,22 +111,44 @@ public static partial class GLTFLoaderKHR {
       var id = app.TextureManager.GetTextureId($"{textureName}_{textureIds.Count}");
       if (id == Guid.Empty) {
         var texture = VulkanTexture.LoadFromGLTF(
-                app.Device,
-                gltf,
-                globalBuffer,
-                gltfImage,
-                $"{textureName}_{textureIds.Count}",
-                textureSampler,
-                flip
-              );
+          app.Device,
+          gltf,
+          globalBuffer,
+          gltfImage,
+          $"{textureName}_{textureIds.Count}",
+          textureSampler,
+          flip
+        );
         id = app.TextureManager.AddTexture(texture);
       }
       textureIds.Add(id);
     }
   }
 
-  private static void LoadMaterials() {
+  private static void LoadMaterials(Gltf gltf, out List<Material> materials) {
+    materials = [];
 
+    foreach (var mat in gltf.Materials) {
+      var material = new Material(mat.Name);
+      material.DoubleSided = material.DoubleSided;
+
+      if (mat.ShouldSerializeAlphaMode()) {
+        switch (mat.AlphaMode) {
+          case glTFLoader.Schema.Material.AlphaModeEnum.OPAQUE:
+            material.AlphaMode = AlphaMode.Opaque;
+            break;
+          case glTFLoader.Schema.Material.AlphaModeEnum.MASK:
+            material.AlphaMode = AlphaMode.Mask;
+            break;
+          case glTFLoader.Schema.Material.AlphaModeEnum.BLEND:
+            material.AlphaMode = AlphaMode.Blend;
+            break;
+        }
+      }
+
+      materials.Add(material);
+    }
+    materials.Add(new());
   }
 
   private static void LoadAnimations(Gltf gltf, byte[] globalBuffer, MeshRenderer meshRenderer) {

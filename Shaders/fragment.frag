@@ -20,7 +20,9 @@ layout(push_constant) uniform Push {
     mat4 normalMatrix;
 } push;
 
-layout(set = 0, binding = 0) uniform sampler2D textureSampler;
+// layout(set = 0, binding = 0) uniform sampler2D textureSampler;
+layout(set = 0, binding = 0) uniform texture2D _texture;
+layout(set = 0, binding = 1) uniform sampler _sampler;
 // layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
 layout(set = 1, binding = 0) #include global_ubo
@@ -65,12 +67,12 @@ void main() {
         if (fragToCamera <= entityToCamera && dist < radiusHorizontal) {
             alpha = 0.5;
             vec2 distorsion = applyDistortion(fragPositionWorld, texCoord, distortionStrength, radiusHorizontal);
-            colorMod = texture(textureSampler, distorsion);
+            colorMod = texture(sampler2D(_texture, _sampler), distorsion);
         } else {
-            colorMod = texture(textureSampler, texCoord);
+            colorMod = texture(sampler2D(_texture, _sampler), texCoord);
         }
     } else {
-        colorMod = texture(textureSampler, texCoord);
+        colorMod = texture(sampler2D(_texture, _sampler), texCoord);
     }
 
     result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);

@@ -5,157 +5,129 @@ using Dwarf.Rendering;
 
 namespace Dwarf.Math;
 
-public struct Frustum {
-  public Plane Left;
-  public Plane Right;
-  public Plane Top;
-  public Plane Bottom;
-  public Plane Near;
-  public Plane Far;
+public static class Frustum {
+  public static List<T> FilterObjectsByPlanes<T>(in Plane[] planes, Span<T> objects) where T : IRender3DElement {
+    var filteredObjects = new List<T>();
 
-  public Frustum(Matrix4x4 viewProjectionMatrix) {
-    // Left Plane
-    Left = new Plane(
-        viewProjectionMatrix.M14 + viewProjectionMatrix.M11,
-        viewProjectionMatrix.M24 + viewProjectionMatrix.M21,
-        viewProjectionMatrix.M34 + viewProjectionMatrix.M31,
-        viewProjectionMatrix.M44 + viewProjectionMatrix.M41);
-
-    // Right Plane
-    Right = new Plane(
-        viewProjectionMatrix.M14 - viewProjectionMatrix.M11,
-        viewProjectionMatrix.M24 - viewProjectionMatrix.M21,
-        viewProjectionMatrix.M34 - viewProjectionMatrix.M31,
-        viewProjectionMatrix.M44 - viewProjectionMatrix.M41);
-
-    // Top Plane
-    Top = new Plane(
-        viewProjectionMatrix.M14 - viewProjectionMatrix.M12,
-        viewProjectionMatrix.M24 - viewProjectionMatrix.M22,
-        viewProjectionMatrix.M34 - viewProjectionMatrix.M32,
-        viewProjectionMatrix.M44 - viewProjectionMatrix.M42);
-
-    // Bottom Plane
-    Bottom = new Plane(
-        viewProjectionMatrix.M14 + viewProjectionMatrix.M12,
-        viewProjectionMatrix.M24 + viewProjectionMatrix.M22,
-        viewProjectionMatrix.M34 + viewProjectionMatrix.M32,
-        viewProjectionMatrix.M44 + viewProjectionMatrix.M42);
-
-    // Near Plane
-    Near = new Plane(
-        viewProjectionMatrix.M13,
-        viewProjectionMatrix.M23,
-        viewProjectionMatrix.M33,
-        viewProjectionMatrix.M43);
-
-    // Far Plane
-    Far = new Plane(
-        viewProjectionMatrix.M14 - viewProjectionMatrix.M13,
-        viewProjectionMatrix.M24 - viewProjectionMatrix.M23,
-        viewProjectionMatrix.M34 - viewProjectionMatrix.M33,
-        viewProjectionMatrix.M44 - viewProjectionMatrix.M43);
-
-    // Normalize planes to ensure correct distances
-    NormalizePlane(ref Left);
-    NormalizePlane(ref Right);
-    NormalizePlane(ref Top);
-    NormalizePlane(ref Bottom);
-    NormalizePlane(ref Near);
-    NormalizePlane(ref Far);
-  }
-  private void NormalizePlane(ref Plane plane) {
-    float magnitude = (float)MathF.Sqrt(plane.Normal.X * plane.Normal.X +
-                                       plane.Normal.Y * plane.Normal.Y +
-                                       plane.Normal.Z * plane.Normal.Z);
-    plane.Normal /= magnitude;
-    plane.D /= magnitude;
-  }
-
-  public static bool IsBoxInFrustum(Frustum frustum, AABB box) {
-    // Check against each frustum plane
-    return IsBoxInPlane(frustum.Left, box) &&
-           IsBoxInPlane(frustum.Right, box) &&
-           IsBoxInPlane(frustum.Top, box) &&
-           IsBoxInPlane(frustum.Bottom, box) &&
-           IsBoxInPlane(frustum.Near, box) &&
-           IsBoxInPlane(frustum.Far, box);
-  }
-  private static bool IsBoxInPlane(Plane plane, AABB box) {
-    // Calculate the positive and negative vertex of the bounding box relative to the plane normal
-    Vector3 positiveVertex = new Vector3(
-        plane.Normal.X >= 0 ? box.Max.X : box.Min.X,
-        plane.Normal.Y >= 0 ? box.Max.Y : box.Min.Y,
-        plane.Normal.Z >= 0 ? box.Max.Z : box.Min.Z
-    );
-
-    // If the positive vertex is outside the plane, the box is outside the frustum
-    if (Vector3.Dot(plane.Normal, positiveVertex) + plane.D < 0) {
-      return false;
+    foreach (var obj in objects) {
+      // var aabb = obj.GetOwner().GetComponent<MeshRenderer>().AABB;
+      // if (IsInAABBFrustum(
+      //     planes,
+      //     aabb.Min,
+      //     aabb.Max
+      //   )
+      // ) {
+      //   filteredObjects.Add(obj);
+      // }
+      if (IsInSphereFrustum(
+        planes,
+        obj.GetOwner().GetComponent<Transform>().Position,
+        obj.GetOwner().GetComponent<MeshRenderer>().Radius
+        )
+      ) {
+        filteredObjects.Add(obj);
+      }
     }
 
+    return filteredObjects;
+  }
+  public static void GetFrustrum(out Plane[] planes) {
+    var camera = CameraState.GetCamera();
+    var viewProjection = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+
+    planes = new Plane[6];
+
+    // Left Plane
+    planes[0] = new Plane(
+        new Vector3(
+            viewProjection.M14 + viewProjection.M11,
+            viewProjection.M24 + viewProjection.M21,
+            viewProjection.M34 + viewProjection.M31
+        ),
+        viewProjection.M44 + viewProjection.M41
+    );
+
+    // Right Plane
+    planes[1] = new Plane(
+        new Vector3(
+            viewProjection.M14 - viewProjection.M11,
+            viewProjection.M24 - viewProjection.M21,
+            viewProjection.M34 - viewProjection.M31
+        ),
+        viewProjection.M44 - viewProjection.M41
+    );
+
+    // Bottom Plane
+    planes[2] = new Plane(
+        new Vector3(
+            viewProjection.M14 + viewProjection.M12,
+            viewProjection.M24 + viewProjection.M22,
+            viewProjection.M34 + viewProjection.M32
+        ),
+        viewProjection.M44 + viewProjection.M42
+    );
+
+    // Top Plane
+    planes[3] = new Plane(
+        new Vector3(
+            viewProjection.M14 - viewProjection.M12,
+            viewProjection.M24 - viewProjection.M22,
+            viewProjection.M34 - viewProjection.M32
+        ),
+        viewProjection.M44 - viewProjection.M42
+    );
+
+    // Near Plane
+    planes[4] = new Plane(
+        new Vector3(
+          viewProjection.M14 + viewProjection.M13,
+          viewProjection.M24 + viewProjection.M23,
+          viewProjection.M34 + viewProjection.M33
+        ),
+        viewProjection.M43 + viewProjection.M43
+    );
+
+    // Far Plane
+    planes[5] = new Plane(
+        new Vector3(
+            viewProjection.M14 - viewProjection.M13,
+            viewProjection.M24 - viewProjection.M23,
+            viewProjection.M34 - viewProjection.M33
+        ),
+        viewProjection.M44 - viewProjection.M43
+    );
+
+    // Normalize planes
+    for (int i = 0; i < 6; i++) {
+      planes[i] = NormalizePlane(planes[i]);
+    }
+  }
+
+  private static Plane NormalizePlane(Plane plane) {
+    float magnitude = plane.Normal.Length();
+    return new Plane(plane.Normal / magnitude, plane.D / magnitude);
+  }
+
+  public static bool IsInSphereFrustum(in Plane[] planes, Vector3 center, float radius) {
+    for (int i = 0; i < planes.Length; i++) {
+      float distance = Vector3.Dot(planes[i].Normal, center) + planes[i].D;
+      if (distance < -radius) {
+        return false;
+      }
+    }
     return true;
   }
 
-  public static List<T> FilterObjectsByFrustum<T>(ref Frustum frustum, Span<T> objects, Func<T, AABB> getBoundingBox) {
-    var filteredObjects = new List<T>();
-
-    foreach (var obj in objects) {
-      AABB box = getBoundingBox(obj);
-
-      if (IsBoxInFrustum(frustum, box)) {
-        filteredObjects.Add(obj);
-      }
+  public static bool IsInAABBFrustum(in Plane[] planes, Vector3 min, Vector3 max) {
+    for (int i = 0; i < planes.Length; i++) {
+      var vec3 = new Vector3(
+        planes[i].Normal.X >= 0 ? max.X : min.X,
+        planes[i].Normal.Y >= 0 ? max.Y : min.Y,
+        planes[i].Normal.Z >= 0 ? max.Z : min.Z
+      );
+      if (Vector3.Dot(planes[i].Normal, vec3) + planes[i].D < -2)
+        return false;
     }
-
-    return filteredObjects;
-  }
-
-  public static List<T> FilterObjectsByFrustum<T>(Frustum frustum, Span<T> objects) where T : IRender3DElement {
-    var filteredObjects = new List<T>();
-
-    foreach (var obj in objects) {
-      if (IsBoxInFrustum(frustum, obj.GetOwner().GetComponent<MeshRenderer>().AABB)) {
-        filteredObjects.Add(obj);
-      }
-    }
-
-    return filteredObjects;
-  }
-
-  public static Frustum CreateFrustumFromCamera(Camera camera) {
-    Frustum frustum = new();
-
-    var halfVerticalSide = 100.0f * MathF.Tan(camera.Fov * 0.5f);
-    var halfHorizontalSize = halfVerticalSide * camera.Aspect;
-    var frontMultFar = 100.0f * camera.Front;
-
-    var camPos = camera.Owner!.GetComponent<Transform>().Position;
-
-    frustum.Near.Normal = camPos + (0.1f * camera.Front);
-    frustum.Near.D = camera.Front.Z;
-
-    frustum.Far.Normal = camPos + frontMultFar;
-    frustum.Far.D = -camera.Front.Z;
-
-    frustum.Right.Normal = camPos;
-    frustum.Right.D = Vector3.Cross(frontMultFar - camera.Right * halfHorizontalSize, camera.Up).X;
-
-    frustum.Left.Normal = camPos;
-    frustum.Left.D = Vector3.Cross(camera.Up, frontMultFar + camera.Right * halfHorizontalSize).X;
-
-    frustum.Top.Normal = camPos;
-    frustum.Top.D = Vector3.Cross(camera.Right, frontMultFar + camera.Up * halfVerticalSide).Y;
-
-    frustum.Bottom.Normal = camPos;
-    frustum.Bottom.D = Vector3.Cross(frontMultFar - camera.Up * halfVerticalSide, camera.Right).Y;
-
-    return frustum;
-  }
-
-  public static void GetFrustrum() {
-    var camera = CameraState.GetCamera();
-    var cameraView = camera.GetViewMatrix();
-    var cameraProj = camera.GetProjectionMatrix();
+    return true;
   }
 }

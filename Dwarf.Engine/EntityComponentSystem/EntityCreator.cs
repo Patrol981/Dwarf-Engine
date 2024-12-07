@@ -32,7 +32,7 @@ public static class EntityCreator {
     entity.AddComponent(new Transform(position.Value));
     entity.GetComponent<Transform>().Rotation = rotation.Value;
     entity.GetComponent<Transform>().Scale = scale.Value;
-    entity.AddComponent(new Material(new(1.0f, 1.0f, 1.0f)));
+    entity.AddComponent(new MaterialComponent(new Vector3(1.0f, 1.0f, 1.0f)));
 
     return Task.FromResult(entity);
   }
@@ -78,7 +78,7 @@ public static class EntityCreator {
   public static void AddMaterial(this Entity entity, Vector3? color) {
     if (color == null) { color = Vector3.One; }
 
-    entity.AddComponent(new Material(color.Value));
+    entity.AddComponent(new MaterialComponent(color.Value));
   }
 
   public static async Task<Entity> Create3DModel(

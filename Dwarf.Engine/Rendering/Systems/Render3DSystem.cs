@@ -59,7 +59,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-    .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+    .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
     .Build();
 
     VkDescriptorSetLayout[] basicLayouts = [
@@ -186,9 +187,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     // LastKnownElemCount = entities.Length;
     LastKnownElemCount = CalculateNodesLength(entities);
     LastKnownElemSize = 0;
-    var result = CalculateNodesLengthWithSkin(entities);
-    LastKnownSkinnedElemCount = (ulong)result.len;
-    LastKnownSkinnedElemJointsCount = (ulong)result.joints;
+    var (len, joints) = CalculateNodesLengthWithSkin(entities);
+    LastKnownSkinnedElemCount = (ulong)len;
+    LastKnownSkinnedElemJointsCount = (ulong)joints;
 
     for (int i = 0; i < entities.Length; i++) {
       var targetModel = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
@@ -242,9 +243,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       return;
     }
 
-    // var frustum = new Frustum(CameraState.GetCamera().GetViewMatrix());
-    // var frustum = Frustum.CreateFrustumFromCamera(CameraState.GetCamera());
-    // var entitiesInsideFrustum = Frustum.FilterObjectsByFrustum<IRender3DElement>(frustum, entities);
+    Frustum.GetFrustrum(out var planes);
+    entities = Frustum.FilterObjectsByPlanes(in planes, entities).ToArray();
+
+    // Logger.Info($"Current renderable: {entities.Length} entities");
 
     List<Node> skinnedNodes = [];
     List<Node> notSkinnedNodes = [];
@@ -341,7 +343,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
-      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
+      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<MaterialComponent>().Data;
       unsafe {
         _modelUbo->Color = materialData.Color;
         _modelUbo->Specular = materialData.Specular;
@@ -445,7 +447,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
 
-      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<Material>().Data;
+      var materialData = nodes[i].ParentRenderer.GetOwner().GetComponent<MaterialComponent>().Data;
       unsafe {
         _modelUbo->Color = materialData.Color;
         _modelUbo->Specular = materialData.Specular;

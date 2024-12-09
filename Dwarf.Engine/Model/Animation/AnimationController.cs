@@ -29,11 +29,18 @@ public class AnimationController : Component {
     }
   }
 
-  public void PlayFirstAnimation() {
+  public void SetFirstAnimation() {
     if (_animations.Count < 1) return;
     // _currentAnimation = _animations.First().Value;
     _activeAnimations.Clear();
-    _activeAnimations.Add((_animations.First().Value, 0.0f));
+    _activeAnimations.Add((_animations.First().Value, 1.0f));
+  }
+
+  public void PlayFirstAnimation() {
+    for (int i = 0; i < _activeAnimations.Count; i++) {
+      _activeAnimations[i] = (_activeAnimations[i].Animation, 0f);
+    }
+    _activeAnimations[0] = (_activeAnimations[0].Animation, 1.0f);
   }
 
   public void PlayAnimation(string animationName, float weight) {

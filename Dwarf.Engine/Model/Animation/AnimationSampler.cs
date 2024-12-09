@@ -37,37 +37,52 @@ public class AnimationSampler {
     return pt;
   }
 
-  public void Translate(int idx, float time, Node node) {
+  public void Translate(int idx, float time, Node node, float weight) {
+    var blendedTranslation = node.Translation;
     switch (Interpolation) {
       case InterpolationType.Linear:
         float u = MathF.Max(0.0f, time - Inputs[idx]) / (Inputs[idx + 1] - Inputs[idx]);
-        node.Translation = Vector4.Lerp(OutputsVec4[idx], OutputsVec4[idx + 1], u).ToVector3();
+        var newTranslation = Vector4.Lerp(OutputsVec4[idx], OutputsVec4[idx + 1], u).ToVector3();
+        node.Translation = Vector3.Lerp(blendedTranslation, newTranslation, weight);
+        // node.Translation = newTranslation;
         break;
       case InterpolationType.Step:
-        node.Translation = OutputsVec4[idx].ToVector3();
+        newTranslation = OutputsVec4[idx].ToVector3();
+        // node.Translation = Vector3.Lerp(blendedTranslation, newTranslation, weight);
+        node.Translation = newTranslation;
         break;
       case InterpolationType.CubicSpline:
-        node.Translation = CubicSplineInterpolation(idx, time, 3).ToVector3();
+        newTranslation = CubicSplineInterpolation(idx, time, 3).ToVector3();
+        node.Translation = Vector3.Lerp(blendedTranslation, newTranslation, weight);
+        // node.Translation = newTranslation;
         break;
     }
   }
 
-  public void Scale(int idx, float time, Node node) {
+  public void Scale(int idx, float time, Node node, float weight) {
+    var blendedScale = node.Scale;
     switch (Interpolation) {
       case InterpolationType.Linear:
         float u = MathF.Max(0.0f, time - Inputs[idx]) / (Inputs[idx + 1] - Inputs[idx]);
-        node.Scale = Vector4.Lerp(OutputsVec4[idx], OutputsVec4[idx + 1], u).ToVector3();
+        var newScale = Vector4.Lerp(OutputsVec4[idx], OutputsVec4[idx + 1], u).ToVector3();
+        node.Scale = Vector3.Lerp(blendedScale, newScale, weight);
+        // node.Scale = newScale;
         break;
       case InterpolationType.Step:
-        node.Scale = OutputsVec4[idx].ToVector3();
+        newScale = OutputsVec4[idx].ToVector3();
+        node.Scale = Vector3.Lerp(blendedScale, newScale, weight);
+        // node.Scale = newScale;
         break;
       case InterpolationType.CubicSpline:
-        node.Scale = CubicSplineInterpolation(idx, time, 3).ToVector3();
+        newScale = CubicSplineInterpolation(idx, time, 3).ToVector3();
+        node.Scale = Vector3.Lerp(blendedScale, newScale, weight);
+        // node.Scale = newScale;
         break;
     }
   }
 
-  public void Rotate(int idx, float time, Node node) {
+  public void Rotate(int idx, float time, Node node, float weight) {
+    var blendedRotation = node.Rotation;
     switch (Interpolation) {
       case InterpolationType.Linear:
         float u = MathF.Max(0.0f, time - Inputs[idx]) / (Inputs[idx + 1] - Inputs[idx]);
@@ -83,25 +98,31 @@ public class AnimationSampler {
           OutputsVec4[idx + 1].Z,
           OutputsVec4[idx + 1].W
         );
-        node.Rotation = Quaternion.Normalize(Quaternion.Slerp(quat1, quat2, u));
+        var newRotation = Quaternion.Slerp(quat1, quat2, u);
+        node.Rotation = Quaternion.Slerp(blendedRotation, Quaternion.Normalize(newRotation), weight);
+
+        // node.Rotation = Quaternion.Normalize(Quaternion.Slerp(quat1, quat2, u));
         break;
       case InterpolationType.Step:
-        node.Rotation = new Quaternion(
+        newRotation = new Quaternion(
           OutputsVec4[idx].X,
           OutputsVec4[idx].Y,
           OutputsVec4[idx].Z,
           OutputsVec4[idx].W
         );
+        node.Rotation = Quaternion.Slerp(blendedRotation, newRotation, weight);
+        // node.Rotation = newRotation;
         break;
       case InterpolationType.CubicSpline:
         var rot = CubicSplineInterpolation(idx, time, 4);
-        var quat = new Quaternion(
+        newRotation = new Quaternion(
           rot.X,
           rot.Y,
           rot.Z,
           rot.W
         );
-        node.Rotation = Quaternion.Normalize(quat);
+        node.Rotation = Quaternion.Slerp(blendedRotation, Quaternion.Normalize(newRotation), weight);
+        // node.Rotation = Quaternion.Normalize(newRotation);
         break;
     }
   }

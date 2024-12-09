@@ -21,6 +21,8 @@ public class CaveGenerator {
   public int Height { get; init; }
   public string Seed { get; init; }
 
+  public Room? MainRoom { get; internal set; }
+
   public int[,] Map { get; private set; }
 
   public class GeneratorOptions {
@@ -39,11 +41,11 @@ public class CaveGenerator {
   }
 
   #region  CLASSES
-  internal struct Coord {
-    internal int TileX;
-    internal int TileY;
+  public struct Coord {
+    public int TileX;
+    public int TileY;
 
-    internal Coord(int x, int y) {
+    public Coord(int x, int y) {
       TileX = x;
       TileY = y;
     }
@@ -415,8 +417,8 @@ public class CaveGenerator {
     }
   }
 
-  internal class Room : IComparable<Room> {
-    internal List<Coord> Tiles;
+  public class Room : IComparable<Room> {
+    public List<Coord> Tiles;
     internal List<Coord> EdgeTiles;
     internal List<Room> ConnectedRooms;
     internal int RoomSize;
@@ -614,6 +616,7 @@ public class CaveGenerator {
     roomsRemaining.Sort();
     roomsRemaining[0].IsMainRoom = true;
     roomsRemaining[0].IsAccessableFromMainRoom = true;
+    MainRoom = roomsRemaining[0];
     ConnectClosestRooms(roomsRemaining);
   }
 

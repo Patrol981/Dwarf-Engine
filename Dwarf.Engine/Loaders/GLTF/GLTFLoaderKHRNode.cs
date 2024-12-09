@@ -32,7 +32,8 @@ public static partial class GLTFLoaderKHR {
         gltf,
         glb,
         1.0f,
-        ref meshRenderer
+        ref meshRenderer,
+        ref materials
       );
     }
 
@@ -49,21 +50,31 @@ public static partial class GLTFLoaderKHR {
       }
 
       if (node.Mesh != null) {
+        var material = node.Mesh.Material;
+
         node.Update();
       }
     }
 
     meshRenderer.Init();
 
-    if (meshRenderer.MeshedNodes.Length == textureIds.Count) {
-      for (int i = 0; i < meshRenderer.MeshedNodes.Length; i++) {
-        meshRenderer.BindToTexture(app.TextureManager, textureIds[i], i);
-      }
-    } else {
-      for (int i = 0; i < meshRenderer.MeshedNodes.Length; i++) {
-        meshRenderer.BindToTexture(app.TextureManager, textureIds[0], i);
-      }
+    // meshRenderer.BindToTexture(app.TextureManager, textureIds[0], 0);
+    // meshRenderer.BindToTexture(app.TextureManager, textureIds[5], 1);
+    // meshRenderer.BindToTexture(app.TextureManager, textureIds[1], 2);
+
+    for (int i = 0; i < meshRenderer.MeshedNodesCount; i++) {
+      meshRenderer.BindToTextureMaterial(app.TextureManager, textureIds, i);
     }
+
+    // if (meshRenderer.MeshedNodes.Length == textureIds.Count) {
+    //   for (int i = 0; i < meshRenderer.MeshedNodes.Length; i++) {
+    //     meshRenderer.BindToTexture(app.TextureManager, textureIds[i], i);
+    //   }
+    // } else {
+    //   for (int i = 0; i < meshRenderer.MeshedNodes.Length; i++) {
+    //     meshRenderer.BindToTexture(app.TextureManager, textureIds[0], i);
+    //   }
+    // }
 
     return Task.FromResult(meshRenderer);
   }
@@ -89,9 +100,10 @@ public static partial class GLTFLoaderKHR {
     in byte[] globalBuffer,
     in List<TextureSampler> textureSamplers,
     int flip,
-    out List<Guid> textureIds
+    out List<(Guid id, ITexture texture)> textureIds
   ) {
     textureIds = [];
+    int i = 0;
     foreach (var gltfTexture in gltf.Textures) {
       if (!gltfTexture.Source.HasValue) continue;
       int src = gltfTexture.Source.Value;
@@ -109,8 +121,9 @@ public static partial class GLTFLoaderKHR {
       }
 
       var id = app.TextureManager.GetTextureId($"{textureName}_{textureIds.Count}");
+      ITexture texture = null!;
       if (id == Guid.Empty) {
-        var texture = VulkanTexture.LoadFromGLTF(
+        texture = VulkanTexture.LoadFromGLTF(
           app.Device,
           gltf,
           globalBuffer,
@@ -120,8 +133,13 @@ public static partial class GLTFLoaderKHR {
           flip
         );
         id = app.TextureManager.AddTexture(texture);
+        texture.TextureIndex = i;
+
+        // var path = Path.Combine(DwarfPath.AssemblyDirectory, $"{textureName}_{textureIds.Count}.png");
+        //File.WriteAllBytes(path, texture.TextureData);
       }
-      textureIds.Add(id);
+      i++;
+      textureIds.Add((id, texture));
     }
   }
 
@@ -131,6 +149,25 @@ public static partial class GLTFLoaderKHR {
     foreach (var mat in gltf.Materials) {
       var material = new Material(mat.Name);
       material.DoubleSided = material.DoubleSided;
+
+      if (mat.PbrMetallicRoughness != null) {
+        if (mat.PbrMetallicRoughness.BaseColorTexture != null) {
+          material.BaseColorTextureIndex = mat.PbrMetallicRoughness.BaseColorTexture.Index;
+        }
+        if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null) {
+          material.MetallicRoughnessTextureIndex = mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
+        }
+      }
+
+      if (mat.NormalTexture != null) {
+        material.NormalTextureIndex = mat.NormalTexture.Index;
+      }
+      if (mat.OcclusionTexture != null) {
+        material.OcclusionTextureIndex = mat.OcclusionTexture.Index;
+      }
+      if (mat.EmissiveTexture != null) {
+        material.EmissiveTextureIndex = mat.EmissiveTexture.Index;
+      }
 
       if (mat.ShouldSerializeAlphaMode()) {
         switch (mat.AlphaMode) {
@@ -148,6 +185,7 @@ public static partial class GLTFLoaderKHR {
 
       materials.Add(material);
     }
+
     materials.Add(new());
   }
 
@@ -315,7 +353,8 @@ public static partial class GLTFLoaderKHR {
     Gltf gltf,
     byte[] globalBuffer,
     float globalScale,
-    ref MeshRenderer meshRenderer
+    ref MeshRenderer meshRenderer,
+    ref List<Material> materials
   ) {
     Dwarf.Model.Node newNode = new() {
       Index = nodeIdx,
@@ -350,7 +389,17 @@ public static partial class GLTFLoaderKHR {
     // Node with children
     if (node.Children?.Length > 0) {
       for (int i = 0; i < node.Children.Length; i++) {
-        LoadNode(device, newNode, gltf.Nodes[node.Children[i]], node.Children[i], gltf, globalBuffer, globalScale, ref meshRenderer);
+        LoadNode(
+          device,
+          newNode,
+          gltf.Nodes[node.Children[i]],
+          node.Children[i],
+          gltf,
+          globalBuffer,
+          globalScale,
+          ref meshRenderer,
+          ref materials
+        );
       }
     }
 
@@ -361,9 +410,13 @@ public static partial class GLTFLoaderKHR {
 
       var indices = new List<uint>();
       var vertices = new List<Vertex>();
+      Material material = null!;
 
       for (int j = 0; j < gltfMesh.Primitives.Length; j++) {
         var primitive = gltfMesh.Primitives[j];
+
+        int materialIdx = primitive.Material.HasValue ? primitive.Material.Value : -1;
+        material = materialIdx >= 0 && materialIdx < materials.Count ? materials[materialIdx] : new Material();
 
         Vector2[] textureCoords = [];
         Vector3[] normals = [];
@@ -423,6 +476,8 @@ public static partial class GLTFLoaderKHR {
 
       newMesh.Vertices = [.. vertices];
       newMesh.Indices = [.. indices];
+      material ??= new Material();
+      newMesh.Material = material;
       newNode.Mesh = newMesh;
     }
 

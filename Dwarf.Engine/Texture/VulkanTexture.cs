@@ -15,6 +15,7 @@ namespace Dwarf;
 public class VulkanTexture : ITexture {
   protected readonly VulkanDevice _device = null!;
 
+  public int TextureIndex { get; set; } = -1;
   public struct VulkanTextureData {
     public VkImage TextureImage;
     public VkDeviceMemory TextureImageMemory;

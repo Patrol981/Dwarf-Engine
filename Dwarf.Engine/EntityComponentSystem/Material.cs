@@ -102,6 +102,12 @@ public class Material(string name = Material.NO_MATERIAL) {
   const string NO_MATERIAL = "no_material";
   public string Name { get; init; } = name;
 
+  public int BaseColorTextureIndex { get; set; }
+  public int MetallicRoughnessTextureIndex { get; set; }
+  public int NormalTextureIndex { get; set; }
+  public int OcclusionTextureIndex { get; set; }
+  public int EmissiveTextureIndex { get; set; }
+
   public AlphaMode AlphaMode = AlphaMode.Opaque;
   public TexCoordSets TexCoordSets { get; set; }
   public bool DoubleSided { get; set; }

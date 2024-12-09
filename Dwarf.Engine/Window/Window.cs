@@ -38,6 +38,8 @@ public class Window : IDisposable {
     InitWindow(windowName, fullscreen, debug);
     LoadIcons();
     Show();
+    RefreshRate = GetRefreshRate();
+    Logger.Info($"[WINDOW] Refresh rate set to {RefreshRate}");
   }
 
   private unsafe void InitWindow(string windowName, bool fullscreen, bool debug) {
@@ -116,7 +118,6 @@ public class Window : IDisposable {
   public void ResetWindowResizedFlag() {
     FramebufferResized = false;
   }
-
 
   public void PollEvents() {
     while (SDL_PollEvent(out SDL_Event e)) {
@@ -199,6 +200,12 @@ public class Window : IDisposable {
       : surface;
   }
 
+  public unsafe float GetRefreshRate() {
+    var displays = SDL_GetDisplays();
+    var displayMode = SDL_GetCurrentDisplayMode(displays[0]);
+    return displayMode->refresh_rate;
+  }
+
   public DwarfExtent2D Extent {
     get { return _extent; }
     private set { _extent = value; }
@@ -208,6 +215,7 @@ public class Window : IDisposable {
   public bool FramebufferResized { get; private set; } = false;
   public bool IsMinimalized { get; private set; } = false;
   public event EventHandler? OnResizedEventDispatcher;
+  public float RefreshRate { get; init; }
 
   public SDL_Window SDLWindow { get; private set; }
 }

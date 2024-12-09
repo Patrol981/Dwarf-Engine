@@ -98,9 +98,9 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     var x = MathF.Abs(MathF.Abs(bb.Min.X) + MathF.Abs(bb.Max.X));
     var y = MathF.Abs(MathF.Abs(bb.Min.Y) + MathF.Abs(bb.Max.Y));
     if (x > y) {
-      Radius = x / 2;
+      Radius = x;
     } else {
-      Radius = y / 2;
+      Radius = y;
     }
     RunTasks(createTasks);
   }
@@ -184,6 +184,17 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     return Task.CompletedTask;
   }
 
+  public void BindToTextureMaterial(
+    TextureManager textureManager,
+    in List<(Guid id, ITexture texture)> inputTextures,
+    int modelPart = 0
+  ) {
+    var material = MeshedNodes[modelPart]?.Mesh?.Material;
+    // var targetTexture = textureManager.GetTexture(material!.BaseColorTextureIndex);
+    var targetTexture = inputTextures.Where(x => x.texture.TextureIndex == material!.BaseColorTextureIndex).Single();
+    MeshedNodes[modelPart]?.Mesh?.BindToTexture(textureManager, targetTexture.id);
+  }
+
   public void BindToTexture(
     TextureManager textureManager,
     string texturePath,
@@ -222,50 +233,50 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
-  public unsafe void UpdateAnimation(int idx, float time) {
-    if (Animations.Count < 1) {
-      Logger.Error($".glTF of {Owner!.Name} does not contain animation.");
-      return;
-    }
+  // public unsafe void UpdateAnimation(int idx, float time) {
+  //   if (Animations.Count < 1) {
+  //     Logger.Error($".glTF of {Owner!.Name} does not contain animation.");
+  //     return;
+  //   }
 
-    if (idx > Animations.Count - 1) {
-      Logger.Error($"No animation with index {idx}");
-      return;
-    }
+  //   if (idx > Animations.Count - 1) {
+  //     Logger.Error($"No animation with index {idx}");
+  //     return;
+  //   }
 
-    bool updated = false;
-    var animation = Animations[idx];
-    foreach (var channel in animation.Channels) {
-      var sampler = animation.Samplers[channel.SamplerIndex];
-      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
-        continue;
-      }
-      for (int i = 0; i < sampler.Inputs.Count - 1; i++) {
-        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
-          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
-          if (u <= 1.0f) {
-            switch (channel.Path) {
-              case AnimationChannel.PathType.Translation:
-                sampler.Translate(i, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Rotation:
-                sampler.Rotate(i, time, channel.Node);
-                break;
-              case AnimationChannel.PathType.Scale:
-                sampler.Scale(i, time, channel.Node);
-                break;
-            }
-            updated = true;
-          }
-        }
-      }
-    }
-    if (updated) {
-      foreach (var node in Nodes) {
-        node.Update();
-      }
-    }
-  }
+  //   bool updated = false;
+  //   var animation = Animations[idx];
+  //   foreach (var channel in animation.Channels) {
+  //     var sampler = animation.Samplers[channel.SamplerIndex];
+  //     if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
+  //       continue;
+  //     }
+  //     for (int i = 0; i < sampler.Inputs.Count - 1; i++) {
+  //       if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
+  //         float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
+  //         if (u <= 1.0f) {
+  //           switch (channel.Path) {
+  //             case AnimationChannel.PathType.Translation:
+  //               sampler.Translate(i, time, channel.Node);
+  //               break;
+  //             case AnimationChannel.PathType.Rotation:
+  //               sampler.Rotate(i, time, channel.Node);
+  //               break;
+  //             case AnimationChannel.PathType.Scale:
+  //               sampler.Scale(i, time, channel.Node);
+  //               break;
+  //           }
+  //           updated = true;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   if (updated) {
+  //     foreach (var node in Nodes) {
+  //       node.Update();
+  //     }
+  //   }
+  // }
 
   public void CalculateBoundingBox(ref Node meshNode, ref BoundingBox boundingBox) {
     var bb = BoundingBox.GetBoundingBox(meshNode.Mesh?.Vertices);

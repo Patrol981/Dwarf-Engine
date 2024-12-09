@@ -97,6 +97,11 @@ public class TextureManager : IDisposable {
     return LoadedTextures.GetValueOrDefault(key) ?? null!;
   }
 
+  public (Guid guid, ITexture texture) GetTexture(int textureIndex) {
+    var target = LoadedTextures.Single(x => x.Value.TextureIndex == textureIndex);
+    return (target.Key, target.Value);
+  }
+
   public Guid GetTextureId(string textureName) {
     foreach (var tex in LoadedTextures) {
       if (tex.Value.TextureName == textureName) {

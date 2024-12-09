@@ -246,6 +246,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     Frustum.GetFrustrum(out var planes);
     entities = Frustum.FilterObjectsByPlanes(in planes, entities).ToArray();
 
+    // Logger.Info($"Current renderable: {entities.Length} entities");
+
     List<Node> skinnedNodes = [];
     List<Node> notSkinnedNodes = [];
 

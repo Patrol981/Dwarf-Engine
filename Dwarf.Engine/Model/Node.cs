@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dwarf.AbstractionLayer;
 using Dwarf.Math;
 using Dwarf.Model.Animation;
 
@@ -16,7 +17,7 @@ public struct NodeInfo {
   }
 }
 
-public class Node {
+public class Node : ICloneable, IDisposable {
   public const int MAX_NUM_JOINTS = 128;
 
   public Node? Parent;
@@ -72,27 +73,44 @@ public class Node {
     }
   }
 
-  public Task DrawNode(IntPtr commandBuffer, uint firstInstance = 0) {
-    if (!HasMesh || !Enabled) return Task.CompletedTask;
+  public void DrawNode(IntPtr commandBuffer, int vertexOffset, uint firstInstance = 0) {
+    if (!HasMesh || !Enabled) return;
+
+    if (Mesh!.HasIndexBuffer) {
+      ParentRenderer.Renderer.CommandList.DrawIndexed(commandBuffer, Mesh!.IndexCount, 1, 0, vertexOffset, firstInstance);
+    } else {
+      ParentRenderer.Renderer.CommandList.Draw(commandBuffer, Mesh!.VertexCount, 1, 0, firstInstance);
+    }
+  }
+
+  public void DrawNode(IntPtr commandBuffer, uint firstInstance = 0) {
+    if (!HasMesh || !Enabled) return;
 
     if (Mesh!.HasIndexBuffer) {
       ParentRenderer.Renderer.CommandList.DrawIndexed(commandBuffer, Mesh!.IndexCount, 1, 0, 0, firstInstance);
     } else {
       ParentRenderer.Renderer.CommandList.Draw(commandBuffer, Mesh!.VertexCount, 1, 0, firstInstance);
     }
-    return Task.CompletedTask;
   }
 
-  public Task BindNode(IntPtr commandBuffer) {
-    if (!HasMesh || !Enabled) return Task.CompletedTask;
+  public void BindNode(IntPtr commandBuffer) {
+    if (!HasMesh || !Enabled) return;
 
     ParentRenderer.Renderer.CommandList.BindVertex(commandBuffer, Mesh!.VertexBuffer!, 0);
 
     if (Mesh!.HasIndexBuffer) {
       ParentRenderer.Renderer.CommandList.BindIndex(commandBuffer, Mesh!.IndexBuffer!);
     }
+  }
 
-    return Task.CompletedTask;
+  public void BindNode(IntPtr commandBuffer, DwarfBuffer vertexBuffer, DwarfBuffer indexBuffer, ulong vertexOffset, ulong indexOffset) {
+    if (!HasMesh || !Enabled) return;
+
+    ParentRenderer.Renderer.CommandList.BindVertex(commandBuffer, vertexBuffer, vertexOffset);
+
+    if (Mesh!.HasIndexBuffer) {
+      ParentRenderer.Renderer.CommandList.BindIndex(commandBuffer, indexBuffer, indexOffset);
+    }
   }
 
   public void Update() {
@@ -124,5 +142,45 @@ public class Node {
   public void Dispose() {
     Skin?.Dispose();
     Mesh?.Dispose();
+  }
+
+  public Node CloneNode(Node parent) {
+    var clone = (Node)Clone();
+    clone.Parent = parent;
+    return clone;
+  }
+
+  public object Clone() {
+    var clone = new Node {
+      Parent = null,
+      Index = Index,
+      NodeMatrix = NodeMatrix,
+      Name = Name,
+      Mesh = (Mesh)Mesh?.Clone()! ?? null!,
+      Skin = Skin?.Clone() as Skin,
+      // Skin = Skin,
+      SkinIndex = SkinIndex,
+      Translation = Translation,
+      Rotation = Rotation,
+      Scale = Scale,
+      TranslationOffset = TranslationOffset,
+      RotationOffset = RotationOffset,
+      ScaleOffset = ScaleOffset,
+      UseCachedMatrix = UseCachedMatrix,
+      CachedLocalMatrix = CachedLocalMatrix,
+      CachedMatrix = CachedMatrix,
+      BoundingVolume = BoundingVolume,
+      AABB = AABB,
+      Enabled = Enabled,
+      AnimationTimer = AnimationTimer
+    };
+
+    clone.Children = Children.Select(child => {
+      var childClone = child.CloneNode(clone);
+      childClone.Parent = clone;
+      return childClone;
+    }).ToList();
+
+    return clone;
   }
 }

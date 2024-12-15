@@ -41,23 +41,15 @@ public enum AlphaMode {
 }
 
 public class MaterialComponent : Component {
-  public Material Material { get; set; }
   private MaterialData _materialData;
 
   public MaterialComponent() {
     Init();
-    Material = new Material();
-  }
-
-  public MaterialComponent(Material material) {
-    Init();
-    Material = material;
   }
 
   public MaterialComponent(Vector3 color) {
     Init();
     _materialData.Color = color;
-    Material = new Material();
   }
 
   private void Init() {

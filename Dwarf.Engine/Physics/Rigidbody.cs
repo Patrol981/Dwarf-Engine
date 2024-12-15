@@ -8,13 +8,14 @@ using Dwarf.Rendering;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;
-
+using Vortice.Vulkan;
 using static Dwarf.Physics.JoltConfig;
 
 namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator;
   private IPhysicsBody _bodyInterface;
 
   private BodyID _bodyId;
@@ -32,6 +33,7 @@ public class Rigidbody : Component, IDisposable {
   public Rigidbody() { }
 
   public Rigidbody(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     PrimitiveType colliderShape,
     float inputRadius,
@@ -40,6 +42,7 @@ public class Rigidbody : Component, IDisposable {
     bool physicsControlRotation = false
   ) {
     PrimitiveType = colliderShape;
+    _vmaAllocator = vmaAllocator;
     _device = device;
     _inputRadius = inputRadius;
     Flipped = flip;
@@ -48,6 +51,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public Rigidbody(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     PrimitiveType primitiveType,
     float sizeX,
@@ -58,6 +62,7 @@ public class Rigidbody : Component, IDisposable {
     bool physicsControlRotation = false
   ) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
     PrimitiveType = primitiveType;
     Flipped = flip;
     _motionType = motionType;
@@ -68,6 +73,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public Rigidbody(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     PrimitiveType primitiveType,
     float sizeX,
@@ -81,6 +87,7 @@ public class Rigidbody : Component, IDisposable {
     bool physicsControlRotation = false
   ) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
     PrimitiveType = primitiveType;
     Flipped = flip;
     _motionType = motionType;
@@ -123,7 +130,7 @@ public class Rigidbody : Component, IDisposable {
         break;
     }
 
-    Owner!.AddComponent(new ColliderMesh(_device, mesh));
+    Owner!.AddComponent(new ColliderMesh(_vmaAllocator, _device, mesh));
   }
 
   public unsafe void Init(in IPhysicsBody bodyInterface) {

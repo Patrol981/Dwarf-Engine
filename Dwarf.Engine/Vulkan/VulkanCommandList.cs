@@ -36,12 +36,12 @@ public class VulkanCommandList : CommandList {
     }
   }
 
-  public override void BindIndex(nint commandBuffer, uint meshIndex, DwarfBuffer[] indexBuffers) {
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffers[meshIndex].GetBuffer(), 0, VkIndexType.Uint32);
+  public override void BindIndex(nint commandBuffer, uint meshIndex, DwarfBuffer[] indexBuffers, ulong offset = 0) {
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffers[meshIndex].GetBuffer(), offset, VkIndexType.Uint32);
   }
 
-  public override void BindIndex(nint commandBuffer, DwarfBuffer indexBuffer) {
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer.GetBuffer(), 0, VkIndexType.Uint32);
+  public override void BindIndex(nint commandBuffer, DwarfBuffer indexBuffer, ulong offset = 0) {
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer.GetBuffer(), offset, VkIndexType.Uint32);
   }
 
   public override void Draw(

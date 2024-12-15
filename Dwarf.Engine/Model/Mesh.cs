@@ -4,11 +4,13 @@ using System.Runtime.CompilerServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
+using Vortice.Vulkan;
 
 namespace Dwarf;
 
-public class Mesh : IDisposable {
+public class Mesh : IDisposable, ICloneable {
   private readonly IDevice _device;
+  private readonly VmaAllocator _vmaAllocator;
 
   public Vertex[] Vertices = [];
   public uint[] Indices = [];
@@ -28,7 +30,8 @@ public class Mesh : IDisposable {
 
   public BoundingBox BoundingBox;
 
-  public Mesh(IDevice device, Matrix4x4 matrix = default) {
+  public Mesh(VmaAllocator vmaAllocator, IDevice device, Matrix4x4 matrix = default) {
+    _vmaAllocator = vmaAllocator;
     _device = device;
     Matrix = matrix;
   }
@@ -39,6 +42,7 @@ public class Mesh : IDisposable {
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       VertexCount,
@@ -54,6 +58,7 @@ public class Mesh : IDisposable {
     }
 
     VertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       VertexCount,
@@ -74,6 +79,7 @@ public class Mesh : IDisposable {
     ulong indexSize = sizeof(uint);
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       IndexCount,
@@ -89,6 +95,7 @@ public class Mesh : IDisposable {
     }
 
     IndexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       IndexCount,
@@ -105,7 +112,7 @@ public class Mesh : IDisposable {
     TextureIdReference = textureManager.GetTextureId(texturePath);
 
     if (TextureIdReference == Guid.Empty) {
-      var texture = await TextureLoader.LoadFromPath(_device, texturePath);
+      var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath);
       textureManager.AddTexture(texture);
       TextureIdReference = textureManager.GetTextureId(texturePath);
 
@@ -143,5 +150,27 @@ public class Mesh : IDisposable {
     if (HasIndexBuffer) {
       IndexBuffer?.Dispose();
     }
+  }
+
+  public object Clone() {
+    var clone = new Mesh(_vmaAllocator, _device) {
+      Vertices = Vertices,
+      Indices = Indices,
+
+      VertexCount = VertexCount,
+      IndexCount = IndexCount,
+
+      TextureIdReference = TextureIdReference,
+      Material = Material,
+
+      Matrix = Matrix,
+
+      BoundingBox = BoundingBox
+    };
+
+    return clone;
+
+    // public DwarfBuffer? VertexBuffer { get; private set; }
+    // public DwarfBuffer? IndexBuffer { get; private set; }
   }
 }

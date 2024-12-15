@@ -6,7 +6,8 @@ public class FontStashManager : FontStashSharp.Interfaces.ITexture2DManager {
 
   public object CreateTexture(int width, int height) {
     var device = Application.Instance.Device;
-    return new VulkanTexture(device, width, height);
+    var vmaAllocator = Application.Instance.VmaAllocator;
+    return new VulkanTexture(vmaAllocator, device, width, height);
   }
   public Point GetTextureSize(object texture) {
     var t = (VulkanTexture)texture;

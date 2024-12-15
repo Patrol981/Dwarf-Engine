@@ -126,6 +126,14 @@ public static class EntityCreator {
     }
   }
 
+  public static MeshRenderer CopyModel(in MeshRenderer copyRef) {
+    var app = Application.Instance;
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    copyRef.CopyTo(ref model);
+    // app.AddModelToReloadQueue(model);
+    return model;
+  }
+
   public static async Task<Entity> Create3DPrimitive(
     string entityName,
     string texturePath,
@@ -168,7 +176,7 @@ public static class EntityCreator {
   }
 
   public static void AddRigdbody(
-    VulkanDevice device,
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float radius,
@@ -177,12 +185,12 @@ public static class EntityCreator {
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, radius, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
   public static void AddRigdbody(
-    VulkanDevice device,
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
@@ -193,12 +201,12 @@ public static class EntityCreator {
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, motionType, flip));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
   public static void AddRigdbody(
-    VulkanDevice device,
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
@@ -212,14 +220,14 @@ public static class EntityCreator {
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
   public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, MotionType motionType = MotionType.Dynamic, float radius = 1) {
-    var device = Application.Instance.Device;
+    var app = Application.Instance;
 
-    AddRigdbody(device, ref entity, primitiveType, radius, motionType);
+    AddRigdbody(app, ref entity, primitiveType, radius, motionType);
   }
 
   public static void AddRigdbody(
@@ -234,8 +242,8 @@ public static class EntityCreator {
     MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip);
+    var app = Application.Instance;
+    AddRigdbody(app, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip);
   }
 
   public static void AddRigdbody(
@@ -246,8 +254,8 @@ public static class EntityCreator {
     MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip);
+    var app = Application.Instance;
+    AddRigdbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip);
   }
 
   public static void AddRigdbody(
@@ -256,7 +264,7 @@ public static class EntityCreator {
     MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, default, motionType: motionType, flip: flip);
+    var app = Application.Instance;
+    AddRigdbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip);
   }
 }

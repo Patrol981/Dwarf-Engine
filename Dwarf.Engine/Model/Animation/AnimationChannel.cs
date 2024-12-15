@@ -1,6 +1,6 @@
 namespace Dwarf.Model.Animation;
 
-public class AnimationChannel {
+public class AnimationChannel : ICloneable {
   public enum PathType {
     Translation,
     Rotation,
@@ -10,4 +10,12 @@ public class AnimationChannel {
   public PathType Path;
   public Node Node = null!;
   public int SamplerIndex;
+
+  public object Clone() {
+    return new AnimationChannel {
+      Path = Path,
+      Node = Node,
+      SamplerIndex = SamplerIndex
+    };
+  }
 }

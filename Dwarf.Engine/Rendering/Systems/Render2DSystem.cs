@@ -16,11 +16,12 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   private DwarfBuffer _spriteBuffer = null!;
 
   public Render2DSystem(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -70,13 +71,14 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     .Build();
 
     _spriteBuffer = new DwarfBuffer(
-        _device,
-        (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
-        (uint)entities.Length,
-        BufferUsage.UniformBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
-      );
+      _vmaAllocator,
+      _device,
+      (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+      (uint)entities.Length,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
+    );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 

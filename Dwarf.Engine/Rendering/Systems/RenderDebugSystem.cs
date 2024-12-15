@@ -12,11 +12,12 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,

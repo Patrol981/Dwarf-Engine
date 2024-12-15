@@ -3,6 +3,8 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Model;
 using ImGuiNET;
 
+namespace Dwarf.Rendering.UI.Utils;
+
 public partial class EditorUtils {
   private const string Tab = "\t";
 

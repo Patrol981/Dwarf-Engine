@@ -2,13 +2,16 @@ using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
+using Vortice.Vulkan;
 namespace Dwarf;
 
 public class TextureManager : IDisposable {
   private readonly VulkanDevice _device;
+  private readonly VmaAllocator _vmaAllocator;
 
-  public TextureManager(VulkanDevice device) {
+  public TextureManager(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
     LoadedTextures = [];
     TextureArray = [];
   }
@@ -22,7 +25,7 @@ public class TextureManager : IDisposable {
   public async Task<Task> AddTextureArray(string textureName, params string[] paths) {
     var baseData = await VulkanTextureArray.LoadDataFromPath(paths[0]);
     var id = Guid.NewGuid();
-    var texture = new VulkanTextureArray(_device, baseData.Width, baseData.Height, paths, textureName);
+    var texture = new VulkanTextureArray(_vmaAllocator, _device, baseData.Width, baseData.Height, paths, textureName);
     TextureArray.TryAdd(id, texture);
 
     return Task.CompletedTask;
@@ -35,7 +38,7 @@ public class TextureManager : IDisposable {
         return Task.CompletedTask;
       }
     }
-    var texture = await TextureLoader.LoadFromPath(_device, texturePath, flip);
+    var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath, flip);
     LoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
@@ -62,20 +65,20 @@ public class TextureManager : IDisposable {
     return false;
   }
 
-  public static async Task<ITexture[]> AddTextures(IDevice device, string[] paths, int flip = 1) {
+  public static async Task<ITexture[]> AddTextures(VmaAllocator vmaAllocator, IDevice device, string[] paths, int flip = 1) {
     var textures = new ITexture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {
-      textures[i] = await TextureLoader.LoadFromPath(device, paths[i], flip);
+      textures[i] = await TextureLoader.LoadFromPath(vmaAllocator, device, paths[i], flip);
     }
     return textures;
   }
 
-  public static ITexture[] AddTextures(IDevice device, List<byte[]> bytes, string[] nameTags) {
+  public static ITexture[] AddTextures(VmaAllocator vmaAllocator, IDevice device, List<byte[]> bytes, string[] nameTags) {
     var textures = new ITexture[bytes.Count];
     for (int i = 0; i < bytes.Count; i++) {
       var imgData = TextureLoader.LoadDataFromBytes(bytes[i]);
       _ = Application.Instance.CurrentAPI switch {
-        RenderAPI.Vulkan => textures[i] = new VulkanTexture((VulkanDevice)device, imgData.Width, imgData.Height, nameTags[i]),
+        RenderAPI.Vulkan => textures[i] = new VulkanTexture(vmaAllocator, (VulkanDevice)device, imgData.Width, imgData.Height, nameTags[i]),
         _ => throw new NotImplementedException(),
       };
       textures[i].SetTextureData(imgData.Data);

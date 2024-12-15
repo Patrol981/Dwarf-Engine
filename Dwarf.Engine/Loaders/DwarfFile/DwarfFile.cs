@@ -92,7 +92,8 @@ public class FileMesh {
   }
 
   public static Mesh FromFileMesh(FileMesh fileMesh) {
-    var mesh = new Mesh(Application.Instance.Device) {
+    var app = Application.Instance;
+    var mesh = new Mesh(app.VmaAllocator, app.Device) {
       Vertices = fileMesh.Vertices?.Count > 0 ? FileVertex.FromFileVertices(fileMesh.Vertices) : null!,
       Indices = fileMesh.Indices?.Count > 0 ? [.. fileMesh.Indices] : null!,
       VertexCount = fileMesh.VertexCount,

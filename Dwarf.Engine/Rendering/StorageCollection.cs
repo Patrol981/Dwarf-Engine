@@ -19,15 +19,17 @@ public struct StorageData {
 
 public class StorageCollection : IDisposable {
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private readonly DescriptorPool _dynamicPool = null!;
 
-  public StorageCollection(VulkanDevice device) {
+  public StorageCollection(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
 
     _dynamicPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(30)
       .AddPoolSize(VkDescriptorType.StorageBuffer, 30)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
       .Build();
   }
 
@@ -53,6 +55,7 @@ public class StorageCollection : IDisposable {
     };
     for (int i = 0; i < arraySize; i++) {
       storage.Buffers[i] = new(
+        _vmaAllocator,
         device,
         bufferSize,
         bufferCount,
@@ -96,6 +99,7 @@ public class StorageCollection : IDisposable {
     ) {
       Storages[key].Buffers[index]?.Dispose();
       Storages[key].Buffers[index] = new(
+        _vmaAllocator,
         _device,
         (ulong)Unsafe.SizeOf<ObjectData>(),
         (ulong)elemCount,

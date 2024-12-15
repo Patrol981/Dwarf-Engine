@@ -9,11 +9,12 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.Systems;
 public class DirectionalLightSystem : SystemBase {
   public DirectionalLightSystem(
+    VmaAllocator vmaAllocator,
     IDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];

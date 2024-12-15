@@ -233,51 +233,6 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
   }
 
-  // public unsafe void UpdateAnimation(int idx, float time) {
-  //   if (Animations.Count < 1) {
-  //     Logger.Error($".glTF of {Owner!.Name} does not contain animation.");
-  //     return;
-  //   }
-
-  //   if (idx > Animations.Count - 1) {
-  //     Logger.Error($"No animation with index {idx}");
-  //     return;
-  //   }
-
-  //   bool updated = false;
-  //   var animation = Animations[idx];
-  //   foreach (var channel in animation.Channels) {
-  //     var sampler = animation.Samplers[channel.SamplerIndex];
-  //     if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
-  //       continue;
-  //     }
-  //     for (int i = 0; i < sampler.Inputs.Count - 1; i++) {
-  //       if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
-  //         float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
-  //         if (u <= 1.0f) {
-  //           switch (channel.Path) {
-  //             case AnimationChannel.PathType.Translation:
-  //               sampler.Translate(i, time, channel.Node);
-  //               break;
-  //             case AnimationChannel.PathType.Rotation:
-  //               sampler.Rotate(i, time, channel.Node);
-  //               break;
-  //             case AnimationChannel.PathType.Scale:
-  //               sampler.Scale(i, time, channel.Node);
-  //               break;
-  //           }
-  //           updated = true;
-  //         }
-  //       }
-  //     }
-  //   }
-  //   if (updated) {
-  //     foreach (var node in Nodes) {
-  //       node.Update();
-  //     }
-  //   }
-  // }
-
   public void CalculateBoundingBox(ref Node meshNode, ref BoundingBox boundingBox) {
     var bb = BoundingBox.GetBoundingBox(meshNode.Mesh?.Vertices);
 
@@ -297,8 +252,6 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
           node.BoundingVolume.Min = node.AABB.Min;
           node.BoundingVolume.Max = node.AABB.Max;
           node.BoundingVolume.IsValid = true;
-
-          Logger.Info("AAAAAA");
         }
       }
     }
@@ -312,6 +265,60 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     foreach (var child in node.Children!) {
       CalculateBoundingBox(child, node);
     }
+  }
+
+  private void HandleCopyNode(Node node, ref Node[] linearNodes, ref int index) {
+    linearNodes[index] = node;
+    index++;
+    if (node.Children?.Count > 0) {
+      foreach (var child in node.Children) {
+        HandleCopyNode(child, ref linearNodes, ref index);
+      }
+    }
+  }
+
+  public void CopyTo(ref MeshRenderer otherMeshRenderer) {
+    otherMeshRenderer.NodesCount = NodesCount;
+    otherMeshRenderer.MeshedNodesCount = MeshedNodesCount;
+    otherMeshRenderer.LinearNodesCount = LinearNodesCount;
+
+    otherMeshRenderer.Nodes = new Node[NodesCount];
+    otherMeshRenderer.MeshedNodes = new Node[MeshedNodesCount];
+    otherMeshRenderer.LinearNodes = new Node[LinearNodesCount];
+
+    otherMeshRenderer.Nodes = Nodes.Select(x => (Node)x.Clone()).ToArray();
+    var tmpLinear = new Node[LinearNodesCount];
+    // otherMeshRenderer.LinearNodes = LinearNodes.Select(x => (Node)x.Clone()).ToArray();
+    // otherMeshRenderer.MeshedNodes = MeshedNodes.Select(x => (Node)x.Clone()).ToArray();
+
+    int index = 0;
+    foreach (var node in otherMeshRenderer.Nodes) {
+      HandleCopyNode(node, ref tmpLinear, ref index);
+    }
+    otherMeshRenderer.LinearNodes = tmpLinear;
+    otherMeshRenderer.MeshedNodes = otherMeshRenderer.LinearNodes.Where(x => x.HasMesh).ToArray();
+
+    foreach (var node in otherMeshRenderer.Nodes) {
+      node.ParentRenderer = otherMeshRenderer;
+    }
+    foreach (var node in otherMeshRenderer.LinearNodes) {
+      node.ParentRenderer = otherMeshRenderer;
+    }
+    foreach (var node in otherMeshRenderer.MeshedNodes) {
+      node.ParentRenderer = otherMeshRenderer;
+    }
+
+    // otherMeshRenderer.Animations = Animations.Select(x => (Animation)x.Clone()).ToList();
+    // otherMeshRenderer.Skins = [.. Skins];
+    // otherMeshRenderer.Ssbo = Ssbo;
+
+    // otherMeshRenderer.InverseMatrices = new Matrix4x4[InverseMatrices.Length];
+    // InverseMatrices.CopyTo(otherMeshRenderer.InverseMatrices, 0);
+
+    otherMeshRenderer.FileName = FileName;
+    otherMeshRenderer.TextureFlipped = TextureFlipped;
+
+    otherMeshRenderer.InitBase();
   }
 
   public unsafe void Dispose() {
@@ -344,8 +351,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
 
   public VkDescriptorSet SkinDescriptor => _skinDescriptor;
-  public DwarfBuffer EntireSkinSSBO { get; private set; } = null!;
-  public string FileName { get; } = "";
+  public string FileName { get; private set; } = "";
   public int TextureFlipped { get; set; } = 1;
   public void AddNode(Node node) {
     node.ParentRenderer = this;

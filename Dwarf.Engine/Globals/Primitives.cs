@@ -19,7 +19,7 @@ public static class Primitives {
   static Vector3 Color = new(1f, 1f, 1f);
 
   public static Mesh CreatePrimitive(PrimitiveType primitiveType) {
-    var mesh = new Mesh(Application.Instance.Device);
+    var mesh = new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device);
 
     switch (primitiveType) {
       case PrimitiveType.Cylinder:
@@ -105,7 +105,7 @@ public static class Primitives {
       indices[i] = (uint)cornerIndex + (uint)numVertices.X + 1;
     }
 
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = vertices,
       Indices = indices,
       Matrix = Matrix4x4.Identity
@@ -130,7 +130,7 @@ public static class Primitives {
         });
       }
     }
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = vertices.ToArray(),
       Matrix = Matrix4x4.Identity
     };
@@ -162,7 +162,7 @@ public static class Primitives {
       vertexOffset += (uint)n.Mesh!.Vertices.Length;
     }
 
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = [.. vertices],
       Indices = [.. indices],
       Matrix = Matrix4x4.Identity
@@ -243,7 +243,7 @@ public static class Primitives {
       0
     ];
 
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = vertices,
       Indices = indices,
       Matrix = Matrix4x4.Identity
@@ -313,7 +313,7 @@ public static class Primitives {
       indices.Add(bottom2);
     }
 
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = [.. vertices],
       Indices = [.. indices],
       Matrix = Matrix4x4.Identity
@@ -440,7 +440,7 @@ public static class Primitives {
     }
     */
 
-    return new Mesh(Application.Instance.Device) {
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = vertices,
       Matrix = Matrix4x4.Identity
     };

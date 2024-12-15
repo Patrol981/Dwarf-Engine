@@ -53,6 +53,7 @@ public class SystemCollection : IDisposable {
 
   public void ValidateSystems(
     ReadOnlySpan<Entity> entities,
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
@@ -66,7 +67,7 @@ public class SystemCollection : IDisposable {
       var textures = _render3DSystem.CheckTextures(modelEntities);
       if (!sizes || !textures || Reload3DRenderSystem) {
         Reload3DRenderSystem = false;
-        Reload3DRenderer(device, renderer, layouts, ref textureManager, pipelineConfigInfo, entities);
+        Reload3DRenderer(vmaAllocator, device, renderer, layouts, ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
@@ -77,7 +78,7 @@ public class SystemCollection : IDisposable {
       var textures = _render2DSystem.CheckTextures(spriteEntities);
       if (!sizes || !textures || Reload2DRenderSystem) {
         Reload2DRenderSystem = false;
-        Reload2DRenderer(device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo, entities);
+        Reload2DRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
@@ -88,7 +89,7 @@ public class SystemCollection : IDisposable {
       var textures = _renderUISystem.CheckTextures(canvasEntities);
       if (!sizes || !textures || ReloadUISystem) {
         ReloadUISystem = false;
-        ReloadUIRenderer(device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
+        ReloadUIRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
       }
     }
   }
@@ -97,6 +98,7 @@ public class SystemCollection : IDisposable {
     Application app,
     SystemCreationFlags creationFlags,
     SystemConfiguration systemConfiguration,
+    VmaAllocator vmaAllocator,
     IDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
@@ -107,6 +109,7 @@ public class SystemCollection : IDisposable {
       app.Systems,
       creationFlags,
       systemConfiguration,
+      vmaAllocator,
       (VulkanDevice)device,
       renderer,
       layouts,
@@ -138,6 +141,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload3DRenderer(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
@@ -147,6 +151,7 @@ public class SystemCollection : IDisposable {
   ) {
     _render3DSystem?.Dispose();
     _render3DSystem = new Render3DSystem(
+      vmaAllocator,
       device,
       renderer,
       externalLayouts,
@@ -156,6 +161,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Reload2DRenderer(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
@@ -165,6 +171,7 @@ public class SystemCollection : IDisposable {
   ) {
     _render2DSystem?.Dispose();
     _render2DSystem = new Render2DSystem(
+      vmaAllocator,
       device,
       renderer,
       globalLayout,
@@ -174,6 +181,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void ReloadUIRenderer(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     Renderer renderer,
     VkDescriptorSetLayout globalLayout,
@@ -182,6 +190,7 @@ public class SystemCollection : IDisposable {
   ) {
     _renderUISystem?.Dispose();
     _renderUISystem = new RenderUISystem(
+      vmaAllocator,
       device,
       renderer,
       globalLayout,

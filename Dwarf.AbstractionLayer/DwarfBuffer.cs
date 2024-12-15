@@ -2,36 +2,50 @@ using Dwarf.Utils;
 
 using Vortice.Vulkan;
 
+using static Vortice.Vulkan.Vma;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.AbstractionLayer;
+
+public enum AllocationStrategy {
+  VulkanMemoryAllocator,
+  Custom
+}
 
 public unsafe class DwarfBuffer : IDisposable {
   public float LastTimeUsed = 0.0f;
 
   private readonly IDevice _device;
-  private void* _mapped;
-  private VkBuffer _buffer = VkBuffer.Null;
-  private VkDeviceMemory _memory = VkDeviceMemory.Null;
+  private readonly VmaAllocator _allocator;
+  private readonly VmaAllocation _allocation;
 
-  private ulong _bufferSize;
-  private ulong _instanceCount;
+  private void* _mapped;
+  private readonly VkBuffer _buffer = VkBuffer.Null;
+  private readonly VkDeviceMemory _memory = VkDeviceMemory.Null;
+
+  private readonly ulong _bufferSize;
+  private readonly ulong _instanceCount;
   private readonly ulong _instanceSize;
   private readonly ulong _alignmentSize;
   private readonly ulong _offsetAlignment;
   private readonly BufferUsage _usageFlags;
   private readonly MemoryProperty _memoryPropertyFlags;
 
+  private readonly AllocationStrategy _allocationStrategy;
+
   private readonly bool _isStagingBuffer = false;
 
   public DwarfBuffer(
+    VmaAllocator allocator,
     IDevice device,
     ulong instanceSize,
     ulong instanceCount,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
     ulong minOffsetAlignment = 1,
-    bool stagingBuffer = false
+    bool stagingBuffer = false,
+    bool cpuAccessible = true,
+    AllocationStrategy allocationStrategy = AllocationStrategy.VulkanMemoryAllocator
   ) {
     _device = device;
     _instanceSize = instanceSize;
@@ -42,17 +56,44 @@ public unsafe class DwarfBuffer : IDisposable {
 
     _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
     _bufferSize = _alignmentSize * _instanceCount;
-    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
-
     _isStagingBuffer = stagingBuffer;
+    _allocationStrategy = allocationStrategy;
+
+    if (allocationStrategy == AllocationStrategy.Custom) {
+      _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+      return;
+    }
+
+    if (allocator.IsNull) throw new ArgumentNullException(nameof(allocator));
+
+    VmaAllocationCreateInfo allocationCreateInfo = new() {
+      usage = VmaMemoryUsage.Auto
+    };
+    if (cpuAccessible) {
+      allocationCreateInfo.flags = VmaAllocationCreateFlags.HostAccessSequentialWrite |
+                                   VmaAllocationCreateFlags.Mapped;
+    }
+
+    VkBufferCreateInfo bufferInfo = new() {
+      size = _bufferSize,
+      usage = (VkBufferUsageFlags)usageFlags,
+      sharingMode = VkSharingMode.Exclusive
+    };
+    if (vmaCreateBuffer(allocator, in bufferInfo, in allocationCreateInfo, out _buffer, out _allocation) != VkResult.Success) {
+      throw new Exception("Failed to create buffer!");
+    }
+    _allocator = allocator;
   }
 
   public DwarfBuffer(
+    VmaAllocator allocator,
     IDevice device,
     ulong bufferSize,
     BufferUsage usageFlags,
     MemoryProperty propertyFlags,
-    bool stagingBuffer = false
+    bool stagingBuffer = false,
+    bool cpuAccessible = true,
+    AllocationStrategy allocationStrategy = AllocationStrategy.VulkanMemoryAllocator
   ) {
     _device = device;
     _instanceSize = bufferSize;
@@ -62,26 +103,66 @@ public unsafe class DwarfBuffer : IDisposable {
     _alignmentSize = bufferSize;
     _offsetAlignment = 1;
     _bufferSize = bufferSize;
-    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
-
     _isStagingBuffer = stagingBuffer;
+    _allocationStrategy = allocationStrategy;
+
+    if (allocationStrategy == AllocationStrategy.Custom) {
+      _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
+      return;
+    }
+
+    if (allocator.IsNull) throw new ArgumentNullException(nameof(allocator));
+
+    VmaAllocationCreateInfo allocationCreateInfo = new() {
+      usage = VmaMemoryUsage.Auto
+    };
+    if (cpuAccessible) {
+      allocationCreateInfo.flags = VmaAllocationCreateFlags.HostAccessSequentialWrite |
+                                   VmaAllocationCreateFlags.Mapped;
+    }
+
+    VkBufferCreateInfo bufferInfo = new() {
+      size = _bufferSize,
+      usage = (VkBufferUsageFlags)usageFlags,
+      sharingMode = VkSharingMode.Exclusive
+    };
+    if (vmaCreateBuffer(allocator, in bufferInfo, in allocationCreateInfo, out _buffer, out _allocation) != VkResult.Success) {
+      throw new Exception("Failed to create buffer!");
+    }
+    _allocator = allocator;
   }
 
   public void Map(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     fixed (void** ptr = &_mapped) {
-      vkMapMemory(_device.LogicalDevice, _memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
+      switch (_allocationStrategy) {
+        case AllocationStrategy.VulkanMemoryAllocator:
+          vmaMapMemory(_allocator, _allocation, ptr);
+          break;
+        case AllocationStrategy.Custom:
+          vkMapMemory(_device.LogicalDevice, _memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
+          break;
+      }
     }
   }
 
+  /*
   public static void Map(DwarfBuffer buff, ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
     fixed (void** ptr = &buff._mapped) {
       vkMapMemory(buff._device.LogicalDevice, buff._memory, offset, size, VkMemoryMapFlags.None, ptr).CheckResult();
     }
   }
+  */
 
   public void Unmap() {
     if (_mapped != null) {
-      vkUnmapMemory(_device.LogicalDevice, _memory);
+      switch (_allocationStrategy) {
+        case AllocationStrategy.VulkanMemoryAllocator:
+          vmaUnmapMemory(_allocator, _allocation);
+          break;
+        case AllocationStrategy.Custom:
+          vkUnmapMemory(_device.LogicalDevice, _memory);
+          break;
+      }
       _mapped = null;
     }
   }
@@ -105,7 +186,14 @@ public unsafe class DwarfBuffer : IDisposable {
       offset = offset,
       size = size
     };
-    return vkFlushMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
+    switch (_allocationStrategy) {
+      case AllocationStrategy.VulkanMemoryAllocator:
+        return vmaFlushAllocation(_allocator, _allocation, offset, size);
+      case AllocationStrategy.Custom:
+        return vkFlushMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
+      default:
+        throw new NotImplementedException();
+    }
   }
 
   public VkDescriptorBufferInfo GetDescriptorBufferInfo(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -123,7 +211,14 @@ public unsafe class DwarfBuffer : IDisposable {
       offset = offset,
       size = size
     };
-    return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
+    switch (_allocationStrategy) {
+      case AllocationStrategy.VulkanMemoryAllocator:
+        return vmaInvalidateAllocation(_allocator, _allocation, offset, size);
+      case AllocationStrategy.Custom:
+        return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
+      default:
+        throw new NotImplementedException();
+    }
   }
 
   public void WrtieToIndex(nint data, int index) {
@@ -187,95 +282,28 @@ public unsafe class DwarfBuffer : IDisposable {
   }
 
   public void FreeMemory() {
-    vkFreeMemory(_device.LogicalDevice, _memory);
+    if (_memory.IsNull) return;
+    switch (_allocationStrategy) {
+      case AllocationStrategy.VulkanMemoryAllocator:
+        vmaFreeMemory(_allocator, _allocation);
+        break;
+      case AllocationStrategy.Custom:
+        vkFreeMemory(_device.LogicalDevice, _memory);
+        break;
+    }
   }
 
   public void DestoryBuffer() {
-    vkDestroyBuffer(_device.LogicalDevice, _buffer);
+    if (_buffer.IsNull) return;
+    switch (_allocationStrategy) {
+      case AllocationStrategy.VulkanMemoryAllocator:
+        vmaDestroyBuffer(_allocator, _buffer, _allocation);
+        break;
+      case AllocationStrategy.Custom:
+        vkDestroyBuffer(_device.LogicalDevice, _buffer);
+        break;
+    }
   }
-
-  public void Resize(ulong newCount) {
-    /*
-    _device = device;
-    _instanceSize = bufferSize;
-    _instanceCount = 1;
-    _usageFlags = usageFlags;
-    _memoryPropertyFlags = propertyFlags;
-    _alignmentSize = bufferSize;
-    _offsetAlignment = 1;
-    _bufferSize = bufferSize;
-    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
-
-    _isStagingBuffer = stagingBuffer;
-    */
-
-    /*
-     _device = device;
-    _instanceSize = instanceSize;
-    _instanceCount = instanceCount;
-    _usageFlags = usageFlags;
-    _memoryPropertyFlags = propertyFlags;
-    _offsetAlignment = minOffsetAlignment;
-
-    _alignmentSize = GetAlignment(instanceSize, minOffsetAlignment);
-    _bufferSize = _alignmentSize * _instanceCount;
-    _device.CreateBuffer(_bufferSize, _usageFlags, _memoryPropertyFlags, out _buffer, out _memory);
-    */
-
-    _device.WaitDevice();
-    _device.WaitQueue();
-
-    Unmap();
-
-    var oldSize = _bufferSize;
-
-    _instanceCount = newCount;
-    _bufferSize = _alignmentSize * _instanceCount;
-
-    VkBufferCreateInfo bufferCreateInfo = new() {
-      sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      size = _bufferSize,
-      usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-      sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    VkBuffer newBuffer;
-    vkCreateBuffer(_device.LogicalDevice, &bufferCreateInfo, null, &newBuffer);
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device.LogicalDevice, newBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = new() {
-      sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      allocationSize = memRequirements.size,
-      memoryTypeIndex = _device.FindMemoryType(memRequirements.memoryTypeBits, MemoryProperty.HostVisible | MemoryProperty.HostCoherent)
-    };
-
-    VkDeviceMemory newBufferMemory;
-    vkAllocateMemory(_device.LogicalDevice, &allocInfo, null, &newBufferMemory);
-    vkBindBufferMemory(_device.LogicalDevice, newBuffer, newBufferMemory, 0);
-
-    void* oldData;
-    vkMapMemory(_device.LogicalDevice, _memory, 0, oldSize, 0, &oldData);
-
-    void* newData;
-    vkMapMemory(_device.LogicalDevice, newBufferMemory, 0, oldSize, 0, &newData);
-
-    // MemoryUtils.MemCopy(_mapped, (void*)data, (int)_bufferSize);
-    MemoryUtils.MemCopy((nint)newData, (nint)oldData, (int)oldSize);
-
-    vkUnmapMemory(_device.LogicalDevice, _memory);
-    vkUnmapMemory(_device.LogicalDevice, newBufferMemory);
-
-    vkDestroyBuffer(_device.LogicalDevice, _buffer, null);
-    vkFreeMemory(_device.LogicalDevice, _memory, null);
-
-    _buffer = newBuffer;
-    _memory = newBufferMemory;
-
-    Map();
-  }
-
   public void Dispose() {
     if (!_isStagingBuffer) {
       _device.WaitAllQueues();

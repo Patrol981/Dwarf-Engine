@@ -1,3 +1,4 @@
+using Dwarf.Model.Animation;
 using Dwarf.Rendering;
 namespace Dwarf.EntityComponentSystem;
 
@@ -143,6 +144,30 @@ public class Entity {
     var target = entities.Where(x => x.Name == name)
       .FirstOrDefault();
     return target ?? null!;
+  }
+
+  public Entity Clone() {
+    var clone = new Entity() {
+      Name = $"{Name} [CLONE]"
+    };
+
+    var transform = TryGetComponent<Transform>();
+    var material = TryGetComponent<MaterialComponent>();
+    var model = TryGetComponent<MeshRenderer>();
+
+    if (transform != null) {
+      clone.AddTransform(transform.Position, transform.Rotation, transform.Scale);
+    }
+    if (material != null) {
+      clone.AddMaterial(material.Color);
+    }
+    if (model != null) {
+      clone.AddComponent(EntityCreator.CopyModel(in model));
+      clone.AddComponent(new AnimationController());
+      clone.GetComponent<AnimationController>().Init(clone.GetComponent<MeshRenderer>());
+    }
+
+    return clone;
   }
 
   public bool Active { get; set; } = true;

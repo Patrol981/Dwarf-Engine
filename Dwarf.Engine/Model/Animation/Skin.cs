@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Dwarf.Model.Animation;
 
-public class Skin : IDisposable {
+public class Skin : IDisposable, ICloneable {
   public string Name { get; set; } = default!;
 
   public Node SkeletonRoot = null!;
@@ -22,5 +22,22 @@ public class Skin : IDisposable {
     }
   }
   public void Dispose() {
+  }
+
+  public object Clone() {
+    var clone = new Skin();
+    if (SkeletonRoot != null) {
+      clone.SkeletonRoot = (Node)SkeletonRoot.Clone();
+    }
+    if (InverseBindMatrices != null) {
+      clone.InverseBindMatrices = InverseBindMatrices;
+    }
+    if (Joints != null) {
+      clone.Joints = Joints.Select(x => (Node)x.Clone()).ToList();
+    }
+
+    clone.JointsCount = JointsCount;
+
+    return clone;
   }
 }

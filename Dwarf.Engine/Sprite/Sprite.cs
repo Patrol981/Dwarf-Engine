@@ -16,6 +16,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf;
 public class Sprite : Component, IDisposable, I2DCollision {
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator;
 
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
@@ -31,8 +32,9 @@ public class Sprite : Component, IDisposable, I2DCollision {
 
   public Sprite() { }
 
-  public Sprite(VulkanDevice device) {
+  public Sprite(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
 
     CreateSpriteVertexData();
 
@@ -100,7 +102,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   private void CreateSpriteVertexData() {
-    _spriteMesh = new(_device) {
+    _spriteMesh = new(_vmaAllocator, _device) {
       Vertices = new Vertex[4]
     };
     _spriteMesh.Vertices[0] = new Vertex {
@@ -197,7 +199,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   private void CreatePixelPerfectVertices(ref ImageResult image) {
-    _spriteMesh = new(_device);
+    _spriteMesh = new(_vmaAllocator, _device);
 
     for (uint y = 0; y < image.Height; y++) {
       for (uint x = 0; x < image.Width; x++) {
@@ -242,6 +244,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -256,6 +259,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -274,6 +278,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     ulong indexSize = sizeof(uint);
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,
@@ -289,6 +294,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     //stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,

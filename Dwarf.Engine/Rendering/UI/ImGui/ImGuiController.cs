@@ -13,10 +13,12 @@ using SDL3;
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
+using static Vortice.Vulkan.Vma;
 
 namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
+  private readonly VmaAllocator _vmaAllocator;
   private readonly Renderer _renderer;
 
   private DwarfBuffer _vertexBuffer = default!;
@@ -61,8 +63,9 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(VulkanDevice device, Renderer renderer) {
+  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, Renderer renderer) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
     _renderer = renderer;
 
     _firstFrame = false;
@@ -429,11 +432,13 @@ public partial class ImGuiController : IDisposable {
       vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
 
       _vertexBuffer = new(
+        _vmaAllocator,
         _device,
         (ulong)sizeof(ImDrawVert),
         (ulong)drawData.TotalVtxCount,
         BufferUsage.VertexBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        allocationStrategy: AllocationStrategy.Custom
       );
       Application.Instance.Mutex.ReleaseMutex();
     }
@@ -451,11 +456,13 @@ public partial class ImGuiController : IDisposable {
       vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
 
       _indexBuffer = new(
+        _vmaAllocator,
         _device,
         (ulong)sizeof(ushort),
         (ulong)drawData.TotalIdxCount,
         BufferUsage.IndexBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        allocationStrategy: AllocationStrategy.Custom
       );
       Application.Instance.Mutex.ReleaseMutex();
     }

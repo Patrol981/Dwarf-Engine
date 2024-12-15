@@ -14,12 +14,13 @@ public class VulkanTextureArray : VulkanTexture {
   private PackedTexture _textures;
 
   public VulkanTextureArray(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     int width,
     int height,
     string[] paths,
     string textureName = ""
-  ) : base(device, width, height, textureName) {
+  ) : base(vmaAllocator, device, width, height, textureName) {
     _paths = paths;
 
     var textures = ImageUtils.LoadTextures(_paths);
@@ -33,6 +34,7 @@ public class VulkanTextureArray : VulkanTexture {
 
   public new void SetTextureData(byte[] data) {
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)_textures.Size,
       BufferUsage.TransferSrc,

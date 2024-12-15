@@ -21,7 +21,7 @@ public class Button : Component, I2DCollision, IUIElement {
   }
   public Button(Application application, string texturePath) {
     _application = application;
-    _guiTexture = new GuiTexture(application.Device);
+    _guiTexture = new GuiTexture(application.VmaAllocator, application.Device);
     _guiTexture.BindToTexture(_application.TextureManager, texturePath, false);
   }
 

@@ -19,6 +19,7 @@ using Vortice.Vulkan;
 
 // using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
+using static Vortice.Vulkan.Vma;
 
 namespace Dwarf;
 
@@ -115,11 +116,23 @@ public class Application {
 
     Window = new Window(windowSize.X, windowSize.Y, appName, Fullscreen, debugMode);
     Device = new VulkanDevice(Window);
+
+    VmaAllocatorCreateFlags allocatorFlags = VmaAllocatorCreateFlags.KHRDedicatedAllocation | VmaAllocatorCreateFlags.KHRBindMemory2;
+    VmaAllocatorCreateInfo allocatorCreateInfo = new() {
+      flags = allocatorFlags,
+      instance = Device.VkInstance,
+      vulkanApiVersion = VkVersion.Version_1_4,
+      physicalDevice = Device.PhysicalDevice,
+      device = Device.LogicalDevice,
+    };
+    vmaCreateAllocator(allocatorCreateInfo, out var allocator);
+    VmaAllocator = allocator;
+
     Renderer = new Renderer(Window, Device);
     Systems = new SystemCollection();
-    StorageCollection = new StorageCollection(Device);
+    StorageCollection = new StorageCollection(VmaAllocator, Device);
 
-    _textureManager = new(Device);
+    _textureManager = new(VmaAllocator, Device);
     _systemCreationFlags = systemCreationFlags;
 
     systemConfiguration ??= SystemConfiguration.Default;
@@ -195,7 +208,7 @@ public class Application {
     _globalPool = null!;
     _skybox?.Dispose();
 
-    StorageCollection = new(Device);
+    StorageCollection = new(VmaAllocator, Device);
     Mutex.ReleaseMutex();
     await Init();
 
@@ -232,7 +245,7 @@ public class Application {
     _onLoadPrimaryResources?.Invoke();
 
     if (_useImGui) {
-      GuiController = new(Device, Renderer);
+      GuiController = new(VmaAllocator, Device, Renderer);
       await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     }
 
@@ -370,6 +383,7 @@ public class Application {
       this,
       _systemCreationFlags,
       _systemConfiguration,
+      VmaAllocator,
       Device,
       Renderer,
       _descriptorSetLayouts,
@@ -405,7 +419,7 @@ public class Application {
       true
     );
 
-    _skybox = new(Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
+    _skybox = new(VmaAllocator, Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
@@ -439,7 +453,7 @@ public class Application {
 
     List<List<ITexture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
-      var t = await TextureManager.AddTextures(Device, [.. paths[i]]);
+      var t = await TextureManager.AddTextures(VmaAllocator, Device, [.. paths[i]]);
       textures.Add([.. t]);
     }
 
@@ -588,7 +602,7 @@ public class Application {
 
     Systems.ValidateSystems(
         _entities.ToArray(),
-        Device, Renderer,
+        VmaAllocator, Device, Renderer,
         _descriptorSetLayouts,
         CurrentPipelineConfig,
         ref _textureManager
@@ -846,6 +860,9 @@ public class Application {
     Systems?.Dispose();
     Renderer?.Dispose();
     Window?.Dispose();
+    if (VmaAllocator.IsNotNull) {
+      vmaDestroyAllocator(VmaAllocator);
+    }
     Device?.Dispose();
   }
 
@@ -902,6 +919,7 @@ public class Application {
   public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
   public Renderer Renderer { get; } = null!;
+  public VmaAllocator VmaAllocator { get; private set; }
   public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;

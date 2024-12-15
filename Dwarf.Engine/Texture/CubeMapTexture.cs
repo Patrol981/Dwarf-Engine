@@ -14,12 +14,13 @@ public class CubeMapTexture : VulkanTexture {
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     int width,
     int height,
     string[] paths,
     string textureName = ""
-  ) : base(device, width, height, textureName) {
+  ) : base(vmaAllocator, device, width, height, textureName) {
     _paths = paths;
 
     var textures = ImageUtils.LoadTextures(_paths);
@@ -33,6 +34,7 @@ public class CubeMapTexture : VulkanTexture {
 
   public new void SetTextureData(byte[] data) {
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -55,6 +57,7 @@ public class CubeMapTexture : VulkanTexture {
 
   public new void SetTextureData(nint dataPtr) {
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,

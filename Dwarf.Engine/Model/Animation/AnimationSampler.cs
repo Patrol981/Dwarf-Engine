@@ -3,7 +3,7 @@ using Dwarf.Loaders;
 
 namespace Dwarf.Model.Animation;
 
-public class AnimationSampler {
+public class AnimationSampler : ICloneable {
   public enum InterpolationType {
     Linear,
     Step,
@@ -125,5 +125,14 @@ public class AnimationSampler {
         // node.Rotation = Quaternion.Normalize(newRotation);
         break;
     }
+  }
+
+  public object Clone() {
+    return new AnimationSampler {
+      Interpolation = Interpolation,
+      Inputs = Inputs,
+      OutputsVec4 = OutputsVec4,
+      Outputs = Outputs,
+    };
   }
 }

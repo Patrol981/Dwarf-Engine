@@ -13,9 +13,9 @@ public abstract class CommandList {
     ulong vertexOffset
   );
 
-  public abstract void BindIndex(IntPtr commandBuffer, uint index, DwarfBuffer[] indexBuffers);
+  public abstract void BindIndex(IntPtr commandBuffer, uint index, DwarfBuffer[] indexBuffers, ulong offset = 0);
 
-  public abstract void BindIndex(IntPtr commandBuffer, DwarfBuffer indexBuffer);
+  public abstract void BindIndex(IntPtr commandBuffer, DwarfBuffer indexBuffer, ulong offset = 0);
 
   public abstract void Draw(
     nint commandBuffer,

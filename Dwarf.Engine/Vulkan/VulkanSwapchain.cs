@@ -356,78 +356,78 @@ public class VulkanSwapchain : IDisposable {
 
     return result;
   }
-  public unsafe VkResult SubmitCommandBuffers_New(VkCommandBuffer buffer, uint imageIndex) {
-    _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+  // public unsafe VkResult SubmitCommandBuffers_New(VkCommandBuffer buffer, uint imageIndex) {
+  //   _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
-    VkPipelineStageFlags2* stageFlags = stackalloc VkPipelineStageFlags2[1];
-    stageFlags[0] = VkPipelineStageFlags2.ColorAttachmentOutput;
+  //   VkPipelineStageFlags2* stageFlags = stackalloc VkPipelineStageFlags2[1];
+  //   stageFlags[0] = VkPipelineStageFlags2.ColorAttachmentOutput;
 
-    VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
-    waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
+  //   VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
+  //   waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
 
-    VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
-    signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
+  //   VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
+  //   signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
 
-    VkSemaphoreSubmitInfo* waitSemaphoresSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
-    waitSemaphoresSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-    waitSemaphoresSubmitInfo[0].semaphore = waitSemaphores[0];
-    waitSemaphoresSubmitInfo[0].pNext = null;
-    waitSemaphoresSubmitInfo[0].stageMask = stageFlags[0];
-    waitSemaphoresSubmitInfo[0].deviceIndex = 0;
-    waitSemaphoresSubmitInfo[0].value = 1;
+  //   VkSemaphoreSubmitInfo* waitSemaphoresSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
+  //   waitSemaphoresSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+  //   waitSemaphoresSubmitInfo[0].semaphore = waitSemaphores[0];
+  //   waitSemaphoresSubmitInfo[0].pNext = null;
+  //   waitSemaphoresSubmitInfo[0].stageMask = stageFlags[0];
+  //   waitSemaphoresSubmitInfo[0].deviceIndex = 0;
+  //   waitSemaphoresSubmitInfo[0].value = 1;
 
-    VkSemaphoreSubmitInfo* signalSemaphoreSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
-    signalSemaphoreSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-    signalSemaphoreSubmitInfo[0].semaphore = signalSemaphores[0];
-    signalSemaphoreSubmitInfo[0].pNext = null;
-    signalSemaphoreSubmitInfo[0].stageMask = stageFlags[0];
-    signalSemaphoreSubmitInfo[0].deviceIndex = 0;
-    signalSemaphoreSubmitInfo[0].value = 2;
+  //   VkSemaphoreSubmitInfo* signalSemaphoreSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
+  //   signalSemaphoreSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+  //   signalSemaphoreSubmitInfo[0].semaphore = signalSemaphores[0];
+  //   signalSemaphoreSubmitInfo[0].pNext = null;
+  //   signalSemaphoreSubmitInfo[0].stageMask = stageFlags[0];
+  //   signalSemaphoreSubmitInfo[0].deviceIndex = 0;
+  //   signalSemaphoreSubmitInfo[0].value = 2;
 
-    VkCommandBufferSubmitInfo* bufferSubmitInfo = stackalloc VkCommandBufferSubmitInfo[1];
-    bufferSubmitInfo[0].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
-    bufferSubmitInfo[0].pNext = null;
-    bufferSubmitInfo[0].commandBuffer = buffer;
-    bufferSubmitInfo[0].deviceMask = 0;
+  //   VkCommandBufferSubmitInfo* bufferSubmitInfo = stackalloc VkCommandBufferSubmitInfo[1];
+  //   bufferSubmitInfo[0].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
+  //   bufferSubmitInfo[0].pNext = null;
+  //   bufferSubmitInfo[0].commandBuffer = buffer;
+  //   bufferSubmitInfo[0].deviceMask = 0;
 
-    VkSubmitInfo2 submitInfo = new();
-    submitInfo.sType = VkStructureType.SubmitInfo2KHR;
-    submitInfo.pNext = null;
-    submitInfo.flags = VkSubmitFlags.None;
+  //   VkSubmitInfo2 submitInfo = new();
+  //   submitInfo.sType = VkStructureType.SubmitInfo2KHR;
+  //   submitInfo.pNext = null;
+  //   submitInfo.flags = VkSubmitFlags.None;
 
-    submitInfo.waitSemaphoreInfoCount = 1;
-    submitInfo.pWaitSemaphoreInfos = waitSemaphoresSubmitInfo;
+  //   submitInfo.waitSemaphoreInfoCount = 1;
+  //   submitInfo.pWaitSemaphoreInfos = waitSemaphoresSubmitInfo;
 
-    submitInfo.signalSemaphoreInfoCount = 1;
-    submitInfo.pSignalSemaphoreInfos = signalSemaphoreSubmitInfo;
+  //   submitInfo.signalSemaphoreInfoCount = 1;
+  //   submitInfo.pSignalSemaphoreInfos = signalSemaphoreSubmitInfo;
 
-    submitInfo.commandBufferInfoCount = 1;
-    submitInfo.pCommandBufferInfos = bufferSubmitInfo;
+  //   submitInfo.commandBufferInfoCount = 1;
+  //   submitInfo.pCommandBufferInfos = bufferSubmitInfo;
 
-    vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-    _device.SubmitQueue2(1, &submitInfo, _inFlightFences[_currentFrame]);
+  //   vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
+  //   _device.SubmitQueue2(1, &submitInfo, _inFlightFences[_currentFrame]);
 
-    VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
-    swapchains[0] = _handle;
+  //   VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
+  //   swapchains[0] = _handle;
 
-    VkPresentInfoKHR presentInfo = new() {
-      pNext = null,
-      pSwapchains = swapchains,
-      swapchainCount = 1,
+  //   VkPresentInfoKHR presentInfo = new() {
+  //     pNext = null,
+  //     pSwapchains = swapchains,
+  //     swapchainCount = 1,
 
-      waitSemaphoreCount = 1,
-      pWaitSemaphores = waitSemaphores,
+  //     waitSemaphoreCount = 1,
+  //     pWaitSemaphores = waitSemaphores,
 
-      pImageIndices = &imageIndex
-    };
+  //     pImageIndices = &imageIndex
+  //   };
 
-    Application.Instance.Mutex.WaitOne();
-    var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
-    Application.Instance.Mutex.ReleaseMutex();
-    _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+  //   Application.Instance.Mutex.WaitOne();
+  //   var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
+  //   Application.Instance.Mutex.ReleaseMutex();
+  //   _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
-    return result;
-  }
+  //   return result;
+  // }
 
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     Application.Instance.Mutex.WaitOne();

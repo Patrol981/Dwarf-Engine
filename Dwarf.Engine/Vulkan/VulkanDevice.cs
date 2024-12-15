@@ -376,15 +376,15 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateInstance() {
-    HashSet<VkUtf8String> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
-    HashSet<VkUtf8String> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
+    HashSet<VkUtf8String> availableInstanceLayers = [.. DeviceHelper.EnumerateInstanceLayers()];
+    HashSet<VkUtf8String> availableInstanceExtensions = [.. DeviceHelper.GetInstanceExtensions()];
 
     var appInfo = new VkApplicationInfo {
       pApplicationName = _window.AppName,
       applicationVersion = new(1, 0, 0),
       pEngineName = _window.EngineName,
       engineVersion = new(1, 0, 0),
-      apiVersion = VkVersion.Version_1_3
+      apiVersion = VkVersion.Version_1_4
     };
 
     var createInfo = new VkInstanceCreateInfo {
@@ -521,6 +521,7 @@ public class VulkanDevice : IDevice {
       sampleRateShading = true,
       multiDrawIndirect = true,
       geometryShader = true,
+      robustBufferAccess = true,
       shaderStorageBufferArrayDynamicIndexing = true,
     };
 
@@ -530,6 +531,7 @@ public class VulkanDevice : IDevice {
 
     VkPhysicalDeviceVulkan12Features vk12Features = new() {
       timelineSemaphore = true,
+      descriptorIndexing = true,
       pNext = &vk11Features,
     };
 
@@ -540,10 +542,15 @@ public class VulkanDevice : IDevice {
       pNext = &vk12Features,
     };
 
+    VkPhysicalDeviceVulkan14Features vk14Features = new() {
+      hostImageCopy = true,
+      pNext = &vk13Features
+    };
+
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
+      pNext = &vk14Features
     };
-    createInfo.pNext = &vk13Features;
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;

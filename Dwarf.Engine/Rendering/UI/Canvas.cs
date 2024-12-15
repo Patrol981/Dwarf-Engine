@@ -139,7 +139,7 @@ public class Canvas : Component, IDisposable {
     image.GetComponent<RectTransform>().Anchor = anchor;
     image.GetComponent<RectTransform>().OffsetFromVector = offsetFromAnchor;
     image.GetComponent<RectTransform>().OriginScale = originScale;
-    image.AddComponent(new GuiTexture(_application.Device));
+    image.AddComponent(new GuiTexture(_application.VmaAllocator, _application.Device));
     image.GetComponent<GuiTexture>().BindToTexture(_application.TextureManager, texturePath, false);
     image.Name = imageName;
     _entities.Add(image);

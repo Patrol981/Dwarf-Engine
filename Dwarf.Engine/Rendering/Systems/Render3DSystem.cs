@@ -22,7 +22,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public const string Simple3D = "simple3D";
   public const string Skinned3D = "skinned3D";
 
+  public const bool GlobalVertexBuffer = false;
+
   private DwarfBuffer _modelBuffer = null!;
+  private DwarfBuffer _complexVertexBuffer = null!;
+  private DwarfBuffer _complexIndexBuffer = null!;
 
   private VkDescriptorSet _dynamicSet = VkDescriptorSet.Null;
   private VulkanDescriptorWriter _dynamicWriter = null!;
@@ -45,11 +49,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private Node[] _skinnedNodesCache = [];
 
   public Render3DSystem(
+    VmaAllocator vmaAllocator,
     IDevice device,
     Renderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBufferDynamic, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -137,6 +142,38 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     return len;
   }
 
+  private static (ulong vtxCount, Vertex[] vertices) CalculateVertexCount(ReadOnlySpan<Entity> entities, bool hasSkinFlag) {
+    ulong vtxCount = 0;
+    List<Vertex> vertices = [];
+    foreach (var entity in entities) {
+      var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
+      var result = i3d?.MeshedNodes.ToArray();
+      for (int i = 0; i < result?.Length; i++) {
+        if (result[i].HasSkin == hasSkinFlag) {
+          vtxCount += result[i]!.Mesh!.VertexCount;
+          vertices.AddRange(result[i]!.Mesh!.Vertices);
+        }
+      }
+    }
+    return (vtxCount, [.. vertices]);
+  }
+
+  public static (ulong idxCount, uint[] indices) CalculateIndexOffsets(ReadOnlySpan<Entity> entities, bool hasSkinFlag) {
+    ulong idxCount = 0;
+    List<uint> indices = [];
+    foreach (var entity in entities) {
+      var i3d = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
+      var result = i3d?.MeshedNodes.ToArray();
+      for (int i = 0; i < result?.Length; i++) {
+        if (result[i].HasSkin == hasSkinFlag) {
+          idxCount += result[i]!.Mesh!.IndexCount;
+          indices.AddRange(result[i]!.Mesh!.Indices);
+        }
+      }
+    }
+    return (idxCount, [.. indices]);
+  }
+
   private static (int len, int joints) CalculateNodesLengthWithSkin(ReadOnlySpan<Entity> entities) {
     int len = 0;
     int joints = 0;
@@ -169,13 +206,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
       .AddPoolSize(VkDescriptorType.UniformBuffer, 1000)
       .AddPoolSize(VkDescriptorType.StorageBuffer, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);
 
     // entities.length before, param no.3
     _modelBuffer = new(
+      _vmaAllocator,
       _device,
       (ulong)Unsafe.SizeOf<ModelUniformBufferObject>(),
       (ulong)_texturesCount,
@@ -207,8 +245,77 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _dynamicWriter.Build(out _dynamicSet);
     }
 
+    CreateGlobalBuffers(entities);
+
     var endTime = DateTime.Now;
     Logger.Warn($"[RENDER 3D RELOAD TIME]: {(endTime - startTime).TotalMilliseconds}");
+  }
+
+  private unsafe void CreateGlobalBuffers(ReadOnlySpan<Entity> entities) {
+    if (!GlobalVertexBuffer) return;
+
+    var (vtxCount, vertices) = CalculateVertexCount(entities, hasSkinFlag: true);
+    ulong vtxBufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * vtxCount;
+
+    Logger.Info($"START VTX: {vtxCount}");
+
+    var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
+      _device,
+      (ulong)Unsafe.SizeOf<Vertex>(),
+      vtxCount,
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
+    );
+
+    stagingBuffer.Map(vtxBufferSize);
+    fixed (Vertex* verticesPtr = vertices) {
+      stagingBuffer.WriteToBuffer((nint)verticesPtr, vtxBufferSize);
+    }
+
+    _complexVertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
+      _device,
+      (ulong)Unsafe.SizeOf<Vertex>(),
+      vtxCount,
+      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
+    );
+
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _complexVertexBuffer.GetBuffer(), vtxBufferSize);
+    stagingBuffer.Dispose();
+
+    var (idxCount, indices) = CalculateIndexOffsets(entities, hasSkinFlag: true);
+
+    stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
+      _device,
+      sizeof(uint),
+      idxCount,
+      BufferUsage.TransferSrc,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      default,
+      true
+    );
+
+    stagingBuffer.Map(sizeof(uint) * idxCount);
+    fixed (uint* indicesPtr = indices) {
+      stagingBuffer.WriteToBuffer((nint)indicesPtr, sizeof(uint) * idxCount);
+    }
+
+    _complexIndexBuffer = new DwarfBuffer(
+      _vmaAllocator,
+      _device,
+      sizeof(uint),
+      idxCount,
+      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
+      MemoryProperty.DeviceLocal
+    );
+
+    _device.CopyBuffer(stagingBuffer.GetBuffer(), _complexIndexBuffer.GetBuffer(), sizeof(uint) * idxCount);
+    stagingBuffer.Dispose();
   }
 
   public bool CheckSizes(ReadOnlySpan<Entity> entities) {
@@ -443,6 +550,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
+    ulong vtxOffset = 0;
+    ulong idxOffset = 0;
+
     for (int i = 0; i < nodes.Length; i++) {
       if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
@@ -480,21 +590,20 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       if (nodes[i].ParentRenderer.Animations.Count > 0) {
         nodes[i].ParentRenderer.GetOwner().GetComponent<AnimationController>().Update(nodes[i]);
       }
-      // nodes[i].ParentRenderer.UpdateAnimation(2, nodes[i].AnimationTimer);
-      // nodes[i].WriteIdentity();
-      // Descriptor.BindDescriptorSet(
-      //   nodes[i].DescriptorSet,
-      //   frameInfo,
-      //   _pipelines[Skinned3D].PipelineLayout,
-      //   5,
-      //   1
-      // );
 
       var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
       Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
 
-      nodes[i].BindNode(frameInfo.CommandBuffer);
-      nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i + (uint)prevIdx);
+      if (GlobalVertexBuffer) {
+        nodes[i].BindNode(frameInfo.CommandBuffer, _complexVertexBuffer, _complexIndexBuffer, vtxOffset, idxOffset);
+        nodes[i].DrawNode(frameInfo.CommandBuffer, (int)vtxOffset, (uint)i + (uint)prevIdx);
+
+        vtxOffset += nodes[i].Mesh!.VertexCount * (ulong)Unsafe.SizeOf<Vertex>();
+        idxOffset += nodes[i].Mesh!.IndexCount * sizeof(uint);
+      } else {
+        nodes[i].BindNode(frameInfo.CommandBuffer);
+        nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i + (uint)prevIdx);
+      }
     }
 
     _modelBuffer.Unmap();
@@ -508,6 +617,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     MemoryUtils.FreeIntPtr<SimplePushConstantData>((nint)_pushConstantData);
     MemoryUtils.FreeIntPtr<ModelUniformBufferObject>((nint)_modelUbo);
 
+    _complexVertexBuffer?.Dispose();
+    _complexIndexBuffer?.Dispose();
+
     _modelBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
 
@@ -518,6 +630,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
   public IRender3DElement[] CachedRenderables => [.. _notSkinnedEntitiesCache, .. _skinnedEntitiesCache];
   public int LastKnownElemCount { get; private set; }
+  public int LastElemRenderedCount => _notSkinnedNodesCache.Length + _skinnedNodesCache.Length;
   public ulong LastKnownElemSize { get; private set; }
   public ulong LastKnownSkinnedElemCount { get; private set; }
   public ulong LastKnownSkinnedElemJointsCount { get; private set; }

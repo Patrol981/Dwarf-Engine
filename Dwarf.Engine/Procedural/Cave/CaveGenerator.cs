@@ -199,12 +199,12 @@ public class CaveGenerator {
       }
     }
 
-    internal void GenerateWallMesh(IDevice device, int wallHeight, out Mesh wallMesh) {
+    internal void GenerateWallMesh(Application app, int wallHeight, out Mesh wallMesh) {
       CalculateMeshOutlines();
 
       var wallVertices = new List<Vector3>();
       var wallTriangles = new List<uint>();
-      wallMesh = new Mesh(device, Matrix4x4.Identity);
+      wallMesh = new Mesh(app.VmaAllocator, app.Device, Matrix4x4.Identity);
 
       foreach (var outline in Outlines) {
         for (int i = 0; i < outline.Count - 1; i++) {
@@ -814,7 +814,8 @@ public class CaveGenerator {
     var grid = new SquareGrid(map, SquareSize, TileSize);
     grid.GenerateMesh();
 
-    mesh = new Mesh(Application.Instance.Device, Matrix4x4.Identity) {
+    var app = Application.Instance;
+    mesh = new Mesh(app.VmaAllocator, app.Device, Matrix4x4.Identity) {
       Vertices = grid.Vertices.Select(x => {
         return new Vertex() {
           Position = x,
@@ -841,7 +842,7 @@ public class CaveGenerator {
       mesh.Vertices[i].Uv = new(percentX, percentY);
     }
 
-    grid.GenerateWallMesh(device, WallHeight, out wallMesh);
+    grid.GenerateWallMesh(app, WallHeight, out wallMesh);
   }
   #endregion
 }

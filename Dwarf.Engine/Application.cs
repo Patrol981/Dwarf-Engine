@@ -184,8 +184,8 @@ public class Application {
     }
 
     Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
+    // while (_renderShouldClose) {
+    // }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
@@ -257,8 +257,8 @@ public class Application {
 
     _renderShouldClose = true;
     Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
+    // while (_renderShouldClose) {
+    // }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
@@ -901,8 +901,8 @@ public class Application {
     }
 
     Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
+    // while (_renderShouldClose) {
+    // }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");

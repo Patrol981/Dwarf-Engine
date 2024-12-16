@@ -157,7 +157,7 @@ public class Node : ICloneable, IDisposable {
       NodeMatrix = NodeMatrix,
       Name = Name,
       Mesh = (Mesh)Mesh?.Clone()! ?? null!,
-      Skin = Skin?.Clone() as Skin,
+      // Skin = (Skin)Skin?.Clone()! ?? null!,
       // Skin = Skin,
       SkinIndex = SkinIndex,
       Translation = Translation,
@@ -166,13 +166,13 @@ public class Node : ICloneable, IDisposable {
       TranslationOffset = TranslationOffset,
       RotationOffset = RotationOffset,
       ScaleOffset = ScaleOffset,
-      UseCachedMatrix = UseCachedMatrix,
-      CachedLocalMatrix = CachedLocalMatrix,
-      CachedMatrix = CachedMatrix,
+      UseCachedMatrix = false,
+      CachedLocalMatrix = Matrix4x4.Identity,
+      CachedMatrix = Matrix4x4.Identity,
       BoundingVolume = BoundingVolume,
       AABB = AABB,
       Enabled = Enabled,
-      AnimationTimer = AnimationTimer
+      AnimationTimer = 0.0f
     };
 
     clone.Children = Children.Select(child => {

@@ -287,6 +287,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     otherMeshRenderer.LinearNodes = new Node[LinearNodesCount];
 
     otherMeshRenderer.Nodes = Nodes.Select(x => (Node)x.Clone()).ToArray();
+    otherMeshRenderer.Skins = Skins.Select(x => (Skin)x.Clone()).ToList();
     var tmpLinear = new Node[LinearNodesCount];
     // otherMeshRenderer.LinearNodes = LinearNodes.Select(x => (Node)x.Clone()).ToArray();
     // otherMeshRenderer.MeshedNodes = MeshedNodes.Select(x => (Node)x.Clone()).ToArray();
@@ -303,16 +304,19 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     }
     foreach (var node in otherMeshRenderer.LinearNodes) {
       node.ParentRenderer = otherMeshRenderer;
+      if (node.HasSkin) {
+        node.Skin = otherMeshRenderer.Skins[node.SkinIndex];
+      }
     }
     foreach (var node in otherMeshRenderer.MeshedNodes) {
       node.ParentRenderer = otherMeshRenderer;
     }
 
-    // otherMeshRenderer.Animations = Animations.Select(x => (Animation)x.Clone()).ToList();
+    otherMeshRenderer.Animations = Animations.Select(x => (Animation)x.Clone()).ToList();
     // otherMeshRenderer.Skins = [.. Skins];
     // otherMeshRenderer.Ssbo = Ssbo;
 
-    // otherMeshRenderer.InverseMatrices = new Matrix4x4[InverseMatrices.Length];
+    otherMeshRenderer.InverseMatrices = new Matrix4x4[InverseMatrices.Length];
     // InverseMatrices.CopyTo(otherMeshRenderer.InverseMatrices, 0);
 
     otherMeshRenderer.FileName = FileName;

@@ -169,6 +169,24 @@ public static class Primitives {
     };
   }
 
+  public static Mesh CreateConvex(Mesh mesh, bool flip = false) {
+    var vertices = new List<Vertex>();
+
+    for (int vertexIndex = 0; vertexIndex < mesh.Vertices.Length; vertexIndex++) {
+      var vertex = mesh.Vertices[vertexIndex];
+      Vector3 updatePos = flip ? new(vertex.Position.X, -vertex.Position.Y, vertex.Position.Z) : vertex.Position;
+
+      vertex.Position = updatePos;
+      vertices.Add(vertex);
+    }
+
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
+      Vertices = [.. vertices],
+      Indices = [.. mesh.Indices],
+      Matrix = Matrix4x4.Identity
+    };
+  }
+
   public static Mesh CreateBoxPrimitive(float scale) {
     Vector3[] normals = [
       new(-1, -1, -1),

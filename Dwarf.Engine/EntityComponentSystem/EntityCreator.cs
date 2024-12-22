@@ -130,7 +130,6 @@ public static class EntityCreator {
     var app = Application.Instance;
     var model = new MeshRenderer(app.Device, app.Renderer);
     copyRef.CopyTo(ref model);
-    // app.AddModelToReloadQueue(model);
     return model;
   }
 
@@ -178,6 +177,21 @@ public static class EntityCreator {
   public static void AddRigdbody(
     Application app,
     ref Entity entity,
+    PrimitiveType primitiveType,
+    float radius,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip));
+    entity.GetComponent<Rigidbody>().InitBase();
+  }
+
+  public static void AddRigdbody(
+    Application app,
+    ref Entity entity,
+    in Mesh mesh,
     PrimitiveType primitiveType,
     float radius,
     MotionType motionType = MotionType.Dynamic,
@@ -266,5 +280,16 @@ public static class EntityCreator {
   ) {
     var app = Application.Instance;
     AddRigdbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip);
+  }
+
+  public static void AddRigdbody(
+    this Entity entity,
+    in Mesh mesh,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false
+  ) {
+    var app = Application.Instance;
+    AddRigdbody(app, ref entity, mesh, primitiveType, default, motionType, flip);
   }
 }

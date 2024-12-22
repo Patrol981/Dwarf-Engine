@@ -14,7 +14,7 @@ public class AnimationChannel : ICloneable {
   public object Clone() {
     return new AnimationChannel {
       Path = Path,
-      Node = Node,
+      // Node = Node,
       SamplerIndex = SamplerIndex
     };
   }

@@ -1,4 +1,5 @@
 using Dwarf.Model.Animation;
+using Dwarf.Physics;
 using Dwarf.Rendering;
 namespace Dwarf.EntityComponentSystem;
 
@@ -154,6 +155,7 @@ public class Entity {
     var transform = TryGetComponent<Transform>();
     var material = TryGetComponent<MaterialComponent>();
     var model = TryGetComponent<MeshRenderer>();
+    var rigidbody = TryGetComponent<Rigidbody>();
 
     if (transform != null) {
       clone.AddTransform(transform.Position, transform.Rotation, transform.Scale);
@@ -165,6 +167,16 @@ public class Entity {
       clone.AddComponent(EntityCreator.CopyModel(in model));
       clone.AddComponent(new AnimationController());
       clone.GetComponent<AnimationController>().Init(clone.GetComponent<MeshRenderer>());
+    }
+    if (rigidbody != null) {
+      clone.AddRigdbody(
+        rigidbody.PrimitiveType,
+        rigidbody.Size,
+        rigidbody.Offset,
+        MotionType.Dynamic,
+        rigidbody.Flipped
+      );
+      Application.Instance.Systems.PhysicsSystem.Init([clone]);
     }
 
     return clone;

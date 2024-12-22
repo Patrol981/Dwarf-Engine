@@ -393,7 +393,7 @@ public partial class ImGuiController : IDisposable {
       // io.InputQueueCharacters.
 
       if (KeyboardState.Instance.KeyStates.TryGetValue(key, out var state)) {
-        if (Input.GetKeyDown((SDL_Scancode)key)) {
+        if (Input.GetKeyDown((SDL_Keycode)key)) {
           io.AddInputCharacter((char)key);
         }
       }

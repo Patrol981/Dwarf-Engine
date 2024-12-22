@@ -13,7 +13,7 @@ public static class Input {
     return state[(int)scancode];
   }
 
-  public static unsafe bool GetKeyDown(SDL_Scancode scancode) {
+  public static unsafe bool GetKeyDown(SDL_Keycode scancode) {
     var keyboardState = KeyboardState.Instance;
 
     bool keyPressed = keyboardState.KeyStates[(int)scancode].KeyPressed;

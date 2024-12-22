@@ -186,14 +186,11 @@ public unsafe class DwarfBuffer : IDisposable {
       offset = offset,
       size = size
     };
-    switch (_allocationStrategy) {
-      case AllocationStrategy.VulkanMemoryAllocator:
-        return vmaFlushAllocation(_allocator, _allocation, offset, size);
-      case AllocationStrategy.Custom:
-        return vkFlushMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
-      default:
-        throw new NotImplementedException();
-    }
+    return _allocationStrategy switch {
+      AllocationStrategy.VulkanMemoryAllocator => vmaFlushAllocation(_allocator, _allocation, offset, size),
+      AllocationStrategy.Custom => vkFlushMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange),
+      _ => throw new NotImplementedException(),
+    };
   }
 
   public VkDescriptorBufferInfo GetDescriptorBufferInfo(ulong size = VK_WHOLE_SIZE, ulong offset = 0) {
@@ -211,14 +208,11 @@ public unsafe class DwarfBuffer : IDisposable {
       offset = offset,
       size = size
     };
-    switch (_allocationStrategy) {
-      case AllocationStrategy.VulkanMemoryAllocator:
-        return vmaInvalidateAllocation(_allocator, _allocation, offset, size);
-      case AllocationStrategy.Custom:
-        return vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange);
-      default:
-        throw new NotImplementedException();
-    }
+    return _allocationStrategy switch {
+      AllocationStrategy.VulkanMemoryAllocator => vmaInvalidateAllocation(_allocator, _allocation, offset, size),
+      AllocationStrategy.Custom => vkInvalidateMappedMemoryRanges(_device.LogicalDevice, 1, &mappedRange),
+      _ => throw new NotImplementedException(),
+    };
   }
 
   public void WrtieToIndex(nint data, int index) {

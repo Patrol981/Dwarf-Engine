@@ -100,14 +100,12 @@ public class Rigidbody : Component, IDisposable {
     _physicsControlRotation = physicsControlRotation;
   }
 
-  public void InitBase() {
+  public void InitBase(Mesh? mesh = null) {
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
 
     if (Owner?.GetDrawable<IRender3DElement>() == null) return;
     var target = Owner!.GetDrawable<IRender3DElement>() as IRender3DElement;
-
-    Mesh mesh;
 
     switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
@@ -116,7 +114,11 @@ public class Rigidbody : Component, IDisposable {
         AdjustColliderMesh(mesh);
         break;
       case PrimitiveType.Convex:
-        mesh = Primitives.CreateConvex(target!.MeshedNodes, Flipped);
+        if (mesh == null) {
+          mesh = Primitives.CreateConvex(target!.MeshedNodes, Flipped);
+        } else {
+          mesh = Primitives.CreateConvex(mesh, Flipped);
+        }
         ScaleColliderMesh(mesh);
         AdjustColliderMesh(mesh);
         break;

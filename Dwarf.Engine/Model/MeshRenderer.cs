@@ -306,6 +306,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       node.ParentRenderer = otherMeshRenderer;
       if (node.HasSkin) {
         node.Skin = otherMeshRenderer.Skins[node.SkinIndex];
+        node.Update();
       }
     }
     foreach (var node in otherMeshRenderer.MeshedNodes) {

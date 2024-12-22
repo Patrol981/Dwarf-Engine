@@ -15,6 +15,7 @@ public enum SystemCreationFlags {
   PointLights = 1 << 5,
   Guizmos = 1 << 6,
   WebApi = 1 << 7,
+  Particles = 1 << 8,
 }
 
 public record SystemConfiguration {
@@ -48,6 +49,7 @@ public class SystemCreator {
     var hasPointLights = flags.HasFlag(SystemCreationFlags.PointLights);
     var hasGuizmos = flags.HasFlag(SystemCreationFlags.Guizmos);
     var hasWebApi = flags.HasFlag(SystemCreationFlags.WebApi);
+    var hasParticles = flags.HasFlag(SystemCreationFlags.Particles);
 
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
@@ -91,6 +93,11 @@ public class SystemCreator {
     if (hasWebApi) {
       Logger.Info("[SYSTEM CREATOR] Creating WebApi");
       systemCollection.WebApi = new(app: Application.Instance);
+    }
+    if (hasParticles) {
+      Logger.Info("[SYSTEM CREATOR] Creating Particle System");
+      systemCollection.ParticleSystem =
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
   }
 }

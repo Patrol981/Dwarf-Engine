@@ -9,11 +9,12 @@ using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using ImGuiNET;
+
 using SDL3;
+
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
-using static Vortice.Vulkan.Vma;
 
 namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
@@ -76,21 +77,25 @@ public partial class ImGuiController : IDisposable {
   public unsafe Task InitResources() {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
-    _systemDescriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(1000)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
+    _systemSetLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
       .Build();
 
-    _systemSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.All)
+    _systemDescriptorPool = new DescriptorPool.Builder(_device)
+      .SetMaxSets(10000)
+      .AddPoolSize(VkDescriptorType.SampledImage, 1000)
+      .AddPoolSize(VkDescriptorType.Sampler, 1000)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
+
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       _systemSetLayout.GetDescriptorSetLayout()
     ];
 
     InitTexture(_device.GraphicsQueue);
+    // InitTexture();
 
     VkPipelineCacheCreateInfo pipelineCacheCreateInfo = new();
     vkCreatePipelineCache(_device.LogicalDevice, &pipelineCacheCreateInfo, null, out _pipelineCache).CheckResult();

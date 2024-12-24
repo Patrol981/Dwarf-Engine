@@ -1,9 +1,10 @@
 using Dwarf.AbstractionLayer;
-using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
+
 using glTFLoader.Schema;
+
 using StbImageSharp;
 
 using Vortice.Vulkan;
@@ -151,21 +152,57 @@ public class VulkanTexture : ITexture {
     }
   }
 
-  public void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
-    VkDescriptorImageInfo imageInfo = new() {
-      // sampler = _textureSampler.ImageSampler,
+  public unsafe void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    VkDescriptorSet descriptorSet = new();
+
+    VkDescriptorImageInfo descriptorImageInfo = new() {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _textureSampler.ImageView
+      imageView = ImageView
     };
-    unsafe {
-      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
-      .WriteImage(0, &imageInfo)
-      .WriteSampler(1, _textureSampler.ImageSampler)
-      .Build(out _textureDescriptor);
-    }
+    VkDescriptorImageInfo descriptorSamplerInfo = new() {
+      sampler = Sampler
+    };
+
+    var allocInfo = new VkDescriptorSetAllocateInfo();
+    allocInfo.descriptorPool = descriptorPool.GetVkDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    var setLayout = descriptorSetLayout.GetDescriptorSetLayout();
+    allocInfo.pSetLayouts = &setLayout;
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkWriteDescriptorSet* writes = stackalloc VkWriteDescriptorSet[2];
+
+    writes[0] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.SampledImage,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo,
+      descriptorCount = 1,
+      dstSet = descriptorSet
+    };
+
+    writes[1] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.Sampler,
+      dstBinding = 1,
+      descriptorCount = 1,
+      pImageInfo = &descriptorSamplerInfo,
+      dstSet = descriptorSet
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writes, 0, null);
+
+    _textureDescriptor = descriptorSet;
+
+    //unsafe {
+    //  _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
+    //  .WriteImage(0, &imageInfo)
+    //  .WriteSampler(1, Image)
+    //  .Build(out _textureDescriptor);
+    //}
   }
 
   public unsafe void AddDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    if (descriptorSetLayout.GetDescriptorSetLayout().IsNull) throw new ArgumentException("Layout is null");
+
     VkDescriptorSet descriptorSet = new();
 
     var allocInfo = new VkDescriptorSetAllocateInfo();
@@ -175,19 +212,48 @@ public class VulkanTexture : ITexture {
     allocInfo.pSetLayouts = &setLayout;
     vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
 
-    VkDescriptorImageInfo descImage = new();
-    VkWriteDescriptorSet writeDesc = new();
+    VkDescriptorImageInfo descriptorImageInfo = new() {
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = ImageView
+    };
+    VkDescriptorImageInfo descriptorSamplerInfo = new() {
+      sampler = Sampler
+    };
 
-    descImage.sampler = _textureSampler.ImageSampler;
-    descImage.imageView = _textureSampler.ImageView;
-    descImage.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+    VkWriteDescriptorSet* writes = stackalloc VkWriteDescriptorSet[2];
 
-    writeDesc.dstSet = descriptorSet;
-    writeDesc.descriptorCount = 1;
-    writeDesc.descriptorType = VkDescriptorType.CombinedImageSampler;
-    writeDesc.pImageInfo = &descImage;
+    writes[0] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.SampledImage,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo,
+      descriptorCount = 1,
+      dstSet = descriptorSet
+    };
 
-    vkUpdateDescriptorSets(_device.LogicalDevice, writeDesc);
+    writes[1] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.Sampler,
+      dstBinding = 1,
+      descriptorCount = 1,
+      pImageInfo = &descriptorSamplerInfo,
+      dstSet = descriptorSet
+    };
+
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writes, 0, null);
+
+    //VkDescriptorImageInfo descImage = new();
+    //VkWriteDescriptorSet writeDesc = new();
+
+    //descImage.sampler = _textureSampler.ImageSampler;
+    //descImage.imageView = _textureSampler.ImageView;
+    //descImage.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+
+    //writeDesc.dstSet = descriptorSet;
+    //writeDesc.descriptorCount = 1;
+    //writeDesc.descriptorType = VkDescriptorType.SampledImage;
+    //writeDesc.pImageInfo = &descImage;
+
+    //vkUpdateDescriptorSets(_device.LogicalDevice, writeDesc);
 
     _textureDescriptor = descriptorSet;
   }
@@ -237,7 +303,8 @@ public class VulkanTexture : ITexture {
       textureData = await LoadDataFromPath(path, flip);
     } else {
       var cwd = DwarfPath.AssemblyDirectory;
-      textureData = await LoadDataFromPath($"{cwd}{path}", flip);
+      var pathResult = Path.Combine(cwd, path);
+      textureData = await LoadDataFromPath(pathResult, flip);
     }
 
     var texture = new VulkanTexture(vmaAllocator, device, textureData.Width, textureData.Height, path);

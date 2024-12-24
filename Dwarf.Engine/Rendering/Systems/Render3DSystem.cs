@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
-using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Model;
 using Dwarf.Model.Animation;
@@ -42,8 +41,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private readonly unsafe SimplePushConstantData* _pushConstantData =
     (SimplePushConstantData*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimplePushConstantData>());
 
-  private IRender3DElement[] _notSkinnedEntitiesCache = [];
-  private IRender3DElement[] _skinnedEntitiesCache = [];
+  private readonly IRender3DElement[] _notSkinnedEntitiesCache = [];
+  private readonly IRender3DElement[] _skinnedEntitiesCache = [];
 
   private Node[] _notSkinnedNodesCache = [];
   private Node[] _skinnedNodesCache = [];
@@ -130,6 +129,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     for (int i = 0; i < target.MeshedNodesCount; i++) {
       var textureId = target.GetTextureIdReference(i);
       var texture = (VulkanTexture)textureManager.GetTexture(textureId);
+
+      if (texture == null) {
+        var nid = textureManager.GetTextureId("./Resources/Textures/base/no_texture.png");
+        texture = (VulkanTexture)textureManager.GetTexture(nid);
+      }
+
       texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
   }
@@ -202,11 +207,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(10000)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
+      .AddPoolSize(VkDescriptorType.SampledImage, 1000)
+      .AddPoolSize(VkDescriptorType.Sampler, 1000)
       .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
       .AddPoolSize(VkDescriptorType.UniformBuffer, 1000)
       .AddPoolSize(VkDescriptorType.StorageBuffer, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);

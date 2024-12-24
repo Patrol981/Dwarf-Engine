@@ -51,10 +51,23 @@ public partial class ImGuiController {
     _fontTexture = new VulkanTexture(_vmaAllocator, _device, texWidth, texHeight, "im_gui_texture");
     _fontTexture.SetTextureData(fontData);
 
-    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.Sampler, _fontTexture.ImageView, VkImageLayout.ShaderReadOnlyOptimal);
-    _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
-    _descriptorWriter.WriteImage(0, &fontDescriptor);
-    _descriptorWriter.Build(out _systemDescriptorSet);
+    _fontTexture.BuildDescriptor(_systemSetLayout, _systemDescriptorPool);
+
+    //VkDescriptorImageInfo imageInfo = new() {
+    //   imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+    //   imageView = _fontView
+    //};
+
+    //_ = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool)
+    //  .WriteImage(0, &imageInfo)
+    //  .WriteSampler(1, _fontTexture.Sampler)
+    //  .Build(out _fontTexture.des);
+
+    //VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_fontTexture.Sampler, _fontTexture.ImageView, VkImageLayout.ShaderReadOnlyOptimal);
+    //_descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
+    //_descriptorWriter.WriteImage(0, &fontDescriptor);
+    //_descriptorWriter.WriteSampler(1, fontDescriptor.sampler);
+    //_descriptorWriter.Build(out _systemDescriptorSet);
 
     // io.Fonts.SetTexID((IntPtr)_systemDescriptorSet.Handle);
   }
@@ -172,17 +185,75 @@ public partial class ImGuiController {
     samplerInfo.addressModeU = VkSamplerAddressMode.Repeat;
     samplerInfo.addressModeV = VkSamplerAddressMode.Repeat;
     samplerInfo.addressModeW = VkSamplerAddressMode.Repeat;
-    samplerInfo.minLod = -1000;
-    samplerInfo.maxLod = 1000;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
 
-    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _sampler).CheckResult();
+    samplerInfo.anisotropyEnable = true;
+    samplerInfo.unnormalizedCoordinates = false;
+    samplerInfo.compareEnable = false;
+    samplerInfo.compareOp = VkCompareOp.Always;
 
-    VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_sampler, _fontView, VkImageLayout.ShaderReadOnlyOptimal);
-    _descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
-    _descriptorWriter.WriteImage(0, &fontDescriptor);
-    _descriptorWriter.Build(out _systemDescriptorSet);
+    var samplerResult = vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _sampler);
+    if (samplerResult != VkResult.Success) {
+      throw new ArgumentException("Failed to create sampler");
+    }
+
+    VkDescriptorSet descriptorSet = new();
+
+    var allocInfo = new VkDescriptorSetAllocateInfo();
+    allocInfo.descriptorPool = _systemDescriptorPool.GetVkDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    var setLayout = _systemSetLayout.GetDescriptorSetLayout();
+    allocInfo.pSetLayouts = &setLayout;
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo descriptorImageInfo = new() {
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = _fontView
+    };
+    VkDescriptorImageInfo descriptorSamplerInfo = new() {
+      sampler = _sampler
+    };
+
+    VkWriteDescriptorSet* writes = stackalloc VkWriteDescriptorSet[2];
+
+    writes[0] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.SampledImage,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo,
+      descriptorCount = 1,
+      dstSet = descriptorSet
+    };
+
+    writes[1] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.Sampler,
+      dstBinding = 1,
+      descriptorCount = 1,
+      pImageInfo = &descriptorSamplerInfo,
+      dstSet = descriptorSet
+    };
+
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writes, 0, null);
+    // vkUpdateDescriptorSets()
+
+    _systemDescriptorSet = descriptorSet;
+
+    //VkDescriptorImageInfo imgInfo = new() {
+    //  imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+    //  imageView = _fontView,
+    //};
+
+    //var result = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool)
+    //  .WriteImage(0, &imgInfo)
+    //  .WriteSampler(1, _sampler)
+    //  .Build(out _systemDescriptorSet);
+
+    //VkDescriptorImageInfo fontDescriptor = VkUtils.DescriptorImageInfo(_sampler, _fontView, VkImageLayout.ShaderReadOnlyOptimal);
+    //_descriptorWriter = new VulkanDescriptorWriter(_systemSetLayout, _systemDescriptorPool);
+    //_descriptorWriter.WriteImage(0, &fontDescriptor);
+    //_descriptorWriter.WriteSampler(1, fontDescriptor.sampler);
+    //_descriptorWriter.Build(out _systemDescriptorSet);
 
     // io.Fonts.SetTexID((IntPtr)_systemDescriptorSet.Handle);
   }

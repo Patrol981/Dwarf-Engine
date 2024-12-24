@@ -108,6 +108,10 @@ public class ParticleSystem : SystemBase {
     _particles.Add(particle);
   }
 
+  public void AddParticles(ParticleBatch batch) {
+    _particles.AddRange(batch.Particles);
+  }
+
   public bool ValidateTextures() {
     return _texturesCount == _particles.Count;
   }

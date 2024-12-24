@@ -17,9 +17,9 @@ using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
+using static Vortice.Vulkan.Vma;
 // using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
-using static Vortice.Vulkan.Vma;
 
 namespace Dwarf;
 
@@ -94,7 +94,6 @@ public class Application {
   public readonly object ApplicationLock = new object();
 
   public const int ThreadTimeoutTimeMS = 1000;
-  private bool _useImGui = true;
 
   public Application(
     string appName = "Dwarf Vulkan",
@@ -242,7 +241,7 @@ public class Application {
 
     _onLoadPrimaryResources?.Invoke();
 
-    if (_useImGui) {
+    if (UseImGui) {
       GuiController = new(VmaAllocator, Device, Renderer);
       await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     }
@@ -322,6 +321,8 @@ public class Application {
       .SetMaxSets(10)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
       .Build();
 
@@ -368,9 +369,9 @@ public class Application {
       Device.Properties.limits.minStorageBufferOffsetAlignment
     );
 
-    _descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-      .Build());
+    //_descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
+    //  .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    //  .Build());
 
     Mutex.WaitOne();
     // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
@@ -700,14 +701,14 @@ public class Application {
       _skybox.Render(_currentFrame);
       Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
 
-      if (_useImGui) {
+      if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onGUI?.Invoke();
       }
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScripts());
 
-      if (_useImGui) {
+      if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
 
@@ -747,7 +748,7 @@ public class Application {
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
-      if (_useImGui) {
+      if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
@@ -919,7 +920,7 @@ public class Application {
   public SystemCollection Systems { get; } = null!;
   public StorageCollection StorageCollection { get; private set; } = null!;
   public Scene CurrentScene { get; private set; } = null!;
-  public bool UseImGui => _useImGui;
+  public bool UseImGui { get; } = true;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
 }

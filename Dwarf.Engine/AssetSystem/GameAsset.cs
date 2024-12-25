@@ -74,7 +74,7 @@ public class GameAsset {
       if (meshInfo.FileName.Contains(".obj")) {
         for (int i = 0; i < meshInfo.MeshedNodesCount; i++) {
           var texId = meshInfo.GetTextureIdReference(i);
-          var tex = Application.Instance.TextureManager.GetTexture(texId);
+          var tex = Application.Instance.TextureManager.GetTextureLocal(texId);
           AssetResourcePaths?.Add(tex.TextureName);
         }
       }

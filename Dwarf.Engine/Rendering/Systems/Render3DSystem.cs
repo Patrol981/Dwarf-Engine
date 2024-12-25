@@ -116,10 +116,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private void BuildTargetDescriptorTexture(Entity entity, ref TextureManager textures, int modelPart = 0) {
     var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
     var id = target!.GetTextureIdReference(modelPart);
-    var texture = (VulkanTexture)textures.GetTexture(id);
+    var texture = (VulkanTexture)textures.GetTextureLocal(id);
     if (texture == null) {
-      var nid = textures.GetTextureId("./Resources/Textures/base/no_texture.png");
-      texture = (VulkanTexture)textures.GetTexture(nid);
+      var nid = textures.GetTextureIdLocal("./Resources/Textures/base/no_texture.png");
+      texture = (VulkanTexture)textures.GetTextureLocal(nid);
     }
 
     texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
@@ -128,12 +128,14 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private void BuildTargetDescriptorTexture(IRender3DElement target, ref TextureManager textureManager) {
     for (int i = 0; i < target.MeshedNodesCount; i++) {
       var textureId = target.GetTextureIdReference(i);
-      var texture = (VulkanTexture)textureManager.GetTexture(textureId);
+      var texture = (VulkanTexture)textureManager.GetTextureLocal(textureId);
 
       if (texture == null) {
-        var nid = textureManager.GetTextureId("./Resources/Textures/base/no_texture.png");
-        texture = (VulkanTexture)textureManager.GetTexture(nid);
+        var nid = textureManager.GetTextureIdLocal("./Resources/Textures/base/no_texture.png");
+        texture = (VulkanTexture)textureManager.GetTextureLocal(nid);
       }
+
+      if (texture == null) return;
 
       texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
@@ -452,6 +454,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
     _modelBuffer.Flush();
 
+    Guid prevTextureId = Guid.Empty;
+
     for (int i = 0; i < nodes.Length; i++) {
       if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
@@ -488,14 +492,17 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
       if (!nodes[i].ParentRenderer.GetOwner().CanBeDisposed && nodes[i].ParentRenderer.GetOwner().Active) {
         if (i == _texturesCount) continue;
-        var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
-        Descriptor.BindDescriptorSet(
-          targetTexture.TextureDescriptor,
-          frameInfo,
-          _pipelines[Simple3D].PipelineLayout,
-          0,
-          1
-        );
+        if (prevTextureId != nodes[i].Mesh!.TextureIdReference) {
+          var targetTexture = frameInfo.TextureManager.GetTextureLocal(nodes[i].Mesh!.TextureIdReference);
+          Descriptor.BindDescriptorSet(
+            targetTexture.TextureDescriptor,
+            frameInfo,
+            _pipelines[Simple3D].PipelineLayout,
+            0,
+            1
+          );
+          prevTextureId = nodes[i].Mesh!.TextureIdReference;
+        }
 
         nodes[i].BindNode(frameInfo.CommandBuffer);
         nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i);
@@ -559,6 +566,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     ulong vtxOffset = 0;
     ulong idxOffset = 0;
 
+    Guid prevTextureId = Guid.Empty;
+
     for (int i = 0; i < nodes.Length; i++) {
       if (nodes[i].ParentRenderer.GetOwner().CanBeDisposed || !nodes[i].ParentRenderer.GetOwner().Active) continue;
       if (!nodes[i].ParentRenderer.FinishedInitialization) continue;
@@ -597,8 +606,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         nodes[i].ParentRenderer.GetOwner().GetComponent<AnimationController>().Update(nodes[i]);
       }
 
-      var targetTexture = frameInfo.TextureManager.GetTexture(nodes[i].Mesh!.TextureIdReference);
-      Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+      if (prevTextureId != nodes[i].Mesh!.TextureIdReference) {
+        var targetTexture = frameInfo.TextureManager.GetTextureLocal(nodes[i].Mesh!.TextureIdReference);
+        Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+        prevTextureId = nodes[i].Mesh!.TextureIdReference;
+      }
 
       if (GlobalVertexBuffer) {
         nodes[i].BindNode(frameInfo.CommandBuffer, _complexVertexBuffer, _complexIndexBuffer, vtxOffset, idxOffset);

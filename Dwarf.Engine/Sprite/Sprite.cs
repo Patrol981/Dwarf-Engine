@@ -74,7 +74,7 @@ public class Sprite : Component, IDisposable, I2DCollision {
     string texturePath,
     bool useLocalPath = false
   ) {
-    _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
+    _textureIdRef = useLocalPath ? textureManager.GetTextureIdLocal($"./Textures/{texturePath}") : textureManager.GetTextureIdLocal(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       UsesTexture = true;

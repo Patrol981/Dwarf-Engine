@@ -99,7 +99,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   public void BindToTexture(TextureManager textureManager, string texturePath, bool useLocalPath = false) {
-    _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
+    _textureIdRef = useLocalPath ? textureManager.GetTextureIdLocal($"./Textures/{texturePath}") : textureManager.GetTextureIdLocal(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       if (useLocalPath) {

@@ -1,5 +1,7 @@
 #version 460
 
+#extension GL_EXT_samplerless_texture_functions : require
+
 layout (location = 0) in vec3 fragColor;
 layout (location = 1) in vec3 fragPositionWorld;
 layout (location = 2) in vec3 fragNormalWorld;
@@ -14,6 +16,8 @@ layout (location = 0) out vec4 outColor;
 
 #include directional_light
 #include point_light
+
+#include sobel
 
 layout (push_constant) uniform Push {
   mat4 transform;
@@ -62,9 +66,22 @@ void main() {
     result += calc_point_light(light, surfaceNormal, viewDir);
   }
 
+  // sampler2D texSampler =
+  // vec4 texture4 = texture(texSampler, texCoord);
+  // result *= sobel(texSampler, texCoord);
+  // result -= sobel(_texture, _sampler, texCoord);
+
+  vec4 texColor = texture(sampler2D(_texture, _sampler), texCoord).rgba;
+  vec3 sobelResult = apply_sobel_filter(_texture, _sampler, texCoord);
+
   if(ubo.layer == 0) {
     outColor = vec4(result, 1.0);
   } else if(ubo.layer == 1) {
-    outColor = texture(sampler2D(_texture, _sampler), texCoord) * vec4(result, 1.0);
+    // outColor =
+    //   texture(sampler2D(_texture, _sampler), texCoord) *
+    //   vec4(result, 1.0);
+
+    // vec4 overlay = texColor + (sobelResult, 0.0); // Scale Sobel intensity for smoother overlay
+    outColor = texColor * vec4(result, 1.0);
   }
 }

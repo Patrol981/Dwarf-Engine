@@ -271,7 +271,7 @@ public class TextField : Component, IUIElement {
     TextureManager textureManager,
     string texturePath
   ) {
-    _textAtlasId = textureManager.GetTextureId(texturePath);
+    _textAtlasId = textureManager.GetTextureIdLocal(texturePath);
 
     if (_textAtlasId == Guid.Empty) {
       Logger.Warn($"Could not bind texture to text ({texturePath}) - no such texture in manager");

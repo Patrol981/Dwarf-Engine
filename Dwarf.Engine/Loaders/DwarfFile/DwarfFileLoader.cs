@@ -131,10 +131,10 @@ public static class DwarfFileLoader {
       );
 
       Guid id;
-      if (!app.TextureManager.TextureExists(texture)) {
-        id = app.TextureManager.AddTexture(texture);
+      if (!app.TextureManager.TextureExistsLocal(texture)) {
+        id = app.TextureManager.AddTextureLocal(texture);
       } else {
-        id = app.TextureManager.GetTextureId(texture.TextureName);
+        id = app.TextureManager.GetTextureIdLocal(texture.TextureName);
         texture.Dispose();
       }
 

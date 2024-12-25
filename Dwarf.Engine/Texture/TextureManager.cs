@@ -12,13 +12,20 @@ public class TextureManager : IDisposable {
   public TextureManager(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
     _vmaAllocator = vmaAllocator;
-    LoadedTextures = [];
+    PerSceneLoadedTextures = [];
+    GlobalLoadedTextures = [];
     TextureArray = [];
   }
 
-  public void AddRange(ITexture[] textures) {
+  public void AddRangeLocal(ITexture[] textures) {
     for (int i = 0; i < textures.Length; i++) {
-      LoadedTextures.Add(Guid.NewGuid(), textures[i]);
+      PerSceneLoadedTextures.Add(Guid.NewGuid(), textures[i]);
+    }
+  }
+
+  public void AddRangeGlobal(ITexture[] textures) {
+    for (int i = 0; i < textures.Length; i++) {
+      GlobalLoadedTextures.Add(Guid.NewGuid(), textures[i]);
     }
   }
 
@@ -31,32 +38,56 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public async Task<Task> AddTexture(string texturePath, int flip = 1) {
-    foreach (var tex in LoadedTextures) {
+  public async Task<Task> AddTextureLocal(string texturePath, int flip = 1) {
+    foreach (var tex in PerSceneLoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
         return Task.CompletedTask;
       }
     }
     var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath, flip);
-    LoadedTextures.Add(Guid.NewGuid(), texture);
+    PerSceneLoadedTextures.Add(Guid.NewGuid(), texture);
     return Task.CompletedTask;
   }
 
-  public Guid AddTexture(ITexture texture) {
-    foreach (var tex in LoadedTextures) {
+  public async Task<Task> AddTextureGlobal(string texturePath, int flip = 1) {
+    foreach (var tex in GlobalLoadedTextures) {
+      if (tex.Value.TextureName == texturePath) {
+        Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
+        return Task.CompletedTask;
+      }
+    }
+    var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath, flip);
+    GlobalLoadedTextures.Add(Guid.NewGuid(), texture);
+    return Task.CompletedTask;
+  }
+
+  public Guid AddTextureLocal(ITexture texture) {
+    foreach (var tex in PerSceneLoadedTextures) {
       if (tex.Value.TextureName == texture.TextureName) {
         Logger.Warn($"Texture [{texture.TextureName}] is already loaded. Skipping current add call.");
         return tex.Key;
       }
     }
     var guid = Guid.NewGuid();
-    LoadedTextures.Add(guid, texture);
+    PerSceneLoadedTextures.Add(guid, texture);
     return guid;
   }
 
-  public bool TextureExists(ITexture texture) {
-    foreach (var tex in LoadedTextures) {
+  public Guid AddTextureGlobal(ITexture texture) {
+    foreach (var tex in GlobalLoadedTextures) {
+      if (tex.Value.TextureName == texture.TextureName) {
+        Logger.Warn($"Texture [{texture.TextureName}] is already loaded. Skipping current add call.");
+        return tex.Key;
+      }
+    }
+    var guid = Guid.NewGuid();
+    GlobalLoadedTextures.Add(guid, texture);
+    return guid;
+  }
+
+  public bool TextureExistsLocal(ITexture texture) {
+    foreach (var tex in PerSceneLoadedTextures) {
       if (tex.Value.TextureName == texture.TextureName) {
         return true;
       }
@@ -86,9 +117,14 @@ public class TextureManager : IDisposable {
     return textures;
   }
 
-  public void RemoveTexture(Guid key) {
-    LoadedTextures[key].Dispose();
-    LoadedTextures.Remove(key);
+  public void RemoveTextureLocal(Guid key) {
+    PerSceneLoadedTextures[key].Dispose();
+    PerSceneLoadedTextures.Remove(key);
+  }
+
+  public void RemoveTextureGlobal(Guid key) {
+    GlobalLoadedTextures[key].Dispose();
+    GlobalLoadedTextures.Remove(key);
   }
 
   public void RemoveTextureArray(Guid key) {
@@ -96,17 +132,26 @@ public class TextureManager : IDisposable {
     TextureArray.Remove(key);
   }
 
-  public ITexture GetTexture(Guid key) {
-    return LoadedTextures.GetValueOrDefault(key) ?? null!;
+  public ITexture GetTextureLocal(Guid key) {
+    return PerSceneLoadedTextures.GetValueOrDefault(key) ?? null!;
   }
 
-  public (Guid guid, ITexture texture) GetTexture(int textureIndex) {
-    var target = LoadedTextures.Single(x => x.Value.TextureIndex == textureIndex);
+  public ITexture GetTextureGlobal(Guid key) {
+    return GlobalLoadedTextures.GetValueOrDefault(key) ?? null!;
+  }
+
+  public (Guid guid, ITexture texture) GetTextureLocal(int textureIndex) {
+    var target = PerSceneLoadedTextures.Single(x => x.Value.TextureIndex == textureIndex);
     return (target.Key, target.Value);
   }
 
-  public Guid GetTextureId(string textureName) {
-    foreach (var tex in LoadedTextures) {
+  public (Guid guid, ITexture texture) GetTextureGlobal(int textureIndex) {
+    var target = GlobalLoadedTextures.Single(x => x.Value.TextureIndex == textureIndex);
+    return (target.Key, target.Value);
+  }
+
+  public Guid GetTextureIdLocal(string textureName) {
+    foreach (var tex in PerSceneLoadedTextures) {
       if (tex.Value.TextureName == textureName) {
         return tex.Key;
       }
@@ -114,13 +159,34 @@ public class TextureManager : IDisposable {
     return Guid.Empty;
   }
 
-  public Dictionary<Guid, ITexture> LoadedTextures { get; }
+  public Guid GetTextureIdGlobal(string textureName) {
+    foreach (var tex in GlobalLoadedTextures) {
+      if (tex.Value.TextureName == textureName) {
+        return tex.Key;
+      }
+    }
+    return Guid.Empty;
+  }
+
+  public Dictionary<Guid, ITexture> PerSceneLoadedTextures { get; }
+  public Dictionary<Guid, ITexture> GlobalLoadedTextures { get; }
   public Dictionary<Guid, VulkanTextureArray> TextureArray { get; }
 
-  public void Dispose() {
-    foreach (var tex in LoadedTextures) {
-      RemoveTexture(tex.Key);
+  public void DisposeLocal() {
+    foreach (var tex in PerSceneLoadedTextures) {
+      RemoveTextureLocal(tex.Key);
     }
+  }
+
+  public void DisposeGlobal() {
+    foreach (var tex in GlobalLoadedTextures) {
+      RemoveTextureGlobal(tex.Key);
+    }
+  }
+
+  public void Dispose() {
+    DisposeLocal();
+    DisposeGlobal();
     foreach (var tex in TextureArray) {
       RemoveTextureArray(tex.Key);
     }

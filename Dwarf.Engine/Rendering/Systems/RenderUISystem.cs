@@ -166,7 +166,7 @@ public class RenderUISystem : SystemBase {
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
     var id = entity.GetDrawable<IUIElement>() as IUIElement;
-    var texture = textureManager.GetTexture(id!.GetTextureIdReference());
+    var texture = textureManager.GetTextureLocal(id!.GetTextureIdReference());
 
     VkDescriptorImageInfo imageInfo = new() {
       sampler = texture.Sampler,

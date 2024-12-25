@@ -169,7 +169,7 @@ public static class EntityCreator {
     model.AddLinearNode(node);
     model.Init();
     entity.AddComponent(model);
-    await app.TextureManager.AddTexture(texturePath);
+    await app.TextureManager.AddTextureLocal(texturePath);
     // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
   }

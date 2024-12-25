@@ -64,7 +64,7 @@ public class Terrain3D : Component {
 
   private async void SetupTexture(Application app) {
     app.Mutex.WaitOne();
-    await app.TextureManager.AddTexture(_texturePath);
+    await app.TextureManager.AddTextureLocal(_texturePath);
     app.Mutex.ReleaseMutex();
   }
 

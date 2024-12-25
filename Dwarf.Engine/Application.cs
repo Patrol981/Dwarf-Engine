@@ -204,16 +204,17 @@ public class Application {
     _globalPool.Dispose();
     _globalPool = null!;
     _skybox?.Dispose();
+    _textureManager.DisposeLocal();
 
     StorageCollection = new(VmaAllocator, Device);
     Mutex.ReleaseMutex();
     await Init();
 
     _renderShouldClose = true;
-    Logger.Info("Waiting for loading render process to close...");
-    while (_renderShouldClose) {
+    Logger.Info("[Scene Reactor Finalizer] Waiting for loading render process to close...");
+    // while (_renderShouldClose) {
 
-    }
+    // }
 
     _renderThread.Join();
     _renderThread = new Thread(RenderLoop) {
@@ -231,7 +232,7 @@ public class Application {
     await LoadEntities();
 
     Logger.Info($"Loaded entities: {_entities.Count}");
-    Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
+    Logger.Info($"Loaded textures: {_textureManager.PerSceneLoadedTextures.Count}");
 
     return Task.CompletedTask;
   }
@@ -253,6 +254,7 @@ public class Application {
     await Init();
 
     _renderShouldClose = true;
+    while (_renderShouldClose) { Logger.Info("Waiting for renderer to close..."); }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
@@ -454,7 +456,7 @@ public class Application {
     }
 
     for (int i = 0; i < paths.Count; i++) {
-      _textureManager.AddRange([.. textures[i]]);
+      _textureManager.AddRangeLocal([.. textures[i]]);
     }
 
     var endTime = DateTime.Now;

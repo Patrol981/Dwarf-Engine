@@ -121,7 +121,7 @@ public static partial class GLTFLoaderKHR {
         textureSampler = textureSamplers[gltfTexture.Sampler.Value];
       }
 
-      var id = app.TextureManager.GetTextureId($"{textureName}_{textureIds.Count}");
+      var id = app.TextureManager.GetTextureIdLocal($"{textureName}_{textureIds.Count}");
       ITexture texture = null!;
       if (id == Guid.Empty) {
         texture = VulkanTexture.LoadFromGLTF(
@@ -134,7 +134,7 @@ public static partial class GLTFLoaderKHR {
           textureSampler,
           flip
         );
-        id = app.TextureManager.AddTexture(texture);
+        id = app.TextureManager.AddTextureLocal(texture);
         texture.TextureIndex = i;
 
         // var path = Path.Combine(DwarfPath.AssemblyDirectory, $"{textureName}_{textureIds.Count}.png");

@@ -109,12 +109,12 @@ public class Mesh : IDisposable, ICloneable {
   }
 
   public async void BindToTexture(TextureManager textureManager, string texturePath) {
-    TextureIdReference = textureManager.GetTextureId(texturePath);
+    TextureIdReference = textureManager.GetTextureIdLocal(texturePath);
 
     if (TextureIdReference == Guid.Empty) {
       var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath);
-      textureManager.AddTexture(texture);
-      TextureIdReference = textureManager.GetTextureId(texturePath);
+      textureManager.AddTextureLocal(texture);
+      TextureIdReference = textureManager.GetTextureIdLocal(texturePath);
 
       Logger.Warn($"Could not bind texture to model ({texturePath}) - no such texture in manager");
       Logger.Info($"Binding ({texturePath})");

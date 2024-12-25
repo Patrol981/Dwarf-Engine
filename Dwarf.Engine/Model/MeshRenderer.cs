@@ -191,7 +191,8 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   ) {
     var material = MeshedNodes[modelPart]?.Mesh?.Material;
     // var targetTexture = textureManager.GetTexture(material!.BaseColorTextureIndex);
-    var targetTexture = inputTextures.Where(x => x.texture.TextureIndex == material!.BaseColorTextureIndex).Single();
+    var targetTexture = inputTextures.Where(x => x.texture?.TextureIndex == material?.BaseColorTextureIndex).SingleOrDefault();
+    if (targetTexture.texture == null) return;
     MeshedNodes[modelPart]?.Mesh?.BindToTexture(textureManager, targetTexture.id);
   }
 

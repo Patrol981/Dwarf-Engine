@@ -45,9 +45,9 @@ public partial class DirectRPG {
     }
 
     var app = Application.Instance;
-    await app.TextureManager.AddTexture("./Resources/crawler_atlas.png", 1);
-    var textureId = app.TextureManager.GetTextureId("./Resources/crawler_atlas.png");
-    var texture = (VulkanTexture)app.TextureManager.GetTexture(textureId);
+    await app.TextureManager.AddTextureGlobal("./Resources/crawler_atlas.png", 1);
+    var textureId = app.TextureManager.GetTextureIdGlobal("./Resources/crawler_atlas.png");
+    var texture = (VulkanTexture)app.TextureManager.GetTextureGlobal(textureId);
     UploadTexture(texture);
   }
 

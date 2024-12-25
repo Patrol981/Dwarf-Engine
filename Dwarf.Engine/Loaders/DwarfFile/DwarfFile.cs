@@ -67,14 +67,14 @@ public class FileMesh {
   public static byte[] GetTextureDataOutOfId(TextureManager textureManager, Guid texId) {
     if (texId == Guid.Empty) return null!;
 
-    var tex = textureManager.GetTexture(texId);
+    var tex = textureManager.GetTextureLocal(texId);
     return tex.TextureData;
   }
 
   public static ITexture GetTextureOutOfId(TextureManager textureManager, Guid texId) {
     if (texId == Guid.Empty) return null!;
 
-    return textureManager.GetTexture(texId);
+    return textureManager.GetTextureLocal(texId);
   }
 
   public static Guid CreateTextureFromFile(string fileName) {

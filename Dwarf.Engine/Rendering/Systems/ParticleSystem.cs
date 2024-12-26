@@ -12,7 +12,7 @@ using System.Numerics;
 namespace Dwarf.Rendering;
 
 public class ParticleSystem : SystemBase {
-  private List<Particle> _particles = [];
+  private static List<Particle> s_particles = [];
   private readonly unsafe ParticlePushConstant* _particlePushConstant =
     (ParticlePushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<ParticlePushConstant>());
 
@@ -37,7 +37,7 @@ public class ParticleSystem : SystemBase {
   }
 
   public void Setup(ref TextureManager textures) {
-    if (_particles.Count < 1) {
+    if (s_particles.Count < 1) {
       Logger.Warn("Particles that are capable of using particle renderer are less than 1, thus Particle Render System won't be recreated");
       return;
     }
@@ -45,12 +45,12 @@ public class ParticleSystem : SystemBase {
     Logger.Info("Recreating Particle System");
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
-      .SetMaxSets((uint)_particles.Count)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)_particles.Count)
+      .SetMaxSets((uint)s_particles.Count)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)s_particles.Count)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _texturesCount = _particles.Count;
+    _texturesCount = s_particles.Count;
 
     _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)_texturesCount)
@@ -60,15 +60,15 @@ public class ParticleSystem : SystemBase {
   }
 
   public void Update() {
-    for (int i = 0; i < _particles.Count; i++) {
-      if (!_particles[i].Update()) {
-        _particles[i].MarkToDispose();
+    for (int i = 0; i < s_particles.Count; i++) {
+      if (!s_particles[i].Update()) {
+        s_particles[i].MarkToDispose();
       }
     }
   }
 
   public void Render(FrameInfo frameInfo) {
-    if (_particles.Count < 1) return;
+    if (s_particles.Count < 1) return;
 
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
@@ -84,11 +84,11 @@ public class ParticleSystem : SystemBase {
       );
     }
 
-    for (int i = 0; i < _particles.Count; i++) {
+    for (int i = 0; i < s_particles.Count; i++) {
       unsafe {
         _particlePushConstant->Color = Vector4.One;
-        _particlePushConstant->Position = new Vector4(_particles[i].Position, 1.0f);
-        _particlePushConstant->Radius = _particles[i].Scale;
+        _particlePushConstant->Position = new Vector4(s_particles[i].Position, 1.0f);
+        _particlePushConstant->Radius = s_particles[i].Scale;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
@@ -104,22 +104,22 @@ public class ParticleSystem : SystemBase {
     }
   }
 
-  public void AddParticle(Particle particle) {
-    _particles.Add(particle);
+  public static void AddParticle(Particle particle) {
+    s_particles.Add(particle);
   }
 
-  public void AddParticles(ParticleBatch batch) {
-    _particles.AddRange(batch.Particles);
+  public static void AddParticles(ParticleBatch batch) {
+    s_particles.AddRange(batch.Particles);
   }
 
   public bool ValidateTextures() {
-    return _texturesCount == _particles.Count;
+    return _texturesCount == s_particles.Count;
   }
 
   public void Collect() {
-    for (int i = 0; i < _particles.Count; i++) {
-      if (_particles[i].CanBeDisposed) {
-        _particles.RemoveAt(i);
+    for (int i = 0; i < s_particles.Count; i++) {
+      if (s_particles[i].CanBeDisposed) {
+        s_particles.RemoveAt(i);
       }
     }
   }

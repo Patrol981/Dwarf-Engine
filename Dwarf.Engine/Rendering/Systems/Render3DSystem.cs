@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Model;
 using Dwarf.Model.Animation;
@@ -406,6 +407,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     skinnedObjects = [.. objectDataSkinned];
   }
   public void Render(FrameInfo frameInfo) {
+    PerfMonitor.Clear3DRendererInfo();
+    PerfMonitor.NumberOfObjectsRenderedIn3DRenderer = (uint)LastElemRenderedCount;
     if (_notSkinnedNodesCache.Length > 0) {
       RenderSimple(frameInfo, _notSkinnedNodesCache);
     }
@@ -502,10 +505,12 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             1
           );
           prevTextureId = nodes[i].Mesh!.TextureIdReference;
+          PerfMonitor.TextureBindingsIn3DRenderer += 1;
         }
 
         nodes[i].BindNode(frameInfo.CommandBuffer);
         nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i);
+        PerfMonitor.VertexBindingsIn3DRenderer += 1;
       }
     }
 
@@ -610,6 +615,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         var targetTexture = frameInfo.TextureManager.GetTextureLocal(nodes[i].Mesh!.TextureIdReference);
         Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
         prevTextureId = nodes[i].Mesh!.TextureIdReference;
+        PerfMonitor.TextureBindingsIn3DRenderer += 1;
       }
 
       if (GlobalVertexBuffer) {
@@ -621,6 +627,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       } else {
         nodes[i].BindNode(frameInfo.CommandBuffer);
         nodes[i].DrawNode(frameInfo.CommandBuffer, (uint)i + (uint)prevIdx);
+        PerfMonitor.VertexBindingsIn3DRenderer += 1;
       }
     }
 

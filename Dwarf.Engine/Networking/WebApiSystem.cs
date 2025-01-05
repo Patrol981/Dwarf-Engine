@@ -50,7 +50,7 @@ public class WebApiSystem : IDisposable {
       postModel.Name = postModel.EntityID.ToString();
       postModel.AddTransform();
       postModel.AddMaterial();
-      // postModel.AddRigdbody(PrimitiveType.Box, new(.5f, 1f, .5f), new(0, -1f, 0), true, false);
+      // postModel.AddRigidbody(PrimitiveType.Box, new(.5f, 1f, .5f), new(0, -1f, 0), true, false);
       postModel.AddModel(filePath, 0);
       postModel.GetComponent<AnimationController>().PlayFirstAnimation();
 

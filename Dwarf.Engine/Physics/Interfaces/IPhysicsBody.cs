@@ -13,6 +13,7 @@ public interface IPhysicsBody : IDisposable {
   MotionType MotionType { get; set; }
   object CreateAndAddBody(object settings);
   object ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh);
+  object BodyId { get; }
   void CreateAndAddBody(MotionType motionType, object shapeSettings, Vector3 position);
   void AddForce(Vector3 force);
   void AddLinearVelocity(Vector3 velocity);

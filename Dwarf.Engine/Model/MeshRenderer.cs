@@ -298,20 +298,24 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
       HandleCopyNode(node, ref tmpLinear, ref index);
     }
     otherMeshRenderer.LinearNodes = tmpLinear;
-    otherMeshRenderer.MeshedNodes = otherMeshRenderer.LinearNodes.Where(x => x.HasMesh).ToArray();
+    if (otherMeshRenderer.LinearNodes != null) {
+      otherMeshRenderer.MeshedNodes = otherMeshRenderer.LinearNodes.Where(x => x.HasMesh).ToArray();
+    }
 
     foreach (var node in otherMeshRenderer.Nodes) {
       node.ParentRenderer = otherMeshRenderer;
     }
-    foreach (var node in otherMeshRenderer.LinearNodes) {
-      node.ParentRenderer = otherMeshRenderer;
-      if (node.HasSkin) {
-        node.Skin = otherMeshRenderer.Skins[node.SkinIndex];
-        node.Update();
+    if (otherMeshRenderer.LinearNodes != null) {
+      foreach (var node in otherMeshRenderer.LinearNodes) {
+        node.ParentRenderer = otherMeshRenderer;
+        if (node.HasSkin) {
+          node.Skin = otherMeshRenderer.Skins[node.SkinIndex];
+          node.Update();
+        }
       }
-    }
-    foreach (var node in otherMeshRenderer.MeshedNodes) {
-      node.ParentRenderer = otherMeshRenderer;
+      foreach (var node in otherMeshRenderer.MeshedNodes) {
+        node.ParentRenderer = otherMeshRenderer;
+      }
     }
 
     otherMeshRenderer.Animations = Animations.Select(x => (Animation)x.Clone()).ToList();

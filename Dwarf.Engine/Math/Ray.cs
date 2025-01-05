@@ -118,6 +118,28 @@ public class Ray {
       .ToArray();
   }
 
+  public static ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>> RaycastWithRayInfo(AABBFilter aabbFilter = AABBFilter.None) {
+    var entities = Application.Instance.GetEntities();
+    var result = new Dictionary<Entity, RaycastHitResult>();
+
+    foreach (var entity in entities) {
+      var enTransform = entity.TryGetComponent<Transform>();
+      var enDistance = Vector3.Distance(
+        CameraState.GetCameraEntity().GetComponent<Transform>().Position,
+        enTransform != null ? enTransform.Position : Vector3.Zero
+      );
+
+      var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
+      if (enResult.Present) {
+        result.TryAdd(entity, enResult);
+      }
+    }
+
+    return new ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>>(
+        [.. result.OrderBy(pair => pair.Value.Distance)]
+    );
+  }
+
   public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance, AABBFilter aabbFilter = AABBFilter.None) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;

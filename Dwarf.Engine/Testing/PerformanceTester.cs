@@ -20,7 +20,7 @@ public class PerformanceTester {
     entity.AddMaterial();
     entity.AddPrimitive("./Resources/gigachad.png", PrimitiveType.Cylinder);
     // entity.AddModel("./Resources/tks.glb");
-    // entity.AddRigdbody(PrimitiveType.Cylinder, false, 1);
+    // entity.AddRigidbody(PrimitiveType.Cylinder, false, 1);
     // entity.GetComponent<Rigidbody>().Init(Application.Instance.Systems.PhysicsSystem.BodyInterface);
     app.AddEntity(entity);
     return Task.CompletedTask;

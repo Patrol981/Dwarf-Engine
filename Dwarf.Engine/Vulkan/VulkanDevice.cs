@@ -29,7 +29,7 @@ public class VulkanDevice : IDevice {
   private readonly object _commandPoolLock = new object();
 
   private VkQueue _graphicsQueue = VkQueue.Null;
-  private VkQueue _presentQueue = VkQueue.Null;
+  // private VkQueue _presentQueue = VkQueue.Null;
   // private readonly VkQueue _transferQueue = VkQueue.Null;
 
   internal readonly object _queueLock = new object();
@@ -303,7 +303,7 @@ public class VulkanDevice : IDevice {
 
   public void WaitAllQueues() {
     WaitQueue(_graphicsQueue);
-    WaitQueue(_presentQueue);
+    // WaitQueue(_presentQueue);
   }
 
   private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
@@ -497,7 +497,7 @@ public class VulkanDevice : IDevice {
     var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, Surface);
     var availableDeviceExtensions = vkEnumerateDeviceExtensionProperties(_physicalDevice);
 
-    HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily, queueFamilies.presentFamily];
+    HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily];
 
     float priority = 1.0f;
     uint queueCount = 0;
@@ -523,6 +523,8 @@ public class VulkanDevice : IDevice {
       geometryShader = true,
       robustBufferAccess = true,
       shaderStorageBufferArrayDynamicIndexing = true,
+      depthClamp = true,
+      depthBounds = true,
     };
 
     VkPhysicalDeviceVulkan11Features vk11Features = new() {
@@ -549,7 +551,7 @@ public class VulkanDevice : IDevice {
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
-      pNext = &vk14Features
+      pNext = &vk13Features
     };
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
@@ -583,7 +585,7 @@ public class VulkanDevice : IDevice {
     vkLoadDevice(_logicalDevice);
 
     vkGetDeviceQueue(_logicalDevice, queueFamilies.graphicsFamily, 0, out _graphicsQueue);
-    vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
+    // vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
   }
 
   public unsafe ulong CreateCommandPool() {
@@ -623,7 +625,8 @@ public class VulkanDevice : IDevice {
   }
 
   public IntPtr PresentQueue {
-    get { return _presentQueue; }
+    // get { return _presentQueue; }
+    get { return IntPtr.Zero; }
   }
 
   public VkInstance VkInstance => _vkInstance;

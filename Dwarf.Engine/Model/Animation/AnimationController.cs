@@ -74,7 +74,7 @@ public class AnimationController : Component {
   public void Update(Node node) {
     // if (_currentAnimation == null) return;
     if (_activeAnimations.Count < 1) return;
-    node.AnimationTimer += _tickRate;
+    node.AnimationTimer += Time.DeltaTimeRender;
 
     // var currentAnimation = _activeAnimations.MaxBy(x => x.Weight);
     (Animation Animation, float Weight) currentAnimation = (null!, -1);

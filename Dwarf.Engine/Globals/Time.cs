@@ -21,11 +21,17 @@ public static class Time {
 
   private static DateTime s_startTime;
 
+  private static Stopwatch s_renderStopwatch = new();
+  private static long s_lastRenderStopwatchTick = 0;
+  private static float s_renderStopwatchDelta;
+
   public static void Init() {
     s_frequency = SDL_GetPerformanceFrequency();
     s_currentTime = SDL_GetPerformanceCounter();
     s_stopwatch.Start();
     s_lastStopwatchTick = s_stopwatch.ElapsedTicks;
+    s_renderStopwatch.Start();
+    s_lastRenderStopwatchTick = s_renderStopwatch.ElapsedTicks;
     s_startTime = DateTime.Now;
   }
 
@@ -61,6 +67,13 @@ public static class Time {
     }
   }
 
+  public static void RenderTick() {
+    long currentFrameTick = s_renderStopwatch.ElapsedTicks;
+    long frameTick = currentFrameTick - s_lastRenderStopwatchTick;
+    s_renderStopwatchDelta = (float)frameTick / Stopwatch.Frequency;
+    s_lastRenderStopwatchTick = currentFrameTick;
+  }
+
   public static void Tick_2() {
     double newTime = SDL_GetTicks();
     double frameTime = newTime - s_currentTime;
@@ -83,7 +96,7 @@ public static class Time {
   public static double Accumulator => s_accumulator;
   public static double LastFrame => s_lastFrame;
   public static double STime => s_time;
-  public const double LOW_LIMIT = 0.0167; // 60FPS
-  public const double HIGH_LIMIT = 0.1; // 10FPS
   public static DateTime StartTime => s_startTime;
+
+  public static float DeltaTimeRender => s_renderStopwatchDelta;
 }

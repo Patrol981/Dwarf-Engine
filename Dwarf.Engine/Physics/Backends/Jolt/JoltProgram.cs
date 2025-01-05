@@ -14,7 +14,7 @@ public class JoltProgram : IPhysicsProgram {
   public JobSystem? JobSystem { get; private set; }
 
   public PhysicsSystemSettings JoltSettings;
-  public readonly JoltPhysicsSharp.PhysicsSystem PhysicsSystem;
+  public readonly JoltPhysicsSharp.PhysicsSystem PhysicsSystem = null!;
   public BodyInterface BodyInterface => PhysicsSystem.BodyInterface!;
   public Dictionary<Entity, JoltBodyWrapper> Bodies { get; private set; } = [];
 
@@ -58,7 +58,7 @@ public class JoltProgram : IPhysicsProgram {
     // Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
     // You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
-    // _physicsSystem.OptimizeBroadPhase();
+    PhysicsSystem.OptimizeBroadPhase();
     PhysicsSystem.Gravity *= -1;
     Logger.Info($"[GRAVITY] {PhysicsSystem.Gravity}");
   }
@@ -96,35 +96,35 @@ public class JoltProgram : IPhysicsProgram {
     return ValidateResult.AcceptAllContactsForThisBodyPair;
   }
 
-  public void OnContactAdded(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
-    var data = Rigidbody.GetCollisionData(body1.ID, body2.ID);
+  public static void OnContactAdded(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
+    var data = JoltBodyWrapper.GetCollisionData(body1.ID, body2.ID);
     if (data.Item1 != null && data.Item2 != null) {
       data.Item1.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Enter, data.Item2);
       data.Item2.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Enter, data.Item1);
     }
   }
 
-  public void OnContactPersisted(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
-    var data = Rigidbody.GetCollisionData(body1.ID, body2.ID);
+  public static void OnContactPersisted(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, in ContactManifold manifold, in ContactSettings settings) {
+    var data = JoltBodyWrapper.GetCollisionData(body1.ID, body2.ID);
     if (data.Item1 != null && data.Item2 != null) {
       data.Item1.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Stay, data.Item2);
       data.Item2.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Stay, data.Item1);
     }
   }
 
-  public void OnContactRemoved(JoltPhysicsSharp.PhysicsSystem system, ref SubShapeIDPair subShapePair) {
-    var data = Rigidbody.GetCollisionData(subShapePair.Body1ID, subShapePair.Body2ID);
+  public static void OnContactRemoved(JoltPhysicsSharp.PhysicsSystem system, ref SubShapeIDPair subShapePair) {
+    var data = JoltBodyWrapper.GetCollisionData(subShapePair.Body1ID, subShapePair.Body2ID);
     if (data.Item1 != null && data.Item2 != null) {
       data.Item1.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Exit, data.Item2);
       data.Item2.GetComponent<Rigidbody>().InvokeCollision(CollisionState.Exit, data.Item1);
     }
   }
 
-  public void OnBodyActivated(JoltPhysicsSharp.PhysicsSystem system, in BodyID bodyID, ulong bodyUserData) {
+  public static void OnBodyActivated(JoltPhysicsSharp.PhysicsSystem system, in BodyID bodyID, ulong bodyUserData) {
     // Console.WriteLine("A body got activated");
   }
 
-  public void OnBodyDeactivated(JoltPhysicsSharp.PhysicsSystem system, in BodyID bodyID, ulong bodyUserData) {
+  public static void OnBodyDeactivated(JoltPhysicsSharp.PhysicsSystem system, in BodyID bodyID, ulong bodyUserData) {
     // Console.WriteLine("A body went to sleep");
   }
 

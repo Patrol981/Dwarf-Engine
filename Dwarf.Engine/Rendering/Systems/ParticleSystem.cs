@@ -12,6 +12,8 @@ using System.Numerics;
 namespace Dwarf.Rendering;
 
 public class ParticleSystem : SystemBase {
+  public const int ParticleMargin = 100;
+  private int _currentCapacity = 0;
   private static List<Particle> s_particles = [];
   private readonly unsafe ParticlePushConstant* _particlePushConstant =
     (ParticlePushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<ParticlePushConstant>());
@@ -37,6 +39,13 @@ public class ParticleSystem : SystemBase {
   }
 
   public void Setup(ref TextureManager textures) {
+    int requiredCapacity = s_particles.Count + ParticleMargin;
+
+    if (_currentCapacity >= requiredCapacity) {
+      Logger.Info("Particle capacity is sufficient, no need to recreate resources.");
+      return;
+    }
+
     if (s_particles.Count < 1) {
       Logger.Warn("Particles that are capable of using particle renderer are less than 1, thus Particle Render System won't be recreated");
       return;
@@ -44,13 +53,15 @@ public class ParticleSystem : SystemBase {
 
     Logger.Info("Recreating Particle System");
 
+    _currentCapacity = requiredCapacity;
+
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)s_particles.Count)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)s_particles.Count)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _texturesCount = s_particles.Count;
+    _texturesCount = requiredCapacity;
 
     _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)_texturesCount)
@@ -113,7 +124,7 @@ public class ParticleSystem : SystemBase {
   }
 
   public bool ValidateTextures() {
-    return _texturesCount == s_particles.Count;
+    return _texturesCount >= s_particles.Count;
   }
 
   public void Collect() {

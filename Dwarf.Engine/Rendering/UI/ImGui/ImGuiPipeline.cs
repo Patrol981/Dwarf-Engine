@@ -36,6 +36,8 @@ public class ImGuiPipeline : PipelineConfigInfo {
     configInfo.ViewportInfo = VkUtils.PipelineViewportStateCreateInfo(1, 1, 0);
     configInfo.MultisampleInfo = VkUtils.PipelineMultisampleStateCreateInfo(VkSampleCountFlags.Count1);
 
+    configInfo.Subpass = 1;
+
     return configInfo;
   }
 }

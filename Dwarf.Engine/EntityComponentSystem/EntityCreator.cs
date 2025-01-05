@@ -174,7 +174,7 @@ public static class EntityCreator {
     app.Mutex.ReleaseMutex();
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
@@ -188,7 +188,7 @@ public static class EntityCreator {
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     Application app,
     ref Entity entity,
     in Mesh mesh,
@@ -200,10 +200,36 @@ public static class EntityCreator {
     if (entity == null) return;
 
     entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip));
-    entity.GetComponent<Rigidbody>().InitBase();
+    entity.GetComponent<Rigidbody>().InitBase(mesh);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
+    Application app,
+    ref Entity entity,
+    in Mesh mesh,
+    PrimitiveType primitiveType,
+    Vector3 size,
+    Vector3 offset,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(
+      new Rigidbody(
+        app.VmaAllocator,
+        app.Device,
+        primitiveType,
+        motionType,
+        size: size,
+        offset: offset,
+        flip
+      )
+    );
+    entity.GetComponent<Rigidbody>().InitBase(mesh);
+  }
+
+  public static void AddRigidbody(
     Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
@@ -219,7 +245,7 @@ public static class EntityCreator {
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
@@ -238,13 +264,13 @@ public static class EntityCreator {
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, MotionType motionType = MotionType.Dynamic, float radius = 1) {
+  public static void AddRigidbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, MotionType motionType = MotionType.Dynamic, float radius = 1) {
     var app = Application.Instance;
 
-    AddRigdbody(app, ref entity, primitiveType, radius, motionType);
+    AddRigidbody(app, ref entity, primitiveType, radius, motionType);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     float sizeX = 1,
@@ -257,10 +283,10 @@ public static class EntityCreator {
     bool flip = false
   ) {
     var app = Application.Instance;
-    AddRigdbody(app, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip);
+    AddRigidbody(app, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     Vector3 size = default,
@@ -269,20 +295,20 @@ public static class EntityCreator {
     bool flip = false
   ) {
     var app = Application.Instance;
-    AddRigdbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip);
+    AddRigidbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
     var app = Application.Instance;
-    AddRigdbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip);
+    AddRigidbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     in Mesh mesh,
     PrimitiveType primitiveType = PrimitiveType.Convex,
@@ -290,6 +316,28 @@ public static class EntityCreator {
     bool flip = false
   ) {
     var app = Application.Instance;
-    AddRigdbody(app, ref entity, mesh, primitiveType, default, motionType, flip);
+    AddRigidbody(app, ref entity, mesh, primitiveType, default, motionType, flip);
+  }
+
+  public static void AddRigidbody(
+    this Entity entity,
+    in Mesh mesh,
+    Vector3 size,
+    Vector3 offset,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false
+  ) {
+    var app = Application.Instance;
+    AddRigidbody(
+      app,
+      ref entity,
+      mesh: in mesh,
+      size: size,
+      offset: offset,
+      primitiveType: primitiveType,
+      motionType: motionType,
+      flip: flip
+    );
   }
 }

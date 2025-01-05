@@ -139,6 +139,9 @@ public static partial class GLTFLoaderKHR {
 
         // var path = Path.Combine(DwarfPath.AssemblyDirectory, $"{textureName}_{textureIds.Count}.png");
         //File.WriteAllBytes(path, texture.TextureData);
+      } else {
+        texture = app.TextureManager.GetTextureLocal(id);
+        texture.TextureIndex = i;
       }
       i++;
       textureIds.Add((id, texture));

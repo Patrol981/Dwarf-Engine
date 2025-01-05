@@ -16,7 +16,7 @@ public enum PrimitiveType {
 }
 
 public static class Primitives {
-  static Vector3 Color = new(1f, 1f, 1f);
+  static Vector3 Color = new(0f, 1f, 0f);
 
   public static Mesh CreatePrimitive(PrimitiveType primitiveType) {
     var mesh = new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device);
@@ -131,7 +131,7 @@ public static class Primitives {
       }
     }
     return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
-      Vertices = vertices.ToArray(),
+      Vertices = [.. vertices],
       Matrix = Matrix4x4.Identity
     };
   }
@@ -177,6 +177,7 @@ public static class Primitives {
       Vector3 updatePos = flip ? new(vertex.Position.X, -vertex.Position.Y, vertex.Position.Z) : vertex.Position;
 
       vertex.Position = updatePos;
+      vertex.Color = Color;
       vertices.Add(vertex);
     }
 

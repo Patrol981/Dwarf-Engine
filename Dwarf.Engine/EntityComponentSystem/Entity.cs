@@ -169,7 +169,7 @@ public class Entity {
       clone.GetComponent<AnimationController>().Init(clone.GetComponent<MeshRenderer>());
     }
     if (rigidbody != null) {
-      clone.AddRigdbody(
+      clone.AddRigidbody(
         rigidbody.PrimitiveType,
         rigidbody.Size,
         rigidbody.Offset,

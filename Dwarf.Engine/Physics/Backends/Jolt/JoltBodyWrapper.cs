@@ -7,7 +7,7 @@ using static Dwarf.Physics.JoltConfig;
 namespace Dwarf.Physics.Backends.Jolt;
 
 public class JoltBodyWrapper : IPhysicsBody {
-  private BodyInterface _bodyInterface;
+  private readonly BodyInterface _bodyInterface;
   private BodyID _bodyID;
 
   public JoltBodyWrapper(in BodyInterface bodyInterface) {
@@ -48,6 +48,8 @@ public class JoltBodyWrapper : IPhysicsBody {
     get => (Dwarf.Physics.MotionType)_bodyInterface.GetMotionType(_bodyID);
     set => _bodyInterface.SetMotionType(_bodyID, (JoltPhysicsSharp.MotionType)value, Activation.Activate);
   }
+
+  public object BodyId => _bodyID;
 
   public object CreateAndAddBody(object settings) {
     return _bodyInterface.CreateAndAddBody((BodyCreationSettings)settings, Activation.Activate);
@@ -90,6 +92,14 @@ public class JoltBodyWrapper : IPhysicsBody {
 
   public void AddImpulse(Vector3 impulse) {
     _bodyInterface.AddImpulse(_bodyID, impulse);
+  }
+
+  public static (Entity?, Entity?) GetCollisionData(BodyID body1, BodyID body2) {
+    var entities = Application.Instance.GetEntities().Where(x => x.HasComponent<Rigidbody>() && !x.CanBeDisposed);
+    var first = entities.Where(x => (BodyID)x.GetComponent<Rigidbody>().BodyInterface.BodyId == body1).FirstOrDefault();
+    var second = entities.Where(x => (BodyID)x.GetComponent<Rigidbody>().BodyInterface.BodyId == body2).FirstOrDefault();
+
+    return (first, second);
   }
 
   public void Dispose() {

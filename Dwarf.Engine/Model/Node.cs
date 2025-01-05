@@ -17,7 +17,7 @@ public struct NodeInfo {
   }
 }
 
-public class Node : ICloneable, IDisposable {
+public class Node : ICloneable, IDisposable, IComparable<Node> {
   public const int MAX_NUM_JOINTS = 128;
 
   public Node? Parent;
@@ -43,6 +43,7 @@ public class Node : ICloneable, IDisposable {
   public BoundingBox AABB;
 
   public bool Enabled { get; set; } = true;
+  public bool FilterMeInShader { get; set; } = false;
 
   public float AnimationTimer = 0.0f;
 
@@ -142,6 +143,7 @@ public class Node : ICloneable, IDisposable {
   public void Dispose() {
     Skin?.Dispose();
     Mesh?.Dispose();
+    GC.SuppressFinalize(this);
   }
 
   public Node CloneNode(Node parent) {
@@ -182,5 +184,14 @@ public class Node : ICloneable, IDisposable {
     }).ToList();
 
     return clone;
+  }
+
+  public int CompareTo(Node? other) {
+    if (other == null) return 1;
+    // if (!other.HasMesh) return 1;
+
+    return string.Compare(Name, other.Name, StringComparison.Ordinal);
+    // int vertexComp = Mesh!.VertexCount.CompareTo(other.Mesh!.VertexCount);
+    // return vertexComp;
   }
 }

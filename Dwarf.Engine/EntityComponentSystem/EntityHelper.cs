@@ -66,7 +66,7 @@ public static class EntityHelper {
     return list.ToArray();
   }
 
-  public static ReadOnlySpan<DwarfScript> GetScripts(this Entity[] entities) {
+  public static ReadOnlySpan<DwarfScript> GetScriptsAsSpan(this Entity[] entities) {
     var list = new List<DwarfScript>();
 
     foreach (var e in entities) {
@@ -74,5 +74,15 @@ public static class EntityHelper {
     }
 
     return list.ToArray();
+  }
+
+  public static DwarfScript[] GetScriptsAsArray(this Entity[] entities) {
+    var list = new List<DwarfScript>();
+
+    foreach (var e in entities) {
+      list.AddRange(e.GetScripts().Where(x => x.Owner!.CanBeDisposed == false));
+    }
+
+    return [.. list];
   }
 }

@@ -5,11 +5,13 @@ layout(location = 1) in vec3 fragPositionWorld;
 layout(location = 2) in vec3 fragNormalWorld;
 layout(location = 3) in vec2 texCoord;
 layout(location = 4) flat in int filterFlag;
+layout(location = 5) in float entityToFragDistance;
+layout(location = 6) in float fogVisiblity;
 
 layout(location = 0) out vec4 outColor;
 
 #include object_data
-
+#include fog
 #include material
 
 #include directional_light
@@ -35,16 +37,6 @@ layout(std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
 
 #include light_calc
 
-vec2 applyDistortion(vec3 pos, vec2 uv, float str, float radius) {
-    vec3 direction = normalize(pos - ubo.importantEntityPosition);
-    float distance = length(pos - ubo.importantEntityPosition);
-
-    float effectStrength = smoothstep(radius, 0.0, distance) * str;
-
-    vec2 distortedUV = uv + direction.xy * effectStrength;
-    return distortedUV;
-}
-
 void main() {
     vec3 surfaceNormal = normalize(fragNormalWorld);
     vec3 viewDir = normalize(ubo.cameraPosition - fragPositionWorld);
@@ -59,20 +51,22 @@ void main() {
         float radiusHorizontal = 1.0;
         float distortionStrength = 1.0;
 
-        float dist = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);
+        // if(ubo.useFog == 1 && entityToFragDistance > ubo.fog.x) discard;
 
         float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
         float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
 
-        if (fragToCamera <= entityToCamera && dist < radiusHorizontal) {
+        if (fragToCamera <= entityToCamera && entityToFragDistance < radiusHorizontal) {
             alpha = 0.5;
-            vec2 distorsion = applyDistortion(fragPositionWorld, texCoord, distortionStrength, radiusHorizontal);
-            colorMod = texture(sampler2D(_texture, _sampler), distorsion);
+            colorMod = texture(sampler2D(_texture, _sampler), texCoord);
         } else {
             colorMod = texture(sampler2D(_texture, _sampler), texCoord);
         }
-    } else {
-        colorMod = texture(sampler2D(_texture, _sampler), texCoord);
+    } else if(ubo.useFog == 1 && ubo.hasImportantEntity == 1) {
+      // if(entityToFragDistance > ubo.fog.x) discard;
+      colorMod = texture(sampler2D(_texture, _sampler), texCoord);
+    }  else {
+      colorMod = texture(sampler2D(_texture, _sampler), texCoord);
     }
 
     result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);
@@ -81,9 +75,6 @@ void main() {
         result += calc_point_light(light, surfaceNormal, viewDir);
     }
 
-    if (ubo.layer == 0) {
-        outColor = vec4(result, alpha);
-    } else if (ubo.layer == 1) {
-        outColor = colorMod * vec4(result, alpha);
-    }
+    outColor = colorMod * vec4(result, alpha);
+    outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
 }

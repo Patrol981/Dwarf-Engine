@@ -42,7 +42,7 @@ public class PipelineConfigInfo {
 
     // configInfo.RasterizationInfo.sType = VkStructureType.PipelineRasterizationStateCreateInfo;
     configInfo.RasterizationInfo = new() {
-      depthClampEnable = false,
+      depthClampEnable = true,
       rasterizerDiscardEnable = false,
       polygonMode = VkPolygonMode.Fill,
       lineWidth = 1.0f,
@@ -92,11 +92,11 @@ public class PipelineConfigInfo {
     configInfo.DepthStencilInfo = new() {
       depthTestEnable = true,
       depthWriteEnable = true,
-      depthCompareOp = VkCompareOp.Less,
-      depthBoundsTestEnable = false,
+      depthCompareOp = VkCompareOp.LessOrEqual,
+      depthBoundsTestEnable = true,
       minDepthBounds = 0.0f,  // Optional
       maxDepthBounds = 1.0f,  // Optional
-      stencilTestEnable = false,
+      stencilTestEnable = true,
       front = new(),  // Optional
       back = new()   // Optional
     };
@@ -112,7 +112,7 @@ public class PipelineConfigInfo {
       configInfo.DynamicStateInfo = new() {
         pDynamicStates = pStates,
         dynamicStateCount = (uint)configInfo.DynamicStatesEnables.Length,
-        flags = 0
+        flags = VkPipelineDynamicStateCreateFlags.None
       };
     }
 

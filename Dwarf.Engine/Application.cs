@@ -81,7 +81,9 @@ public class Application {
   private bool _newSceneShouldLoad = false;
   private bool _appExitRequest = false;
 
-  private Skybox _skybox = null!;
+  private Skybox? _skybox = null;
+  public bool UseSkybox = true;
+
   // private GlobalUniformBufferObject _ubo;
   private readonly unsafe GlobalUniformBufferObject* _ubo =
     (GlobalUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -94,6 +96,9 @@ public class Application {
   public readonly object ApplicationLock = new object();
 
   public const int ThreadTimeoutTimeMS = 1000;
+
+  public Vector3 FogValue = Vector3.UnitX;
+  public bool UseFog = true;
 
   public Application(
     string appName = "Dwarf Vulkan",
@@ -247,14 +252,17 @@ public class Application {
       await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     }
 
-    _renderThread = new Thread(LoaderLoop);
-    _renderThread.Name = "App Loading Frontend Thread";
+    _renderThread = new Thread(LoaderLoop) {
+      Name = "App Loading Frontend Thread"
+    };
     _renderThread.Start();
 
     await Init();
 
     _renderShouldClose = true;
-    while (_renderShouldClose) { Logger.Info("Waiting for renderer to close..."); }
+    Logger.Info("Waiting for renderer to close...");
+    int x = 0;
+    while (_renderShouldClose) { Console.Write(""); }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
@@ -281,9 +289,10 @@ public class Application {
 
       PerformCalculations();
 
-      _onUpdate?.Invoke();
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
-      MasterUpdate(updatable.GetScripts());
+      MasterFixedUpdate(updatable.GetScriptsAsSpan());
+      _onUpdate?.Invoke();
+      MasterUpdate(updatable.GetScriptsAsArray());
 
       if (_newSceneShouldLoad) {
         SceneLoadReactor();
@@ -323,6 +332,7 @@ public class Application {
       .SetMaxSets(10)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
@@ -344,6 +354,16 @@ public class Application {
     _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
       .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
       .Build());
+
+    // _descriptorSetLayouts.TryAdd("InputAttachments", new DescriptorSetLayout.Builder(Device)
+    //   .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+    //   .Build());
+
+    // StorageCollection.CreateStorage(
+    //   Device,
+    //   VkDescriptorType.InputAttachment,
+    //   BufferUsage.UniformBuffer
+    // )
 
     StorageCollection.CreateStorage(
       Device,
@@ -417,7 +437,15 @@ public class Application {
       true
     );
 
-    _skybox = new(VmaAllocator, Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
+    if (UseSkybox) {
+      _skybox = new(
+        VmaAllocator,
+        Device,
+        _textureManager,
+        Renderer,
+        _descriptorSetLayouts["Global"].GetDescriptorSetLayout()
+      );
+    }
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
@@ -434,8 +462,6 @@ public class Application {
       InitResources()
     };
 
-    // await SetupScene();
-    // InitResources();
     await Task.WhenAll(tasks);
 
     return Task.CompletedTask;
@@ -447,7 +473,6 @@ public class Application {
     var paths = CurrentScene.GetTexturePaths();
 
     var startTime = DateTime.UtcNow;
-    List<Task> tasks = [];
 
     List<List<ITexture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
@@ -505,10 +530,19 @@ public class Application {
 #endif
   }
 
-  private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+  private static void MasterUpdate(DwarfScript[] entities) {
+#if RUNTIME
+    Parallel.For(0, entities.Length, i => { entities[i].Update(); });
+    // for (short i = 0; i < entities.Length; i++) {
+    //   entities[i].Update();
+    // }
+#endif
+  }
+
+  private static void MasterFixedUpdate(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
-      entities[i].Update();
+      entities[i].FixedUpdate();
     }
 #endif
   }
@@ -524,8 +558,8 @@ public class Application {
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
       var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      MasterAwake(new[] { entity }.GetScripts());
-      MasterStart(new[] { entity }.GetScripts());
+      MasterAwake(new[] { entity }.GetScriptsAsSpan());
+      MasterStart(new[] { entity }.GetScriptsAsSpan());
       vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
       unsafe {
         vkDestroyFence(Device.LogicalDevice, fence);
@@ -596,6 +630,7 @@ public class Application {
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     // Time.Tick();
+    Time.RenderTick();
     if (Window.IsMinimalized) return;
 
     Systems.ValidateSystems(
@@ -634,13 +669,17 @@ public class Application {
       _currentFrame.TextureManager = _textureManager;
       _currentFrame.ImportantEntity = _entities.Where(x => x.IsImportant).FirstOrDefault() ?? null!;
 
+      // _currentFrame.DepthTexture = Renderer.Swapchain
+
       _ubo->Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
       _ubo->View = _camera.GetComponent<Camera>().GetViewMatrix();
       _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
-      _ubo->Layer = 1;
+      _ubo->Fov = 60;
       _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Position : Vector3.Zero;
-      _ubo->ImportantEntityPosition.Z += 1.0f;
+      _ubo->ImportantEntityPosition.Z += 0.5f;
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
+      _ubo->Fog = FogValue;
+      _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
 
       _ubo->DirectionalLight = DirectionalLight;
@@ -700,19 +739,23 @@ public class Application {
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
       _onRender?.Invoke();
-      _skybox.Render(_currentFrame);
-      Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
+      _skybox?.Render(_currentFrame);
+      Entity[] toUpdate = [.. _entities];
+      Systems.UpdateSystems(toUpdate, _currentFrame);
 
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onGUI?.Invoke();
       }
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
-      MasterRenderUpdate(updatable.GetScripts());
+      MasterRenderUpdate(updatable.GetScriptsAsSpan());
 
+      Renderer.NextSwapchainSubpass(commandBuffer);
+      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
+
 
       Mutex.WaitOne();
       Renderer.EndSwapchainRenderPass(commandBuffer);
@@ -750,6 +793,7 @@ public class Application {
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
 
+      Renderer.NextSwapchainSubpass(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();

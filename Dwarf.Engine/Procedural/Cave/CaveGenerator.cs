@@ -519,7 +519,7 @@ public class CaveGenerator {
     dstTarget.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, wallTexture, 1);
     dstTarget.GetComponent<MeshRenderer>().FilterMeInShader = true;
 
-    // dstTarget.AddRigdbody(PrimitiveType.Convex, true, false);
+    // dstTarget.AddRigidbody(PrimitiveType.Convex, true, false);
     // dstTarget.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, textureName);
   }
 
@@ -544,6 +544,35 @@ public class CaveGenerator {
     }
 
     GenerateMesh(device, borderedMap, out mesh, out wallMesh);
+  }
+
+  public Vector3 MapPointToWorld(int mapX, int mapY, float scale = 1.0f) {
+    float worldOffsetX = -Width * SquareSize / 2.0f;
+    float worldOffsetZ = -Height * SquareSize / 2.0f;
+
+    float worldX = (worldOffsetX + mapX * SquareSize + SquareSize / 2.0f) * scale;
+    float worldZ = (worldOffsetZ + mapY * SquareSize + SquareSize / 2.0f) * scale;
+
+    float worldY = 0;
+
+    return new Vector3(worldX, worldY, worldZ);
+  }
+
+  public Vector3 GetRoomCenterInWorldSpace(Room room, float scale = 1.0f) {
+    if (room.Tiles.Count == 0) {
+      throw new InvalidOperationException("The room has no tiles.");
+    }
+
+    var targetTile = room.Tiles[room.Tiles.Count / 2];
+
+    var pos = CoordToWorldPoint(targetTile);
+    pos.X *= scale;
+    pos.Z *= scale;
+    return pos;
+  }
+
+  public Vector3 CoordToWorldPoint(Coord tile) {
+    return new Vector3(-Width / 2 + .5f + tile.TileX, 0, -Height / 2 + .5f + tile.TileY);
   }
 
   private void SmoothMap() {
@@ -835,8 +864,8 @@ public class CaveGenerator {
         grid.Vertices[i].X
       ) * TileSize;
       float percentY = Float.InverseLerp(
-        -map.GetLength(0) / 2 * SquareSize,
-        map.GetLength(0) / 2 * SquareSize,
+        -map.GetLength(1) / 2 * SquareSize,
+        map.GetLength(1) / 2 * SquareSize,
         grid.Vertices[i].Z
       ) * TileSize;
       mesh.Vertices[i].Uv = new(percentX, percentY);

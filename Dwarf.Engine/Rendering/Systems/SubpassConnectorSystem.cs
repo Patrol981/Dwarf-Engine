@@ -14,7 +14,10 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
-    VkDescriptorSetLayout[] layouts = [renderer.Swapchain.InputAttachmentLayout.GetDescriptorSetLayout()];
+    VkDescriptorSetLayout[] layouts = [
+      renderer.Swapchain.InputAttachmentLayout.GetDescriptorSetLayout(),
+      externalLayouts["Global"].GetDescriptorSetLayout()
+    ];
 
     AddPipelineData(new() {
       RenderPass = renderer.GetSwapchainRenderPass(),
@@ -42,6 +45,13 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
       _pipelines[Subpass].PipelineLayout,
       0,
       _renderer.Swapchain.ImageDescriptor
+    );
+    vkCmdBindDescriptorSets(
+      frameInfo.CommandBuffer,
+      VkPipelineBindPoint.Graphics,
+      _pipelines[Subpass].PipelineLayout,
+      1,
+      frameInfo.GlobalDescriptorSet
     );
     vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
   }

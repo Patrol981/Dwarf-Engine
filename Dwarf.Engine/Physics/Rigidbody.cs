@@ -21,12 +21,15 @@ public class Rigidbody : Component, IDisposable {
   private readonly MotionQuality _motionQuality = MotionQuality.LinearCast;
   private readonly bool _physicsControlRotation = false;
   private readonly float _inputRadius = 0.0f;
+  private readonly bool _useMesh = true;
   private float _sizeX = 0.0f;
   private float _sizeY = 0.0f;
   private float _sizeZ = 0.0f;
   private float _offsetX = 0.0f;
   private float _offsetY = 0.0f;
   private float _offsetZ = 0.0f;
+
+  private Mesh? _collisionShape;
 
   public Rigidbody() { }
 
@@ -38,7 +41,8 @@ public class Rigidbody : Component, IDisposable {
     Vector3 size,
     Vector3 offset,
     bool flip = false,
-    bool physicsControlRotation = false
+    bool physicsControlRotation = false,
+    bool useMesh = true
   ) {
     _device = device;
     _vmaAllocator = vmaAllocator;
@@ -53,6 +57,7 @@ public class Rigidbody : Component, IDisposable {
     _offsetZ = offset.Z;
     _physicsControlRotation = physicsControlRotation;
     _inputRadius = default;
+    _useMesh = useMesh;
   }
 
   public Rigidbody(
@@ -62,7 +67,8 @@ public class Rigidbody : Component, IDisposable {
     float inputRadius,
     MotionType motionType,
     bool flip = false,
-    bool physicsControlRotation = false
+    bool physicsControlRotation = false,
+    bool useMesh = true
   ) {
     PrimitiveType = colliderShape;
     _vmaAllocator = vmaAllocator;
@@ -71,6 +77,7 @@ public class Rigidbody : Component, IDisposable {
     Flipped = flip;
     _motionType = motionType;
     _physicsControlRotation = physicsControlRotation;
+    _useMesh = useMesh;
   }
 
   public Rigidbody(
@@ -82,7 +89,8 @@ public class Rigidbody : Component, IDisposable {
     float sizeZ,
     MotionType motionType,
     bool flip,
-    bool physicsControlRotation = false
+    bool physicsControlRotation = false,
+    bool useMesh = true
   ) {
     _device = device;
     _vmaAllocator = vmaAllocator;
@@ -93,6 +101,7 @@ public class Rigidbody : Component, IDisposable {
     _sizeY = sizeY;
     _sizeZ = sizeZ;
     _physicsControlRotation = physicsControlRotation;
+    _useMesh = useMesh;
   }
 
   public Rigidbody(
@@ -107,7 +116,8 @@ public class Rigidbody : Component, IDisposable {
     float offsetZ,
     MotionType motionType,
     bool flip,
-    bool physicsControlRotation = false
+    bool physicsControlRotation = false,
+    bool useMesh = true
   ) {
     _device = device;
     _vmaAllocator = vmaAllocator;
@@ -121,6 +131,7 @@ public class Rigidbody : Component, IDisposable {
     _offsetY = offsetY;
     _offsetZ = offsetZ;
     _physicsControlRotation = physicsControlRotation;
+    _useMesh = useMesh;
   }
 
   public void InitBase(Mesh? mesh = null) {
@@ -145,54 +156,57 @@ public class Rigidbody : Component, IDisposable {
 
     switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
-        mesh = Primitives.CreateCylinderPrimitive(1, 1, 20);
-        ScaleColliderMesh(ref mesh);
-        AdjustColliderMesh(ref mesh);
+        _collisionShape = Primitives.CreateCylinderPrimitive(1, 1, 20);
+        ScaleColliderMesh(ref _collisionShape);
+        AdjustColliderMesh(ref _collisionShape);
         break;
       case PrimitiveType.Convex:
         if (mesh == null) {
           var target = Owner?.GetDrawable<IRender3DElement>() as IRender3DElement;
           if (target == null) throw new ArgumentException(nameof(mesh));
-          mesh = Primitives.CreateConvex(target!.MeshedNodes, Flipped);
+          _collisionShape = Primitives.CreateConvex(target!.MeshedNodes, Flipped);
         } else {
-          mesh = Primitives.CreateConvex(mesh, Flipped);
+          _collisionShape = Primitives.CreateConvex(mesh, Flipped);
         }
-        AdjustColliderMesh(ref mesh);
+        AdjustColliderMesh(ref _collisionShape);
         // ScaleColliderMesh(ref mesh);
 
         break;
       case PrimitiveType.Box:
-        mesh = Primitives.CreateBoxPrimitive(1);
-        ScaleColliderMesh(ref mesh);
-        AdjustColliderMesh(ref mesh);
+        _collisionShape = Primitives.CreateBoxPrimitive(1);
+        ScaleColliderMesh(ref _collisionShape);
+        AdjustColliderMesh(ref _collisionShape);
         break;
       default:
-        mesh = Primitives.CreateBoxPrimitive(1);
+        _collisionShape = Primitives.CreateBoxPrimitive(1);
         break;
     }
 
-    Owner!.AddComponent(new ColliderMesh(_vmaAllocator, _device, mesh));
+    if (_useMesh) {
+      Owner!.AddComponent(new ColliderMesh(_vmaAllocator, _device, _collisionShape));
+    }
+
   }
 
   public unsafe void Init(in IPhysicsBody bodyInterface) {
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
+    if (_collisionShape == null) throw new ArgumentNullException(nameof(_collisionShape));
     if (_device == null) throw new Exception("Device cannot be null!");
 
     _bodyInterface = bodyInterface;
 
     var pos = Owner!.GetComponent<Transform>().Position;
-    Mesh mesh = Owner!.GetComponent<ColliderMesh>().Mesh;
     object shapeSettings;
 
     switch (PrimitiveType) {
       case PrimitiveType.Cylinder:
-        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, _collisionShape);
         break;
       case PrimitiveType.Convex:
-        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, _collisionShape);
         break;
       case PrimitiveType.Box:
-        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, mesh);
+        shapeSettings = _bodyInterface.ColldierMeshToPhysicsShape(Owner, _collisionShape);
         break;
       default:
         // shapeSettings = new BoxShapeSettings(new(1 / 2, 1 / 2, 1 / 2));
@@ -245,7 +259,8 @@ public class Rigidbody : Component, IDisposable {
       var newVel = _bodyInterface.LinearVelocity;
       newVel.X /= 2;
       newVel.Z /= 2;
-      newVel.Y = transform.Position.Y;
+      // newVel.Y = transform.Position.Y;
+      newVel.Y = 0;
       _bodyInterface.LinearVelocity = newVel;
     }
 
@@ -332,6 +347,7 @@ public class Rigidbody : Component, IDisposable {
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;
 
   public void Dispose() {
+    Logger.Info("RG DISPOSE");
     GC.SuppressFinalize(this);
   }
 }

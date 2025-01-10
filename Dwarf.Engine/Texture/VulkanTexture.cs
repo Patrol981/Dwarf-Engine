@@ -385,6 +385,9 @@ public class VulkanTexture : ITexture {
 
       byte[] imgData = reader.ReadBytes(buffer.ByteLength);
 
+      // var path = Path.Combine(DwarfPath.AssemblyDirectory, $"{textureName}_{Guid.NewGuid()}.png");
+      // File.WriteAllBytes(path, imgData);
+
       StbImage.stbi_set_flip_vertically_on_load(flip);
       var image = ImageResult.FromMemory(imgData);
       byte[] rgba;

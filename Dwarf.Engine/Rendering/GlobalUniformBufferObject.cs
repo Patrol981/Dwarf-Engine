@@ -16,8 +16,9 @@ public struct GlobalUniformBufferObject {
   [FieldOffset(192)] public int PointLightsLength;
   [FieldOffset(196)] public int HasImportantEntity;
   [FieldOffset(208)] public Vector3 ImportantEntityPosition;
-  [FieldOffset(224)] public Vector3 Fog; // X,Y for coords Z for alpha
-  [FieldOffset(236)] public int UseFog;
+  [FieldOffset(224)] public Vector3 ImportantEntityDirection;
+  [FieldOffset(240)] public Vector3 Fog; // X,Y for coords Z for alpha
+  [FieldOffset(252)] public int UseFog;
 
   // [FieldOffset(208)] public PointLight[] PointLights;
   // [FieldOffset(192)] public unsafe PointLight* PointLights;

@@ -7,6 +7,7 @@ uniform GlobalUbo {
   int pointLightLength;
   int hasImportantEntity;
   vec3 importantEntityPosition;
+  vec3 importantEntityDirection;
   vec3 fog;
   int useFog;
 } ubo;

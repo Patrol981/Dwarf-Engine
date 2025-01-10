@@ -75,9 +75,12 @@ public static class EntityCreator {
     entity.AddMaterial(Vector3.One);
   }
 
+  public static void AddMaterial(this Entity entity, MaterialData materialData) {
+    entity.AddComponent(new MaterialComponent(materialData));
+  }
+
   public static void AddMaterial(this Entity entity, Vector3? color) {
     if (color == null) { color = Vector3.One; }
-
     entity.AddComponent(new MaterialComponent(color.Value));
   }
 
@@ -180,11 +183,12 @@ public static class EntityCreator {
     PrimitiveType primitiveType,
     float radius,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip, useMesh: useMesh));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
@@ -195,11 +199,12 @@ public static class EntityCreator {
     PrimitiveType primitiveType,
     float radius,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip, useMesh: useMesh));
     entity.GetComponent<Rigidbody>().InitBase(mesh);
   }
 
@@ -211,7 +216,8 @@ public static class EntityCreator {
     Vector3 size,
     Vector3 offset,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
@@ -223,7 +229,8 @@ public static class EntityCreator {
         motionType,
         size: size,
         offset: offset,
-        flip
+        flip,
+        useMesh: useMesh
       )
     );
     entity.GetComponent<Rigidbody>().InitBase(mesh);
@@ -237,11 +244,12 @@ public static class EntityCreator {
     float sizeY = 1,
     float sizeZ = 1,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, motionType, flip, useMesh: useMesh));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
@@ -256,11 +264,12 @@ public static class EntityCreator {
     float offsetY = 0,
     float offsetZ = 0,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip, useMesh: useMesh));
     entity.GetComponent<Rigidbody>().InitBase();
   }
 
@@ -292,20 +301,22 @@ public static class EntityCreator {
     Vector3 size = default,
     Vector3 offset = default,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     var app = Application.Instance;
-    AddRigidbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip);
+    AddRigidbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip, useMesh: useMesh);
   }
 
   public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     MotionType motionType = MotionType.Dynamic,
-    bool flip = false
+    bool flip = false,
+    bool useMesh = true
   ) {
     var app = Application.Instance;
-    AddRigidbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip);
+    AddRigidbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip, useMesh: useMesh);
   }
 
   public static void AddRigidbody(

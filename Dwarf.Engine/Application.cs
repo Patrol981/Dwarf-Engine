@@ -677,8 +677,10 @@ public class Application {
       _ubo->Fov = 60;
       _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Position : Vector3.Zero;
       _ubo->ImportantEntityPosition.Z += 0.5f;
+      _ubo->ImportantEntityDirection = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Forward : Vector3.Zero;
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
-      _ubo->Fog = FogValue;
+      // _ubo->Fog = FogValue;
+      _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
       _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
 
@@ -881,13 +883,14 @@ public class Application {
 
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Sprite>()?.Dispose();
+      // entities[i].GetComponent<Sprite>()?.Dispose();
 
-      var u = entities[i].GetDrawables<IDrawable>();
-      foreach (var e in u) {
-        var t = e as IDrawable;
-        t?.Dispose();
-      }
+      // var u = entities[i].GetDrawables<IDrawable>();
+      // foreach (var e in u) {
+      //   var t = e as IDrawable;
+      //   t?.Dispose();
+      // }
+      entities[i].DisposeEverything();
     }
 
     _textureManager?.Dispose();

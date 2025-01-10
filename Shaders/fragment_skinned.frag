@@ -61,7 +61,7 @@ void main() {
         alpha = 0.5;
       }
   } else if(ubo.useFog == 1 && ubo.hasImportantEntity == 1) {
-    if(entityToFragDistance > ubo.fog.x) discard;
+    // if(entityToFragDistance > ubo.fog.x) discard;
   }
 
   result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);
@@ -80,5 +80,5 @@ void main() {
 
 
   outColor = texColor * vec4(result, alpha);
-  outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
+  // outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
 }

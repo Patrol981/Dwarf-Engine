@@ -688,7 +688,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         }
       }
 
-      if (nodes[i].ParentRenderer.Animations.Count > 0) {
+      if (i <= nodes.Length && nodes[i].ParentRenderer.Animations.Count > 0) {
         nodes[i].ParentRenderer.GetOwner().GetComponent<AnimationController>().Update(nodes[i]);
       }
 

@@ -52,13 +52,22 @@ public class MaterialComponent : Component {
     _materialData.Color = color;
   }
 
+  public MaterialComponent(MaterialData materialData) {
+    Init();
+    if (materialData.Color != default) _materialData.Color = materialData.Color;
+    if (materialData.Shininess != default) _materialData.Shininess = materialData.Shininess;
+    if (materialData.Ambient != default) _materialData.Ambient = materialData.Ambient;
+    if (materialData.Diffuse != default) _materialData.Diffuse = materialData.Diffuse;
+    if (materialData.Specular != default) _materialData.Specular = materialData.Specular;
+  }
+
   private void Init() {
     _materialData = new() {
       Color = new(1, 1, 1),
-      Shininess = 1.0f,
+      Shininess = 0.001f,
       Ambient = new(1.0f, 1.0f, 1.0f),
-      Diffuse = new(0.0f, 0.0f, 0.0f),
-      Specular = new(0, 0, 0)
+      Diffuse = new(0.5f, 0.5f, 0.5f),
+      Specular = new(1, 1, 1)
     };
   }
 

@@ -122,18 +122,30 @@ public class Ray {
     var entities = Application.Instance.GetEntities();
     var result = new Dictionary<Entity, RaycastHitResult>();
 
-    foreach (var entity in entities) {
-      var enTransform = entity.TryGetComponent<Transform>();
+    for (int i = 0; i < entities.Count; i++) {
+      var enTransform = entities[i].TryGetComponent<Transform>();
       var enDistance = Vector3.Distance(
         CameraState.GetCameraEntity().GetComponent<Transform>().Position,
         enTransform != null ? enTransform.Position : Vector3.Zero
       );
 
-      var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
+      var enResult = Ray.CastRayIntersect(entities[i], enDistance, aabbFilter);
       if (enResult.Present) {
-        result.TryAdd(entity, enResult);
+        result.TryAdd(entities[i], enResult);
       }
     }
+    // foreach (var entity in entities) {
+    //   var enTransform = entity.TryGetComponent<Transform>();
+    //   var enDistance = Vector3.Distance(
+    //     CameraState.GetCameraEntity().GetComponent<Transform>().Position,
+    //     enTransform != null ? enTransform.Position : Vector3.Zero
+    //   );
+
+    //   var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
+    //   if (enResult.Present) {
+    //     result.TryAdd(entity, enResult);
+    //   }
+    // }
 
     return new ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>>(
         [.. result.OrderBy(pair => pair.Value.Distance)]

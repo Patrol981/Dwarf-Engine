@@ -76,5 +76,5 @@ void main() {
     }
 
     outColor = colorMod * vec4(result, alpha);
-    outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
+    // outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
 }

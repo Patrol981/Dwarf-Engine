@@ -108,8 +108,8 @@ public class SystemCollection : IDisposable {
     }
 
     if (_particleSystem != null) {
-      var textures = _particleSystem.ValidateTextures();
-      if (!textures || ReloadParticleSystem) {
+      var particles = _particleSystem.Validate();
+      if (!particles || ReloadParticleSystem) {
         ReloadParticleSystem = false;
         ReloadParticleRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, new ParticlePipelineConfigInfo());
       }

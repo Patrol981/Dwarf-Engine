@@ -360,7 +360,6 @@ public class Rigidbody : Component, IDisposable {
   public PrimitiveType PrimitiveType { get; } = PrimitiveType.None;
 
   public void Dispose() {
-    Logger.Info("RG DISPOSE");
     GC.SuppressFinalize(this);
   }
 }

@@ -7,9 +7,11 @@ layout (push_constant) uniform Push {
   vec4 position;
   vec4 color;
   float scale;
+  int hasTexture;
 } push;
 
 #include directional_light
+
 layout (set = 0, binding = 0) #include global_ubo
 
 void main() {

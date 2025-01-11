@@ -14,9 +14,14 @@ namespace Dwarf.Rendering;
 public class ParticleSystem : SystemBase {
   public const int ParticleMargin = 100;
   private int _currentCapacity = 0;
+  private int _requiredCapacity = 0;
+  private static HashSet<Guid> s_textures = [];
   private static List<Particle> s_particles = [];
   private readonly unsafe ParticlePushConstant* _particlePushConstant =
     (ParticlePushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<ParticlePushConstant>());
+  private DescriptorSetLayout _textureLayout = null!;
+
+  private TextureManager _textureManager;
 
   public ParticleSystem(
     VmaAllocator vmaAllocator,
@@ -25,8 +30,18 @@ public class ParticleSystem : SystemBase {
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
+    _textureLayout = new DescriptorSetLayout.Builder(device)
+      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .Build();
+
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
+    ];
+
+    VkDescriptorSetLayout[] texturedSetLayouts = [
+      _textureLayout.GetDescriptorSetLayout(),
+      globalSetLayout
     ];
 
     AddPipelineData<ParticlePushConstant>(new() {
@@ -35,10 +50,22 @@ public class ParticleSystem : SystemBase {
       FragmentName = "particle_fragment",
       PipelineProvider = new ParticlePipelineProvider(),
       DescriptorSetLayouts = descriptorSetLayouts,
+      PipelineName = "BaseParticle"
+    });
+
+    AddPipelineData<ParticlePushConstant>(new() {
+      RenderPass = renderer.GetSwapchainRenderPass(),
+      VertexName = "particle_textured_vertex",
+      FragmentName = "particle_textured_fragment",
+      PipelineProvider = new ParticlePipelineProvider(),
+      DescriptorSetLayouts = texturedSetLayouts,
+      PipelineName = "TexturedParticle"
     });
   }
 
-  public void Setup(ref TextureManager textures) {
+  public void Setup(ref TextureManager textureManager) {
+    _textureManager ??= textureManager;
+
     int requiredCapacity = s_particles.Count + ParticleMargin;
 
     if (_currentCapacity >= requiredCapacity) {
@@ -61,13 +88,22 @@ public class ParticleSystem : SystemBase {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    _texturesCount = requiredCapacity;
+    _requiredCapacity = requiredCapacity;
+    _texturesCount = s_textures.Count;
 
-    _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
+    if (_texturesCount > 0) {
+      _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)_texturesCount)
+      .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
+      .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
+
+      foreach (var textureId in s_textures) {
+        var targetTexture = (VulkanTexture)_textureManager.GetTextureLocal(textureId);
+        targetTexture.BuildDescriptor(_textureLayout, _texturePool);
+      }
+    }
   }
 
   public void Update() {
@@ -79,52 +115,125 @@ public class ParticleSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
-    if (s_particles.Count < 1) return;
+    var basic = s_particles.Where(x => !x.HasTexture).ToArray();
+    var textured = s_particles.Where(x => x.HasTexture).ToArray();
+    RenderBasic(frameInfo, basic);
+    RenderTextured(frameInfo, textured);
+  }
 
-    BindPipeline(frameInfo.CommandBuffer);
-    unsafe {
-      vkCmdBindDescriptorSets(
-        frameInfo.CommandBuffer,
-        VkPipelineBindPoint.Graphics,
-        PipelineLayout,
-        0,
-        1,
-        &frameInfo.GlobalDescriptorSet,
-        0,
-        null
-      );
-    }
+  private void RenderTextured(FrameInfo frameInfo, Particle[] particles) {
+    if (particles.Length < 1) return;
 
-    for (int i = 0; i < s_particles.Count; i++) {
+    ITexture? prevTexture = null;
+
+    BindPipeline(frameInfo.CommandBuffer, "TexturedParticle");
+    Descriptor.BindDescriptorSet(
+      frameInfo.GlobalDescriptorSet,
+      frameInfo,
+      _pipelines["TexturedParticle"].PipelineLayout,
+      1,
+      1
+    );
+
+    bool validDesc = true;
+    for (int i = 0; i < particles.Length; i++) {
       unsafe {
         _particlePushConstant->Color = Vector4.One;
-        _particlePushConstant->Position = new Vector4(s_particles[i].Position, 1.0f);
-        _particlePushConstant->Radius = s_particles[i].Scale;
+        _particlePushConstant->Position = new Vector4(particles[i].Position, 1.0f);
+        _particlePushConstant->Radius = particles[i].Scale;
+        _particlePushConstant->HasTexture = particles[i].HasTexture ? 1 : 0;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
-          PipelineLayout,
+          _pipelines["TexturedParticle"].PipelineLayout,
           VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
           0,
           (uint)Unsafe.SizeOf<ParticlePushConstant>(),
           _particlePushConstant
         );
+      }
 
+      if (prevTexture != particles[i].ParticleTexture) {
+        prevTexture = particles[i].ParticleTexture;
+
+        var vkTexture = (VulkanTexture)prevTexture!;
+        if (vkTexture.VkTextureDescriptor.IsNull) {
+          validDesc = false;
+        } else {
+          Descriptor.BindDescriptorSet(
+            prevTexture!.TextureDescriptor,
+            frameInfo,
+            _pipelines["TexturedParticle"].PipelineLayout,
+            0,
+            1
+          );
+        }
+      }
+
+      if (validDesc) {
         vkCmdDraw(frameInfo.CommandBuffer, 6, 1, 0, 0);
       }
     }
   }
 
-  public static void AddParticle(Particle particle) {
-    s_particles.Add(particle);
+  private void RenderBasic(FrameInfo frameInfo, Particle[] particles) {
+    if (particles.Length < 1) return;
+
+    BindPipeline(frameInfo.CommandBuffer, "BaseParticle");
+    Descriptor.BindDescriptorSet(
+      frameInfo.GlobalDescriptorSet,
+      frameInfo,
+      _pipelines["BaseParticle"].PipelineLayout,
+      0,
+      1
+    );
+
+    for (int i = 0; i < particles.Length; i++) {
+      unsafe {
+        _particlePushConstant->Color = Vector4.One;
+        _particlePushConstant->Position = new Vector4(particles[i].Position, 1.0f);
+        _particlePushConstant->Radius = particles[i].Scale;
+        _particlePushConstant->HasTexture = particles[i].HasTexture ? 1 : 0;
+
+        vkCmdPushConstants(
+          frameInfo.CommandBuffer,
+          _pipelines["BaseParticle"].PipelineLayout,
+          VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
+          0,
+          (uint)Unsafe.SizeOf<ParticlePushConstant>(),
+          _particlePushConstant
+        );
+      }
+
+      vkCmdDraw(frameInfo.CommandBuffer, 6, 1, 0, 0);
+    }
   }
 
-  public static void AddParticles(ParticleBatch batch) {
+  public void AddParticle(Particle particle) {
+    s_particles.Add(particle);
+    CreateTextureResources(particle);
+  }
+
+  public void AddParticles(ParticleBatch batch) {
     s_particles.AddRange(batch.Particles);
+    CreateTextureResources(batch.Particles[0]);
+  }
+
+  public void CreateTextureResources(Particle particle) {
+    if (!particle.HasTexture) return;
+
+    var targetId = _textureManager.GetTextureIdLocal(particle.ParticleTexture!.TextureName);
+    if (s_textures.Add(targetId)) {
+      Application.Instance.Systems.ReloadParticleSystem = true;
+    }
   }
 
   public bool ValidateTextures() {
     return _texturesCount >= s_particles.Count;
+  }
+
+  public bool Validate() {
+    return _requiredCapacity >= s_particles.Count;
   }
 
   public void Collect() {
@@ -138,6 +247,8 @@ public class ParticleSystem : SystemBase {
   public override unsafe void Dispose() {
     _device.WaitQueue();
     _device.WaitDevice();
+
+    _textureLayout?.Dispose();
 
     MemoryUtils.FreeIntPtr<ParticlePushConstant>((nint)_particlePushConstant);
 

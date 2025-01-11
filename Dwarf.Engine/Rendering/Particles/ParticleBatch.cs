@@ -1,9 +1,12 @@
 using System.Numerics;
+using Dwarf.AbstractionLayer;
 
 namespace Dwarf.Rendering.Particles;
 
 public class ParticleBatch {
   private List<Particle> _particles = [];
+
+  internal List<Particle> Particles => _particles;
 
   public ParticleBatch() {
 
@@ -13,12 +16,11 @@ public class ParticleBatch {
     _particles = particles;
   }
 
-  internal List<Particle> Particles => _particles;
-
   public class Builder(Application app) {
     private readonly Application _app = app;
     private List<Particle> _particles = [];
     private ParticlePropagationConfig _particleConfig;
+    private ITexture? _particleTexture;
 
     public struct ParticlePropagationConfig {
       public Vector3 VelocityMin;
@@ -78,7 +80,21 @@ public class ParticleBatch {
       return this;
     }
 
+    public Builder WithTexture(string texturePath) {
+      _app.TextureManager.AddTextureLocal(texturePath).Wait();
+      var textureId = _app.TextureManager.GetTextureIdLocal(texturePath);
+      _particleTexture = _app.TextureManager.GetTextureLocal(textureId);
+      return this;
+    }
+
+    public Builder WithTextures() {
+      throw new NotImplementedException();
+    }
+
     public ParticleBatch Build() {
+      if (_particleTexture != null) {
+        _particles.ForEach(x => x.SetTexture(_particleTexture));
+      }
       return new ParticleBatch(_particles);
     }
 

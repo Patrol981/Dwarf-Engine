@@ -1,4 +1,5 @@
 using System.Numerics;
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 
@@ -7,7 +8,7 @@ namespace Dwarf.Rendering.Particles;
 public class Particle {
   public const float GRAVITY = 9.807f;
 
-  private readonly Application _app;
+  private ITexture? _particleTexture;
 
   private Vector3 _position;
   private Vector3 _velocity;
@@ -46,7 +47,13 @@ public class Particle {
     CanBeDisposed = true;
   }
 
+  public void SetTexture(ITexture texture) {
+    _particleTexture = texture;
+  }
+
   public Vector3 Position => _position;
   public float Scale => _scale;
   public bool CanBeDisposed { get; private set; }
+  public ITexture? ParticleTexture => _particleTexture;
+  public bool HasTexture => _particleTexture != null;
 }

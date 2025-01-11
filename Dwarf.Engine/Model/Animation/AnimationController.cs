@@ -29,6 +29,15 @@ public class AnimationController : Component {
     }
   }
 
+  public Animation? GetAnimation(string name) {
+    _animations.TryGetValue(name, out var animation);
+    if (animation != null) {
+      return animation;
+    }
+    Logger.Error("No animation found");
+    return null;
+  }
+
   public void SetFirstAnimation() {
     if (_animations.Count < 1) return;
     // _currentAnimation = _animations.First().Value;
@@ -54,9 +63,34 @@ public class AnimationController : Component {
     if (index != -1) {
       _activeAnimations[index] = (_activeAnimations[index].Animation, weight);
     }
+  }
 
-    // _currentAnimation = animation;
-    // _activeAnimations.Add((animation, weight));
+  public void PlayAnimations((string animationName, float weight)[] animations) {
+    var newActiveAnimations = new List<(Animation Animation, float Weight)>();
+    foreach (var (animationName, weight) in animations) {
+      if (_animations.TryGetValue(animationName, out var animation)) {
+        newActiveAnimations.Add((animation, weight));
+      }
+    }
+    _activeAnimations.Clear();
+    _activeAnimations.AddRange(newActiveAnimations);
+  }
+
+  public void PlayAnimations_Old((string animationName, float weight)[] animations) {
+    for (int i = 0; i < _activeAnimations.Count; i++) {
+      var activeAnimationName = _activeAnimations[i].Animation.Name;
+
+      if (!animations.Any(anim => anim.animationName == activeAnimationName)) {
+        _activeAnimations[i] = (_activeAnimations[i].Animation, 0f);
+      }
+    }
+
+    foreach (var (animationName, weight) in animations) {
+      var index = _activeAnimations.FindIndex(x => x.Animation.Name == animationName);
+      if (index != -1) {
+        _activeAnimations[index] = (_activeAnimations[index].Animation, weight);
+      }
+    }
   }
 
   public void SetCurrentAnimation(string animationName, float weight = 1.0f) {
@@ -71,10 +105,43 @@ public class AnimationController : Component {
     // _activeAnimations.Clear();
     _activeAnimations.Add((animation, weight));
   }
+
   public void Update(Node node) {
+    if (node == null) return;
+    if (_activeAnimations.Count < 1) return;
+    List<(Animation Animation, float Weight)> clone = [.. _activeAnimations];
+
+    node.AnimationTimer += Time.DeltaTimeRender;
+    float totalWeight = 0f;
+
+    for (int i = 0; i < clone.Count; i++) {
+      totalWeight += clone[i].Weight;
+    }
+
+    totalWeight = MathF.Max(totalWeight, 1e-6f); // Avoid division by zero
+
+    for (int i = 0; i < clone.Count; i++) {
+      if (i >= clone.Count) break; // Safety check to prevent out-of-range errors
+
+      var animationWeightPair = clone[i];
+      var animation = animationWeightPair.Animation;
+      var weight = animationWeightPair.Weight;
+
+      if (animation == null) break;
+
+      float normalizedWeight = weight / totalWeight;
+      float adjustedTimer = node.AnimationTimer;
+      if (animation.End > 0) {
+        adjustedTimer %= animation.End; // Loop the animation timer
+      }
+      UpdateAnimation(animation, adjustedTimer, normalizedWeight);
+    }
+  }
+
+  public void Update_Old(Node node) {
     // if (_currentAnimation == null) return;
     if (_activeAnimations.Count < 1) return;
-    node.AnimationTimer += _tickRate;
+    node.AnimationTimer += Time.DeltaTimeRender;
 
     // var currentAnimation = _activeAnimations.MaxBy(x => x.Weight);
     (Animation Animation, float Weight) currentAnimation = (null!, -1);
@@ -101,6 +168,37 @@ public class AnimationController : Component {
   }
 
   public void UpdateAnimation(Animation animation, float time, float weight) {
+    foreach (var channel in animation.Channels) {
+      var sampler = animation.Samplers[channel.SamplerIndex];
+      if (sampler.Inputs.Count > sampler.OutputsVec4.Count) {
+        continue;
+      }
+      for (int i = 0; i < sampler.Inputs.Count - 1; i++) {
+        if ((time >= sampler.Inputs[i]) && (time <= sampler.Inputs[i + 1])) {
+          float u = MathF.Max(0.0f, time - sampler.Inputs[i]) / (sampler.Inputs[i + 1] - sampler.Inputs[i]);
+          if (u <= 1.0f) {
+            switch (channel.Path) {
+              case AnimationChannel.PathType.Translation:
+                sampler.Translate(i, time, channel.Node, weight);
+                break;
+              case AnimationChannel.PathType.Rotation:
+                sampler.Rotate(i, time, channel.Node, weight);
+                break;
+              case AnimationChannel.PathType.Scale:
+                sampler.Scale(i, time, channel.Node, weight);
+                break;
+            }
+          }
+        }
+      }
+    }
+
+    foreach (var node in _meshRenderer.Nodes) {
+      node.Update();
+    }
+  }
+
+  public void UpdateAnimation_Old(Animation animation, float time, float weight) {
     bool updated = false;
     foreach (var channel in animation.Channels) {
       var sampler = animation.Samplers[channel.SamplerIndex];

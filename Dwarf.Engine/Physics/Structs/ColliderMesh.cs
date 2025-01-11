@@ -78,9 +78,9 @@ public class ColliderMesh : Component, IDebugRender3DObject {
   public void Dispose() {
     _device.WaitQueue();
     _device.WaitDevice();
-    _vertexBuffer.Dispose();
+    _vertexBuffer?.Dispose();
     if (_hasIndexBuffer) {
-      _indexBuffer.Dispose();
+      _indexBuffer?.Dispose();
     }
   }
 

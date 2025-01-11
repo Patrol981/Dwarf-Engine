@@ -7,8 +7,9 @@ using static Dwarf.Physics.JoltConfig;
 namespace Dwarf.Physics.Backends.Jolt;
 
 public class JoltBodyWrapper : IPhysicsBody {
-  private BodyInterface _bodyInterface;
+  private readonly BodyInterface _bodyInterface;
   private BodyID _bodyID;
+  private Activation _activation = Activation.Activate;
 
   public JoltBodyWrapper(in BodyInterface bodyInterface) {
     _bodyInterface = bodyInterface;
@@ -16,12 +17,12 @@ public class JoltBodyWrapper : IPhysicsBody {
 
   public Quaternion Rotation {
     get => _bodyInterface.GetRotation(_bodyID);
-    set => _bodyInterface.SetRotation(_bodyID, value, Activation.Activate);
+    set => _bodyInterface.SetRotation(_bodyID, value, _activation);
   }
 
   public Vector3 Position {
     get => _bodyInterface.GetPosition(_bodyID);
-    set => _bodyInterface.SetPosition(_bodyID, value, Activation.Activate);
+    set => _bodyInterface.SetPosition(_bodyID, value, _activation);
   }
 
   public Vector3 LinearVelocity {
@@ -46,11 +47,25 @@ public class JoltBodyWrapper : IPhysicsBody {
 
   public Dwarf.Physics.MotionType MotionType {
     get => (Dwarf.Physics.MotionType)_bodyInterface.GetMotionType(_bodyID);
-    set => _bodyInterface.SetMotionType(_bodyID, (JoltPhysicsSharp.MotionType)value, Activation.Activate);
+    set => _bodyInterface.SetMotionType(_bodyID, (JoltPhysicsSharp.MotionType)value, _activation);
   }
 
+  public object BodyId => _bodyID;
+
   public object CreateAndAddBody(object settings) {
-    return _bodyInterface.CreateAndAddBody((BodyCreationSettings)settings, Activation.Activate);
+    return _bodyInterface.CreateAndAddBody((BodyCreationSettings)settings, _activation);
+  }
+
+  public void SetActive(bool value) {
+    if (value) {
+      _bodyInterface.ActivateBody(_bodyID);
+      _activation = Activation.Activate;
+      _bodyInterface.AddBody(_bodyID, _activation);
+    } else {
+      _bodyInterface.DeactivateBody(_bodyID);
+      _activation = Activation.DontActivate;
+      _bodyInterface.RemoveBody(_bodyID);
+    }
   }
 
   public object ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
@@ -77,7 +92,7 @@ public class JoltBodyWrapper : IPhysicsBody {
       Layers.Moving
     );
 
-    _bodyID = _bodyInterface.CreateAndAddBody(settings, Activation.Activate);
+    _bodyID = _bodyInterface.CreateAndAddBody(settings, _activation);
   }
 
   public void AddForce(Vector3 force) {
@@ -90,6 +105,14 @@ public class JoltBodyWrapper : IPhysicsBody {
 
   public void AddImpulse(Vector3 impulse) {
     _bodyInterface.AddImpulse(_bodyID, impulse);
+  }
+
+  public static (Entity?, Entity?) GetCollisionData(BodyID body1, BodyID body2) {
+    var entities = Application.Instance.GetEntities().Where(x => !x.CanBeDisposed && x.HasComponent<Rigidbody>());
+    var first = entities.Where(x => (BodyID)x.GetComponent<Rigidbody>().BodyInterface.BodyId == body1).FirstOrDefault();
+    var second = entities.Where(x => (BodyID)x.GetComponent<Rigidbody>().BodyInterface.BodyId == body2).FirstOrDefault();
+
+    return (first, second);
   }
 
   public void Dispose() {

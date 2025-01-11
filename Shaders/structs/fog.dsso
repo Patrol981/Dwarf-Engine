@@ -1,0 +1,2 @@
+const float fog_density = 0.007;
+const float fog_gradient = 1.5;

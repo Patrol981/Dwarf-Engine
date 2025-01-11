@@ -9,13 +9,17 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanSwapchain : IDisposable {
-  private const int MAX_FRAMES_IN_FLIGHT = 1;
+  private const int MAX_FRAMES_IN_FLIGHT = 2;
 
   private readonly VulkanDevice _device;
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
   private VkImageView[] _swapChainImageViews = null!;
   private VkImage[] _swapchainImages = [];
   private VkRenderPass _renderPass = VkRenderPass.Null;
+
+  private VkImageView[] _colorImageViews = [];
+  private VkImage[] _colorImages = [];
+  private VkDeviceMemory[] _colorImageMemories = [];
 
   private VkImage[] _depthImages = [];
   private VkDeviceMemory[] _depthImagesMemories = [];
@@ -27,6 +31,8 @@ public class VulkanSwapchain : IDisposable {
 
   private VkFormat _swapchainImageFormat = VkFormat.Undefined;
   private VkFormat _swapchainDepthFormat = VkFormat.Undefined;
+  private VkFormat _colorImageFormat = VkFormat.Undefined;
+
   private VkExtent2D _swapchainExtent = VkExtent2D.Zero;
   private VkFramebuffer[] _swapchainFramebuffers = [];
   private unsafe VkSemaphore* _imageAvailableSemaphores;
@@ -35,6 +41,11 @@ public class VulkanSwapchain : IDisposable {
   private unsafe VkFence* _imagesInFlight;
 
   // private Swapchain _oldSwapchain = null!;
+  private DescriptorPool _descriptorPool;
+  private DescriptorSetLayout _inputAttachmentsLayout;
+  //private VkDescriptorSet[] _colorDescriptors;
+  // pr ivate VkDescriptorSet[] _depthDescriptors;
+  private VkDescriptorSet[] _imageDescriptors;
 
   private int _currentFrame = 0;
 
@@ -70,6 +81,8 @@ public class VulkanSwapchain : IDisposable {
     CreateImageViews();
     CreateRenderPass();
     CreateDepthResources();
+    CreateColorResources();
+    CreateDescriptors();
     CreateFramebuffers();
     CreateSyncObjects();
   }
@@ -102,7 +115,7 @@ public class VulkanSwapchain : IDisposable {
       imageColorSpace = surfaceFormat.colorSpace,
       imageExtent = extent,
       imageArrayLayers = 1,
-      imageUsage = VkImageUsageFlags.ColorAttachment
+      imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst
     };
 
     var queueFamilies = DeviceHelper.FindQueueFamilies(_device.PhysicalDevice, _device.Surface);
@@ -162,15 +175,35 @@ public class VulkanSwapchain : IDisposable {
     // var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
 
     for (int i = 0; i < swapChainImages.Length; i++) {
-      var viewCreateInfo = new VkImageViewCreateInfo(
-          swapChainImages[i],
-          VkImageViewType.Image2D,
-          surfaceFormat.format,
-          VkComponentMapping.Rgba,
-          new VkImageSubresourceRange(VkImageAspectFlags.Color, 0, 1, 0, 1)
-          );
+      VkImageViewCreateInfo colorAttachmentView = new() {
+        pNext = null,
+        format = surfaceFormat.format,
+        components = new() {
+          r = VK_COMPONENT_SWIZZLE_R,
+          g = VK_COMPONENT_SWIZZLE_G,
+          b = VK_COMPONENT_SWIZZLE_B,
+          a = VK_COMPONENT_SWIZZLE_A
+        },
+        subresourceRange = new() {
+          aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+          baseMipLevel = 0,
+          levelCount = 1,
+          baseArrayLayer = 0,
+          layerCount = 1,
+        },
+        viewType = VK_IMAGE_VIEW_TYPE_2D,
+        flags = 0,
+        image = swapChainImages[i]
+      };
+      // var viewCreateInfo = new VkImageViewCreateInfo(
+      //     swapChainImages[i],
+      //     VkImageViewType.Image2D,
+      //     surfaceFormat.format,
+      //     VkComponentMapping.Rgba,
+      //     new VkImageSubresourceRange(VkImageAspectFlags.Color, 0, 1, 0, 1)
+      // );
 
-      vkCreateImageView(_device.LogicalDevice, &viewCreateInfo, null, out _swapChainImageViews[i]).CheckResult();
+      vkCreateImageView(_device.LogicalDevice, &colorAttachmentView, null, out _swapChainImageViews[i]).CheckResult();
     }
   }
 
@@ -179,20 +212,143 @@ public class VulkanSwapchain : IDisposable {
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
 
+    VkAttachmentDescription* attachments = stackalloc VkAttachmentDescription[3];
+    attachments[0] = new() {
+      format = surfaceFormat.format,
+      samples = VK_SAMPLE_COUNT_1_BIT,
+      loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    };
+    attachments[1] = new() {
+      format = surfaceFormat.format,
+      samples = VK_SAMPLE_COUNT_1_BIT,
+      loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+    attachments[2] = new() {
+      format = FindDepthFormat(),
+      samples = VK_SAMPLE_COUNT_1_BIT,
+      loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    };
+
+    VkSubpassDescription* subpassDescription = stackalloc VkSubpassDescription[2];
+
+    // first subpass
+
+    {
+      VkAttachmentReference colorReference = new() {
+        attachment = 1,
+        layout = VkImageLayout.AttachmentOptimal
+      };
+
+      VkAttachmentReference depthReference = new() {
+        attachment = 2,
+        layout = VkImageLayout.AttachmentOptimal
+      };
+
+      subpassDescription[0] = new() {
+        pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        colorAttachmentCount = 1,
+        pColorAttachments = &colorReference,
+        pDepthStencilAttachment = &depthReference
+      };
+    }
+
+    // second subpass
+
+    {
+      VkAttachmentReference colorReferenceSwapchain = new() {
+        attachment = 0,
+        layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+      };
+
+      VkAttachmentReference* inputReferences = stackalloc VkAttachmentReference[2];
+      inputReferences[0] = new() {
+        attachment = 1,
+        layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      };
+      inputReferences[1] = new() {
+        attachment = 2,
+        layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+      };
+
+      subpassDescription[1] = new() {
+        pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        colorAttachmentCount = 1,
+        pColorAttachments = &colorReferenceSwapchain,
+        inputAttachmentCount = 2,
+        pInputAttachments = inputReferences
+      };
+    }
+
+    VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[3];
+    dependencies[0] = new() {
+      srcSubpass = VK_SUBPASS_EXTERNAL,
+      dstSubpass = 0,
+      srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+      srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+      dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    };
+    dependencies[1] = new() {
+      srcSubpass = 0,
+      dstSubpass = 1,
+      srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+      dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    };
+    dependencies[2] = new() {
+      srcSubpass = 0,
+      dstSubpass = VK_SUBPASS_EXTERNAL,
+      srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+      srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+    };
+
+    VkRenderPassCreateInfo renderPassCreateInfo = new() {
+      attachmentCount = 3,
+      pAttachments = attachments,
+      subpassCount = 2,
+      pSubpasses = subpassDescription,
+      dependencyCount = 3,
+      pDependencies = dependencies
+    };
+
+    vkCreateRenderPass(_device.LogicalDevice, renderPassCreateInfo, null, out _renderPass).CheckResult();
+  }
+
+  private unsafe void CreateRenderPass_Old() {
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+
     VkAttachmentDescription depthAttachment = new() {
       format = FindDepthFormat(),
       samples = VkSampleCountFlags.Count1,
       loadOp = VkAttachmentLoadOp.Clear,
-      storeOp = VkAttachmentStoreOp.DontCare,
+      storeOp = VkAttachmentStoreOp.Store,
       stencilLoadOp = VkAttachmentLoadOp.DontCare,
       stencilStoreOp = VkAttachmentStoreOp.DontCare,
       initialLayout = VkImageLayout.Undefined,
-      finalLayout = VkImageLayout.DepthStencilAttachmentOptimal
-    };
-
-    VkAttachmentReference depthAttachmentRef = new() {
-      attachment = 1,
-      layout = VkImageLayout.DepthStencilAttachmentOptimal
+      finalLayout = VkImageLayout.DepthStencilReadOnlyOptimal
     };
 
     VkAttachmentDescription colorAttachment = new() {
@@ -203,27 +359,56 @@ public class VulkanSwapchain : IDisposable {
       stencilStoreOp = VkAttachmentStoreOp.DontCare,
       stencilLoadOp = VkAttachmentLoadOp.DontCare,
       initialLayout = VkImageLayout.Undefined,
-      finalLayout = VkImageLayout.PresentSrcKHR
+      finalLayout = VkImageLayout.PresentSrcKHR,
+    };
+
+    VkAttachmentReference depthAttachmentRef = new() {
+      attachment = 1,
+      layout = VkImageLayout.DepthStencilAttachmentOptimal
     };
 
     VkAttachmentReference colorAttachmentRef = new() {
       attachment = 0,
-      layout = VkImageLayout.ColorAttachmentOptimal
+      layout = VkImageLayout.ColorAttachmentOptimal,
     };
 
-    VkSubpassDescription subpass = new() {
+    VkAttachmentReference inputAttachmentRef = new() {
+      attachment = 1,
+      layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+    };
+
+    VkSubpassDescription* subpassDescription = stackalloc VkSubpassDescription[2];
+    subpassDescription[0] = new() {
       pipelineBindPoint = VkPipelineBindPoint.Graphics,
       colorAttachmentCount = 1,
       pColorAttachments = &colorAttachmentRef,
-      pDepthStencilAttachment = &depthAttachmentRef
+      pDepthStencilAttachment = &depthAttachmentRef,
     };
+
+    subpassDescription[1] = new() {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics,
+      colorAttachmentCount = 1,
+      pColorAttachments = &colorAttachmentRef,
+      pDepthStencilAttachment = &depthAttachmentRef,
+      inputAttachmentCount = 1,
+      pInputAttachments = &inputAttachmentRef
+    };
+
+    // VkSubpassDescription subpass = new() {
+    //   pipelineBindPoint = VkPipelineBindPoint.Graphics,
+    //   colorAttachmentCount = 1,
+    //   pColorAttachments = &colorAttachmentRef,
+    //   // inputAttachmentCount = 1,
+    //   // pInputAttachments = &inputAttachmentRef,
+    //   pDepthStencilAttachment = &depthAttachmentRef
+    // };
 
     VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[2];
     dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
     dependencies[0].dstSubpass = 0;
     dependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    dependencies[0].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    dependencies[0].srcAccessMask = 0;
     dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     dependencies[0].dependencyFlags = 0;
 
@@ -243,8 +428,8 @@ public class VulkanSwapchain : IDisposable {
     fixed (VkAttachmentDescription* ptr = attachments) {
       renderPassInfo.pAttachments = ptr;
     }
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.subpassCount = 2;
+    renderPassInfo.pSubpasses = subpassDescription;
     renderPassInfo.dependencyCount = 2;
     renderPassInfo.pDependencies = dependencies;
 
@@ -252,7 +437,50 @@ public class VulkanSwapchain : IDisposable {
     if (result != VkResult.Success) throw new Exception("Failed to create render pass!");
   }
 
+  private unsafe void CreateColorResources() {
+    ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+
+    _colorImages = new VkImage[swapChainImages.Length];
+    _colorImageMemories = new VkDeviceMemory[swapChainImages.Length];
+    _colorImageViews = new VkImageView[swapChainImages.Length];
+
+    for (int i = 0; i < _colorImages.Length; i++) {
+      CreateAttachment(
+        surfaceFormat.format,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        out _colorImages[i],
+        out _colorImageMemories[i],
+        out _colorImageViews[i],
+        out _colorImageFormat
+      );
+    }
+  }
+
   private unsafe void CreateDepthResources() {
+    var depthFormat = FindDepthFormat();
+    _swapchainDepthFormat = depthFormat;
+
+    ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
+
+    _depthImages = new VkImage[swapChainImages.Length];
+    _depthImagesMemories = new VkDeviceMemory[swapChainImages.Length];
+    _depthImageViews = new VkImageView[swapChainImages.Length];
+
+    for (int i = 0; i < _depthImages.Length; i++) {
+      CreateAttachment(
+        depthFormat,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        out _depthImages[i],
+        out _depthImagesMemories[i],
+        out _depthImageViews[i],
+        out _swapchainDepthFormat
+      );
+    }
+  }
+
+  private unsafe void CreateDepthResources_Old() {
     var depthFormat = FindDepthFormat();
     _swapchainDepthFormat = depthFormat;
 
@@ -274,7 +502,7 @@ public class VulkanSwapchain : IDisposable {
       imageInfo.format = depthFormat;
       imageInfo.tiling = VkImageTiling.Optimal;
       imageInfo.initialLayout = VkImageLayout.Undefined;
-      imageInfo.usage = VkImageUsageFlags.DepthStencilAttachment;
+      imageInfo.usage = VkImageUsageFlags.DepthStencilAttachment | VkImageUsageFlags.InputAttachment;
       imageInfo.samples = VkSampleCountFlags.Count1;
       imageInfo.sharingMode = VkSharingMode.Exclusive;
       imageInfo.flags = 0;
@@ -296,16 +524,72 @@ public class VulkanSwapchain : IDisposable {
     }
   }
 
+  private unsafe void CreateAttachment(
+    VkFormat format,
+    VkImageUsageFlags usage,
+    out VkImage image,
+    out VkDeviceMemory imageMemory,
+    out VkImageView imageView,
+    out VkFormat imageFormat
+  ) {
+    VkImageAspectFlags aspectMask = 0;
+    VkImageLayout imageLayout = new();
+
+    imageFormat = format;
+
+    if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0) {
+      aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+    if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
+      aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+      imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    VkImageCreateInfo imageCreateInfo = new() {
+      imageType = VK_IMAGE_TYPE_2D,
+      format = format,
+      extent = new() {
+        width = _swapchainExtent.width,
+        height = _swapchainExtent.height,
+        depth = 1
+      },
+      mipLevels = 1,
+      arrayLayers = 1,
+      samples = VK_SAMPLE_COUNT_1_BIT,
+      tiling = VK_IMAGE_TILING_OPTIMAL,
+      usage = usage | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+      initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    _device.CreateImageWithInfo(imageCreateInfo, VkMemoryPropertyFlags.DeviceLocal, out image, out imageMemory);
+
+    VkImageViewCreateInfo imageViewCreateInfo = new() {
+      viewType = VK_IMAGE_VIEW_TYPE_2D,
+      format = format,
+      subresourceRange = new() {
+        aspectMask = aspectMask,
+        baseMipLevel = 0,
+        levelCount = 1,
+        baseArrayLayer = 0,
+        layerCount = 1,
+      },
+      image = image
+    };
+
+    vkCreateImageView(_device.LogicalDevice, &imageViewCreateInfo, null, out imageView).CheckResult();
+  }
+
   private unsafe void CreateFramebuffers() {
     ReadOnlySpan<VkImage> swapChainImages = vkGetSwapchainImagesKHR(_device.LogicalDevice, _handle);
     _swapchainFramebuffers = new VkFramebuffer[swapChainImages.Length];
 
     for (int i = 0; i < swapChainImages.Length; i++) {
-      VkImageView[] attachmetns = [_swapChainImageViews[i], _depthImageViews[i]];
+      VkImageView[] attachmetns = [_swapChainImageViews[i], _colorImageViews[i], _depthImageViews[i]];
       fixed (VkImageView* ptr = attachmetns) {
         VkFramebufferCreateInfo framebufferInfo = new() {
           renderPass = _renderPass,
-          attachmentCount = 2,
+          attachmentCount = (uint)attachmetns.Length,
           pAttachments = ptr,
           width = _swapchainExtent.width,
           height = _swapchainExtent.height,
@@ -314,6 +598,99 @@ public class VulkanSwapchain : IDisposable {
 
         vkCreateFramebuffer(_device.LogicalDevice, &framebufferInfo, null, out _swapchainFramebuffers[i]).CheckResult();
       }
+    }
+  }
+
+  public unsafe void UpdateDescriptors(int index) {
+    VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
+    descriptorImageInfo[0] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _colorImageViews[_currentFrame],
+      sampler = VkSampler.Null
+    };
+    descriptorImageInfo[1] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _depthImageViews[_currentFrame],
+      sampler = VkSampler.Null
+    };
+
+    VkWriteDescriptorSet* writeDescriptorSets = stackalloc VkWriteDescriptorSet[2];
+    writeDescriptorSets[0] = new() {
+      dstSet = _imageDescriptors[index],
+      descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+      descriptorCount = 1,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo[0]
+    };
+    writeDescriptorSets[1] = new() {
+      dstSet = _imageDescriptors[index],
+      descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+      descriptorCount = 1,
+      dstBinding = 1,
+      pImageInfo = &descriptorImageInfo[1]
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writeDescriptorSets, 0, null);
+  }
+
+  private unsafe void CreateDescriptors(int index) {
+    var setLayout = _inputAttachmentsLayout.GetDescriptorSetLayout();
+
+    VkDescriptorSet descriptorSet = new();
+    var allocInfo = new VkDescriptorSetAllocateInfo {
+      descriptorPool = _descriptorPool.GetVkDescriptorPool(),
+      descriptorSetCount = 1,
+      pSetLayouts = &setLayout
+    };
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
+    descriptorImageInfo[0] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _colorImageViews[_currentFrame],
+      sampler = VkSampler.Null
+    };
+    descriptorImageInfo[1] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _depthImageViews[_currentFrame],
+      sampler = VkSampler.Null
+    };
+
+    VkWriteDescriptorSet* writeDescriptorSets = stackalloc VkWriteDescriptorSet[2];
+    writeDescriptorSets[0] = new() {
+      dstSet = descriptorSet,
+      descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+      descriptorCount = 1,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo[0]
+    };
+    writeDescriptorSets[1] = new() {
+      dstSet = descriptorSet,
+      descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+      descriptorCount = 1,
+      dstBinding = 1,
+      pImageInfo = &descriptorImageInfo[1]
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writeDescriptorSets, 0, null);
+    _imageDescriptors[index] = descriptorSet;
+  }
+
+  private unsafe void CreateDescriptors() {
+    _inputAttachmentsLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+      .AddBinding(1, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+      .Build();
+
+    _descriptorPool = new DescriptorPool.Builder(_device)
+      .SetMaxSets(100)
+      .AddPoolSize(VkDescriptorType.InputAttachment, 10)
+      .Build();
+
+    _imageDescriptors = new VkDescriptorSet[_colorImageViews.Length];
+
+    for (int i = 0; i < _imageDescriptors.Length; i++) {
+      CreateDescriptors(i);
     }
   }
 
@@ -356,91 +733,18 @@ public class VulkanSwapchain : IDisposable {
 
     return result;
   }
-  // public unsafe VkResult SubmitCommandBuffers_New(VkCommandBuffer buffer, uint imageIndex) {
-  //   _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
-
-  //   VkPipelineStageFlags2* stageFlags = stackalloc VkPipelineStageFlags2[1];
-  //   stageFlags[0] = VkPipelineStageFlags2.ColorAttachmentOutput;
-
-  //   VkSemaphore* waitSemaphores = stackalloc VkSemaphore[1];
-  //   waitSemaphores[0] = _imageAvailableSemaphores[_currentFrame];
-
-  //   VkSemaphore* signalSemaphores = stackalloc VkSemaphore[1];
-  //   signalSemaphores[0] = _renderFinishedSemaphores[_currentFrame];
-
-  //   VkSemaphoreSubmitInfo* waitSemaphoresSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
-  //   waitSemaphoresSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-  //   waitSemaphoresSubmitInfo[0].semaphore = waitSemaphores[0];
-  //   waitSemaphoresSubmitInfo[0].pNext = null;
-  //   waitSemaphoresSubmitInfo[0].stageMask = stageFlags[0];
-  //   waitSemaphoresSubmitInfo[0].deviceIndex = 0;
-  //   waitSemaphoresSubmitInfo[0].value = 1;
-
-  //   VkSemaphoreSubmitInfo* signalSemaphoreSubmitInfo = stackalloc VkSemaphoreSubmitInfo[1];
-  //   signalSemaphoreSubmitInfo[0].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-  //   signalSemaphoreSubmitInfo[0].semaphore = signalSemaphores[0];
-  //   signalSemaphoreSubmitInfo[0].pNext = null;
-  //   signalSemaphoreSubmitInfo[0].stageMask = stageFlags[0];
-  //   signalSemaphoreSubmitInfo[0].deviceIndex = 0;
-  //   signalSemaphoreSubmitInfo[0].value = 2;
-
-  //   VkCommandBufferSubmitInfo* bufferSubmitInfo = stackalloc VkCommandBufferSubmitInfo[1];
-  //   bufferSubmitInfo[0].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
-  //   bufferSubmitInfo[0].pNext = null;
-  //   bufferSubmitInfo[0].commandBuffer = buffer;
-  //   bufferSubmitInfo[0].deviceMask = 0;
-
-  //   VkSubmitInfo2 submitInfo = new();
-  //   submitInfo.sType = VkStructureType.SubmitInfo2KHR;
-  //   submitInfo.pNext = null;
-  //   submitInfo.flags = VkSubmitFlags.None;
-
-  //   submitInfo.waitSemaphoreInfoCount = 1;
-  //   submitInfo.pWaitSemaphoreInfos = waitSemaphoresSubmitInfo;
-
-  //   submitInfo.signalSemaphoreInfoCount = 1;
-  //   submitInfo.pSignalSemaphoreInfos = signalSemaphoreSubmitInfo;
-
-  //   submitInfo.commandBufferInfoCount = 1;
-  //   submitInfo.pCommandBufferInfos = bufferSubmitInfo;
-
-  //   vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
-  //   _device.SubmitQueue2(1, &submitInfo, _inFlightFences[_currentFrame]);
-
-  //   VkSwapchainKHR* swapchains = stackalloc VkSwapchainKHR[1];
-  //   swapchains[0] = _handle;
-
-  //   VkPresentInfoKHR presentInfo = new() {
-  //     pNext = null,
-  //     pSwapchains = swapchains,
-  //     swapchainCount = 1,
-
-  //     waitSemaphoreCount = 1,
-  //     pWaitSemaphores = waitSemaphores,
-
-  //     pImageIndices = &imageIndex
-  //   };
-
-  //   Application.Instance.Mutex.WaitOne();
-  //   var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
-  //   Application.Instance.Mutex.ReleaseMutex();
-  //   _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-
-  //   return result;
-  // }
-
   public unsafe VkResult SubmitCommandBuffers(VkCommandBuffer* buffers, uint imageIndex) {
     Application.Instance.Mutex.WaitOne();
 
-    if (_imagesInFlight[imageIndex] != VkFence.Null) {
-      vkWaitForFences(_device.LogicalDevice, 1, &_inFlightFences[_currentFrame], true, UInt64.MaxValue);
-    }
-    _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
+    // if (_imagesInFlight[imageIndex] != VkFence.Null) {
+    //   vkWaitForFences(_device.LogicalDevice, 1, &_inFlightFences[_currentFrame], true, UInt64.MaxValue);
+    // }
+    // _imagesInFlight[imageIndex] = _inFlightFences[_currentFrame];
 
     VkSubmitInfo submitInfo = new();
 
     VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-    waitStages[0] = VkPipelineStageFlags.ColorAttachmentOutput;
+    waitStages[0] = VkPipelineStageFlags.TopOfPipe;
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &_imageAvailableSemaphores[_currentFrame];
@@ -475,7 +779,7 @@ public class VulkanSwapchain : IDisposable {
       pNext = null,
     };
 
-    var result = vkQueuePresentKHR(_device.PresentQueue, &presentInfo);
+    var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     Application.Instance.Mutex.ReleaseMutex();
@@ -513,8 +817,9 @@ public class VulkanSwapchain : IDisposable {
 
   private static VkPresentModeKHR ChooseSwapPresentMode(ReadOnlySpan<VkPresentModeKHR> availablePresentModes) {
     if (Application.Instance.VSync) {
-      Logger.Info($"[SWAPCHAIN] Present Mode is set to: {VkPresentModeKHR.Fifo}");
-      return VkPresentModeKHR.Fifo;
+      var targetMode = VkPresentModeKHR.Fifo;
+      Logger.Info($"[SWAPCHAIN] Present Mode is set to: {targetMode}");
+      return targetMode;
     }
 
     foreach (VkPresentModeKHR availablePresentMode in availablePresentModes) {
@@ -548,6 +853,9 @@ public class VulkanSwapchain : IDisposable {
   }
 
   public unsafe void Dispose() {
+    _inputAttachmentsLayout?.Dispose();
+    _descriptorPool?.Dispose();
+
     for (int i = 0; i < _swapChainImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _swapChainImageViews[i]);
     }
@@ -560,6 +868,16 @@ public class VulkanSwapchain : IDisposable {
     }
     for (int i = 0; i < _depthImageViews.Length; i++) {
       vkDestroyImageView(_device.LogicalDevice, _depthImageViews[i]);
+    }
+
+    for (int i = 0; i < _colorImages.Length; i++) {
+      vkDestroyImage(_device.LogicalDevice, _colorImages[i]);
+    }
+    for (int i = 0; i < _colorImageViews.Length; i++) {
+      vkDestroyImageView(_device.LogicalDevice, _colorImageViews[i]);
+    }
+    for (int i = 0; i < _colorImageMemories.Length; i++) {
+      vkFreeMemory(_device.LogicalDevice, _colorImageMemories[i]);
     }
 
     for (int i = 0; i < _normalImages.Length; i++) {
@@ -615,6 +933,12 @@ public class VulkanSwapchain : IDisposable {
   public unsafe VkFence* CurrentFence => &_inFlightFences[_currentFrame];
   public unsafe ulong CurrentSemaphore => _renderFinishedSemaphores[_currentFrame].Handle;
   public VkRenderPass RenderPass => _renderPass;
+  public VkImageView CurrentImageDepthView => _depthImageViews[_currentFrame];
+  public VkImage CurrentImageDepth => _depthImages[_currentFrame];
+  // public VkDescriptorSet ColorDescriptor => _colorDescriptors[_currentFrame];
+  // public VkDescriptorSet DepthDescriptor => _depthDescriptors[_currentFrame];
+  public VkDescriptorSet ImageDescriptor => _imageDescriptors[_currentFrame];
+  public DescriptorSetLayout InputAttachmentLayout => _inputAttachmentsLayout;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;
   public float ExtentAspectRatio() {

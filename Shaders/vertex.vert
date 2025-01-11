@@ -12,12 +12,15 @@ layout(location = 1) out vec3 fragPositionWorld;
 layout(location = 2) out vec3 fragNormalWorld;
 layout(location = 3) out vec2 texCoord;
 layout(location = 4) flat out int filterFlag;
+layout(location = 5) out float entityToFragDistance;
+layout(location = 6) out float fogVisiblity;
 
 #include material
 
 #include directional_light
 #include point_light
 #include object_data
+#include fog
 
 layout(set = 1, binding = 0) #include global_ubo
 
@@ -43,4 +46,17 @@ void main() {
     fragColor = color;
     texCoord = uv;
     filterFlag = objectBuffer.objectData[gl_BaseInstance].filterFlag;
+
+    if(ubo.hasImportantEntity == 1) {
+      entityToFragDistance = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);
+      float normalizedDistance = entityToFragDistance / ubo.fog.x;
+      fogVisiblity = exp(-pow(normalizedDistance, 2.0));
+      fogVisiblity = clamp(fogVisiblity, 0.0, 1.0);
+    } else {
+      entityToFragDistance = -1;
+    }
+
+    if(ubo.useFog == 0) {
+      fogVisiblity = 1.0;
+    }
 }

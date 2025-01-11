@@ -1,4 +1,5 @@
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.Particles;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
@@ -59,7 +60,7 @@ public class SystemCreator {
     if (hasRenderer3D) {
       Logger.Info("[SYSTEM CREATOR] Creating 3D Renderer");
       systemCollection.Render3DSystem =
-        new(vmaAllocator, device, renderer, layouts, configInfo);
+        new(vmaAllocator, device, renderer, layouts, new ModelPipelineConfig());
 
       Logger.Info("[SYSTEM CREATOR] Creating 3D Debug Renderer");
       var debugConfig = new VertexDebugPipeline();
@@ -97,7 +98,7 @@ public class SystemCreator {
     if (hasParticles) {
       Logger.Info("[SYSTEM CREATOR] Creating Particle System");
       systemCollection.ParticleSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), new ParticlePipelineConfigInfo());
     }
   }
 }

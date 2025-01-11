@@ -2,11 +2,14 @@ uniform GlobalUbo {
   mat4 view;
   mat4 projection;
   vec3 cameraPosition;
-  int layer;
+  float fov;
   DirectionalLight directionalLight;
   int pointLightLength;
   int hasImportantEntity;
   vec3 importantEntityPosition;
+  vec3 importantEntityDirection;
+  vec3 fog;
+  int useFog;
 } ubo;
 
 vec2 worldToScreenPos(vec3 worldPos, mat4 mvp) {

@@ -82,6 +82,7 @@ public static partial class GLTFLoaderKHR {
 
   private static void LoadTextureSamplers(Gltf gltf, out List<TextureSampler> textureSamplers) {
     textureSamplers = [];
+    if (!gltf.ShouldSerializeSamplers()) return;
     foreach (var sampler in gltf.Samplers) {
       var textureSampler = new TextureSampler {
         MinFilter = GetFilterMode((int)sampler.MinFilter!),
@@ -105,6 +106,7 @@ public static partial class GLTFLoaderKHR {
   ) {
     textureIds = [];
     int i = 0;
+    // if (!gltf.ShouldSerializeTextures()) return;
     foreach (var gltfTexture in gltf.Textures) {
       if (!gltfTexture.Source.HasValue) continue;
       int src = gltfTexture.Source.Value;
@@ -138,7 +140,10 @@ public static partial class GLTFLoaderKHR {
         texture.TextureIndex = i;
 
         // var path = Path.Combine(DwarfPath.AssemblyDirectory, $"{textureName}_{textureIds.Count}.png");
-        //File.WriteAllBytes(path, texture.TextureData);
+        // File.WriteAllBytes(path, texture.TextureData);
+      } else {
+        texture = app.TextureManager.GetTextureLocal(id);
+        texture.TextureIndex = i;
       }
       i++;
       textureIds.Add((id, texture));

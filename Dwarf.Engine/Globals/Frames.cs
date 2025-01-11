@@ -7,14 +7,14 @@ public static class Frames {
   // private static double s_frameRate = 0.0f;
 
   public static double GetFramesDelta() {
-    var lastUpdate = Time.DeltaTime;
+    var lastUpdate = Time.DeltaTimeRender;
     return lastUpdate;
   }
 
   public static double GetFrames() {
-    return (s_startTime - s_endTime).TotalMilliseconds;
+    var frame = (s_startTime - s_endTime).TotalMilliseconds;
     // return Time.DeltaTime;
-    // return MathF.Round(, 5, MidpointRounding.ToZero);
+    return MathF.Round((float)frame, 5, MidpointRounding.ToZero);
   }
 
   public static void TickStart() {

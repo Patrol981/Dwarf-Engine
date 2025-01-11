@@ -89,6 +89,21 @@ public class Transform : Component {
   }
 
   /// <summary>
+  /// Sets Transform euler angle to given position
+  /// </summary>
+  /// <param name="position"></param>
+  public void LookAt(Vector3 position) {
+    var direction = position - Position;
+    direction = Vector3.Normalize(direction);
+    var yaw = MathF.Atan2(-direction.X, -direction.Z);
+    yaw = Converter.RadiansToDegrees(yaw);
+    var pitch = MathF.Asin(direction.Y);
+    pitch = -Converter.RadiansToDegrees(pitch);
+    Rotation.Y = yaw;
+    Rotation.X = pitch;
+  }
+
+  /// <summary>
   /// Sets Transform euler angle to given position only by Y axis
   /// </summary>
   /// <param name="position"></param>
@@ -99,6 +114,43 @@ public class Transform : Component {
     var yaw = MathF.Atan2(-direction.X, -direction.Z);
     yaw = Converter.RadiansToDegrees(yaw);
     Rotation.Y = yaw;
+  }
+
+  /// <summary>
+  /// Sets Transform euler angle to given position only by Y axis
+  /// </summary>
+  /// <param name="position"></param>
+  public void LookAtFixed(Vector3 position, float lerpFactor) {
+    // Calculate the target direction
+    var direction = position - Position;
+    direction.Y = 0;
+    direction = Vector3.Normalize(direction);
+
+    // Calculate the target yaw angle
+    var targetYaw = MathF.Atan2(-direction.X, -direction.Z);
+    targetYaw = Converter.RadiansToDegrees(targetYaw);
+
+    // Normalize both angles to the range [0, 360)
+    var currentYaw = NormalizeAngle(Rotation.Y);
+    targetYaw = NormalizeAngle(targetYaw);
+
+    // Calculate the shortest direction to rotate
+    var deltaYaw = targetYaw - currentYaw;
+    if (deltaYaw > 180) {
+      deltaYaw -= 360;
+    } else if (deltaYaw < -180) {
+      deltaYaw += 360;
+    }
+
+    // Interpolate between the current yaw and the target yaw
+    currentYaw += deltaYaw * lerpFactor;
+    Rotation.Y = NormalizeAngle(currentYaw);
+  }
+
+  private static float NormalizeAngle(float angle) {
+    while (angle < 0) angle += 360;
+    while (angle >= 360) angle -= 360;
+    return angle;
   }
 
   public void LookAtFixedRound(Vector3 position) {
@@ -203,6 +255,12 @@ public class Transform : Component {
     return forward;
   }
 
+  private Vector3 GetForwardPosition() {
+    var modelMatrix = Matrix4;
+    var forward = new Vector3(modelMatrix[2, 0], modelMatrix[2, 1], modelMatrix[2, 2]);
+    return Vector3.Normalize(forward);
+  }
+
   private Vector3 GetRight() {
     var modelMatrix = Matrix4;
     var right = new Vector3(modelMatrix[2, 0], modelMatrix[2, 1], modelMatrix[2, 2]);
@@ -223,6 +281,7 @@ public class Transform : Component {
   }
 
   public Vector3 Forward => GetForward();
+  public Vector3 ForwardPosition => GetForwardPosition();
   public Vector3 Right => GetRight();
   public Matrix4x4 Matrix4 => GetMatrix();
   public Matrix4x4 NoScale => GetMatrixWithoutScale();

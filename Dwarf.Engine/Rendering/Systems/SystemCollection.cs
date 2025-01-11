@@ -2,6 +2,7 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Networking;
 using Dwarf.Physics;
+using Dwarf.Rendering.Particles;
 using Dwarf.Rendering.Systems;
 using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
@@ -35,16 +36,23 @@ public class SystemCollection : IDisposable {
   public bool ReloadUISystem = false;
   public bool ReloadParticleSystem = false;
 
+  private SubpassConnectorSystem? _subpassConnectorSystem;
+
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     _render3DSystem?.Render(
         frameInfo
       );
     _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
-    _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
+    //
     _directionaLightSystem?.Render(frameInfo);
     _pointLightSystem?.Render(frameInfo);
     _guizmoRenderSystem?.Render(frameInfo);
     _renderUISystem?.DrawUI(frameInfo, _canvas);
+  }
+
+  public void UpdateSecondPassSystems(Entity[] entities, FrameInfo frameInfo) {
+    _subpassConnectorSystem?.Redner(frameInfo);
+    _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
     _particleSystem?.Render(frameInfo);
   }
 
@@ -103,7 +111,7 @@ public class SystemCollection : IDisposable {
       var textures = _particleSystem.ValidateTextures();
       if (!textures || ReloadParticleSystem) {
         ReloadParticleSystem = false;
-        ReloadParticleRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
+        ReloadParticleRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, new ParticlePipelineConfigInfo());
       }
     }
   }
@@ -129,6 +137,7 @@ public class SystemCollection : IDisposable {
       layouts,
       configInfo
     );
+    _subpassConnectorSystem = new(vmaAllocator, device, renderer, layouts, new SecondSubpassPipeline());
 
     var entities = app.GetEntities();
     var objs3D = entities.DistinctInterface<IRender3DElement>();
@@ -138,7 +147,7 @@ public class SystemCollection : IDisposable {
     _directionaLightSystem?.Setup();
     _pointLightSystem?.Setup();
     _particleSystem?.Setup(ref textureManager);
-    _physicsSystem?.Init(objs3D);
+    _physicsSystem?.Init(entities.ToArray());
   }
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
@@ -283,6 +292,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void Dispose() {
+    _subpassConnectorSystem?.Dispose();
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
     _canvas?.Dispose();

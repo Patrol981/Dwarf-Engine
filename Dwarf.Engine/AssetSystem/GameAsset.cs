@@ -178,7 +178,7 @@ public class GameAsset {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
       entity.GetComponent<Terrain3D>().Setup(new(150, 150), default);
-      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.MotionType, false);
+      // entity.AddRigidbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.MotionType, false);
     }
   }
 
@@ -186,7 +186,7 @@ public class GameAsset {
     if (RigidbodyData == null) return;
     var rbData = RigidbodyData!.Value;
 
-    entity.AddRigdbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.MotionType);
+    // entity.AddRigidbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.MotionType);
   }
 
   private void HandleCamera(Entity entity) {

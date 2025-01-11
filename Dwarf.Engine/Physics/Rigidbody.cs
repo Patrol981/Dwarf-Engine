@@ -135,6 +135,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void InitBase(Mesh? mesh = null) {
+    if (Owner.CanBeDisposed) throw new Exception("Entity is being disposed");
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_device == null) throw new Exception("Device cannot be null!");
 
@@ -189,6 +190,7 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public unsafe void Init(in IPhysicsBody bodyInterface) {
+    if (Owner.CanBeDisposed) throw new Exception("Entity is being disposed");
     if (PrimitiveType == PrimitiveType.None) throw new Exception("Collider must have certain type!");
     if (_collisionShape == null) throw new ArgumentNullException(nameof(_collisionShape));
     if (_device == null) throw new Exception("Device cannot be null!");
@@ -237,6 +239,8 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void Update() {
+    if (Owner.CanBeDisposed) return;
+
     var pos = _bodyInterface.Position;
     var transform = Owner!.GetComponent<Transform>();
 
@@ -269,22 +273,27 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void AddForce(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     _bodyInterface.AddForce(vec3);
   }
 
   public void AddVelocity(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     _bodyInterface.AddLinearVelocity(vec3);
   }
 
   public void AddImpulse(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     _bodyInterface.AddImpulse(vec3);
   }
 
   public void Translate(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     _bodyInterface.AddLinearVelocity(vec3);
   }
 
   public void Rotate(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     var rot = _bodyInterface.Rotation;
     rot.X += vec3.X;
     rot.Y += vec3.Y;
@@ -293,21 +302,25 @@ public class Rigidbody : Component, IDisposable {
   }
 
   public void SetRotation(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     var rot = _bodyInterface.Rotation;
     _bodyInterface.Rotation = new(vec3, rot.Z);
   }
 
   public void SetPosition(Vector3 vec3) {
+    if (Owner.CanBeDisposed) return;
     _bodyInterface.Position = vec3;
   }
 
   public Vector3 Velocity {
     get {
+      if (Owner.CanBeDisposed) return Vector3.Zero;
       return _bodyInterface.LinearVelocity;
     }
   }
 
   public void InvokeCollision(CollisionState collisionState, Entity otherColl) {
+    if (Owner.CanBeDisposed) return;
     var scripts = Owner!.GetScripts();
     for (short i = 0; i < scripts.Length; i++) {
       switch (collisionState) {

@@ -99,7 +99,7 @@ public class Ray {
     var entities = Application.Instance.GetEntities();
     var result = new Dictionary<Entity, RaycastHitResult>();
 
-    foreach (var entity in entities) {
+    foreach (var entity in entities.Where(x => !x.CanBeDisposed)) {
       var enTransform = entity.TryGetComponent<Transform>();
       var enDistance = Vector3.Distance(
         CameraState.GetCameraEntity().GetComponent<Transform>().Position,
@@ -123,6 +123,7 @@ public class Ray {
     var result = new Dictionary<Entity, RaycastHitResult>();
 
     for (int i = 0; i < entities.Count; i++) {
+      if (entities[i].CanBeDisposed) continue;
       var enTransform = entities[i].TryGetComponent<Transform>();
       var enDistance = Vector3.Distance(
         CameraState.GetCameraEntity().GetComponent<Transform>().Position,
@@ -134,18 +135,6 @@ public class Ray {
         result.TryAdd(entities[i], enResult);
       }
     }
-    // foreach (var entity in entities) {
-    //   var enTransform = entity.TryGetComponent<Transform>();
-    //   var enDistance = Vector3.Distance(
-    //     CameraState.GetCameraEntity().GetComponent<Transform>().Position,
-    //     enTransform != null ? enTransform.Position : Vector3.Zero
-    //   );
-
-    //   var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
-    //   if (enResult.Present) {
-    //     result.TryAdd(entity, enResult);
-    //   }
-    // }
 
     return new ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>>(
         [.. result.OrderBy(pair => pair.Value.Distance)]

@@ -4,7 +4,7 @@ using Dwarf.Physics;
 using Dwarf.Testing;
 // using Dwarf.Extensions.GLFW;
 using Dwarf.Vulkan;
-
+using Dwarf.Windowing;
 using SDL3;
 
 namespace Dwarf.Globals;
@@ -35,8 +35,8 @@ public sealed class KeyboardState {
         s_instance.KeyStates[(int)e.key].KeyDown = true;
         s_instance.KeyStates[(int)e.key].KeyPressed = true;
 
-        if (e.key == SDL_Keycode.F) WindowState.FocusOnWindow();
-        if (e.key == SDL_Keycode.F1) WindowState.MaximizeWindow();
+        if (e.key == SDL_Keycode.F) Window.FocusOnWindow();
+        if (e.key == SDL_Keycode.F1) Window.MaximizeWindow();
         if (e.key == SDL_Keycode.Grave) ChangeWireframeMode();
         if (e.key == SDL_Keycode._1) ChangeDebugVisiblity();
 

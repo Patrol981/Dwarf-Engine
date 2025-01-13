@@ -9,7 +9,7 @@ layout (push_constant) uniform Push {
   vec4 position;
   vec4 color;
   float scale;
-  int hasTexture;
+  float rotation;
 } push;
 
 #include directional_light

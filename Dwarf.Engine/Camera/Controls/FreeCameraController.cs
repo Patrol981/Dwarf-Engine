@@ -1,5 +1,6 @@
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
+using Dwarf.Windowing;
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 
@@ -23,7 +24,7 @@ public class FreeCameraController : DwarfScript {
       var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
       CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
 
-      if (WindowState.s_MouseCursorState == CursorState.Centered) {
+      if (Window.MouseCursorState == CursorState.Centered) {
         Owner!.GetComponent<Camera>().Yaw += deltaX * CameraState.GetSensitivity();
         Owner!.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
       }

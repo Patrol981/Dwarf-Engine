@@ -27,7 +27,7 @@ public class Button : Component, I2DCollision, IUIElement {
 
   public void CheckCollision(object sender, EventArgs e) {
     var camera = CameraState.GetCamera();
-    var size = WindowState.s_Window.Extent;
+    var size = Application.Instance.Window.Extent;
     var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.Width, size.Height));
     if (collResult) {
       Logger.Info("COLL DETECTED");

@@ -141,7 +141,7 @@ public class ParticleSystem : SystemBase {
         _particlePushConstant->Color = Vector4.One;
         _particlePushConstant->Position = new Vector4(particles[i].Position, 1.0f);
         _particlePushConstant->Radius = particles[i].Scale;
-        _particlePushConstant->HasTexture = particles[i].HasTexture ? 1 : 0;
+        _particlePushConstant->Rotation = particles[i].Rotation;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,
@@ -193,7 +193,7 @@ public class ParticleSystem : SystemBase {
         _particlePushConstant->Color = Vector4.One;
         _particlePushConstant->Position = new Vector4(particles[i].Position, 1.0f);
         _particlePushConstant->Radius = particles[i].Scale;
-        _particlePushConstant->HasTexture = particles[i].HasTexture ? 1 : 0;
+        _particlePushConstant->Rotation = particles[i].Rotation;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,

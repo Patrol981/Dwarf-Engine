@@ -1,6 +1,7 @@
 // using Dwarf.Extensions.GLFW;
 // using Dwarf.Extensions.GLFW;
 using System.Numerics;
+using Dwarf.Windowing;
 using SDL3;
 using static SDL3.SDL3;
 // using Dwarf.GLFW.Core;
@@ -80,13 +81,13 @@ public sealed class MouseState {
 
   public Vector2 MousePosition {
     get {
-      return WindowState.CursorState switch {
+      return Window.MouseCursorState switch {
         CursorState.Centered => _lastRelativeMousePositionFromCallback,
         _ => _lastMousePositionFromCallback,
       };
     }
     set {
-      switch (WindowState.CursorState) {
+      switch (Window.MouseCursorState) {
         case CursorState.Centered:
           _lastRelativeMousePositionFromCallback = value;
           break;

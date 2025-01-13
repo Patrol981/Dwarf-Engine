@@ -109,7 +109,7 @@ public class Application {
     bool fullscreen = false,
     bool debugMode = true
   ) {
-    Application.Instance = this;
+    Instance = this;
     CurrentAPI = RenderAPI.Vulkan;
     VSync = vsync;
     Fullscreen = fullscreen;
@@ -118,7 +118,9 @@ public class Application {
 
     windowSize ??= new(1200, 900);
 
-    Window = new Window(windowSize.X, windowSize.Y, appName, Fullscreen, debugMode);
+    Window = new Window(windowSize.X, windowSize.Y);
+    Window.Init(appName, Fullscreen, debugMode);
+
     Device = new VulkanDevice(Window);
 
     VmaAllocatorCreateFlags allocatorFlags = VmaAllocatorCreateFlags.KHRDedicatedAllocation | VmaAllocatorCreateFlags.KHRBindMemory2;
@@ -275,7 +277,7 @@ public class Application {
     _renderThread.Start();
 
     Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
-    WindowState.FocusOnWindow();
+    Window.FocusOnWindow();
 
     while (!Window.ShouldClose) {
       MouseState.GetInstance().ScrollDelta = 0.0f;
@@ -642,7 +644,8 @@ public class Application {
       );
 
     float aspect = Renderer.AspectRatio;
-    if (aspect != _camera.GetComponent<Camera>().Aspect) {
+    var cameraAsppect = _camera.TryGetComponent<Camera>()?.Aspect;
+    if (aspect != cameraAsppect && cameraAsppect != null) {
       _camera.GetComponent<Camera>().Aspect = aspect;
       switch (_camera.GetComponent<Camera>().CameraType) {
         case CameraType.Perspective:
@@ -656,10 +659,16 @@ public class Application {
       }
     }
 
-    var commandBuffer = Renderer.BeginFrame();
-    if (commandBuffer != VkCommandBuffer.Null) {
+    var camera = _camera.TryGetComponent<Camera>();
+    VkCommandBuffer commandBuffer = VkCommandBuffer.Null;
+
+    if (camera != null) {
+      commandBuffer = Renderer.BeginFrame();
+    }
+
+    if (commandBuffer != VkCommandBuffer.Null && camera != null) {
       int frameIndex = Renderer.GetFrameIndex();
-      _currentFrame.Camera = _camera.GetComponent<Camera>();
+      _currentFrame.Camera = camera;
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
       _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
@@ -772,9 +781,9 @@ public class Application {
         item.Dispose();
         item.Init(item.AABBFilter);
       }
-
-      Collect();
     }
+
+    Collect();
 
     if (_entitiesQueue.Count > 0) {
       Mutex.WaitOne();

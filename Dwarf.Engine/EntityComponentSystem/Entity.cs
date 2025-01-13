@@ -35,7 +35,7 @@ public class Entity {
   }
 
   public T? TryGetComponent<T>() where T : Component, new() {
-    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
+    if (CanBeDisposed) return null;
     return HasComponent<T>() ? GetComponent<T>() : null;
   }
 

@@ -52,6 +52,7 @@ public class Particle {
   }
 
   public Vector3 Position => _position;
+  public float Rotation => _rotation;
   public float Scale => _scale;
   public bool CanBeDisposed { get; private set; }
   public ITexture? ParticleTexture => _particleTexture;

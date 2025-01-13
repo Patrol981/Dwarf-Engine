@@ -1,5 +1,7 @@
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
+using Dwarf.Windowing;
+
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
 using OpenTK.Mathematics;
@@ -76,7 +78,7 @@ public class ThirdPersonCamera : DwarfScript {
       var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
       CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
 
-      if (WindowState.s_MouseCursorState != CursorState.Centered) return;
+      if (Window.MouseCursorState != CursorState.Centered) return;
 
       CalculateZoom();
       CalculateAngle(deltaX);

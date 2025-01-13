@@ -19,7 +19,7 @@ public class AnimationController : Component {
     } else {
       _meshRenderer = new MeshRenderer();
     }
-    _tickRate = 1.0f / WindowState.s_Window.RefreshRate;
+    _tickRate = 1.0f / Application.Instance.Window.RefreshRate;
   }
   public void Init(MeshRenderer meshRenderer) {
     _meshRenderer = meshRenderer;

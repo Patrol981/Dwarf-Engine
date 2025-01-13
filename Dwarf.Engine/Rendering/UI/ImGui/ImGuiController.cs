@@ -7,7 +7,7 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
-
+using Dwarf.Windowing;
 using ImGuiNET;
 
 using SDL3;
@@ -144,7 +144,7 @@ public partial class ImGuiController : IDisposable {
     ImGui.NewFrame();
     _frameBegun = true;
 
-    WindowState.s_Window.OnResizedEventDispatcher += WindowResized;
+    Application.Instance.Window.OnResizedEventDispatcher += WindowResized;
 
     return Task.CompletedTask;
   }
@@ -340,7 +340,7 @@ public partial class ImGuiController : IDisposable {
   }
 
   private void WindowResized(object? sender, EventArgs e) {
-    var windowExtent = WindowState.s_Window.Extent;
+    var windowExtent = Application.Instance.Window.Extent;
     _width = (int)windowExtent.Width;
     _height = (int)windowExtent.Height;
     Logger.Info($"[ImGUI] Window Resized ({_width}{_height})");
@@ -383,7 +383,7 @@ public partial class ImGuiController : IDisposable {
     io.MouseDown[1] = MouseState.GetInstance().QuickStateMouseButtons.Right;
     io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
     var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
-    if (WindowState.s_MouseCursorState != CursorState.Centered && WindowState.s_MouseCursorState != CursorState.Hidden) {
+    if (Window.MouseCursorState != CursorState.Centered && Window.MouseCursorState != CursorState.Hidden) {
       io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
     }
 

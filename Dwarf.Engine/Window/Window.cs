@@ -25,6 +25,12 @@ public enum WindowFlags {
   Maximized = 1 << 4,
 }
 
+public enum CursorState {
+  Normal,
+  Centered,
+  Hidden
+}
+
 public class Window : IDisposable {
   public VkUtf8String AppName = "Dwarf App"u8;
   public VkUtf8String EngineName = "Dwarf Engine"u8;
@@ -33,8 +39,11 @@ public class Window : IDisposable {
 
   private SDL_Cursor _cursor;
 
-  public Window(int width, int height, string windowName, bool fullscreen, bool debug = false) {
+  public Window(int width, int height) {
     Size = new Vector2I(width, height);
+  }
+
+  internal void Init(string windowName, bool fullscreen, bool debug = false) {
     InitWindow(windowName, fullscreen, debug);
     LoadIcons();
     Show();
@@ -75,8 +84,7 @@ public class Window : IDisposable {
 
     _ = SDL_SetWindowPosition(SDLWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
-    WindowState.s_Window = this;
-    WindowState.s_Window.Extent = new DwarfExtent2D((uint)Size.X, (uint)Size.Y);
+    Application.Instance.Window.Extent = new DwarfExtent2D((uint)Size.X, (uint)Size.Y);
   }
 
   private unsafe void LoadIcons() {
@@ -129,7 +137,7 @@ public class Window : IDisposable {
           KeyboardState.KeyCallback(SDLWindow, e.key, e.type);
           break;
         case SDL_EventType.MouseMotion:
-          switch (WindowState.CursorState) {
+          switch (MouseCursorState) {
             case CursorState.Centered:
               MouseState.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
               break;
@@ -172,9 +180,9 @@ public class Window : IDisposable {
   private static unsafe void FrambufferResizedCallback(int width, int height) {
     if (width <= 0 || height <= 0) return;
     Logger.Info($"RESISING {width} {height}");
-    WindowState.s_Window.FramebufferResized = true;
-    WindowState.s_Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
-    WindowState.s_Window.OnResizedEvent(null!);
+    Application.Instance.Window.FramebufferResized = true;
+    Application.Instance.Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
+    Application.Instance.Window.OnResizedEvent(null!);
   }
 
   private static void Log_SDL(SDL_LogCategory category, SDL_LogPriority priority, string description) {
@@ -187,7 +195,7 @@ public class Window : IDisposable {
   }
 
   private void OnResizedEvent(EventArgs e) {
-    WindowState.s_Window.OnResizedEventDispatcher?.Invoke(this, e);
+    Application.Instance.Window.OnResizedEventDispatcher?.Invoke(this, e);
   }
 
   public bool WasWindowResized() => FramebufferResized;
@@ -206,6 +214,40 @@ public class Window : IDisposable {
     return displayMode->refresh_rate;
   }
 
+  public static unsafe void SetCursorMode(CursorState cursorState) {
+    var prevMousePos = MouseState.GetInstance().MousePosition;
+
+    MouseCursorState = cursorState;
+    switch (cursorState) {
+      case CursorState.Normal:
+        SDL_ShowCursor();
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        break;
+      case CursorState.Centered:
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, true);
+        MouseState.GetInstance().MousePosition = prevMousePos;
+        // SDL_WarpMouseInWindow(s_Window.SDLWindow, s_Window.Size.X / 2, s_Window.Size.Y / 2);
+        break;
+      case CursorState.Hidden:
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        SDL_HideCursor();
+        break;
+    }
+  }
+
+  public static void FocusOnWindow() {
+    if (MouseCursorState == CursorState.Centered) {
+      SetCursorMode(CursorState.Normal);
+    } else {
+      SetCursorMode(CursorState.Centered);
+    }
+  }
+
+  public static unsafe void MaximizeWindow() {
+    Application.Instance.Device.WaitDevice();
+    SDL_MaximizeWindow(Application.Instance.Window.SDLWindow);
+  }
+
   public DwarfExtent2D Extent {
     get { return _extent; }
     private set { _extent = value; }
@@ -215,7 +257,8 @@ public class Window : IDisposable {
   public bool FramebufferResized { get; private set; } = false;
   public bool IsMinimalized { get; private set; } = false;
   public event EventHandler? OnResizedEventDispatcher;
-  public float RefreshRate { get; init; }
+  public float RefreshRate { get; private set; }
 
   public SDL_Window SDLWindow { get; private set; }
+  public static CursorState MouseCursorState = CursorState.Normal;
 }

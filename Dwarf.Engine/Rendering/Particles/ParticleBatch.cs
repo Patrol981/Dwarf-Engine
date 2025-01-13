@@ -33,6 +33,8 @@ public class ParticleBatch {
       public float LengthMax;
       public float ScaleMin;
       public float ScaleMax;
+      public float RotationMin;
+      public float RotationMax;
     }
 
     public Builder Configure(ParticlePropagationConfig propagationConfig) {
@@ -72,7 +74,7 @@ public class ParticleBatch {
           NextVector3(_particleConfig.VelocityMin, _particleConfig.VelocityMax, rnd),
           NextFloat(_particleConfig.GravityEffectMin, _particleConfig.GravityEffectMax, rnd),
           NextFloat(_particleConfig.LengthMin, _particleConfig.LengthMax, rnd),
-          0,
+          NextFloat(_particleConfig.RotationMin, _particleConfig.RotationMax),
           NextFloat(_particleConfig.ScaleMin, _particleConfig.ScaleMax, rnd)
         ));
       }
@@ -81,7 +83,9 @@ public class ParticleBatch {
     }
 
     public Builder WithTexture(string texturePath) {
-      _app.TextureManager.AddTextureLocal(texturePath).Wait();
+      if (!_app.TextureManager.TextureExistsLocal(texturePath)) {
+        _app.TextureManager.AddTextureLocal(texturePath).Wait();
+      }
       var textureId = _app.TextureManager.GetTextureIdLocal(texturePath);
       _particleTexture = _app.TextureManager.GetTextureLocal(textureId);
       return this;

@@ -96,6 +96,36 @@ public class TextureManager : IDisposable {
     return false;
   }
 
+  public bool TextureExistsLocal(string textureName) {
+    foreach (var tex in PerSceneLoadedTextures) {
+      if (tex.Value.TextureName == textureName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public bool TextureExistsGlobal(ITexture texture) {
+    foreach (var tex in GlobalLoadedTextures) {
+      if (tex.Value.TextureName == texture.TextureName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public bool TextureExistsGlobal(string textureName) {
+    foreach (var tex in GlobalLoadedTextures) {
+      if (tex.Value.TextureName == textureName) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   public static async Task<ITexture[]> AddTextures(VmaAllocator vmaAllocator, IDevice device, string[] paths, int flip = 1) {
     var textures = new ITexture[paths.Length];
     for (int i = 0; i < textures.Length; i++) {

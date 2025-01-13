@@ -131,7 +131,7 @@ public class JoltProgram : IPhysicsProgram {
   public void Dispose() {
     foreach (var body in Bodies) {
       body.Value.Dispose();
-      body.Key.GetComponent<Rigidbody>().Dispose();
+      body.Key.TryGetComponent<Rigidbody>()?.Dispose();
     }
     JobSystem?.Dispose();
     PhysicsSystem?.Dispose();

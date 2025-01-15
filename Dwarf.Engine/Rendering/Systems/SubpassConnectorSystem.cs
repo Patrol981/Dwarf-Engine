@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
@@ -56,9 +57,6 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
   }
 
   private unsafe void UpdateDescriptors(int currentFrame) {
-    // for (int i = 0; i < _renderer.MAX_FRAMES_IN_FLIGHT; i++) {
-    //   _renderer.Swapchain.UpdateDescriptors(i);
-    // }
     _renderer.Swapchain.UpdateDescriptors(currentFrame);
   }
 
@@ -92,6 +90,8 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
       _subpassInfoPushConstant->EdgeHigh = EdgeHigh;
       _subpassInfoPushConstant->Contrast = Contrast;
       _subpassInfoPushConstant->Stripple = Stipple;
+
+      // Logger.Info(_subpassInfoPushConstant->WindowSize);
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,

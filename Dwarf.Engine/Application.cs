@@ -767,9 +767,12 @@ public class Application {
         GuiController.Render(_currentFrame);
       }
 
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.BeginPostProcessRenderPass(commandBuffer);
+      Systems.PostProcessingSystem?.Render(FrameInfo);
+      Renderer.EndPostProcessRenderPass(commandBuffer);
 
       Mutex.WaitOne();
-      Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
       Mutex.ReleaseMutex();
 

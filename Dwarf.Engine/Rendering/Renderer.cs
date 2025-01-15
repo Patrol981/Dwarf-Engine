@@ -12,7 +12,6 @@ namespace Dwarf.Rendering;
 
 public unsafe class Renderer : IDisposable {
   private readonly Window _window = null!;
-  // private VulkanDevice _device = null!;
   private readonly IDevice _device;
   private VkCommandBuffer[] _commandBuffers = [];
 
@@ -25,9 +24,7 @@ public unsafe class Renderer : IDisposable {
 
     CommandList = new VulkanCommandList();
 
-    // _swapchain = new Swapchain(_device, _window.Extent);
     RecreateSwapchain();
-    // CreateCommandBuffers();
   }
 
   public VkCommandBuffer BeginFrame(VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
@@ -52,15 +49,12 @@ public unsafe class Renderer : IDisposable {
 
     var commandBuffer = GetCurrentCommandBuffer();
 
-    // vkResetFences(_device.LogicalDevice, 1, Swapchain.CurrentFence);
     vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None);
 
     VkCommandBufferBeginInfo beginInfo = new();
     if (level == VkCommandBufferLevel.Secondary) {
       beginInfo.flags = VkCommandBufferUsageFlags.SimultaneousUse;
-      // beginInfo.pInheritanceInfo
     }
-    // beginInfo.sType = VkStructureType.CommandBufferBeginInfo;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo).CheckResult();
 
@@ -101,59 +95,34 @@ public unsafe class Renderer : IDisposable {
       return;
     }
 
-    // unsafe {
-    //   var depthBarrier = new VkImageMemoryBarrier {
-    //     sType = VkStructureType.ImageMemoryBarrier,
-    //     oldLayout = VkImageLayout.DepthStencilAttachmentOptimal,
-    //     newLayout = VkImageLayout.DepthStencilReadOnlyOptimal,
-    //     srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite,
-    //     dstAccessMask = VkAccessFlags.ShaderRead,
-    //     image = Swapchain.CurrentImageDepth,
-    //     subresourceRange = new VkImageSubresourceRange {
-    //       aspectMask = VkImageAspectFlags.Depth,
-    //       baseMipLevel = 0,
-    //       levelCount = 1,
-    //       baseArrayLayer = 0,
-    //       layerCount = 1
-    //     }
-    //   };
-    //   vkCmdPipelineBarrier(
-    //       commandBuffer,
-    //       VkPipelineStageFlags.EarlyFragmentTests | VkPipelineStageFlags.LateFragmentTests,
-    //       VkPipelineStageFlags.FragmentShader,
-    //       0,
-    //       0, null,
-    //       0, null,
-    //       1, &depthBarrier
-    //   );
-    // }
 
-    VkRenderPassBeginInfo renderPassInfo = new();
-    renderPassInfo.renderPass = Swapchain.RenderPass;
-    renderPassInfo.framebuffer = Swapchain.GetFramebuffer((int)_imageIndex);
+    VkRenderPassBeginInfo renderPassInfo = new() {
+      renderPass = Swapchain.RenderPass,
+      framebuffer = Swapchain.GetFramebuffer((int)_imageIndex)
+    };
 
     renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
     renderPassInfo.renderArea.extent = Swapchain.Extent2D;
 
     VkClearValue[] values = new VkClearValue[3];
-    // VkClearValue* values = stackalloc VkClearValue[2];
     values[0].color = new VkClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     values[1].color = new VkClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
     values[2].depthStencil = new(1.0f, 0);
     fixed (VkClearValue* ptr = values) {
       renderPassInfo.clearValueCount = 3;
       renderPassInfo.pClearValues = ptr;
-
-      vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.Inline);
     }
 
-    VkViewport viewport = new();
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = Swapchain.Extent2D.width;
-    viewport.height = Swapchain.Extent2D.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.Inline);
+
+    VkViewport viewport = new() {
+      x = 0.0f,
+      y = 0.0f,
+      width = Swapchain.Extent2D.width,
+      height = Swapchain.Extent2D.height,
+      minDepth = 0.0f,
+      maxDepth = 1.0f
+    };
 
     VkRect2D scissor = new(0, 0, Swapchain.Extent2D.width, Swapchain.Extent2D.height);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
@@ -174,19 +143,42 @@ public unsafe class Renderer : IDisposable {
       return;
     }
 
-    // vkCmdPipelineBarrier(
-    //   commandBuffer,
-    //   VkPipelineStageFlags.EarlyFragmentTests,
-    //   VkPipelineStageFlags.LateFragmentTests,
-    //   0,
-    //   0,
-    //   null,
-    //   0,
-    //   null,
-    //   0,
-    //   null
-    // );
+    vkCmdEndRenderPass(commandBuffer);
+  }
 
+  public void BeginPostProcessRenderPass(VkCommandBuffer commandBuffer) {
+    VkRenderPassBeginInfo renderPassInfo = new() {
+      renderPass = Swapchain.PostProcessPass,
+      framebuffer = Swapchain.GetPostProcessFramebuffer((int)_imageIndex)
+    };
+
+    VkClearValue[] values = new VkClearValue[1];
+    values[0].color = new VkClearColorValue(0.0f, 0.0f, 0.0f, 0.0f);
+    fixed (VkClearValue* ptr = values) {
+      renderPassInfo.clearValueCount = 1;
+      renderPassInfo.pClearValues = ptr;
+    }
+
+    renderPassInfo.renderArea.offset = new VkOffset2D(0, 0);
+    renderPassInfo.renderArea.extent = Swapchain.Extent2D;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.Inline);
+
+    VkViewport viewport = new() {
+      x = 0.0f,
+      y = 0.0f,
+      width = Swapchain.Extent2D.width,
+      height = Swapchain.Extent2D.height,
+      minDepth = 0.0f,
+      maxDepth = 1.0f
+    };
+
+    VkRect2D scissor = new(0, 0, Swapchain.Extent2D.width, Swapchain.Extent2D.height);
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+  }
+
+  public void EndPostProcessRenderPass(VkCommandBuffer commandBuffer) {
     vkCmdEndRenderPass(commandBuffer);
   }
 
@@ -194,36 +186,14 @@ public unsafe class Renderer : IDisposable {
     var extent = _window.Extent.ToVkExtent2D();
     while (extent.width == 0 || extent.height == 0 || _window.IsMinimalized) {
       extent = _window.Extent.ToVkExtent2D();
-      // glfwWaitEvents();
     }
 
     _device.WaitDevice();
 
-    if (Swapchain != null) Swapchain.Dispose();
+    Swapchain?.Dispose();
     Swapchain = new((VulkanDevice)_device, extent);
 
     Logger.Info("Recreated Swapchain");
-
-    // if (_swapchain == null) {
-
-    //} else {
-    //var copy = _swapchain;
-    //_swapchain = new(_device, extent, ref copy);
-
-    //_swapchain?.Dispose();
-    //_swapchain = new(_device, extent);
-
-    //if (!copy.CompareSwapFormats(_swapchain)) {
-    //Logger.Warn("Swapchain Format has been changed");
-    //}
-
-    /*
-    if (_commandBuffers == null || _swapchain.ImageCount != _commandBuffers.Length) {
-      FreeCommandBuffers();
-      CreateCommandBuffers();
-    }
-    */
-    // }
   }
 
   public void CreateCommandBuffers(VkCommandPool commandPool, VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
@@ -268,6 +238,7 @@ public unsafe class Renderer : IDisposable {
     return _frameIndex;
   }
   public VkRenderPass GetSwapchainRenderPass() => Swapchain.RenderPass;
+  public VkRenderPass GetPostProcessingPass() => Swapchain.PostProcessPass;
   public float AspectRatio => Swapchain.ExtentAspectRatio();
   public DwarfExtent2D Extent2D => Swapchain.Extent2D.FromVkExtent2D();
   public int MAX_FRAMES_IN_FLIGHT => Swapchain.GetMaxFramesInFlight();

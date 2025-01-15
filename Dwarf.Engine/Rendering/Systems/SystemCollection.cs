@@ -37,6 +37,7 @@ public class SystemCollection : IDisposable {
   public bool ReloadParticleSystem = false;
 
   private SubpassConnectorSystem? _subpassConnectorSystem;
+  private PostProcessingSystem? _postProcessingSystem;
 
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     _render3DSystem?.Render(
@@ -138,6 +139,7 @@ public class SystemCollection : IDisposable {
       configInfo
     );
     _subpassConnectorSystem = new(vmaAllocator, device, renderer, layouts, new SecondSubpassPipeline());
+    _postProcessingSystem = new(vmaAllocator, device, renderer, layouts, new PostProcessingPipeline());
 
     var entities = app.GetEntities();
     var objs3D = entities.DistinctInterface<IRender3DElement>();
@@ -291,7 +293,10 @@ public class SystemCollection : IDisposable {
     set { _canvas = value; }
   }
 
+  public PostProcessingSystem? PostProcessingSystem => _postProcessingSystem;
+
   public void Dispose() {
+    _postProcessingSystem?.Dispose();
     _subpassConnectorSystem?.Dispose();
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();

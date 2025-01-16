@@ -24,7 +24,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     ];
 
     AddPipelineData<ColliderMeshPushConstant>(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = renderer.GetPostProcessingPass(),
       VertexName = "debug_vertex",
       FragmentName = "debug_fragment",
       PipelineProvider = new PipelineModelProvider(),

@@ -235,7 +235,7 @@ public class VulkanSwapchain : IDisposable {
       format = surfaceFormat.format,
       samples = VK_SAMPLE_COUNT_1_BIT,
       loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -245,7 +245,7 @@ public class VulkanSwapchain : IDisposable {
       format = FindDepthFormat(),
       samples = VK_SAMPLE_COUNT_1_BIT,
       loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -343,7 +343,7 @@ public class VulkanSwapchain : IDisposable {
     vkCreateRenderPass(_device.LogicalDevice, renderPassCreateInfo, null, out _renderPass).CheckResult();
   }
 
-  private unsafe void CreatePostProcessRenderPass() {
+  private unsafe void CreatePostProcessRenderPass_Old() {
     VkSubpassDescription vkSubpassDescription = new() {
       pipelineBindPoint = VkPipelineBindPoint.Graphics
     };
@@ -369,6 +369,109 @@ public class VulkanSwapchain : IDisposable {
 
     vkCreateRenderPass(_device.LogicalDevice, renderPassCreateInfo, null, out _postProcessPass).CheckResult();
   }
+
+  private unsafe void CreatePostProcessRenderPass() {
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+
+    VkAttachmentDescription depthAttachment = new() {
+      format = FindDepthFormat(),
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.Store,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.DepthStencilReadOnlyOptimal
+    };
+
+    VkAttachmentDescription colorAttachment = new() {
+      format = surfaceFormat.format,
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.Store,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.PresentSrcKHR,
+    };
+
+    VkAttachmentReference depthAttachmentRef = new() {
+      attachment = 1,
+      layout = VkImageLayout.DepthStencilAttachmentOptimal
+    };
+
+    VkAttachmentReference colorAttachmentRef = new() {
+      attachment = 0,
+      layout = VkImageLayout.ColorAttachmentOptimal,
+    };
+
+    VkAttachmentReference inputAttachmentRef = new() {
+      attachment = 1,
+      layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+    };
+
+    VkSubpassDescription* subpassDescription = stackalloc VkSubpassDescription[2];
+    subpassDescription[0] = new() {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics,
+      colorAttachmentCount = 1,
+      pColorAttachments = &colorAttachmentRef,
+      pDepthStencilAttachment = null,
+    };
+
+    // subpassDescription[1] = new() {
+    //   pipelineBindPoint = VkPipelineBindPoint.Graphics,
+    //   colorAttachmentCount = 1,
+    //   pColorAttachments = &colorAttachmentRef,
+    //   pDepthStencilAttachment = &depthAttachmentRef,
+    //   inputAttachmentCount = 1,
+    //   pInputAttachments = &inputAttachmentRef
+    // };
+
+    // VkSubpassDescription subpass = new() {
+    //   pipelineBindPoint = VkPipelineBindPoint.Graphics,
+    //   colorAttachmentCount = 1,
+    //   pColorAttachments = &colorAttachmentRef,
+    //   // inputAttachmentCount = 1,
+    //   // pInputAttachments = &inputAttachmentRef,
+    //   pDepthStencilAttachment = &depthAttachmentRef
+    // };
+
+    VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[2];
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependencies[0].dependencyFlags = 0;
+
+    dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].dstSubpass = 0;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].srcAccessMask = 0;
+    dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependencies[1].dependencyFlags = 0;
+
+
+    VkAttachmentDescription[] attachments = [colorAttachment];
+    VkRenderPassCreateInfo renderPassInfo = new() {
+      attachmentCount = 1
+    };
+    fixed (VkAttachmentDescription* ptr = attachments) {
+      renderPassInfo.pAttachments = ptr;
+    }
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = subpassDescription;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies = dependencies;
+
+    var result = vkCreateRenderPass(_device.LogicalDevice, &renderPassInfo, null, out _postProcessPass);
+    if (result != VkResult.Success) throw new Exception("Failed to create render pass!");
+  }
+
 
   private unsafe void CreateRenderPass_Old() {
     SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
@@ -638,16 +741,19 @@ public class VulkanSwapchain : IDisposable {
     _postProcessFramebuffers = new VkFramebuffer[swapChainImages.Length];
     for (int i = 0; i < swapChainImages.Length; i++) {
       // VkImageView[] attachmetns = [_swapChainImageViews[i], _colorImageViews[i], _depthImageViews[i]];
-      VkFramebufferCreateInfo framebufferCreateInfo = new() {
-        renderPass = _postProcessPass,
-        attachmentCount = 0,
-        pAttachments = null,
-        width = _swapchainExtent.width,
-        height = _swapchainExtent.height,
-        layers = 1
-      };
+      VkImageView[] attachmetns = [_swapChainImageViews[i]];
+      fixed (VkImageView* ptr2 = attachmetns) {
+        VkFramebufferCreateInfo framebufferCreateInfo = new() {
+          renderPass = _postProcessPass,
+          attachmentCount = (uint)attachmetns.Length,
+          pAttachments = ptr2,
+          width = _swapchainExtent.width,
+          height = _swapchainExtent.height,
+          layers = 1
+        };
 
-      vkCreateFramebuffer(_device.LogicalDevice, &framebufferCreateInfo, null, out _postProcessFramebuffers[i]).CheckResult();
+        vkCreateFramebuffer(_device.LogicalDevice, &framebufferCreateInfo, null, out _postProcessFramebuffers[i]).CheckResult();
+      }
     }
   }
 
@@ -905,7 +1011,7 @@ public class VulkanSwapchain : IDisposable {
     VkSubmitInfo submitInfo = new();
 
     VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-    waitStages[0] = VkPipelineStageFlags.TopOfPipe;
+    waitStages[0] = VkPipelineStageFlags.AllGraphics;
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &_imageAvailableSemaphores[_currentFrame];
@@ -1110,6 +1216,7 @@ public class VulkanSwapchain : IDisposable {
   public VkRenderPass PostProcessPass => _postProcessPass;
   public VkImageView CurrentImageDepthView => _depthImageViews[_currentFrame];
   public VkImage CurrentImageDepth => _depthImages[_currentFrame];
+  public VkImage CurrentImageColor => _colorImages[_currentFrame];
   public VkDescriptorSet ImageDescriptor => _imageDescriptors[_currentFrame];
   public VkDescriptorSet PostProcessDecriptor => _postProcessDescriptors[_currentFrame];
   public DescriptorSetLayout InputAttachmentLayout => _inputAttachmentsLayout;

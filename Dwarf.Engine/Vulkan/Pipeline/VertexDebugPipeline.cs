@@ -8,7 +8,7 @@ public class VertexDebugPipeline : PipelineConfigInfo {
     configInfo.RasterizationInfo.polygonMode = VkPolygonMode.Line;
     configInfo.RasterizationInfo.lineWidth = 1.0f;
 
-    configInfo.Subpass = 1;
+    configInfo.Subpass = 0;
     return configInfo;
   }
 }

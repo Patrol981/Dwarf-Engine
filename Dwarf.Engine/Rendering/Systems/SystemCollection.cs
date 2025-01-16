@@ -52,7 +52,7 @@ public class SystemCollection : IDisposable {
   }
 
   public void UpdateSecondPassSystems(Entity[] entities, FrameInfo frameInfo) {
-    _subpassConnectorSystem?.Redner(frameInfo);
+    _postProcessingSystem?.Render(frameInfo);
     _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
     _particleSystem?.Render(frameInfo);
   }

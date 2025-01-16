@@ -14,7 +14,7 @@ public class ParticlePipelineConfigInfo : PipelineConfigInfo {
 
     configInfo.ColorBlendInfo.logicOp = VkLogicOp.Clear;
 
-    configInfo.Subpass = 1;
+    configInfo.Subpass = 0;
 
     return configInfo;
   }

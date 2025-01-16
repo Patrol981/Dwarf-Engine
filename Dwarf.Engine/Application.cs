@@ -754,22 +754,22 @@ public class Application {
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
-      if (UseImGui) {
-        GuiController.Update(Time.StopwatchDelta);
-        _onGUI?.Invoke();
-      }
-      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
-      MasterRenderUpdate(updatable.GetScriptsAsSpan());
 
       Renderer.NextSwapchainSubpass(commandBuffer);
-      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
-      if (UseImGui) {
-        GuiController.Render(_currentFrame);
-      }
 
       Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.BeginPostProcessRenderPass(commandBuffer);
-      Systems.PostProcessingSystem?.Render(FrameInfo);
+      // Systems.PostProcessingSystem?.Render(FrameInfo);
+      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
+      if (UseImGui) {
+        GuiController.Update(Time.StopwatchDelta);
+      }
+      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
+      MasterRenderUpdate(updatable.GetScriptsAsSpan());
+      _onGUI?.Invoke();
+      if (UseImGui) {
+        GuiController.Render(_currentFrame);
+      }
       Renderer.EndPostProcessRenderPass(commandBuffer);
 
       Mutex.WaitOne();
@@ -806,23 +806,24 @@ public class Application {
       _currentFrame.FrameIndex = frameIndex;
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
-
       Renderer.NextSwapchainSubpass(commandBuffer);
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.BeginPostProcessRenderPass(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
       }
+      Renderer.EndPostProcessRenderPass(commandBuffer);
 
       Mutex.WaitOne();
-      Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
       Mutex.ReleaseMutex();
     }
   }
 
   private void PerformCalculations() {
-    Systems.UpdateCalculationSystems(GetEntities().ToArray());
+    Systems.UpdateCalculationSystems([.. GetEntities()]);
   }
 
   internal unsafe void LoaderLoop() {

@@ -120,7 +120,7 @@ vec3 calculateFog(vec3 pColor) {
   float fog_visibility = exp(-pow(normalized_distance, 2.0));
   fog_visibility = clamp(fog_visibility, 0.0, 1.0);
 
-  return mix(vec3(0.0), pColor, fog_visibility);
+  return mix(vec3(1.0), pColor, fog_visibility);
 }
 
 void main() {
@@ -161,7 +161,7 @@ void main() {
 
   final_color = mix(vec3(1.0), vec3(0.0), final_color * push.contrast);
   vec3 mix_result = mix(final_color, screen_color, push.stipple);
-  mix_result = calculateFog(mix_result);
+  // mix_result = calculateFog(mix_result);
 
   // outColor = vec4(final_color, 1.0) + edge;
   // outColor = vec4(mix(final_color, vec3(0.0), edge), 1.0);

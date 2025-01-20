@@ -113,5 +113,5 @@ void main() {
     outColor = colorMod * vec4(result, alpha);
 
     // outColor = vec4(mix(hatch.rgb, colorMod.rgb, 0.7), 1.0) * vec4(result, alpha);
-    // outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
+    outColor = mix(vec4(1.0), outColor, fogVisiblity);
 }

@@ -128,5 +128,6 @@ void main() {
 
   // outColor = texColor * hatch * vec4(col, 1.0) * vec4(result, alpha) * vec4(whitescaleColor, 1.0);
   outColor = texColor * vec4(result, alpha);
+  outColor = mix(vec4(1.0), outColor, fogVisiblity);
   // outColor = vec4(mix(hatch.rgb, texColor.rgb, 0.7), 1.0) * vec4(result, alpha);
 }

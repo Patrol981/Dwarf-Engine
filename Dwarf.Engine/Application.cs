@@ -985,6 +985,7 @@ public class Application {
   public StorageCollection StorageCollection { get; private set; } = null!;
   public Scene CurrentScene { get; private set; } = null!;
   public bool UseImGui { get; } = true;
+  public unsafe GlobalUniformBufferObject GlobalUbo => *_ubo;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
 }

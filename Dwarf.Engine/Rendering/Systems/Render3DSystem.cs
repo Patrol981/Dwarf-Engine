@@ -22,6 +22,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public const string Simple3D = "simple3D";
   public const string Skinned3D = "skinned3D";
 
+  public const string HatchTextureName = "./Resources/T_crossHatching13_D.png";
+  public static float HatchScale = 5;
+
   public const bool GlobalVertexBuffer = false;
 
   private DwarfBuffer _modelBuffer = null!;
@@ -51,6 +54,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private List<(string, int)> _skinnedGroups = [];
   private List<(string, int)> _notSkinnedGroups = [];
 
+  private VulkanTexture _hatchTexture = null!;
+  private DescriptorSetLayout _previousTexturesLayout = null!;
+
   public Render3DSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
@@ -69,9 +75,18 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
       .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+
+      // .AddBinding(2, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+      // .AddBinding(3, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .Build();
+
+    _previousTexturesLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
       .Build();
 
     VkDescriptorSetLayout[] basicLayouts = [
+      _textureSetLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout(),
       externalLayouts["Global"].GetDescriptorSetLayout(),
       externalLayouts["ObjectData"].GetDescriptorSetLayout(),
@@ -82,7 +97,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     VkDescriptorSetLayout[] complexLayouts = [
       .. basicLayouts,
       externalLayouts["JointsBuffer"].GetDescriptorSetLayout(),
-      _jointDescriptorLayout.GetDescriptorSetLayout(),
+      // _jointDescriptorLayout.GetDescriptorSetLayout(),
+      // _previousTexturesLayout.GetDescriptorSetLayout()
     ];
 
     AddPipelineData(new() {
@@ -90,7 +106,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       VertexName = "vertex",
       FragmentName = "fragment",
       PipelineProvider = new PipelineModelProvider(),
-      DescriptorSetLayouts = basicLayouts,
+      DescriptorSetLayouts = [.. basicLayouts, _previousTexturesLayout.GetDescriptorSetLayout()],
       PipelineName = Simple3D
     });
 
@@ -99,7 +115,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       VertexName = "vertex_skinned",
       FragmentName = "fragment_skinned",
       PipelineProvider = new PipelineModelProvider(),
-      DescriptorSetLayouts = complexLayouts,
+      DescriptorSetLayouts = [.. complexLayouts, _previousTexturesLayout.GetDescriptorSetLayout()],
       PipelineName = Skinned3D
     });
   }
@@ -256,6 +272,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       _dynamicWriter = new VulkanDescriptorWriter(_setLayout, _descriptorPool);
       _dynamicWriter.WriteBuffer(0, &range);
       _dynamicWriter.Build(out _dynamicSet);
+    }
+
+    if (_hatchTexture == null) {
+      textures.AddTextureGlobal(HatchTextureName).Wait();
+      var id = textures.GetTextureIdGlobal(HatchTextureName);
+      _hatchTexture = (VulkanTexture)textures.GetTextureGlobal(id);
+      _hatchTexture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
 
     CreateGlobalBuffers(entities);
@@ -500,7 +523,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Simple3D].PipelineLayout,
-        1,
+        2,
         1,
         &frameInfo.GlobalDescriptorSet,
         0,
@@ -511,7 +534,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Simple3D].PipelineLayout,
-        4,
+        5,
         1,
         &frameInfo.PointLightsDescriptorSet,
         0,
@@ -522,12 +545,22 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Simple3D].PipelineLayout,
-        2,
+        3,
         1,
         &frameInfo.ObjectDataDescriptorSet,
         0,
         null
       );
+
+      if (_renderer.Swapchain.PreviousFrame != -1) {
+        vkCmdBindDescriptorSets(
+          frameInfo.CommandBuffer,
+          VkPipelineBindPoint.Graphics,
+          _pipelines[Simple3D].PipelineLayout,
+          6,
+          _renderer.Swapchain.PreviousPostProcessDescriptor
+        );
+      }
     }
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
@@ -561,7 +594,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             frameInfo.CommandBuffer,
             VkPipelineBindPoint.Graphics,
             _pipelines[Simple3D].PipelineLayout,
-            3,
+            4,
             1,
             descPtr,
             1,
@@ -574,13 +607,15 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         if (i == _texturesCount) continue;
         if (prevTextureId != nodes[i].Mesh!.TextureIdReference) {
           var targetTexture = frameInfo.TextureManager.GetTextureLocal(nodes[i].Mesh!.TextureIdReference);
-          Descriptor.BindDescriptorSet(
-            targetTexture.TextureDescriptor,
-            frameInfo,
-            _pipelines[Simple3D].PipelineLayout,
-            0,
-            1
-          );
+          VkDescriptorSet[] textureDescriptors = [targetTexture.TextureDescriptor, _hatchTexture.TextureDescriptor];
+          Descriptor.BindDescriptorSets(textureDescriptors, frameInfo, PipelineLayout, 0);
+          // Descriptor.BindDescriptorSet(
+          //   targetTexture.TextureDescriptor,
+          //   frameInfo,
+          //   _pipelines[Simple3D].PipelineLayout,
+          //   0,
+          //   1
+          // );
           prevTextureId = nodes[i].Mesh!.TextureIdReference;
           PerfMonitor.TextureBindingsIn3DRenderer += 1;
         }
@@ -604,7 +639,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Skinned3D].PipelineLayout,
-        1,
+        2,
         1,
         &frameInfo.GlobalDescriptorSet,
         0,
@@ -615,7 +650,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Skinned3D].PipelineLayout,
-        4,
+        5,
         1,
         &frameInfo.PointLightsDescriptorSet,
         0,
@@ -626,7 +661,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Skinned3D].PipelineLayout,
-        2,
+        3,
         1,
         &frameInfo.ObjectDataDescriptorSet,
         0,
@@ -637,12 +672,22 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         frameInfo.CommandBuffer,
         VkPipelineBindPoint.Graphics,
         _pipelines[Skinned3D].PipelineLayout,
-        5,
+        6,
         1,
         &frameInfo.JointsBufferDescriptorSet,
         0,
         null
       );
+
+      if (_renderer.Swapchain.PreviousFrame != -1) {
+        vkCmdBindDescriptorSets(
+          frameInfo.CommandBuffer,
+          VkPipelineBindPoint.Graphics,
+          _pipelines[Skinned3D].PipelineLayout,
+          7,
+          _renderer.Swapchain.PreviousPostProcessDescriptor
+        );
+      }
     }
 
     _modelBuffer.Map(_modelBuffer.GetAlignmentSize());
@@ -679,7 +724,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
             frameInfo.CommandBuffer,
             VkPipelineBindPoint.Graphics,
             _pipelines[Skinned3D].PipelineLayout,
-            3,
+            4,
             1,
             descPtr,
             1,
@@ -694,7 +739,9 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
       if (prevTextureId != nodes[i].Mesh!.TextureIdReference) {
         var targetTexture = frameInfo.TextureManager.GetTextureLocal(nodes[i].Mesh!.TextureIdReference);
-        Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+        VkDescriptorSet[] textureDescriptors = [targetTexture.TextureDescriptor, _hatchTexture.TextureDescriptor];
+        // Descriptor.BindDescriptorSet(targetTexture.TextureDescriptor, frameInfo, PipelineLayout, 0, 1);
+        Descriptor.BindDescriptorSets(textureDescriptors, frameInfo, PipelineLayout, 0);
         prevTextureId = nodes[i].Mesh!.TextureIdReference;
         PerfMonitor.TextureBindingsIn3DRenderer += 1;
       }
@@ -733,6 +780,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _descriptorPool?.FreeDescriptors([_dynamicSet]);
 
     _jointDescriptorLayout?.Dispose();
+    _previousTexturesLayout?.Dispose();
 
     base.Dispose();
   }

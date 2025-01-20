@@ -54,6 +54,7 @@ public class VulkanSwapchain : IDisposable {
   private VkDescriptorSet[] _postProcessDescriptors;
 
   private int _currentFrame = 0;
+  private int _previousFrame = -1;
 
   private readonly object _swapchainLock = new();
 
@@ -1047,6 +1048,7 @@ public class VulkanSwapchain : IDisposable {
     };
 
     var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
+    _previousFrame = _currentFrame;
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     Application.Instance.Mutex.ReleaseMutex();
@@ -1219,10 +1221,13 @@ public class VulkanSwapchain : IDisposable {
   public VkImage CurrentImageColor => _colorImages[_currentFrame];
   public VkDescriptorSet ImageDescriptor => _imageDescriptors[_currentFrame];
   public VkDescriptorSet PostProcessDecriptor => _postProcessDescriptors[_currentFrame];
+  public VkDescriptorSet PreviousPostProcessDescriptor => _postProcessDescriptors[_previousFrame];
   public DescriptorSetLayout InputAttachmentLayout => _inputAttachmentsLayout;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;
   public float ExtentAspectRatio() {
     return _swapchainExtent.width / (float)_swapchainExtent.height;
   }
+  public int PreviousFrame => _previousFrame;
+  public int CurrentFrame => _currentFrame;
 }

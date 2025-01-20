@@ -14,6 +14,7 @@ layout(location = 3) out vec2 texCoord;
 layout(location = 4) flat out int filterFlag;
 layout(location = 5) out float entityToFragDistance;
 layout(location = 6) out float fogVisiblity;
+layout(location = 7) out vec2 screenTexCoord;
 
 #include material
 
@@ -22,21 +23,23 @@ layout(location = 6) out float fogVisiblity;
 #include fog
 #include object_data
 
-layout(set = 1, binding = 0) #include global_ubo
-
-layout(set = 3, binding = 0) #include skinned_model_ubo
-
 #define MAX_NUM_JOINTS 128
-// store entire nodes joints in flatten array to avoid nesting
-layout(std140, set = 5, binding = 0) readonly buffer JointBuffer {
+int MAX_JOINT_INFLUENCE = 4;
+
+// set 0 = tex
+// set 1 = tex
+
+layout(set = 2, binding = 0) #include global_ubo
+layout(std140, set = 3, binding = 0) readonly buffer ObjectBuffer {
+    ObjectData objectData[];
+} objectBuffer;
+layout(set = 4, binding = 0) #include skinned_model_ubo
+// set 5 = point lights
+
+layout(std140, set = 6, binding = 0) readonly buffer JointBuffer {
     mat4 jointMatrices[];
 } jointBuffer;
 
-layout(std140, set = 2, binding = 0) readonly buffer ObjectBuffer {
-    ObjectData objectData[];
-} objectBuffer;
-
-int MAX_JOINT_INFLUENCE = 4;
 
 vec3 applyBoneTransform(vec4 p) {
     vec4 result = vec4(0.0);
@@ -63,7 +66,8 @@ void main() {
             vec4(position, 1.0);
 
     vec3 worldPos = positionWorld.xyz / positionWorld.w;
-    gl_Position = ubo.projection * ubo.view * vec4(worldPos, 1.0);
+    vec4 clip = ubo.projection * ubo.view * vec4(worldPos, 1.0);
+    gl_Position = clip;
 
     fragNormalWorld = normalize(mat3(objectBuffer.objectData[gl_BaseInstance].normalMatrix) * normal);
 
@@ -71,6 +75,10 @@ void main() {
     fragColor = color;
     texCoord = uv;
     filterFlag = objectBuffer.objectData[gl_BaseInstance].filterFlag;
+
+    vec3 ndc = clip.xyz / clip.w;
+    screenTexCoord = ndc.xy * 0.5 + 0.5;
+    // screenTexCoord.y = 1.0 - screenTexCoord.y;
 
     if(ubo.hasImportantEntity == 1) {
       entityToFragDistance = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);

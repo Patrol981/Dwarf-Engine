@@ -9,6 +9,7 @@ layout(location = 3) in vec2 texCoord;
 layout(location = 4) flat in int filterFlag;
 layout(location = 5) in float entityToFragDistance;
 layout(location = 6) in float fogVisiblity;
+layout(location = 7) in vec2 screenTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
@@ -26,89 +27,62 @@ layout (push_constant) uniform Push {
   mat4 normalMatrix;
 } push;
 
-// layout (set = 0, binding = 0) uniform sampler2D textureSampler;
 layout(set = 0, binding = 0) uniform texture2D _texture;
 layout(set = 0, binding = 1) uniform sampler _sampler;
-// layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
-layout(set = 1, binding = 0) #include global_ubo
-layout(set = 3, binding = 0) #include skinned_model_ubo
+layout(set = 1, binding = 0) uniform texture2D _hatchTexture;
+layout(set = 1, binding = 1) uniform sampler _hatchSampler;
 
-layout(std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
+layout(set = 2, binding = 0) #include global_ubo
+// set 3 = ssbo set
+layout(set = 4, binding = 0) #include skinned_model_ubo
+
+layout(std140, set = 5, binding = 0) readonly buffer PointLightBuffer {
   PointLight pointLights[];
 } pointLightBuffer;
 
+// set 6 = joints
+
+layout(set = 7, binding = 0) uniform sampler2D _prevColor;
+layout(set = 7, binding = 1) uniform sampler2D _prevDepth;
+
 #include light_calc
 
-const vec2 uTexelSize = vec2(1.0 / 1920.0, 1.0 / 1080.0);                  // 1.0 / texture size
-const float uHighThreshold = 0.5;             // High threshold for edge detection
-const float uLowThreshold = 0.1;              // Low threshold for edge detection
-const float uContrast = 1.5;                  // Contrast adjustment
-const float uStippleSize = 10.0;               // Stippling scal
+vec3 computeViewNormal(vec2 inTexCoords) {
+  // Sample depth texture and convert to NDC
+  float depth = texture(_prevDepth, inTexCoords).r;
+  depth = depth * 2.0 - 1.0; // Remap from [0, 1] to [-1, 1]
 
-// Function to calculate luminance
-float luminance(vec3 color) {
-  return dot(color, vec3(0.299, 0.587, 0.114));
-}
+  // Convert screen UV to NDC coordinates
+  vec2 ndcPos = inTexCoords * 2.0 - 1.0;
 
-// Function to apply Sobel edge detection
-float edgeDetection(vec2 uv) {
-  const int Kx[3][3] = int[3][3](
-    int[]( 1,  0, -1),
-    int[]( 2,  0, -2),
-    int[]( 1,  0, -1)
-  );
+  // Reconstruct clip-space position
+  vec4 clipPos = vec4(ndcPos, depth, 1.0);
 
-  const int Ky[3][3] = int[3][3](
-    int[]( 1,  2,  1),
-    int[]( 0,  0,  0),
-    int[](-1, -2, -1)
-  );
+  // Transform to view space
+  vec4 viewPos = inverse(ubo.projection) * clipPos;
+  viewPos.xyz /= viewPos.w; // Perspective divide
 
-  float Gx = 0.0;
-  float Gy = 0.0;
+  // Compute partial derivatives for view-space position
+  vec3 viewPosDx = dFdx(viewPos.xyz);
+  vec3 viewPosDy = dFdy(viewPos.xyz);
 
-  for (int x = -1; x <= 1; ++x) {
-    for (int y = -1; y <= 1; ++y) {
-      vec2 offset = vec2(x, y) * uTexelSize;
-      float lum = luminance(texture(sampler2D(_texture, _sampler), texCoord + offset).rgb);
-      Gx += Kx[x + 1][y + 1] * lum;
-      Gy += Ky[x + 1][y + 1] * lum;
-    }
+  // Compute view-space normal using the right-hand rule
+  vec3 normal = normalize(cross(viewPosDx, viewPosDy));
+
+  // Ensure normals point outward by flipping if necessary
+  if (dot(normal, viewPos.xyz) > 0.0) {
+      normal = -normal;
   }
 
-  return sqrt(Gx * Gx + Gy * Gy);
-}
-
-float stipple(vec2 uv, float luminance) {
-  vec2 stippleUV = uv * uStippleSize;
-  float stippleNoise = fract(sin(dot(stippleUV, vec2(12.9898, 78.233))) * 43758.5453);
-  return luminance < stippleNoise ? 1.0 : 0.0;
+  return normal;
 }
 
 void main() {
   vec3 surfaceNormal = normalize(fragNormalWorld);
   vec3 viewDir = normalize(ubo.cameraPosition - fragPositionWorld);
 
-  vec3 lightColor = ubo.directionalLight.lightColor.xyz;
   vec3 result = vec3(0,0,0);
-
-  float alpha = 1.0;
-
-  if (ubo.hasImportantEntity == 1 && filterFlag == 1) {
-      float radiusHorizontal = 1.0;
-
-      // if(ubo.useFog == 1 && entityToFragDistance > ubo.fog.x) discard;
-
-      float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
-      float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
-
-      if(fragToCamera <= entityToCamera && entityToFragDistance < radiusHorizontal) {
-        alpha = 0.5;
-      }
-  } else if(ubo.useFog == 1 && ubo.hasImportantEntity == 1) {
-    // if(entityToFragDistance > ubo.fog.x) discard;
-  }
 
   result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);
   for(int i = 0; i < ubo.pointLightLength; i++) {
@@ -116,20 +90,43 @@ void main() {
     result += calc_point_light(light, surfaceNormal, viewDir);
   }
 
-  // sampler2D texSampler =
-  // vec4 texture4 = texture(texSampler, texCoord);
-  // result *= sobel(texSampler, texCoord);
-  // result -= sobel(_texture, _sampler, texCoord);
+  float alpha = 1.0;
+
+  if (ubo.hasImportantEntity == 1 && filterFlag == 1) {
+      float radiusHorizontal = 1.0;
+
+      float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
+      float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
+
+      if(fragToCamera <= entityToCamera && entityToFragDistance < radiusHorizontal) {
+        alpha = 0.5;
+      }
+  }
+
+  // float hatchScale = 5.0;
+  vec3 worldCoords = fragPositionWorld * 0.1;
+  vec2 hatchCoords = vec2(worldCoords.x, worldCoords.z);
+  vec4 hatch = texture(
+    sampler2D(_hatchTexture, _hatchSampler),
+    vec2(1.001f, sin(0.5)) * gl_FragCoord.xy * ubo.hatchScale
+  );
+  hatch *= hatch * hatch * hatch;
+
+  vec3 xnm = fragNormalWorld;
+  vec3 col = vec3(xnm.x + xnm.y + xnm.z) / 3.0;
+
+  col.rgb *= 2.1;
+  col.rgb *= (floor(6.0 * col.rgb) * 4.0) / 9.0;
 
   vec4 texColor = texture(sampler2D(_texture, _sampler), texCoord).rgba;
-  vec3 sobelResult = apply_sobel_filter(_texture, _sampler, texCoord);
 
-  // float lum = luminance(texColor.xyz);
-  // float edge = edgeDetection(texCoord);
-  // edge = smoothstep(uLowThreshold, uHighThreshold, edge);
-  // float stippleEffect = stipple(texCoord, lum);
-  // vec3 finalColor = vec3(1.0 - edge) * stippleEffect * depth;
+  // vec3 prevColor = texture(_prevColor, screenTexCoord).rgb;
+  float intensity = 0.2126 * texColor.r + 0.7152 * texColor.g + 0.0722 * texColor.b;
+  vec3 canvasTone = mix(vec3(0.9, 0.9, 0.9), vec3(1.0, 0.9, 0.9), intensity);
+  // texColor.rgb = canvasTone; // Replace texColor's RGB with grayscale intensity
+  // vec3 whitescaleColor = vec3(intensity);
 
+  // outColor = texColor * hatch * vec4(col, 1.0) * vec4(result, alpha) * vec4(whitescaleColor, 1.0);
   outColor = texColor * vec4(result, alpha);
-  // outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
+  // outColor = vec4(mix(hatch.rgb, texColor.rgb, 0.7), 1.0) * vec4(result, alpha);
 }

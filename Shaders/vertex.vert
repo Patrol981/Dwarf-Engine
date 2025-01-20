@@ -14,6 +14,7 @@ layout(location = 3) out vec2 texCoord;
 layout(location = 4) flat out int filterFlag;
 layout(location = 5) out float entityToFragDistance;
 layout(location = 6) out float fogVisiblity;
+layout(location = 7) out vec2 screenTexCoord;
 
 #include material
 
@@ -22,30 +23,37 @@ layout(location = 6) out float fogVisiblity;
 #include object_data
 #include fog
 
-layout(set = 1, binding = 0) #include global_ubo
+// set 0 = tex
+// set 1 = tex
 
-layout(set = 3, binding = 0) #include model_ubo
-
-layout(std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
-    PointLight pointLights[];
-} pointLightBuffer;
-
-layout(std140, set = 2, binding = 0) readonly buffer ObjectBuffer {
+layout(set = 2, binding = 0) #include global_ubo
+layout(std140, set = 3, binding = 0) readonly buffer ObjectBuffer {
     ObjectData objectData[];
 } objectBuffer;
+layout(set = 4, binding = 0) #include model_ubo
+layout(std140, set = 5, binding = 0) readonly buffer PointLightBuffer {
+    PointLight pointLights[];
+} pointLightBuffer;
 
 void main() {
     vec4 positionWorld = objectBuffer.objectData[gl_BaseInstance].transformMatrix *
             objectBuffer.objectData[gl_BaseInstance].nodeMatrix *
             vec4(position, 1.0);
 
-    gl_Position = ubo.projection * ubo.view * positionWorld;
+    // gl_Position = ubo.projection * ubo.view * positionWorld;
+    vec3 worldPos = positionWorld.xyz / positionWorld.w;
+    vec4 clip = ubo.projection * ubo.view * vec4(worldPos, 1.0);
+    gl_Position = clip;
 
     fragNormalWorld = normalize(mat3(objectBuffer.objectData[gl_BaseInstance].normalMatrix) * normal);
     fragPositionWorld = positionWorld.xyz;
     fragColor = color;
     texCoord = uv;
     filterFlag = objectBuffer.objectData[gl_BaseInstance].filterFlag;
+
+    vec3 ndc = clip.xyz / clip.w;
+    screenTexCoord = ndc.xy * 0.5 + 0.5;
+    // screenTexCoord.y = 1.0 - screenTexCoord.y;
 
     if(ubo.hasImportantEntity == 1) {
       entityToFragDistance = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);

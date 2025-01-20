@@ -152,7 +152,11 @@ public class VulkanTexture : ITexture {
     }
   }
 
-  public unsafe void BuildDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+  public unsafe void BuildDescriptor(
+    DescriptorSetLayout descriptorSetLayout,
+    DescriptorPool descriptorPool,
+    uint dstBindingStartIndex = 0
+  ) {
     VkDescriptorSet descriptorSet = new();
 
     VkDescriptorImageInfo descriptorImageInfo = new() {
@@ -174,7 +178,7 @@ public class VulkanTexture : ITexture {
 
     writes[0] = new VkWriteDescriptorSet() {
       descriptorType = VkDescriptorType.SampledImage,
-      dstBinding = 0,
+      dstBinding = dstBindingStartIndex,
       pImageInfo = &descriptorImageInfo,
       descriptorCount = 1,
       dstSet = descriptorSet
@@ -182,7 +186,7 @@ public class VulkanTexture : ITexture {
 
     writes[1] = new VkWriteDescriptorSet() {
       descriptorType = VkDescriptorType.Sampler,
-      dstBinding = 1,
+      dstBinding = dstBindingStartIndex + 1,
       descriptorCount = 1,
       pImageInfo = &descriptorSamplerInfo,
       dstSet = descriptorSet

@@ -692,6 +692,8 @@ public class Application {
       _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
       _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
+      _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
+      _ubo->HatchScale = Render3DSystem.HatchScale;
 
       _ubo->DirectionalLight = DirectionalLight;
 

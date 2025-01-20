@@ -7,6 +7,7 @@ layout(location = 3) in vec2 texCoord;
 layout(location = 4) flat in int filterFlag;
 layout(location = 5) in float entityToFragDistance;
 layout(location = 6) in float fogVisiblity;
+layout(location = 7) in vec2 screenTexCoord;
 
 layout(location = 0) out vec4 outColor;
 
@@ -22,20 +23,35 @@ layout(push_constant) uniform Push {
     mat4 normalMatrix;
 } push;
 
-// layout(set = 0, binding = 0) uniform sampler2D textureSampler;
 layout(set = 0, binding = 0) uniform texture2D _texture;
 layout(set = 0, binding = 1) uniform sampler _sampler;
-// layout (set = 0, binding = 1) uniform sampler2DArray arraySampler;
 
-layout(set = 1, binding = 0) #include global_ubo
+layout(set = 1, binding = 0) uniform texture2D _hatchTexture;
+layout(set = 1, binding = 1) uniform sampler _hatchSampler;
 
-layout(set = 3, binding = 0) #include model_ubo
-
-layout(std140, set = 4, binding = 0) readonly buffer PointLightBuffer {
+layout(set = 2, binding = 0) #include global_ubo
+// set 3 = object ssbo
+layout(set = 4, binding = 0) #include model_ubo // dynamic
+layout(std140, set = 5, binding = 0) readonly buffer PointLightBuffer {
     PointLight pointLights[];
 } pointLightBuffer;
 
+layout(set = 6, binding = 0) uniform sampler2D _prevColor;
+layout(set = 6, binding = 1) uniform sampler2D _prevDepth;
+
 #include light_calc
+
+vec3 computeViewNormal(vec2 inTexCoords) {
+  float depth = texture(_prevDepth, inTexCoords).r;
+
+  vec3 viewPos = vec3(inTexCoords * 2.0 - 1.0, depth);
+
+  vec3 dx = vec3(dFdx(viewPos.x), dFdx(viewPos.y), dFdx(viewPos.z));
+  vec3 dy = vec3(dFdy(viewPos.x), dFdy(viewPos.y), dFdy(viewPos.z));
+
+  vec3 normal = normalize(cross(dx, dy));
+  return normal;
+}
 
 void main() {
     vec3 surfaceNormal = normalize(fragNormalWorld);
@@ -75,6 +91,27 @@ void main() {
         result += calc_point_light(light, surfaceNormal, viewDir);
     }
 
+    // vec2 screen_uv = gl_FragCoord.xy / ubo.screenSize;
+    // vec3 screen_color = texture(_prevColor, screen_uv).rgb;
+
+    // float luminance = dot(screen_color, vec3(0.299, 0.587, 0.114));
+
+    // float r_channel = screen_color.r;
+    // float pow_r = pow(r_channel,0.3);
+    // float inverse_pow_r = 1.0 - pow_r;
+    // luminance -= inverse_pow_r;
+    // luminance = 1.0 - luminance;
+    // vec3 final_color = vec3(luminance);
+
+    // // vec3 normal_sample = normalize(texture(normal_texture, SCREEN_UV).rgb * 2.0 - 1.0);
+    // vec2 distorted_uv = screen_uv + fragNormalWorld.xy * 2.0;
+    // vec3 hatch1_color = 1.0 - texture(sampler2D(_hatchTexture, _hatchSampler), distorted_uv * 15.0).rgb;
+    // final_color *= hatch1_color;
+
+    // final_color = mix(vec3(1.0), vec3(0.0), final_color * 20.0);
+    // outColor = vec4(final_color, 1.0);
     outColor = colorMod * vec4(result, alpha);
+
+    // outColor = vec4(mix(hatch.rgb, colorMod.rgb, 0.7), 1.0) * vec4(result, alpha);
     // outColor = mix(vec4(0.0, 0.0, 0.0, 1.0), outColor, fogVisiblity);
 }

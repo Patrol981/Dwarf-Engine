@@ -101,7 +101,7 @@ public partial class ImGuiController : IDisposable {
     vkCreatePipelineCache(_device.LogicalDevice, &pipelineCacheCreateInfo, null, out _pipelineCache).CheckResult();
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetSwapchainRenderPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
 
     return Task.CompletedTask;
   }

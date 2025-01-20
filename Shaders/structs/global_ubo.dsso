@@ -10,6 +10,8 @@ uniform GlobalUbo {
   vec3 importantEntityDirection;
   vec3 fog;
   int useFog;
+  vec2 screenSize;
+  float hatchScale;
 } ubo;
 
 vec2 worldToScreenPos(vec3 worldPos, mat4 mvp) {

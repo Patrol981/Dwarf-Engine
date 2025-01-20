@@ -16,12 +16,15 @@ public class VulkanSwapchain : IDisposable {
   private VkImageView[] _swapChainImageViews = null!;
   private VkImage[] _swapchainImages = [];
   private VkRenderPass _renderPass = VkRenderPass.Null;
+  private VkRenderPass _postProcessPass = VkRenderPass.Null;
 
   private VkImageView[] _colorImageViews = [];
   private VkImage[] _colorImages = [];
+  private VkSampler _colorSampler = VkSampler.Null;
   private VkDeviceMemory[] _colorImageMemories = [];
 
   private VkImage[] _depthImages = [];
+  private VkSampler _depthSampler = VkSampler.Null;
   private VkDeviceMemory[] _depthImagesMemories = [];
   private VkImageView[] _depthImageViews = [];
 
@@ -35,6 +38,7 @@ public class VulkanSwapchain : IDisposable {
 
   private VkExtent2D _swapchainExtent = VkExtent2D.Zero;
   private VkFramebuffer[] _swapchainFramebuffers = [];
+  private VkFramebuffer[] _postProcessFramebuffers = [];
   private unsafe VkSemaphore* _imageAvailableSemaphores;
   private unsafe VkSemaphore* _renderFinishedSemaphores;
   private unsafe VkFence* _inFlightFences;
@@ -43,11 +47,14 @@ public class VulkanSwapchain : IDisposable {
   // private Swapchain _oldSwapchain = null!;
   private DescriptorPool _descriptorPool;
   private DescriptorSetLayout _inputAttachmentsLayout;
-  //private VkDescriptorSet[] _colorDescriptors;
-  // pr ivate VkDescriptorSet[] _depthDescriptors;
+  private DescriptorSetLayout _postProcessLayout;
+  // private VkDescriptorSet[] _colorDescriptors;
+  // private VkDescriptorSet[] _depthDescriptors;
   private VkDescriptorSet[] _imageDescriptors;
+  private VkDescriptorSet[] _postProcessDescriptors;
 
   private int _currentFrame = 0;
+  private int _previousFrame = -1;
 
   private readonly object _swapchainLock = new();
 
@@ -79,7 +86,9 @@ public class VulkanSwapchain : IDisposable {
   private void Init() {
     CreateSwapChain();
     CreateImageViews();
+    CreateSamplers();
     CreateRenderPass();
+    CreatePostProcessRenderPass();
     CreateDepthResources();
     CreateColorResources();
     CreateDescriptors();
@@ -227,7 +236,7 @@ public class VulkanSwapchain : IDisposable {
       format = surfaceFormat.format,
       samples = VK_SAMPLE_COUNT_1_BIT,
       loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -237,7 +246,7 @@ public class VulkanSwapchain : IDisposable {
       format = FindDepthFormat(),
       samples = VK_SAMPLE_COUNT_1_BIT,
       loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+      storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -334,6 +343,136 @@ public class VulkanSwapchain : IDisposable {
 
     vkCreateRenderPass(_device.LogicalDevice, renderPassCreateInfo, null, out _renderPass).CheckResult();
   }
+
+  private unsafe void CreatePostProcessRenderPass_Old() {
+    VkSubpassDescription vkSubpassDescription = new() {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics
+    };
+
+    VkRenderPassCreateInfo renderPassCreateInfo = new() {
+      attachmentCount = 0,
+      subpassCount = 1,
+      pSubpasses = &vkSubpassDescription
+    };
+
+    VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[1];
+    dependencies[0] = new() {
+      srcSubpass = VK_SUBPASS_EXTERNAL,
+      dstSubpass = 0,
+      srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      dstAccessMask = VK_ACCESS_SHADER_READ_BIT
+    };
+
+    renderPassCreateInfo.dependencyCount = 1;
+    renderPassCreateInfo.pDependencies = dependencies;
+
+    vkCreateRenderPass(_device.LogicalDevice, renderPassCreateInfo, null, out _postProcessPass).CheckResult();
+  }
+
+  private unsafe void CreatePostProcessRenderPass() {
+    SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
+    VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+    VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
+
+    VkAttachmentDescription depthAttachment = new() {
+      format = FindDepthFormat(),
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.Store,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.DepthStencilReadOnlyOptimal
+    };
+
+    VkAttachmentDescription colorAttachment = new() {
+      format = surfaceFormat.format,
+      samples = VkSampleCountFlags.Count1,
+      loadOp = VkAttachmentLoadOp.Clear,
+      storeOp = VkAttachmentStoreOp.Store,
+      stencilStoreOp = VkAttachmentStoreOp.DontCare,
+      stencilLoadOp = VkAttachmentLoadOp.DontCare,
+      initialLayout = VkImageLayout.Undefined,
+      finalLayout = VkImageLayout.PresentSrcKHR,
+    };
+
+    VkAttachmentReference depthAttachmentRef = new() {
+      attachment = 1,
+      layout = VkImageLayout.DepthStencilAttachmentOptimal
+    };
+
+    VkAttachmentReference colorAttachmentRef = new() {
+      attachment = 0,
+      layout = VkImageLayout.ColorAttachmentOptimal,
+    };
+
+    VkAttachmentReference inputAttachmentRef = new() {
+      attachment = 1,
+      layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+    };
+
+    VkSubpassDescription* subpassDescription = stackalloc VkSubpassDescription[2];
+    subpassDescription[0] = new() {
+      pipelineBindPoint = VkPipelineBindPoint.Graphics,
+      colorAttachmentCount = 1,
+      pColorAttachments = &colorAttachmentRef,
+      pDepthStencilAttachment = null,
+    };
+
+    // subpassDescription[1] = new() {
+    //   pipelineBindPoint = VkPipelineBindPoint.Graphics,
+    //   colorAttachmentCount = 1,
+    //   pColorAttachments = &colorAttachmentRef,
+    //   pDepthStencilAttachment = &depthAttachmentRef,
+    //   inputAttachmentCount = 1,
+    //   pInputAttachments = &inputAttachmentRef
+    // };
+
+    // VkSubpassDescription subpass = new() {
+    //   pipelineBindPoint = VkPipelineBindPoint.Graphics,
+    //   colorAttachmentCount = 1,
+    //   pColorAttachments = &colorAttachmentRef,
+    //   // inputAttachmentCount = 1,
+    //   // pInputAttachments = &inputAttachmentRef,
+    //   pDepthStencilAttachment = &depthAttachmentRef
+    // };
+
+    VkSubpassDependency* dependencies = stackalloc VkSubpassDependency[2];
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependencies[0].srcAccessMask = 0;
+    dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    dependencies[0].dependencyFlags = 0;
+
+    dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].dstSubpass = 0;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].srcAccessMask = 0;
+    dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    dependencies[1].dependencyFlags = 0;
+
+
+    VkAttachmentDescription[] attachments = [colorAttachment];
+    VkRenderPassCreateInfo renderPassInfo = new() {
+      attachmentCount = 1
+    };
+    fixed (VkAttachmentDescription* ptr = attachments) {
+      renderPassInfo.pAttachments = ptr;
+    }
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = subpassDescription;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies = dependencies;
+
+    var result = vkCreateRenderPass(_device.LogicalDevice, &renderPassInfo, null, out _postProcessPass);
+    if (result != VkResult.Success) throw new Exception("Failed to create render pass!");
+  }
+
 
   private unsafe void CreateRenderPass_Old() {
     SwapChainSupportDetails swapChainSupport = VkUtils.QuerySwapChainSupport(_device.PhysicalDevice, _device.Surface);
@@ -449,7 +588,7 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _colorImages.Length; i++) {
       CreateAttachment(
         surfaceFormat.format,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         out _colorImages[i],
         out _colorImageMemories[i],
         out _colorImageViews[i],
@@ -471,7 +610,7 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _depthImages.Length; i++) {
       CreateAttachment(
         depthFormat,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         out _depthImages[i],
         out _depthImagesMemories[i],
         out _depthImageViews[i],
@@ -502,7 +641,7 @@ public class VulkanSwapchain : IDisposable {
       imageInfo.format = depthFormat;
       imageInfo.tiling = VkImageTiling.Optimal;
       imageInfo.initialLayout = VkImageLayout.Undefined;
-      imageInfo.usage = VkImageUsageFlags.DepthStencilAttachment | VkImageUsageFlags.InputAttachment;
+      imageInfo.usage = VkImageUsageFlags.DepthStencilAttachment | VkImageUsageFlags.InputAttachment | VkImageUsageFlags.Sampled;
       imageInfo.samples = VkSampleCountFlags.Count1;
       imageInfo.sharingMode = VkSharingMode.Exclusive;
       imageInfo.flags = 0;
@@ -599,6 +738,24 @@ public class VulkanSwapchain : IDisposable {
         vkCreateFramebuffer(_device.LogicalDevice, &framebufferInfo, null, out _swapchainFramebuffers[i]).CheckResult();
       }
     }
+
+    _postProcessFramebuffers = new VkFramebuffer[swapChainImages.Length];
+    for (int i = 0; i < swapChainImages.Length; i++) {
+      // VkImageView[] attachmetns = [_swapChainImageViews[i], _colorImageViews[i], _depthImageViews[i]];
+      VkImageView[] attachmetns = [_swapChainImageViews[i]];
+      fixed (VkImageView* ptr2 = attachmetns) {
+        VkFramebufferCreateInfo framebufferCreateInfo = new() {
+          renderPass = _postProcessPass,
+          attachmentCount = (uint)attachmetns.Length,
+          pAttachments = ptr2,
+          width = _swapchainExtent.width,
+          height = _swapchainExtent.height,
+          layers = 1
+        };
+
+        vkCreateFramebuffer(_device.LogicalDevice, &framebufferCreateInfo, null, out _postProcessFramebuffers[i]).CheckResult();
+      }
+    }
   }
 
   public unsafe void UpdateDescriptors(int index) {
@@ -625,6 +782,38 @@ public class VulkanSwapchain : IDisposable {
     writeDescriptorSets[1] = new() {
       dstSet = _imageDescriptors[index],
       descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+      descriptorCount = 1,
+      dstBinding = 1,
+      pImageInfo = &descriptorImageInfo[1]
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writeDescriptorSets, 0, null);
+  }
+
+  public unsafe void UpdatePostProcessDescriptors(int index) {
+    VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
+    descriptorImageInfo[0] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _colorImageViews[_currentFrame],
+      sampler = _colorSampler // Sampler for the color image
+    };
+    descriptorImageInfo[1] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _depthImageViews[_currentFrame],
+      sampler = _depthSampler // Sampler for the depth image
+    };
+
+    VkWriteDescriptorSet* writeDescriptorSets = stackalloc VkWriteDescriptorSet[2];
+    writeDescriptorSets[0] = new() {
+      dstSet = _postProcessDescriptors[index],
+      descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      descriptorCount = 1,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo[0]
+    };
+    writeDescriptorSets[1] = new() {
+      dstSet = _postProcessDescriptors[index],
+      descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
       descriptorCount = 1,
       dstBinding = 1,
       pImageInfo = &descriptorImageInfo[1]
@@ -676,21 +865,74 @@ public class VulkanSwapchain : IDisposable {
     _imageDescriptors[index] = descriptorSet;
   }
 
+  private unsafe void CreatePostProcessDescriptors(int index) {
+    var setLayout = _postProcessLayout.GetDescriptorSetLayout();
+
+    VkDescriptorSet descriptorSet = new();
+    var allocInfo = new VkDescriptorSetAllocateInfo {
+      descriptorPool = _descriptorPool.GetVkDescriptorPool(),
+      descriptorSetCount = 1,
+      pSetLayouts = &setLayout
+    };
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
+    descriptorImageInfo[0] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _colorImageViews[_currentFrame],
+      sampler = _colorSampler
+    };
+    descriptorImageInfo[1] = new() {
+      imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      imageView = _depthImageViews[_currentFrame],
+      sampler = _depthSampler
+    };
+
+    VkWriteDescriptorSet* writeDescriptorSets = stackalloc VkWriteDescriptorSet[2];
+    writeDescriptorSets[0] = new() {
+      dstSet = descriptorSet,
+      descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      descriptorCount = 1,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo[0]
+    };
+    writeDescriptorSets[1] = new() {
+      dstSet = descriptorSet,
+      descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      descriptorCount = 1,
+      dstBinding = 1,
+      pImageInfo = &descriptorImageInfo[1]
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writeDescriptorSets, 0, null);
+    _postProcessDescriptors[index] = descriptorSet;
+  }
+
   private unsafe void CreateDescriptors() {
     _inputAttachmentsLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
       .AddBinding(1, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
       .Build();
 
+    _postProcessLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .Build();
+
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(100)
       .AddPoolSize(VkDescriptorType.InputAttachment, 10)
+      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
       .Build();
 
     _imageDescriptors = new VkDescriptorSet[_colorImageViews.Length];
+    _postProcessDescriptors = new VkDescriptorSet[_colorImageViews.Length];
 
     for (int i = 0; i < _imageDescriptors.Length; i++) {
       CreateDescriptors(i);
+    }
+    for (int i = 0; i < _postProcessDescriptors.Length; i++) {
+      CreatePostProcessDescriptors(i);
     }
   }
 
@@ -716,6 +958,32 @@ public class VulkanSwapchain : IDisposable {
       // vkCreateFence(_device.LogicalDevice, &fenceInfo, null, out _inFlightFences[i]).CheckResult();
       vkCreateFence(_device.LogicalDevice, &fenceInfo, null, &_inFlightFences[i]).CheckResult();
     }
+  }
+
+  private unsafe void CreateSamplers() {
+    CreateSampler(out _colorSampler);
+    CreateSampler(out _depthSampler);
+  }
+
+  private unsafe void CreateSampler(out VkSampler sampler) {
+    VkPhysicalDeviceProperties properties = new();
+    vkGetPhysicalDeviceProperties(_device.PhysicalDevice, &properties);
+
+    VkSamplerCreateInfo samplerInfo = new();
+    samplerInfo.magFilter = VkFilter.Nearest;
+    samplerInfo.minFilter = VkFilter.Nearest;
+    samplerInfo.addressModeU = VkSamplerAddressMode.Repeat;
+    samplerInfo.addressModeV = VkSamplerAddressMode.Repeat;
+    samplerInfo.addressModeW = VkSamplerAddressMode.Repeat;
+    samplerInfo.anisotropyEnable = true;
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VkBorderColor.IntOpaqueBlack;
+    samplerInfo.unnormalizedCoordinates = false;
+    samplerInfo.compareEnable = false;
+    samplerInfo.compareOp = VkCompareOp.Always;
+    samplerInfo.mipmapMode = VkSamplerMipmapMode.Nearest;
+
+    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out sampler).CheckResult();
   }
 
   public unsafe VkResult AcquireNextImage(out uint imageIndex) {
@@ -744,7 +1012,7 @@ public class VulkanSwapchain : IDisposable {
     VkSubmitInfo submitInfo = new();
 
     VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-    waitStages[0] = VkPipelineStageFlags.TopOfPipe;
+    waitStages[0] = VkPipelineStageFlags.AllGraphics;
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &_imageAvailableSemaphores[_currentFrame];
@@ -780,6 +1048,7 @@ public class VulkanSwapchain : IDisposable {
     };
 
     var result = vkQueuePresentKHR(_device.GraphicsQueue, &presentInfo);
+    _previousFrame = _currentFrame;
     _currentFrame = (_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 
     Application.Instance.Mutex.ReleaseMutex();
@@ -854,6 +1123,7 @@ public class VulkanSwapchain : IDisposable {
 
   public unsafe void Dispose() {
     _inputAttachmentsLayout?.Dispose();
+    _postProcessLayout?.Dispose();
     _descriptorPool?.Dispose();
 
     for (int i = 0; i < _swapChainImageViews.Length; i++) {
@@ -893,6 +1163,10 @@ public class VulkanSwapchain : IDisposable {
     for (int i = 0; i < _swapchainFramebuffers.Length; i++) {
       vkDestroyFramebuffer(_device.LogicalDevice, _swapchainFramebuffers[i]);
     }
+    for (int i = 0; i < _postProcessFramebuffers.Length; i++) {
+      vkDestroyFramebuffer(_device.LogicalDevice, _postProcessFramebuffers[i]);
+    }
+
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
       vkDestroySemaphore(_device.LogicalDevice, _imageAvailableSemaphores[i]);
       vkDestroySemaphore(_device.LogicalDevice, _renderFinishedSemaphores[i]);
@@ -907,7 +1181,11 @@ public class VulkanSwapchain : IDisposable {
     MemoryUtils.FreeIntPtr<VkFence>((nint)_inFlightFences);
 
     vkDestroyRenderPass(_device.LogicalDevice, _renderPass);
+    vkDestroyRenderPass(_device.LogicalDevice, _postProcessPass);
     vkDestroySwapchainKHR(_device.LogicalDevice, _handle);
+
+    vkDestroySampler(_device.LogicalDevice, _colorSampler);
+    vkDestroySampler(_device.LogicalDevice, _depthSampler);
 
     for (int i = 0; i < _swapchainImages.Length; i++) {
       // vkDestroyImage(_device.LogicalDevice, _swapchainImages[i]);
@@ -928,20 +1206,28 @@ public class VulkanSwapchain : IDisposable {
     return _swapchainFramebuffers[index];
   }
 
+  public VkFramebuffer GetPostProcessFramebuffer(int index) {
+    return _postProcessFramebuffers[index];
+  }
+
   public VkSwapchainKHR Handle => _handle;
   public VkExtent2D Extent2D { get; }
   public unsafe VkFence* CurrentFence => &_inFlightFences[_currentFrame];
   public unsafe ulong CurrentSemaphore => _renderFinishedSemaphores[_currentFrame].Handle;
   public VkRenderPass RenderPass => _renderPass;
+  public VkRenderPass PostProcessPass => _postProcessPass;
   public VkImageView CurrentImageDepthView => _depthImageViews[_currentFrame];
   public VkImage CurrentImageDepth => _depthImages[_currentFrame];
-  // public VkDescriptorSet ColorDescriptor => _colorDescriptors[_currentFrame];
-  // public VkDescriptorSet DepthDescriptor => _depthDescriptors[_currentFrame];
+  public VkImage CurrentImageColor => _colorImages[_currentFrame];
   public VkDescriptorSet ImageDescriptor => _imageDescriptors[_currentFrame];
+  public VkDescriptorSet PostProcessDecriptor => _postProcessDescriptors[_currentFrame];
+  public VkDescriptorSet PreviousPostProcessDescriptor => _postProcessDescriptors[_previousFrame];
   public DescriptorSetLayout InputAttachmentLayout => _inputAttachmentsLayout;
   public uint ImageCount => GetImageCount();
   public int GetMaxFramesInFlight() => MAX_FRAMES_IN_FLIGHT;
   public float ExtentAspectRatio() {
     return _swapchainExtent.width / (float)_swapchainExtent.height;
   }
+  public int PreviousFrame => _previousFrame;
+  public int CurrentFrame => _currentFrame;
 }

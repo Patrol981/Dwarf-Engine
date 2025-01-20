@@ -45,7 +45,7 @@ public class ParticleSystem : SystemBase {
     ];
 
     AddPipelineData<ParticlePushConstant>(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = renderer.GetPostProcessingPass(),
       VertexName = "particle_vertex",
       FragmentName = "particle_fragment",
       PipelineProvider = new ParticlePipelineProvider(),
@@ -54,7 +54,7 @@ public class ParticleSystem : SystemBase {
     });
 
     AddPipelineData<ParticlePushConstant>(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = renderer.GetPostProcessingPass(),
       VertexName = "particle_textured_vertex",
       FragmentName = "particle_textured_fragment",
       PipelineProvider = new ParticlePipelineProvider(),

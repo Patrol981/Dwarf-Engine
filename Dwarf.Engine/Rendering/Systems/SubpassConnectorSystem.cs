@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
@@ -23,12 +24,6 @@ public struct SubpassInfo {
 
 public class SubpassConnectorSystem : SystemBase, IDisposable {
   public const string Subpass = "Subpass";
-  public static float DepthMax = 0.995f;
-  public static float DepthMin = 0.990f;
-  public static float EdgeLow = 0;
-  public static float EdgeHigh = 1;
-  public static float Contrast = 0;
-  public static float Stipple = 0;
 
   private readonly unsafe SubpassInfo* _subpassInfoPushConstant =
     (SubpassInfo*)Marshal.AllocHGlobal(Unsafe.SizeOf<SubpassInfo>());
@@ -56,10 +51,8 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
   }
 
   private unsafe void UpdateDescriptors(int currentFrame) {
-    // for (int i = 0; i < _renderer.MAX_FRAMES_IN_FLIGHT; i++) {
-    //   _renderer.Swapchain.UpdateDescriptors(i);
-    // }
     _renderer.Swapchain.UpdateDescriptors(currentFrame);
+    // _renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
   }
 
   public void Redner(FrameInfo frameInfo) {
@@ -85,13 +78,15 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
     var window = Application.Instance.Window;
 
     unsafe {
-      _subpassInfoPushConstant->DepthMax = DepthMax;
-      _subpassInfoPushConstant->DepthMin = DepthMin;
-      _subpassInfoPushConstant->WindowSize = new(window.Extent.Width, window.Extent.Height);
-      _subpassInfoPushConstant->EdgeLow = EdgeLow;
-      _subpassInfoPushConstant->EdgeHigh = EdgeHigh;
-      _subpassInfoPushConstant->Contrast = Contrast;
-      _subpassInfoPushConstant->Stripple = Stipple;
+      // _subpassInfoPushConstant->DepthMax = DepthMax;
+      // _subpassInfoPushConstant->DepthMin = DepthMin;
+      // _subpassInfoPushConstant->WindowSize = new(window.Extent.Width, window.Extent.Height);
+      // _subpassInfoPushConstant->EdgeLow = EdgeLow;
+      // _subpassInfoPushConstant->EdgeHigh = EdgeHigh;
+      // _subpassInfoPushConstant->Contrast = Contrast;
+      // _subpassInfoPushConstant->Stripple = Stipple;
+
+      // Logger.Info(_subpassInfoPushConstant->WindowSize);
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
@@ -103,7 +98,7 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
       );
     }
 
-    vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
+    // vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
   }
 
   public unsafe void Dispose() {

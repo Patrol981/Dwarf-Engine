@@ -692,6 +692,8 @@ public class Application {
       _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
       _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
+      _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
+      _ubo->HatchScale = Render3DSystem.HatchScale;
 
       _ubo->DirectionalLight = DirectionalLight;
 
@@ -754,22 +756,25 @@ public class Application {
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
+
+      Renderer.NextSwapchainSubpass(commandBuffer);
+
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.BeginPostProcessRenderPass(commandBuffer);
+      // Systems.PostProcessingSystem?.Render(FrameInfo);
+      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
-        _onGUI?.Invoke();
       }
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScriptsAsSpan());
-
-      Renderer.NextSwapchainSubpass(commandBuffer);
-      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
+      _onGUI?.Invoke();
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
-
+      Renderer.EndPostProcessRenderPass(commandBuffer);
 
       Mutex.WaitOne();
-      Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
       Mutex.ReleaseMutex();
 
@@ -803,23 +808,24 @@ public class Application {
       _currentFrame.FrameIndex = frameIndex;
 
       Renderer.BeginSwapchainRenderPass(commandBuffer);
-
       Renderer.NextSwapchainSubpass(commandBuffer);
+      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.BeginPostProcessRenderPass(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
       }
+      Renderer.EndPostProcessRenderPass(commandBuffer);
 
       Mutex.WaitOne();
-      Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
       Mutex.ReleaseMutex();
     }
   }
 
   private void PerformCalculations() {
-    Systems.UpdateCalculationSystems(GetEntities().ToArray());
+    Systems.UpdateCalculationSystems([.. GetEntities()]);
   }
 
   internal unsafe void LoaderLoop() {

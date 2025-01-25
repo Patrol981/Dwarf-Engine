@@ -93,7 +93,7 @@ public class PipelineConfigInfo {
       depthTestEnable = true,
       depthWriteEnable = true,
       depthCompareOp = VkCompareOp.LessOrEqual,
-      depthBoundsTestEnable = true,
+      depthBoundsTestEnable = false,
       minDepthBounds = 0.0f,  // Optional
       maxDepthBounds = 1.0f,  // Optional
       stencilTestEnable = true,

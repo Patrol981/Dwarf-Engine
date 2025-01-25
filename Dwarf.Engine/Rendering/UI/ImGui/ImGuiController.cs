@@ -122,10 +122,10 @@ public partial class ImGuiController : IDisposable {
     var io = ImGui.GetIO();
     io.Fonts.ClearFonts();
     var dwarfPath = DwarfPath.AssemblyDirectory;
-    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}./Resources/fonts/DroidSans.ttf", 14);
+    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 14);
     unsafe {
       if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
-        Logger.Error("Could not load font!");
+        Logger.Error($"Could not load font! [{dwarfPath}/Resources/fonts/DroidSans.ttf]");
         throw new ArgumentException("Could not load font!");
       }
     }

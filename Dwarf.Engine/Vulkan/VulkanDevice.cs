@@ -524,7 +524,6 @@ public class VulkanDevice : IDevice {
       robustBufferAccess = true,
       shaderStorageBufferArrayDynamicIndexing = true,
       depthClamp = true,
-      depthBounds = true,
     };
 
     VkPhysicalDeviceVulkan11Features vk11Features = new() {
@@ -551,7 +550,7 @@ public class VulkanDevice : IDevice {
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
-      pNext = &vk14Features
+      pNext = &vk13Features
     };
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
@@ -580,7 +579,7 @@ public class VulkanDevice : IDevice {
     DeviceExtensions = enabledExtensions;
 
     var result = vkCreateDevice(_physicalDevice, &createInfo, null, out _logicalDevice);
-    if (result != VkResult.Success) throw new Exception("Failed to create a device!");
+    if (result != VkResult.Success) throw new Exception($"Failed to create a device! [{result}]");
 
     vkLoadDevice(_logicalDevice);
 

@@ -15,7 +15,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanDevice : IDevice {
-  private readonly string[] VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
+  private readonly string[] VALIDATION_LAYERS = ["VK_LAYER_KHRONOS_validation"];
   public static bool s_EnableValidationLayers = true;
   private readonly Window _window;
 

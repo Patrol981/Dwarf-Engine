@@ -280,7 +280,7 @@ public class Application {
     Window.FocusOnWindow();
 
     while (!Window.ShouldClose) {
-      MouseState.GetInstance().ScrollDelta = 0.0f;
+      Input.ScrollDelta = 0.0f;
       Time.Tick();
       Window.PollEvents();
       if (!Window.IsMinimalized) {

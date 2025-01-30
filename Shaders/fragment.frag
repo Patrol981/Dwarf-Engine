@@ -67,8 +67,6 @@ void main() {
         float radiusHorizontal = 1.0;
         float distortionStrength = 1.0;
 
-        // if(ubo.useFog == 1 && entityToFragDistance > ubo.fog.x) discard;
-
         float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
         float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
 
@@ -79,7 +77,6 @@ void main() {
             colorMod = texture(sampler2D(_texture, _sampler), texCoord);
         }
     } else if(ubo.useFog == 1 && ubo.hasImportantEntity == 1) {
-      // if(entityToFragDistance > ubo.fog.x) discard;
       colorMod = texture(sampler2D(_texture, _sampler), texCoord);
     }  else {
       colorMod = texture(sampler2D(_texture, _sampler), texCoord);
@@ -91,27 +88,6 @@ void main() {
         result += calc_point_light(light, surfaceNormal, viewDir);
     }
 
-    // vec2 screen_uv = gl_FragCoord.xy / ubo.screenSize;
-    // vec3 screen_color = texture(_prevColor, screen_uv).rgb;
-
-    // float luminance = dot(screen_color, vec3(0.299, 0.587, 0.114));
-
-    // float r_channel = screen_color.r;
-    // float pow_r = pow(r_channel,0.3);
-    // float inverse_pow_r = 1.0 - pow_r;
-    // luminance -= inverse_pow_r;
-    // luminance = 1.0 - luminance;
-    // vec3 final_color = vec3(luminance);
-
-    // // vec3 normal_sample = normalize(texture(normal_texture, SCREEN_UV).rgb * 2.0 - 1.0);
-    // vec2 distorted_uv = screen_uv + fragNormalWorld.xy * 2.0;
-    // vec3 hatch1_color = 1.0 - texture(sampler2D(_hatchTexture, _hatchSampler), distorted_uv * 15.0).rgb;
-    // final_color *= hatch1_color;
-
-    // final_color = mix(vec3(1.0), vec3(0.0), final_color * 20.0);
-    // outColor = vec4(final_color, 1.0);
     outColor = colorMod * vec4(result, alpha);
-
-    // outColor = vec4(mix(hatch.rgb, colorMod.rgb, 0.7), 1.0) * vec4(result, alpha);
     outColor = mix(vec4(1.0), outColor, fogVisiblity);
 }

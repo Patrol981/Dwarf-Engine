@@ -147,26 +147,27 @@ public unsafe class Renderer : IDisposable {
   }
 
   public void BeginPostProcessRenderPass(VkCommandBuffer commandBuffer) {
-    // VkImageMemoryBarrier barrier = new();
-    // barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    // barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    // barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    // barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    // barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    // barrier.image = Swapchain.CurrentImageColor; // Or depthImage for depth
-    // barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Or VK_IMAGE_ASPECT_DEPTH_BIT
-    // barrier.subresourceRange.levelCount = 1;
-    // barrier.subresourceRange.layerCount = 1;
+    VkImageMemoryBarrier barrier = new() {
+      sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+      image = Swapchain.CurrentImageColor
+    };
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.layerCount = 1;
 
-    // vkCmdPipelineBarrier(
-    //     commandBuffer,
-    //     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    //     VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-    //     0,
-    //     0, null,
-    //     0, null,
-    //     1, &barrier
-    // );
+    vkCmdPipelineBarrier(
+      commandBuffer,
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      0,
+      0, null,
+      0, null,
+      1, &barrier
+    );
 
     VkRenderPassBeginInfo renderPassInfo = new() {
       renderPass = Swapchain.PostProcessPass,

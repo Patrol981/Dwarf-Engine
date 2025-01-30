@@ -18,33 +18,33 @@ public class FreeCameraController : DwarfScript {
   public unsafe void MoveByPC() {
     if (CameraState.GetFirstMove()) {
       CameraState.SetFirstMove(false);
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+      CameraState.SetLastPosition(Input.MousePosition);
     } else {
-      var deltaX = (float)MouseState.GetInstance().MousePosition.X - (float)CameraState.GetLastPosition().X;
-      var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+      var deltaX = (float)Input.MousePosition.X - (float)CameraState.GetLastPosition().X;
+      var deltaY = (float)Input.MousePosition.Y - (float)CameraState.GetLastPosition().Y;
+      CameraState.SetLastPosition(Input.MousePosition);
 
       if (Window.MouseCursorState == CursorState.Centered) {
         Owner!.GetComponent<Camera>().Yaw += deltaX * CameraState.GetSensitivity();
         Owner!.GetComponent<Camera>().Pitch += deltaY * CameraState.GetSensitivity();
       }
 
-      if (Input.GetKey(SDL3.SDL_Scancode.D)) {
+      if (Input.GetKey(Scancode.D)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKey(SDL3.SDL_Scancode.A)) {
+      if (Input.GetKey(Scancode.A)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Right * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKey(SDL3.SDL_Scancode.S)) {
+      if (Input.GetKey(Scancode.S)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKey(SDL3.SDL_Scancode.W)) {
+      if (Input.GetKey(Scancode.W)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Front * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKey(SDL3.SDL_Scancode.Space)) {
+      if (Input.GetKey(Scancode.Space)) {
         Owner!.GetComponent<Transform>().Position -= Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
-      if (Input.GetKey(SDL3.SDL_Scancode.LeftShift)) {
+      if (Input.GetKey(Scancode.LeftShift)) {
         Owner!.GetComponent<Transform>().Position += Owner!.GetComponent<Camera>().Up * CameraState.GetCameraSpeed() * Time.DeltaTime;
       }
 

@@ -120,7 +120,7 @@ public class Canvas : Component, IDisposable {
     button.Name = buttonName;
     _entities.Add(button);
 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
-    MouseState.GetInstance().ClickEvent += button.GetComponent<Button>().CheckCollision;
+    Input.ClickEvent += button.GetComponent<Button>().CheckCollision;
 #pragma warning restore CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
     return button;
   }

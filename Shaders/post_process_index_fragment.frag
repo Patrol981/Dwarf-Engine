@@ -40,30 +40,6 @@ float getProjectedDepthFromTexture(vec2 pTexCoords, mat4 pInverseProjection) {
   return -view.z;
 }
 
-vec4 pixelEffect() {
-  float depth = getProjectedDepthFromTexture(uv, inverse(ubo.projection));
-  vec2 texel_size = 1.0 / push.windowSize.xy;
-
-  vec2 uvs[4];
-  uvs[0] = vec2(uv.x, uv.y + texel_size.y);
-  uvs[1] = vec2(uv.x, uv.y - texel_size.y);
-  uvs[2] = vec2(uv.x + texel_size.x, uv.y);
-  uvs[3] = vec2(uv.x - texel_size.x, uv.y);
-
-  float depth_diff = 0.0;
-  for(int i = 0; i < 4; i++) {
-    float d = getProjectedDepthFromTexture(uvs[i], inverse(ubo.projection));
-    depth_diff += abs(depth - d);
-  }
-
-  float depth_edge = step(push.depthMax, depth_diff);
-  vec3 edge_mix = mix(texture(_colorSampler, uv).rgb, vec3(0), depth_edge);
-
-  vec4 pixelResult = vec4(edge_mix, 1.0);
-
-  return pixelResult;
-}
-
 float edgeDetection(vec2 pTexCoords) {
     float dx = 1.0 / push.windowSize.x;
     float dy = 1.0 / push.windowSize.y;
@@ -124,13 +100,10 @@ vec3 calculateFog(vec3 pColor) {
 }
 
 void main() {
-  vec3 color = texture(_colorSampler, uv).rgb;
+  vec3 screen_color = texture(_colorSampler, uv).rgb;
 
   float edge = edgeDetection(uv);
-  vec3 edge_result = mix(color, vec3(0.0), edge);
-
-  // vec2 screen_uv = gl_FragCoord.xy / ubo.screenSize;
-  vec3 screen_color = texture(_colorSampler, uv).rgb;
+  vec3 edge_result = mix(screen_color, vec3(0.0), edge);
 
   float luminance = dot(screen_color, vec3(0.299, 0.587, 0.114));
 
@@ -141,11 +114,8 @@ void main() {
   luminance = 1.0 - luminance;
   vec3 final_color = vec3(luminance);
 
-  vec3 pos_sample = normalize(ubo.cameraPosition.xyz);
   vec3 normal_sample = normalize(texture(_colorSampler, uv).rgb * 2.0 - 1.0);
   vec2 distorted_uv = uv + normal_sample.xy * push.contrast;
-  // vec2 distorted_uv = uv + vec2(pos_sample.z * push.contrast);
-  // vec2 distorted_uv = uv;
    if (luminance > 0.001) {
     if (luminance < push.edgeLow) {
       vec3 hatch1_color = 1.0 - texture(sampler2D(_hatchTexture1, _hatchSampler1), distorted_uv * 15.0).rgb;
@@ -161,9 +131,5 @@ void main() {
 
   final_color = mix(vec3(1.0), vec3(0.0), final_color * push.contrast);
   vec3 mix_result = mix(final_color, screen_color, push.stipple);
-  // mix_result = calculateFog(mix_result);
-
-  // outColor = vec4(final_color, 1.0) + edge;
-  // outColor = vec4(mix(final_color, vec3(0.0), edge), 1.0);
   outColor = vec4(mix(mix_result, vec3(0.0), edge), 1.0);
 }

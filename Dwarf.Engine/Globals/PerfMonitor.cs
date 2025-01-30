@@ -1,3 +1,7 @@
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
+using Dwarf.Vulkan;
+
 namespace Dwarf.Globals;
 
 public static class PerfMonitor {
@@ -5,9 +9,33 @@ public static class PerfMonitor {
   public static uint VertexBindingsIn3DRenderer { get; set; }
   public static uint NumberOfObjectsRenderedIn3DRenderer { get; set; }
 
+  private static bool s_debug = true;
+
   public static void Clear3DRendererInfo() {
     TextureBindingsIn3DRenderer = 0;
     VertexBindingsIn3DRenderer = 0;
     NumberOfObjectsRenderedIn3DRenderer = 0;
+  }
+
+  public static void ChangeWireframeMode() {
+    Application.Instance.CurrentPipelineConfig = Application.Instance.CurrentPipelineConfig.GetType() == typeof(PipelineConfigInfo)
+      ? new VertexDebugPipeline()
+      : new PipelineConfigInfo();
+    Application.Instance.Systems.Reload3DRenderSystem = true;
+    Application.Instance.Systems.Reload2DRenderSystem = true;
+  }
+
+  public static void ChangeDebugVisiblity() {
+    s_debug = !s_debug;
+    var entities = Application.Instance.GetEntities();
+    var debugObjects = entities.DistinctInterface<IDebugRender3DObject>();
+    foreach (var entity in debugObjects) {
+      var e = entity.GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
+      if (s_debug) {
+        e?.Enable();
+      } else {
+        e?.Disable();
+      }
+    }
   }
 }

@@ -21,7 +21,7 @@ public class Ray {
   public record Plane(Vector3 Normal, Vector3 Point);
 
   public static Vector2 MouseToWorld2D(Camera camera, Vector2 screenSize) {
-    var mousePos = MouseState.GetInstance().MousePosition;
+    var mousePos = Input.MousePosition;
     float normalizedX = 2.0f * (float)mousePos.X / screenSize.X - 1.0f;
     float normalizedY = 1.0f - 2.0f * (float)mousePos.Y / screenSize.Y;
 
@@ -39,7 +39,7 @@ public class Ray {
   }
 
   public static RayResult GetRayInfo(Camera camera, Vector2 screenSize) {
-    var mousePos = MouseState.GetInstance().MousePosition;
+    var mousePos = Input.MousePosition;
     var rayStartNDC = new Vector4(
       ((float)mousePos.X / screenSize.X - 0.5f) * 2.0f,
       ((float)mousePos.Y / screenSize.Y - 0.5f) * 2.0f,

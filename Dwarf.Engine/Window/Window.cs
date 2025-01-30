@@ -49,10 +49,11 @@ public class Window : IDisposable {
     Show();
     RefreshRate = GetRefreshRate();
     Logger.Info($"[WINDOW] Refresh rate set to {RefreshRate}");
+    // EnumerateAvailableGameControllers();
   }
 
   private unsafe void InitWindow(string windowName, bool fullscreen, bool debug) {
-    if (!SDL_Init(SDL_InitFlags.Video)) {
+    if (!SDL_Init(SDL_InitFlags.Video | SDL_InitFlags.Gamepad)) {
       throw new Exception("Failed to initalize Window");
     }
 
@@ -134,26 +135,29 @@ public class Window : IDisposable {
           ShouldClose = true;
           break;
         case SDL_EventType.KeyDown:
-          KeyboardState.KeyCallback(SDLWindow, e.key, e.type);
+          Input.KeyCallback(SDLWindow, e.key, e.type);
+          break;
+        case SDL_EventType.GamepadButtonDown:
+          Input.GamepadCallback(SDLWindow, e.gbutton, e.type);
           break;
         case SDL_EventType.MouseMotion:
           switch (MouseCursorState) {
             case CursorState.Centered:
-              MouseState.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
+              Input.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
               break;
             default:
-              MouseState.WindowMouseCallback(e.motion.x, e.motion.y);
+              Input.WindowMouseCallback(e.motion.x, e.motion.y);
               break;
           }
           break;
         case SDL_EventType.MouseWheel:
-          MouseState.ScrollCallback(e.wheel.x, e.wheel.y);
+          Input.ScrollCallback(e.wheel.x, e.wheel.y);
           break;
         case SDL_EventType.MouseButtonUp:
-          MouseState.MouseButtonCallbackUp(e.button.Button);
+          Input.MouseButtonCallbackUp(e.button.Button);
           break;
         case SDL_EventType.MouseButtonDown:
-          MouseState.MouseButtonCallbackDown(e.button.Button);
+          Input.MouseButtonCallbackDown(e.button.Button);
           break;
         case SDL_EventType.WindowResized:
           FrambufferResizedCallback(e.window.data1, e.window.data2);
@@ -167,6 +171,19 @@ public class Window : IDisposable {
           break;
         case SDL_EventType.LowMemory:
           throw new Exception("Memory Leak");
+        case SDL_EventType.GamepadAdded:
+          if (GameController.IsNull) {
+            GameController = SDL_OpenGamepad(e.gdevice.which);
+            Logger.Info($"[SDL] Connected {SDL_GetGamepadName(GameController)}");
+          }
+          break;
+        case SDL_EventType.GamepadRemoved:
+          var instanceId = e.gdevice.which;
+          if (GameController.IsNotNull && SDL_GetGamepadID(GameController) == instanceId) {
+            Logger.Info($"[SDL] Disconnected {SDL_GetGamepadName(GameController)}");
+            SDL_CloseGamepad(GameController);
+          }
+          break;
         default:
           break;
       }
@@ -215,7 +232,7 @@ public class Window : IDisposable {
   }
 
   public static unsafe void SetCursorMode(CursorState cursorState) {
-    var prevMousePos = MouseState.GetInstance().MousePosition;
+    var prevMousePos = Input.MousePosition;
 
     MouseCursorState = cursorState;
     switch (cursorState) {
@@ -225,7 +242,7 @@ public class Window : IDisposable {
         break;
       case CursorState.Centered:
         SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, true);
-        MouseState.GetInstance().MousePosition = prevMousePos;
+        Input.MousePosition = prevMousePos;
         // SDL_WarpMouseInWindow(s_Window.SDLWindow, s_Window.Size.X / 2, s_Window.Size.Y / 2);
         break;
       case CursorState.Hidden:
@@ -248,6 +265,16 @@ public class Window : IDisposable {
     SDL_MaximizeWindow(Application.Instance.Window.SDLWindow);
   }
 
+  public void EnumerateAvailableGameControllers() {
+    var gamepads = SDL_GetJoysticks();
+    foreach (var gamepad in gamepads) {
+      if (SDL_IsGamepad(gamepad)) {
+        GameController = SDL_OpenGamepad(gamepad);
+        Logger.Info($"[SDL] Connected {SDL_GetGamepadName(GameController)}");
+      }
+    }
+  }
+
   public DwarfExtent2D Extent {
     get { return _extent; }
     private set { _extent = value; }
@@ -258,7 +285,7 @@ public class Window : IDisposable {
   public bool IsMinimalized { get; private set; } = false;
   public event EventHandler? OnResizedEventDispatcher;
   public float RefreshRate { get; private set; }
-
+  public static SDL_Gamepad GameController { get; private set; }
   public SDL_Window SDLWindow { get; private set; }
   public static CursorState MouseCursorState = CursorState.Normal;
 }

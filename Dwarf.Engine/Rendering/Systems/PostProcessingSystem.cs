@@ -115,6 +115,7 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   }
 
   private void UpdateDescriptors(int currentFrame) {
+    _renderer.Swapchain.UpdateDescriptors(currentFrame);
     _renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
   }
 

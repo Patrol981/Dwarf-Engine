@@ -74,31 +74,6 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
       1,
       frameInfo.GlobalDescriptorSet
     );
-
-    var window = Application.Instance.Window;
-
-    unsafe {
-      // _subpassInfoPushConstant->DepthMax = DepthMax;
-      // _subpassInfoPushConstant->DepthMin = DepthMin;
-      // _subpassInfoPushConstant->WindowSize = new(window.Extent.Width, window.Extent.Height);
-      // _subpassInfoPushConstant->EdgeLow = EdgeLow;
-      // _subpassInfoPushConstant->EdgeHigh = EdgeHigh;
-      // _subpassInfoPushConstant->Contrast = Contrast;
-      // _subpassInfoPushConstant->Stripple = Stipple;
-
-      // Logger.Info(_subpassInfoPushConstant->WindowSize);
-
-      vkCmdPushConstants(
-        frameInfo.CommandBuffer,
-        _pipelines[Subpass].PipelineLayout,
-        VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
-        0,
-        (uint)Unsafe.SizeOf<SubpassInfo>(),
-        _subpassInfoPushConstant
-      );
-    }
-
-    // vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
   }
 
   public unsafe void Dispose() {

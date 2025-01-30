@@ -48,36 +48,6 @@ layout(set = 7, binding = 1) uniform sampler2D _prevDepth;
 
 #include light_calc
 
-vec3 computeViewNormal(vec2 inTexCoords) {
-  // Sample depth texture and convert to NDC
-  float depth = texture(_prevDepth, inTexCoords).r;
-  depth = depth * 2.0 - 1.0; // Remap from [0, 1] to [-1, 1]
-
-  // Convert screen UV to NDC coordinates
-  vec2 ndcPos = inTexCoords * 2.0 - 1.0;
-
-  // Reconstruct clip-space position
-  vec4 clipPos = vec4(ndcPos, depth, 1.0);
-
-  // Transform to view space
-  vec4 viewPos = inverse(ubo.projection) * clipPos;
-  viewPos.xyz /= viewPos.w; // Perspective divide
-
-  // Compute partial derivatives for view-space position
-  vec3 viewPosDx = dFdx(viewPos.xyz);
-  vec3 viewPosDy = dFdy(viewPos.xyz);
-
-  // Compute view-space normal using the right-hand rule
-  vec3 normal = normalize(cross(viewPosDx, viewPosDy));
-
-  // Ensure normals point outward by flipping if necessary
-  if (dot(normal, viewPos.xyz) > 0.0) {
-      normal = -normal;
-  }
-
-  return normal;
-}
-
 void main() {
   vec3 surfaceNormal = normalize(fragNormalWorld);
   vec3 viewDir = normalize(ubo.cameraPosition - fragPositionWorld);

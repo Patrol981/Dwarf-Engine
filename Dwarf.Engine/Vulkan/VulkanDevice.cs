@@ -545,12 +545,13 @@ public class VulkanDevice : IDevice {
 
     VkPhysicalDeviceVulkan14Features vk14Features = new() {
       hostImageCopy = true,
+      pushDescriptor = true,
       pNext = &vk13Features
     };
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
-      pNext = &vk13Features
+      pNext = &vk14Features
     };
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {

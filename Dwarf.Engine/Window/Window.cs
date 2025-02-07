@@ -235,9 +235,11 @@ public class Window : IDisposable {
     var prevMousePos = Input.MousePosition;
 
     MouseCursorState = cursorState;
+
+    Logger.Info($"Setting cursor state to: {MouseCursorState}");
+
     switch (cursorState) {
       case CursorState.Normal:
-        SDL_ShowCursor();
         SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
         break;
       case CursorState.Centered:

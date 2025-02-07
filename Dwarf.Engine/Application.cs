@@ -177,17 +177,30 @@ public class Application {
       e.CanBeDisposed = true;
     }
 
-    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
-    if (_entities.Count() > 0) {
-      return;
-    }
-    _entities.Clear();
-    _entities = [];
+    // Mutex.WaitOne();
+    // while (_entities.Count > 0) {
+    //   Logger.Info($"Waiting for entities to dispose... [{_entities.Count}]");
+    //   Collect();
+    //   _entities.Clear();
+    //   _entities = [];
+    // }
 
-    if (!_renderShouldClose) {
-      _renderShouldClose = true;
+    Logger.Info($"Waiting for entities to dispose... [{_entities.Count}]");
+    if (_entities.Count > 0) {
       return;
     }
+
+    // Mutex.ReleaseMutex();
+
+    _renderShouldClose = true;
+    // if (!_renderShouldClose) {
+
+    //   return;
+    // }
+
+    // while (_renderShouldClose) {
+
+    // }
 
     Logger.Info("Waiting for render process to close...");
     _renderThread?.Join();
@@ -222,14 +235,17 @@ public class Application {
     // while (_renderShouldClose) {
 
     // }
+    while (_renderThread.IsAlive) {
 
+    }
+
+    _newSceneShouldLoad = false;
     _renderThread.Join();
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };
     _renderThread.Start();
 
-    _newSceneShouldLoad = false;
   }
 
   private async Task<Task> SetupScene() {
@@ -277,7 +293,6 @@ public class Application {
     _renderThread.Start();
 
     Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
-    Window.FocusOnWindow();
 
     while (!Window.ShouldClose) {
       Input.ScrollDelta = 0.0f;
@@ -606,7 +621,9 @@ public class Application {
 
   public void RemoveEntity(Guid id) {
     lock (_entitiesLock) {
-      var target = _entities.Where((x) => x.EntityID == id).First();
+      if (_entities.Count == 0) return;
+      var target = _entities.Where((x) => x.EntityID == id).FirstOrDefault();
+      if (target == null) return;
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.Remove(target);
@@ -680,13 +697,13 @@ public class Application {
 
       // _currentFrame.DepthTexture = Renderer.Swapchain
 
-      _ubo->Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
-      _ubo->View = _camera.GetComponent<Camera>().GetViewMatrix();
-      _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
+      _ubo->Projection = _camera.TryGetComponent<Camera>()?.GetProjectionMatrix() ?? Matrix4x4.Identity;
+      _ubo->View = _camera.TryGetComponent<Camera>()?.GetViewMatrix() ?? Matrix4x4.Identity;
+      _ubo->CameraPosition = _camera.TryGetComponent<Transform>()?.Position ?? Vector3.Zero;
       _ubo->Fov = 60;
-      _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Position : Vector3.Zero;
+      _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity?.TryGetComponent<Transform>()?.Position ?? Vector3.Zero;
       _ubo->ImportantEntityPosition.Z += 0.5f;
-      _ubo->ImportantEntityDirection = _currentFrame.ImportantEntity != null ? _currentFrame.ImportantEntity.GetComponent<Transform>().Forward : Vector3.Zero;
+      _ubo->ImportantEntityDirection = _currentFrame.ImportantEntity?.TryGetComponent<Transform>()?.Forward ?? Vector3.Zero;
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
       // _ubo->Fog = FogValue;
       _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
@@ -818,9 +835,7 @@ public class Application {
       }
       Renderer.EndPostProcessRenderPass(commandBuffer);
 
-      Mutex.WaitOne();
       Renderer.EndFrame();
-      Mutex.ReleaseMutex();
     }
   }
 
@@ -881,7 +896,8 @@ public class Application {
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
-    Logger.Info("Closing Renderer");
+
+    Logger.Info("[RENDER LOOP] Closing Renderer");
 
     Device.WaitQueue();
     Device.WaitDevice();
@@ -927,10 +943,14 @@ public class Application {
   }
 
   private void Collect() {
+    if (_entities.Count == 0) return;
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
-        Device.WaitDevice();
 
+
+        if (_entities[i].Collected) continue;
+
+        _entities[i].Collected = true;
         _entities[i].DisposeEverything();
         RemoveEntity(_entities[i].EntityID);
       }
@@ -979,7 +999,7 @@ public class Application {
   public Renderer Renderer { get; } = null!;
   public VmaAllocator VmaAllocator { get; private set; }
   public FrameInfo FrameInfo => _currentFrame;
-  public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
+  public DirectionalLight DirectionalLight = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
   public StorageCollection StorageCollection { get; private set; } = null!;

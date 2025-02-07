@@ -5,6 +5,7 @@ namespace Dwarf.EntityComponentSystem;
 
 public class Entity {
   public bool CanBeDisposed = false;
+  public bool Collected = false;
   public EntityLayer Layer = EntityLayer.Default;
   public bool IsImportant = false;
 

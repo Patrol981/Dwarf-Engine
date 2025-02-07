@@ -1,4 +1,5 @@
 using Dwarf.AbstractionLayer;
+using Dwarf.Globals;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Vulkan;
 
@@ -33,6 +34,8 @@ public class DirectionalLightSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
+    if (!PerfMonitor.IsDebug) return;
+
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(

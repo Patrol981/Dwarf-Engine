@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
@@ -8,6 +9,9 @@ public static class PerfMonitor {
   public static uint TextureBindingsIn3DRenderer { get; set; }
   public static uint VertexBindingsIn3DRenderer { get; set; }
   public static uint NumberOfObjectsRenderedIn3DRenderer { get; set; }
+  public static double Render3DComputeTime { get; set; }
+
+  public static Stopwatch ComunnalStopwatch { get; } = Stopwatch.StartNew();
 
   private static bool s_debug = true;
 
@@ -38,4 +42,6 @@ public static class PerfMonitor {
       }
     }
   }
+
+  public static bool IsDebug => s_debug;
 }

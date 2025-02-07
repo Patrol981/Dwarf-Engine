@@ -386,6 +386,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
       return;
     }
 
+    PerfMonitor.ComunnalStopwatch.Restart();
     Frustum.GetFrustrum(out var planes);
     entities = Frustum.FilterObjectsByPlanes(in planes, entities).ToArray();
 
@@ -434,16 +435,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     nodeObjectsSkinned.Sort((x, y) => x.Key.CompareTo(y.Key));
     nodeObjectsNotSkinned.Sort((x, y) => x.Key.CompareTo(y.Key));
 
-    // var test = nodeObjectsSkinned.GroupBy(x => x.Key.Name)
-    _skinnedGroups = nodeObjectsSkinned
+    _skinnedGroups = [.. nodeObjectsSkinned
       .GroupBy(x => x.Key.Name)
-      .Select(group => (Key: group.Key, Count: group.Count()))
-      .ToList();
+      .Select(group => (Key: group.Key, Count: group.Count()))];
 
-    _notSkinnedGroups = nodeObjectsNotSkinned
+    _notSkinnedGroups = [.. nodeObjectsNotSkinned
       .GroupBy(x => x.Key.Name)
-      .Select(group => (Key: group.Key, Count: group.Count()))
-      .ToList();
+      .Select(group => (Key: group.Key, Count: group.Count()))];
 
     _skinnedNodesCache = [.. nodeObjectsSkinned.Select(x => x.Key)];
     _notSkinnedNodesCache = [.. nodeObjectsNotSkinned.Select(x => x.Key)];
@@ -451,27 +449,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     objectData = [.. nodeObjectsNotSkinned.Select(x => x.Value), .. nodeObjectsSkinned.Select(x => x.Value)];
     skinnedObjects = [.. nodeObjectsSkinned.Select(x => x.Value)];
 
-    // _skinnedNodesCache = [.. skinnedNodes];
-    // _notSkinnedNodesCache = [.. notSkinnedNodes];
-
-    // objectData = [.. objectDataNotSkinned, .. objectDataSkinned];
-    // skinnedObjects = [.. objectDataSkinned];
-    // unsafe {
-    //   VkDescriptorImageInfo depthInputInfo = new() {
-    //     imageView = Application.Instance.Renderer.Swapchain.CurrentImageDepthView,
-    //     imageLayout = VkImageLayout.ShaderReadOnlyOptimal
-    //   };
-
-    //   VkWriteDescriptorSet depthDescriptorWrite = new() {
-    //     descriptorType = VkDescriptorType.InputAttachment,
-    //     dstBinding = 0,
-    //     pImageInfo = &depthInputInfo,
-    //     descriptorCount = 1,
-    //     dstSet = _inputDescriptorSet
-    //   };
-    //   vkUpdateDescriptorSets(_device.LogicalDevice, 1, &depthDescriptorWrite, 0, null);
-    // }
-
+    PerfMonitor.Render3DComputeTime = PerfMonitor.ComunnalStopwatch.ElapsedMilliseconds;
   }
 
   private List<Indirect3DBatch> CreateBatch(List<KeyValuePair<Node, ObjectData>> nodeObjects) {

@@ -38,28 +38,28 @@ public class TextureManager : IDisposable {
     return Task.CompletedTask;
   }
 
-  public async Task<Task> AddTextureLocal(string texturePath, int flip = 1) {
+  public async Task<ITexture> AddTextureLocal(string texturePath, int flip = 1) {
     foreach (var tex in PerSceneLoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
-        return Task.CompletedTask;
+        return tex.Value;
       }
     }
     var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath, flip);
     PerSceneLoadedTextures.Add(Guid.NewGuid(), texture);
-    return Task.CompletedTask;
+    return texture;
   }
 
-  public async Task<Task> AddTextureGlobal(string texturePath, int flip = 1) {
+  public async Task<ITexture> AddTextureGlobal(string texturePath, int flip = 1) {
     foreach (var tex in GlobalLoadedTextures) {
       if (tex.Value.TextureName == texturePath) {
         Logger.Warn($"Texture [{texturePath}] is already loaded. Skipping current add call.");
-        return Task.CompletedTask;
+        return tex.Value;
       }
     }
     var texture = await TextureLoader.LoadFromPath(_vmaAllocator, _device, texturePath, flip);
     GlobalLoadedTextures.Add(Guid.NewGuid(), texture);
-    return Task.CompletedTask;
+    return texture;
   }
 
   public Guid AddTextureLocal(ITexture texture) {

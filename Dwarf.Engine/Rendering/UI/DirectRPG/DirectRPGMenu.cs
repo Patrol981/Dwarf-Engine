@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.Intrinsics.X86;
+using Dwarf.AbstractionLayer;
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.DirectRPG;
@@ -11,8 +12,9 @@ public partial class DirectRPG {
 
   public struct MenuConfig {
     public bool HasBackground;
-
     public Vector3 BackgroundColor;
+    public ITexture BackgroundTexture;
+
     public Vector2 Size;
 
     public float WindowAlpha;
@@ -48,6 +50,12 @@ public partial class DirectRPG {
       ImGuiWindowFlags.NoResize |
       ImGuiWindowFlags.NoBringToFrontOnFocus
     );
+    if (s_menuConfig.BackgroundTexture != null) {
+      var controller = Application.Instance.GuiController;
+      var binding = controller.GetOrCreateImGuiBinding((VulkanTexture)s_menuConfig.BackgroundTexture);
+      // ImGui.Image(binding, ImGui.GetWindowSize(), s_uv0, s_uv1);
+      DirectRPG.Image(s_menuConfig.BackgroundTexture);
+    }
   }
 
   public static void EndMenu() {
@@ -67,7 +75,8 @@ public partial class DirectRPG {
     string label,
     ButtonClickedDelegate onClick,
     Anchor anchor,
-    Vector2 size = default
+    Vector2 size = default,
+    ITexture? bgTexture = null
   ) {
     var io = ImGui.GetIO();
 

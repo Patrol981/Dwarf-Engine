@@ -332,4 +332,35 @@ public static class VkUtils {
     vInputAttribDescription.offset = offset;
     return vInputAttribDescription;
   }
+
+  public static unsafe void InsertMemoryBarrier(
+    VkCommandBuffer cmdbuffer,
+			VkImage image,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange
+  ) {
+    VkImageMemoryBarrier imageMemoryBarrier = new() {
+      srcAccessMask = srcAccessMask,
+      dstAccessMask = dstAccessMask,
+      oldLayout = oldImageLayout,
+      newLayout = newImageLayout,
+      image = image,
+      subresourceRange = subresourceRange
+    };
+
+    vkCmdPipelineBarrier(
+			cmdbuffer,
+			srcStageMask,
+			dstStageMask,
+			0,
+			0, null,
+			0, null,
+			1, &imageMemoryBarrier
+    );
+  }
 }

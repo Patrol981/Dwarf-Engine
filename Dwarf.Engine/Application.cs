@@ -867,7 +867,19 @@ public class Application {
     }
 
     fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
-      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+      // vkFreeCommandBuffers(
+      //   Device.LogicalDevice,
+      //   threadInfo.CommandPool,
+      //   (uint)Renderer.MAX_FRAMES_IN_FLIGHT,
+      //   cmdBfPtrEnd
+      // );
+
+      vkFreeCommandBuffers(
+        Device.LogicalDevice,
+        threadInfo.CommandPool,
+        (uint)threadInfo.CommandBuffer.Length,
+        cmdBfPtrEnd
+      );
     }
 
     Device.WaitQueue();

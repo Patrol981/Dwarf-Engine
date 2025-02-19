@@ -9,7 +9,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanSwapchain : IDisposable {
-  private const int MAX_FRAMES_IN_FLIGHT = 2;
+  private const int MAX_FRAMES_IN_FLIGHT = 4;
 
   private readonly VulkanDevice _device;
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
@@ -1076,7 +1076,7 @@ public class VulkanSwapchain : IDisposable {
     foreach (VkSurfaceFormatKHR availableFormat in availableFormats) {
       // R8G8B8A8Unorm
       // R8G8B8A8Srgb
-      if (availableFormat.format == VkFormat.R8G8B8A8Unorm) {
+      if (availableFormat.format == VkFormat.R8G8B8A8Srgb) {
         return availableFormat;
       }
     }

@@ -296,14 +296,17 @@ public static class VkUtils {
   public static unsafe VkGraphicsPipelineCreateInfo PipelineCreateInfo(
     VkPipelineLayout layout,
     VkRenderPass renderPass,
+    VkPipelineRenderingCreateInfo dynamicRenderCreateInfo,
     VkPipelineCreateFlags flags = VkPipelineCreateFlags.None
   ) {
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = new();
-    pipelineCreateInfo.layout = layout;
-    pipelineCreateInfo.renderPass = renderPass;
-    pipelineCreateInfo.flags = flags;
-    pipelineCreateInfo.basePipelineIndex = -1;
-    pipelineCreateInfo.basePipelineHandle = VkPipeline.Null;
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = new() {
+      layout = layout,
+      renderPass = renderPass,
+      flags = flags,
+      basePipelineIndex = -1,
+      basePipelineHandle = VkPipeline.Null,
+      pNext = &dynamicRenderCreateInfo
+    };
     return pipelineCreateInfo;
   }
 
@@ -335,14 +338,14 @@ public static class VkUtils {
 
   public static unsafe void InsertMemoryBarrier(
     VkCommandBuffer cmdbuffer,
-			VkImage image,
-			VkAccessFlags srcAccessMask,
-			VkAccessFlags dstAccessMask,
-			VkImageLayout oldImageLayout,
-			VkImageLayout newImageLayout,
-			VkPipelineStageFlags srcStageMask,
-			VkPipelineStageFlags dstStageMask,
-			VkImageSubresourceRange subresourceRange
+      VkImage image,
+      VkAccessFlags srcAccessMask,
+      VkAccessFlags dstAccessMask,
+      VkImageLayout oldImageLayout,
+      VkImageLayout newImageLayout,
+      VkPipelineStageFlags srcStageMask,
+      VkPipelineStageFlags dstStageMask,
+      VkImageSubresourceRange subresourceRange
   ) {
     VkImageMemoryBarrier imageMemoryBarrier = new() {
       srcAccessMask = srcAccessMask,
@@ -354,13 +357,62 @@ public static class VkUtils {
     };
 
     vkCmdPipelineBarrier(
-			cmdbuffer,
-			srcStageMask,
-			dstStageMask,
-			0,
-			0, null,
-			0, null,
-			1, &imageMemoryBarrier
+      cmdbuffer,
+      srcStageMask,
+      dstStageMask,
+      0,
+      0, null,
+      0, null,
+      1, &imageMemoryBarrier
     );
   }
+
+  public static unsafe void ImageLayoutTransition(
+    VkCommandBuffer commandBuffer,
+    VkImage image,
+    VkPipelineStageFlags srcStageMask,
+    VkPipelineStageFlags dstStageMask,
+    VkAccessFlags srcAccessMask,
+    VkAccessFlags dstAccessMask,
+    VkImageLayout oldLayout,
+    VkImageLayout newLayout,
+    VkImageSubresourceRange subresourceRange
+  ) {
+    VkImageMemoryBarrier imageMemoryBarrier = new() {
+      sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      srcAccessMask = srcAccessMask,
+      dstAccessMask = dstAccessMask,
+      oldLayout = oldLayout,
+      newLayout = newLayout,
+      srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      image = image,
+      subresourceRange = subresourceRange
+    };
+
+    vkCmdPipelineBarrier(
+      commandBuffer,
+      srcStageMask,
+      dstStageMask,
+      0, 0,
+      null, 0,
+      null, 1,
+      &imageMemoryBarrier
+    );
+  }
+
+  // public static unsafe void ImageLayoutTransition(
+  //   VkCommandBuffer commandBuffer,
+  //   VkImage image,
+  //   VkImageLayout oldLayout,
+  //   VkImageLayout newLayout,
+  //   VkImageSubresourceRange subresourceRange
+  // ) {
+  //   VkPipelineStageFlags src_stage_mask = getPipelineStageFlags(old_layout);
+  //   VkPipelineStageFlags dst_stage_mask = getPipelineStageFlags(new_layout);
+  //   VkAccessFlags src_access_mask = getAccessFlags(old_layout);
+  //   VkAccessFlags dst_access_mask = getAccessFlags(new_layout);
+
+  //   image_layout_transition(command_buffer, image, src_stage_mask, dst_stage_mask, src_access_mask, dst_access_mask, old_layout, new_layout, subresource_range);
+  // }
 }

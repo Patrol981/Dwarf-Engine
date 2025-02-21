@@ -17,19 +17,19 @@ namespace Dwarf;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
   private readonly IDevice _device = null!;
-  private readonly Renderer _renderer = null!;
+  private readonly IRenderer _renderer = null!;
   private readonly AABB _mergedAABB = new();
 
   private VkDescriptorSet _skinDescriptor = VkDescriptorSet.Null;
 
   public MeshRenderer() { }
 
-  public MeshRenderer(IDevice device, Renderer renderer) {
+  public MeshRenderer(IDevice device, IRenderer renderer) {
     _device = device;
     _renderer = renderer;
   }
 
-  public MeshRenderer(IDevice device, Renderer renderer, Node[] nodes, Node[] linearNodes) {
+  public MeshRenderer(IDevice device, IRenderer renderer, Node[] nodes, Node[] linearNodes) {
     _device = device;
     _renderer = renderer;
     Init(nodes, linearNodes);
@@ -37,7 +37,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public MeshRenderer(
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Node[] nodes,
     Node[] linearNodes,
     string fileName
@@ -432,7 +432,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public bool FilterMeInShader { get; set; }
 
   public Entity GetOwner() => Owner!;
-  public Renderer Renderer => _renderer;
+  public IRenderer Renderer => _renderer;
   public AABB[] AABBArray { get; private set; } = [];
 
   public AABBFilter AABBFilter { get; set; } = AABBFilter.Default;

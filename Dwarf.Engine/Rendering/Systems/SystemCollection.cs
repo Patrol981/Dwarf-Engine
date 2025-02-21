@@ -70,7 +70,7 @@ public class SystemCollection : IDisposable {
     ReadOnlySpan<Entity> entities,
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo pipelineConfigInfo,
     ref TextureManager textureManager
@@ -123,7 +123,7 @@ public class SystemCollection : IDisposable {
     SystemConfiguration systemConfiguration,
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo,
     ref TextureManager textureManager
@@ -138,7 +138,7 @@ public class SystemCollection : IDisposable {
       layouts,
       configInfo
     );
-    _subpassConnectorSystem = new(vmaAllocator, device, renderer, layouts, new SecondSubpassPipeline());
+    // _subpassConnectorSystem = new(vmaAllocator, device, renderer, layouts, new SecondSubpassPipeline());
     _postProcessingSystem = new(vmaAllocator, device, renderer, layouts, new PostProcessingPipeline());
 
     var entities = app.GetEntities();
@@ -161,7 +161,7 @@ public class SystemCollection : IDisposable {
   public void Reload3DRenderer(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
@@ -181,7 +181,7 @@ public class SystemCollection : IDisposable {
   public void Reload2DRenderer(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
@@ -201,7 +201,7 @@ public class SystemCollection : IDisposable {
   public void ReloadUIRenderer(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig
@@ -220,7 +220,7 @@ public class SystemCollection : IDisposable {
   public void ReloadParticleRenderer(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig

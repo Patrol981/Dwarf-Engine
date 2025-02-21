@@ -49,7 +49,7 @@ public abstract class SystemBase {
 
   protected readonly IDevice _device = null!;
   protected readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
-  protected readonly Renderer _renderer = null!;
+  protected readonly IRenderer _renderer = null!;
   protected PipelineConfigInfo _pipelineConfigInfo;
   protected Dictionary<string, PipelineData> _pipelines = [];
 
@@ -64,7 +64,7 @@ public abstract class SystemBase {
   public SystemBase(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     PipelineConfigInfo configInfo = null!
   ) {
     _vmaAllocator = vmaAllocator;
@@ -129,7 +129,7 @@ public abstract class SystemBase {
     return pushConstantRange;
   }
 
-  protected void CreatePipeline(
+  protected unsafe void CreatePipeline(
     VkRenderPass renderPass,
     string vertexName,
     string fragmentName,
@@ -139,9 +139,11 @@ public abstract class SystemBase {
   ) {
     _pipelineConfigInfo ??= new PipelineConfigInfo();
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
-    pipelineConfig.RenderPass = renderPass;
+    var colorFormat = _renderer.DynamicSwapchain.ColorFormat;
+    var depthFormat = _renderer.DepthFormat;
+    pipelineConfig.RenderPass = VkRenderPass.Null;
     pipelineConfig.PipelineLayout = pipelineLayout;
-    pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+    pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider, depthFormat, colorFormat);
   }
 
   protected void AddPipelineData<T>(PipelineInputData<T> pipelineInput) where T : struct {

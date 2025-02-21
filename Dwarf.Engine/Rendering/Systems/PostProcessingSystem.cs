@@ -42,7 +42,7 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   public PostProcessingSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -115,12 +115,13 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   }
 
   private void UpdateDescriptors(int currentFrame) {
-    _renderer.Swapchain.UpdateDescriptors(currentFrame);
-    _renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
+    // _renderer.Swapchain.UpdateDescriptors(currentFrame);
+    // _ renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
+    _renderer.UpdateDescriptors();
   }
 
   public void Render(FrameInfo frameInfo) {
-    UpdateDescriptors(_renderer.GetFrameIndex());
+    UpdateDescriptors(_renderer.FrameIndex);
     BindPipeline(frameInfo.CommandBuffer);
 
     var window = Application.Instance.Window;
@@ -148,7 +149,7 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       VkPipelineBindPoint.Graphics,
       PipelineLayout,
       0,
-      _renderer.Swapchain.PostProcessDecriptor
+      _renderer.PostProcessDecriptor
     );
 
     vkCmdBindDescriptorSets(

@@ -14,7 +14,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {

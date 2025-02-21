@@ -134,7 +134,8 @@ public class Application {
     vmaCreateAllocator(allocatorCreateInfo, out var allocator);
     VmaAllocator = allocator;
 
-    Renderer = new Renderer(Window, Device);
+    // Renderer = new Renderer(Window, Device);
+    Renderer = new DynamicRenderer(Window, Device);
     Systems = new SystemCollection();
     StorageCollection = new StorageCollection(VmaAllocator, Device);
 
@@ -235,9 +236,9 @@ public class Application {
     // while (_renderShouldClose) {
 
     // }
-    while (_renderThread.IsAlive) {
+    // while (_renderThread.IsAlive) {
 
-    }
+    // }
 
     _newSceneShouldLoad = false;
     _renderThread.Join();
@@ -270,23 +271,25 @@ public class Application {
       await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     }
 
-    _renderThread = new Thread(LoaderLoop) {
-      Name = "App Loading Frontend Thread"
-    };
-    _renderThread.Start();
+    // _renderThread = new Thread(LoaderLoop) {
+    //   Name = "App Loading Frontend Thread"
+    // };
+    // _renderThread.Start();
 
     await Init();
 
-    _renderShouldClose = true;
+    // _renderShouldClose = true;
     Logger.Info("Waiting for renderer to close...");
     int x = 0;
-    while (_renderShouldClose) { Console.Write(""); }
+    // while (_renderShouldClose) { Console.Write(""); }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
-    while (_renderThread!.IsAlive) {
-    }
+    // while (_renderThread!.IsAlive) {
+    // }
 
+    // _renderShouldClose = false;
+    Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };
@@ -649,6 +652,8 @@ public class Application {
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     // Time.Tick();
+    // Logger.Info("TICK");
+
     Time.RenderTick();
     if (Window.IsMinimalized) return;
 
@@ -684,7 +689,7 @@ public class Application {
     }
 
     if (commandBuffer != VkCommandBuffer.Null && camera != null) {
-      int frameIndex = Renderer.GetFrameIndex();
+      int frameIndex = Renderer.FrameIndex;
       _currentFrame.Camera = camera;
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
@@ -766,7 +771,8 @@ public class Application {
       );
 
       // render
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
+      // Renderer.BeginSwapchainRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
 
       _onRender?.Invoke();
       _skybox?.Render(_currentFrame);
@@ -774,11 +780,11 @@ public class Application {
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
 
-      Renderer.NextSwapchainSubpass(commandBuffer);
+      // Renderer.NextSwapchainSubpass(commandBuffer);
 
-      Renderer.EndSwapchainRenderPass(commandBuffer);
-      Renderer.BeginPostProcessRenderPass(commandBuffer);
-      // Systems.PostProcessingSystem?.Render(FrameInfo);
+      // Renderer.EndSwapchainRenderPass(commandBuffer);
+      // Renderer.BeginPostProcessRenderPass(commandBuffer);
+      Systems.PostProcessingSystem?.Render(FrameInfo);
       Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
@@ -789,11 +795,13 @@ public class Application {
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
-      Renderer.EndPostProcessRenderPass(commandBuffer);
 
-      Mutex.WaitOne();
+      Renderer.EndRendering(commandBuffer);
+      // Renderer.EndPostProcessRenderPass(commandBuffer);
+
+      // Mutex.WaitOne();
       Renderer.EndFrame();
-      Mutex.ReleaseMutex();
+      // Mutex.ReleaseMutex();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
       StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
@@ -819,21 +827,23 @@ public class Application {
   internal unsafe void RenderLoader() {
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
-      int frameIndex = Renderer.GetFrameIndex();
+      int frameIndex = Renderer.FrameIndex;
 
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
 
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
-      Renderer.NextSwapchainSubpass(commandBuffer);
-      Renderer.EndSwapchainRenderPass(commandBuffer);
-      Renderer.BeginPostProcessRenderPass(commandBuffer);
+      // Renderer.BeginSwapchainRenderPass(commandBuffer);
+      // Renderer.NextSwapchainSubpass(commandBuffer);
+      // Renderer.EndSwapchainRenderPass(commandBuffer);
+      // Renderer.BeginPostProcessRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
       }
-      Renderer.EndPostProcessRenderPass(commandBuffer);
+      // Renderer.EndPostProcessRenderPass(commandBuffer);
+      Renderer.EndRendering(commandBuffer);
 
       Renderer.EndFrame();
     }
@@ -899,9 +909,11 @@ public class Application {
     };
 
     Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+    // Renderer.BuildCommandBuffers(() => { });
     Mutex.ReleaseMutex();
 
     while (!_renderShouldClose) {
+      // Logger.Warn("SPINNING " + !_renderShouldClose);
       if (Window.IsMinimalized) continue;
 
       Render(threadInfo);
@@ -1008,7 +1020,8 @@ public class Application {
   public Mutex Mutex { get; private set; }
   public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
-  public Renderer Renderer { get; } = null!;
+  // public Renderer Renderer { get; } = null!;
+  public DynamicRenderer Renderer { get; } = null!;
   public VmaAllocator VmaAllocator { get; private set; }
   public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight = DirectionalLight.New();

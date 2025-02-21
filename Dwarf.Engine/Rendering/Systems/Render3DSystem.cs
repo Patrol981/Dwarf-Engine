@@ -60,7 +60,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public Render3DSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -530,13 +530,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         null
       );
 
-      if (_renderer.Swapchain.PreviousFrame != -1) {
+      if (_renderer.DynamicSwapchain.PreviousFrame != -1) {
         vkCmdBindDescriptorSets(
           frameInfo.CommandBuffer,
           VkPipelineBindPoint.Graphics,
           _pipelines[Simple3D].PipelineLayout,
           6,
-          _renderer.Swapchain.PreviousPostProcessDescriptor
+          _renderer.PreviousPostProcessDescriptor
         );
       }
     }
@@ -657,13 +657,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
         null
       );
 
-      if (_renderer.Swapchain.PreviousFrame != -1) {
+      if (_renderer.DynamicSwapchain.PreviousFrame != -1) {
         vkCmdBindDescriptorSets(
           frameInfo.CommandBuffer,
           VkPipelineBindPoint.Graphics,
           _pipelines[Skinned3D].PipelineLayout,
           7,
-          _renderer.Swapchain.PreviousPostProcessDescriptor
+          _renderer.PreviousPostProcessDescriptor
         );
       }
     }

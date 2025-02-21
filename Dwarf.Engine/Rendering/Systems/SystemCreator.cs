@@ -48,7 +48,7 @@ public class SystemCreator {
     SystemConfiguration systemConfig,
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo = null!
   ) {

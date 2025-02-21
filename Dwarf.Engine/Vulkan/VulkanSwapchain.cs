@@ -9,7 +9,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanSwapchain : IDisposable {
-  private const int MAX_FRAMES_IN_FLIGHT = 4;
+  private const int MAX_FRAMES_IN_FLIGHT = 2;
 
   private readonly VulkanDevice _device;
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
@@ -54,6 +54,7 @@ public class VulkanSwapchain : IDisposable {
   private VkDescriptorSet[] _postProcessDescriptors;
 
   private int _currentFrame = 0;
+  private uint _imageIndex = 0;
   private int _previousFrame = -1;
 
   private readonly object _swapchainLock = new();
@@ -87,12 +88,12 @@ public class VulkanSwapchain : IDisposable {
     CreateSwapChain();
     CreateImageViews();
     CreateSamplers();
-    CreateRenderPass();
-    CreatePostProcessRenderPass();
+    // CreateRenderPass();
+    // CreatePostProcessRenderPass();
     CreateDepthResources();
     CreateColorResources();
     CreateDescriptors();
-    CreateFramebuffers();
+    // CreateFramebuffers();
     CreateSyncObjects();
   }
 
@@ -107,6 +108,8 @@ public class VulkanSwapchain : IDisposable {
       swapChainSupport.Capabilities.maxImageExtent.height = Extent2D.height;
 
     VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.Formats);
+    SurfaceFormat = surfaceFormat.format;
+    DepthFormat = FindDepthFormat();
     VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.PresentModes);
     var extent = ChooseSwapExtent(swapChainSupport.Capabilities);
 
@@ -762,12 +765,12 @@ public class VulkanSwapchain : IDisposable {
     VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
     descriptorImageInfo[0] = new() {
       imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      imageView = _colorImageViews[_currentFrame],
+      imageView = _colorImageViews[index],
       sampler = VkSampler.Null
     };
     descriptorImageInfo[1] = new() {
       imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      imageView = _depthImageViews[_currentFrame],
+      imageView = _depthImageViews[index],
       sampler = VkSampler.Null
     };
 
@@ -794,12 +797,12 @@ public class VulkanSwapchain : IDisposable {
     VkDescriptorImageInfo* descriptorImageInfo = stackalloc VkDescriptorImageInfo[2];
     descriptorImageInfo[0] = new() {
       imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      imageView = _colorImageViews[_currentFrame],
+      imageView = _colorImageViews[index],
       sampler = _colorSampler // Sampler for the color image
     };
     descriptorImageInfo[1] = new() {
       imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      imageView = _depthImageViews[_currentFrame],
+      imageView = _depthImageViews[index],
       sampler = _depthSampler // Sampler for the depth image
     };
 
@@ -987,7 +990,7 @@ public class VulkanSwapchain : IDisposable {
   }
 
   public unsafe VkResult AcquireNextImage(out uint imageIndex) {
-    vkWaitForFences(_device.LogicalDevice, MAX_FRAMES_IN_FLIGHT, _inFlightFences, true, UInt64.MaxValue);
+    // vkWaitForFences(_device.LogicalDevice, MAX_FRAMES_IN_FLIGHT, _inFlightFences, true, UInt64.MaxValue);
 
     VkResult result = vkAcquireNextImageKHR(
       _device.LogicalDevice,
@@ -997,6 +1000,7 @@ public class VulkanSwapchain : IDisposable {
       VkFence.Null,
       out imageIndex
     );
+    _imageIndex = imageIndex;
     // vkResetFences(_device.LogicalDevice, _imagesInFlight[imageIndex]);
 
     return result;
@@ -1012,7 +1016,7 @@ public class VulkanSwapchain : IDisposable {
     VkSubmitInfo submitInfo = new();
 
     VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-    waitStages[0] = VkPipelineStageFlags.AllGraphics;
+    waitStages[0] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &_imageAvailableSemaphores[_currentFrame];
@@ -1031,6 +1035,7 @@ public class VulkanSwapchain : IDisposable {
     submitInfo.pSignalSemaphores = &_renderFinishedSemaphores[_currentFrame];
     submitInfo.pNext = null;
 
+    vkWaitForFences(_device.LogicalDevice, MAX_FRAMES_IN_FLIGHT, _inFlightFences, true, UInt64.MaxValue);
     vkResetFences(_device.LogicalDevice, _inFlightFences[_currentFrame]);
     // _device.SubmitQueue(1, &submitInfo, _inFlightFences[_currentFrame]);
     var queueResult = vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _inFlightFences[_currentFrame]);
@@ -1217,8 +1222,13 @@ public class VulkanSwapchain : IDisposable {
   public VkRenderPass RenderPass => _renderPass;
   public VkRenderPass PostProcessPass => _postProcessPass;
   public VkImageView CurrentImageDepthView => _depthImageViews[_currentFrame];
+  public VkImageView GetImageDepthView(uint idx) => _depthImageViews[idx];
   public VkImage CurrentImageDepth => _depthImages[_currentFrame];
+  public VkImage GetImageDepth(uint idx) => _depthImages[idx];
   public VkImage CurrentImageColor => _colorImages[_currentFrame];
+  public VkImage GetImageColor(uint idx) => _colorImages[idx];
+  public VkImageView CurrentImageColorView => _colorImageViews[_currentFrame];
+  public VkImageView GetImageColorView(uint idx) => _colorImageViews[idx];
   public VkDescriptorSet ImageDescriptor => _imageDescriptors[_currentFrame];
   public VkDescriptorSet PostProcessDecriptor => _postProcessDescriptors[_currentFrame];
   public VkDescriptorSet PreviousPostProcessDescriptor => _postProcessDescriptors[_previousFrame];
@@ -1230,4 +1240,7 @@ public class VulkanSwapchain : IDisposable {
   }
   public int PreviousFrame => _previousFrame;
   public int CurrentFrame => _currentFrame;
+
+  public static VkFormat SurfaceFormat = VkFormat.Undefined;
+  public static VkFormat DepthFormat = VkFormat.Undefined;
 }

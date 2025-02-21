@@ -20,7 +20,7 @@ namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly VmaAllocator _vmaAllocator;
-  private readonly Renderer _renderer;
+  private readonly IRenderer _renderer;
 
   private DwarfBuffer _vertexBuffer = default!;
   private DwarfBuffer _indexBuffer = default!;
@@ -64,7 +64,7 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, Renderer renderer) {
+  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, IRenderer renderer) {
     _device = device;
     _vmaAllocator = vmaAllocator;
     _renderer = renderer;
@@ -101,7 +101,8 @@ public partial class ImGuiController : IDisposable {
     vkCreatePipelineCache(_device.LogicalDevice, &pipelineCacheCreateInfo, null, out _pipelineCache).CheckResult();
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    // CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    CreatePipeline(VkRenderPass.Null, "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
 
     return Task.CompletedTask;
   }

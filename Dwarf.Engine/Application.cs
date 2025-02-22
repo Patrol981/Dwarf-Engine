@@ -236,9 +236,9 @@ public class Application {
     // while (_renderShouldClose) {
 
     // }
-    // while (_renderThread.IsAlive) {
+    while (_renderThread.IsAlive) {
 
-    // }
+    }
 
     _newSceneShouldLoad = false;
     _renderThread.Join();
@@ -271,24 +271,24 @@ public class Application {
       await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
     }
 
-    // _renderThread = new Thread(LoaderLoop) {
-    //   Name = "App Loading Frontend Thread"
-    // };
-    // _renderThread.Start();
+    _renderThread = new Thread(LoaderLoop) {
+      Name = "App Loading Frontend Thread"
+    };
+    _renderThread.Start();
 
     await Init();
 
-    // _renderShouldClose = true;
+    _renderShouldClose = true;
     Logger.Info("Waiting for renderer to close...");
     int x = 0;
-    // while (_renderShouldClose) { Console.Write(""); }
+    while (_renderShouldClose) { Console.Write(""); }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
-    // while (_renderThread!.IsAlive) {
-    // }
+    while (_renderThread!.IsAlive) {
+    }
 
-    // _renderShouldClose = false;
+    _renderShouldClose = false;
     Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
@@ -775,7 +775,7 @@ public class Application {
       Renderer.BeginRendering(commandBuffer);
 
       _onRender?.Invoke();
-      _skybox?.Render(_currentFrame);
+      // _skybox?.Render(_currentFrame);
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
@@ -784,7 +784,7 @@ public class Application {
 
       // Renderer.EndSwapchainRenderPass(commandBuffer);
       // Renderer.BeginPostProcessRenderPass(commandBuffer);
-      Systems.PostProcessingSystem?.Render(FrameInfo);
+      // Systems.PostProcessingSystem?.Render(FrameInfo);
       Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);

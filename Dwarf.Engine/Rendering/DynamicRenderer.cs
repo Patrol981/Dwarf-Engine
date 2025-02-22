@@ -36,13 +36,13 @@ public unsafe class DynamicRenderer : IRenderer {
     internal VkDeviceMemory ImageMemory;
     // internal VkDescriptorSet ImageDescriptor = VkDescriptorSet.Null;
   }
-  private DepthStencil _depthStencil = new();
+  private DepthStencil[] _depthStencil = [];
 
   internal class Semaphores {
     internal VkSemaphore PresentComplete;
     internal VkSemaphore RenderComplete;
   }
-  private Semaphores _semaphores = new();
+  private Semaphores[] _semaphores = [];
 
   public DynamicRenderer(Window window, VulkanDevice device) {
     _window = window;
@@ -53,7 +53,6 @@ public unsafe class DynamicRenderer : IRenderer {
     RecreateSwapchain();
 
     InitVulkan();
-    CreateDepthStencil();
     CreateSamplers();
     CreateDescriptors();
   }
@@ -67,7 +66,7 @@ public unsafe class DynamicRenderer : IRenderer {
     };
     descriptorImageInfo[1] = new() {
       imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
-      imageView = _depthStencil.ImageView,
+      imageView = _depthStencil[_imageIndex].ImageView,
       sampler = DepthSampler // Sampler for the depth image
     };
 
@@ -156,7 +155,7 @@ public unsafe class DynamicRenderer : IRenderer {
     };
     descriptorImageInfo[1] = new() {
       imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      imageView = _depthStencil.ImageView,
+      imageView = _depthStencil[index].ImageView,
       sampler = DepthSampler
     };
 
@@ -184,7 +183,7 @@ public unsafe class DynamicRenderer : IRenderer {
       vkWaitForFences(_device.LogicalDevice, (uint)Swapchain.Images.Length, fences, true, UInt64.MaxValue);
     }
 
-    var result = Swapchain.AcquireNextImage(_semaphores.PresentComplete, out _imageIndex);
+    var result = Swapchain.AcquireNextImage(_semaphores[Swapchain.CurrentFrame].PresentComplete, out _imageIndex);
     if (result == VkResult.ErrorOutOfDateKHR) {
       RecreateSwapchain();
     }
@@ -195,8 +194,8 @@ public unsafe class DynamicRenderer : IRenderer {
   }
 
   private void SubmitFrame() {
-    var result = Swapchain.QueuePresent(_device.GraphicsQueue, _imageIndex, _semaphores.RenderComplete);
-    if (result != VkResult.Success || result != VkResult.SuboptimalKHR) {
+    var result = Swapchain.QueuePresent(_device.GraphicsQueue, _imageIndex, _semaphores[Swapchain.CurrentFrame].RenderComplete);
+    if (result != VkResult.Success || result != VkResult.SuboptimalKHR || _window.WasWindowResized()) {
       if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         _window.ResetWindowResizedFlag();
         RecreateSwapchain();
@@ -218,16 +217,20 @@ public unsafe class DynamicRenderer : IRenderer {
       vkCreateFence(_device.LogicalDevice, &fenceCreateInfo, null, out _waitFences[i]);
     }
 
-    VkSemaphoreCreateInfo semaphoreCreateInfo = new();
-    vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores.PresentComplete).CheckResult();
-    vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores.RenderComplete).CheckResult();
+    _semaphores = new Semaphores[Swapchain.Images.Length];
+    for (int i = 0; i < Swapchain.Images.Length; i++) {
+      _semaphores[i] = new();
+      VkSemaphoreCreateInfo semaphoreCreateInfo = new();
+      vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores[i].PresentComplete).CheckResult();
+      vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores[i].RenderComplete).CheckResult();
+    }
 
     // VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
     // waitStages[0] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
   }
 
-  private void CreateDepthStencil() {
+  private void CreateDepthStencil(int index) {
     DepthFormat = FindDepthFormat();
 
     VkImageCreateInfo imageCI = new();
@@ -240,20 +243,20 @@ public unsafe class DynamicRenderer : IRenderer {
     imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageCI.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-    vkCreateImage(_device.LogicalDevice, &imageCI, null, out _depthStencil.Image);
+    vkCreateImage(_device.LogicalDevice, &imageCI, null, out _depthStencil[index].Image);
 
     VkMemoryRequirements memReqs = new();
-    vkGetImageMemoryRequirements(_device.LogicalDevice, _depthStencil.Image, &memReqs);
+    vkGetImageMemoryRequirements(_device.LogicalDevice, _depthStencil[index].Image, &memReqs);
 
     VkMemoryAllocateInfo memAllloc = new();
     memAllloc.allocationSize = memReqs.size;
     memAllloc.memoryTypeIndex = _device.FindMemoryType(memReqs.memoryTypeBits, MemoryProperty.DeviceLocal);
-    vkAllocateMemory(_device.LogicalDevice, &memAllloc, null, out _depthStencil.ImageMemory).CheckResult();
-    vkBindImageMemory(_device.LogicalDevice, _depthStencil.Image, _depthStencil.ImageMemory, 0).CheckResult();
+    vkAllocateMemory(_device.LogicalDevice, &memAllloc, null, out _depthStencil[index].ImageMemory).CheckResult();
+    vkBindImageMemory(_device.LogicalDevice, _depthStencil[index].Image, _depthStencil[index].ImageMemory, 0).CheckResult();
 
     VkImageViewCreateInfo imageViewCI = new();
     imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    imageViewCI.image = _depthStencil.Image;
+    imageViewCI.image = _depthStencil[index].Image;
     imageViewCI.format = DepthFormat;
     imageViewCI.subresourceRange.baseMipLevel = 0;
     imageViewCI.subresourceRange.levelCount = 1;
@@ -264,7 +267,7 @@ public unsafe class DynamicRenderer : IRenderer {
     if (DepthFormat >= VK_FORMAT_D16_UNORM_S8_UINT) {
       // imageViewCI.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
-    vkCreateImageView(_device.LogicalDevice, &imageViewCI, null, out _depthStencil.ImageView).CheckResult();
+    vkCreateImageView(_device.LogicalDevice, &imageViewCI, null, out _depthStencil[index].ImageView).CheckResult();
   }
 
   private VkFormat FindDepthFormat() {
@@ -284,8 +287,27 @@ public unsafe class DynamicRenderer : IRenderer {
 
     _device.WaitDevice();
 
+    if (Swapchain != null) {
+      if (_depthStencil.Length > 0) {
+        for (int i = 0; i < Swapchain.Images.Length; i++) {
+          vkDestroyImageView(_device.LogicalDevice, _depthStencil[i].ImageView, null);
+          vkDestroyImage(_device.LogicalDevice, _depthStencil[i].Image, null);
+          vkFreeMemory(_device.LogicalDevice, _depthStencil[i].ImageMemory, null);
+        }
+      }
+    }
+
     Swapchain?.Dispose();
     Swapchain = new(_device, extent);
+    if (_depthStencil.Length < 1) {
+      _depthStencil = new DepthStencil[Swapchain.Images.Length];
+      for (int i = 0; i < Swapchain.Images.Length; i++) {
+        _depthStencil[i] = new();
+      }
+    }
+    for (int i = 0; i < Swapchain.Images.Length; i++) {
+      CreateDepthStencil(i);
+    }
 
     Logger.Info("Recreated Swapchain");
   }
@@ -297,7 +319,14 @@ public unsafe class DynamicRenderer : IRenderer {
     return VkRenderPass.Null;
   }
   public VkCommandBuffer BeginFrame(VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
+    if (IsFrameInProgress) {
+      Logger.Error("Cannot start frame while already in progress!");
+      return VkCommandBuffer.Null;
+    }
+
     PrepareFrame();
+
+    IsFrameInProgress = true;
 
     var commandBuffer = _commandBuffers[_imageIndex];
     vkResetCommandBuffer(commandBuffer, VkCommandBufferResetFlags.None);
@@ -311,11 +340,15 @@ public unsafe class DynamicRenderer : IRenderer {
   }
 
   public void EndFrame() {
+    if (!IsFrameInProgress) {
+      Logger.Error("Cannot end frame is not in progress!");
+    }
+
     var commandBuffer = _commandBuffers[_imageIndex];
     vkEndCommandBuffer(commandBuffer).CheckResult();
 
-    fixed (VkSemaphore* renderPtr = &_semaphores.RenderComplete)
-    fixed (VkSemaphore* presentPtr = &_semaphores.PresentComplete) {
+    fixed (VkSemaphore* renderPtr = &_semaphores[Swapchain.CurrentFrame].RenderComplete)
+    fixed (VkSemaphore* presentPtr = &_semaphores[Swapchain.CurrentFrame].PresentComplete) {
       VkSubmitInfo submitInfo = new();
 
       VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
@@ -339,12 +372,24 @@ public unsafe class DynamicRenderer : IRenderer {
 
       vkResetFences(_device.LogicalDevice, _waitFences[Swapchain.CurrentFrame]);
 
+      Application.Instance.Mutex.WaitOne();
       var queueResult = vkQueueSubmit(_device.GraphicsQueue, 1, &submitInfo, _waitFences[Swapchain.CurrentFrame]);
+      Application.Instance.Mutex.ReleaseMutex();
       SubmitFrame();
+
+      IsFrameInProgress = false;
     }
   }
 
   public void BeginRendering(VkCommandBuffer commandBuffer) {
+    if (!IsFrameInProgress) {
+      Logger.Error("Cannot start render pass while already in progress!");
+      return;
+    }
+    if (commandBuffer != CurrentCommandBuffer) {
+      Logger.Error("Can't begin render pass on command buffer from diffrent frame!");
+      return;
+    }
     // VkCommandBufferBeginInfo cmdBufInfo = new();
     VkUtils.InsertMemoryBarrier(
         commandBuffer,
@@ -360,7 +405,7 @@ public unsafe class DynamicRenderer : IRenderer {
 
     VkUtils.InsertMemoryBarrier(
       commandBuffer,
-      _depthStencil.Image,
+      _depthStencil[_imageIndex].Image,
       0,
       VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
       VK_IMAGE_LAYOUT_UNDEFINED,
@@ -378,7 +423,7 @@ public unsafe class DynamicRenderer : IRenderer {
     colorAttachment.clearValue.color = new(0.35f, 0.35f, 0.35f, 0.0f);
 
     VkRenderingAttachmentInfo depthStencilAttachment = new();
-    depthStencilAttachment.imageView = _depthStencil.ImageView;
+    depthStencilAttachment.imageView = _depthStencil[_imageIndex].ImageView;
     depthStencilAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     depthStencilAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthStencilAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -409,6 +454,15 @@ public unsafe class DynamicRenderer : IRenderer {
   }
 
   public void EndRendering(VkCommandBuffer commandBuffer) {
+    if (!IsFrameInProgress) {
+      Logger.Error("Cannot end render pass on not started frame!");
+      return;
+    }
+    if (commandBuffer != CurrentCommandBuffer) {
+      Logger.Error("Can't end render pass on command buffer from diffrent frame!");
+      return;
+    }
+
     vkCmdEndRendering(commandBuffer);
 
     VkUtils.InsertMemoryBarrier(
@@ -442,12 +496,15 @@ public unsafe class DynamicRenderer : IRenderer {
     _descriptorPool?.Dispose();
     _postProcessLayout?.Dispose();
 
-    vkDestroyImageView(_device.LogicalDevice, _depthStencil.ImageView, null);
-    vkDestroyImage(_device.LogicalDevice, _depthStencil.Image, null);
-    vkFreeMemory(_device.LogicalDevice, _depthStencil.ImageMemory, null);
 
-    vkDestroySemaphore(_device.LogicalDevice, _semaphores.PresentComplete, null);
-    vkDestroySemaphore(_device.LogicalDevice, _semaphores.RenderComplete, null);
+    for (int i = 0; i < Swapchain.Images.Length; i++) {
+      vkDestroySemaphore(_device.LogicalDevice, _semaphores[i].PresentComplete, null);
+      vkDestroySemaphore(_device.LogicalDevice, _semaphores[i].RenderComplete, null);
+
+      vkDestroyImageView(_device.LogicalDevice, _depthStencil[i].ImageView, null);
+      vkDestroyImage(_device.LogicalDevice, _depthStencil[i].Image, null);
+      vkFreeMemory(_device.LogicalDevice, _depthStencil[i].ImageMemory, null);
+    }
 
     foreach (var fence in _waitFences) {
       vkDestroyFence(_device.LogicalDevice, fence, null);
@@ -465,7 +522,7 @@ public unsafe class DynamicRenderer : IRenderer {
   public VulkanDynamicSwapchain DynamicSwapchain => Swapchain;
   public VkDescriptorSet PostProcessDecriptor => ImageDescriptors[ImageIndex];
   public VkDescriptorSet PreviousPostProcessDescriptor => ImageDescriptors[Swapchain.PreviousFrame];
-  public VkCommandBuffer CurrentCommandBuffer => _commandBuffers[Swapchain.CurrentFrame];
+  public VkCommandBuffer CurrentCommandBuffer => _commandBuffers[_imageIndex];
   public int FrameIndex { get; private set; }
   public int ImageIndex => (int)_imageIndex;
   public float AspectRatio => Swapchain.ExtentAspectRatio();
@@ -473,5 +530,6 @@ public unsafe class DynamicRenderer : IRenderer {
   public int MAX_FRAMES_IN_FLIGHT => Swapchain.Images.Length;
   public VulkanDynamicSwapchain Swapchain { get; private set; } = null!;
   public CommandList CommandList { get; } = null!;
-
+  public bool IsFrameInProgress { get; private set; } = false;
+  public bool IsFrameStarted => IsFrameInProgress;
 }

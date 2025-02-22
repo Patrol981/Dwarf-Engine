@@ -10,7 +10,6 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Vulkan;
 
 public class VulkanDynamicSwapchain : IDisposable {
-  // https://github.com/SaschaWillems/Vulkan/blob/313ac10de4a765997ddf5202c599e4a0ca32c8ca/examples/dynamicrendering/dynamicrendering.cpp
   private readonly VulkanDevice _device;
   private VkSwapchainKHR _handle = VkSwapchainKHR.Null;
 
@@ -30,7 +29,7 @@ public class VulkanDynamicSwapchain : IDisposable {
     Extent2D = extent2D;
 
     InitSurface();
-    Init(extent2D.width, extent2D.height, true, false);
+    Init(true);
   }
 
   private unsafe void InitSurface() {
@@ -114,19 +113,21 @@ public class VulkanDynamicSwapchain : IDisposable {
     return availableFormats[0];
   }
 
-  private unsafe void Init(uint width, uint height, bool vsync, bool fullscreen) {
+  private unsafe void Init(bool vsync) {
     VkSurfaceCapabilitiesKHR surfCaps;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_device.PhysicalDevice, _device.Surface, &surfCaps).CheckResult();
 
-    // VkExtent2D swapchainExtent = new();
-    // if (surfCaps.currentExtent.width == unchecked((uint)-1)) {
+    // if (surfCaps.currentExtent.width < 1) {
+    //   // Surface doesn't specify the size, so use our provided width and height.
     //   swapchainExtent.width = width;
     //   swapchainExtent.height = height;
     // } else {
+    //   // Surface defines the extent, so use that.
     //   swapchainExtent = surfCaps.currentExtent;
     //   width = surfCaps.currentExtent.width;
     //   height = surfCaps.currentExtent.height;
     // }
+    // Extent2D = swapchainExtent;
 
     uint presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(_device.PhysicalDevice, _device.Surface, &presentModeCount, null).CheckResult();
@@ -179,30 +180,22 @@ public class VulkanDynamicSwapchain : IDisposable {
       }
     }
 
-    VkSwapchainCreateInfoKHR swapchainCI = new();
-    swapchainCI.surface = _device.Surface;
-    swapchainCI.minImageCount = desiredNumberOfSwapchainImages;
-    swapchainCI.imageFormat = ColorFormat;
-    swapchainCI.imageColorSpace = ColorSpace;
-    swapchainCI.imageExtent = new(Extent2D.width, Extent2D.height);
-    swapchainCI.imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled;
-    swapchainCI.preTransform = preTransform;
-    swapchainCI.imageArrayLayers = 1;
-    swapchainCI.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swapchainCI.queueFamilyIndexCount = 0;
-    swapchainCI.presentMode = swapchainPresentMode;
-    swapchainCI.clipped = true;
-    swapchainCI.compositeAlpha = compositeAlpha;
-
-    // // Enable transfer source on swap chain images if supported
-    // if ((surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) != 0) {
-    //   swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    // }
-
-    // // Enable transfer destination on swap chain images if supported
-    // if ((surfCaps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) != 0) {
-    //   swapchainCI.imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    // }
+    VkSwapchainCreateInfoKHR swapchainCI = new() {
+      surface = _device.Surface,
+      minImageCount = desiredNumberOfSwapchainImages,
+      imageFormat = ColorFormat,
+      imageColorSpace = ColorSpace,
+      imageExtent = Extent2D,
+      imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.Sampled,
+      preTransform = preTransform,
+      imageArrayLayers = 1,
+      imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      queueFamilyIndexCount = 0,
+      presentMode = swapchainPresentMode,
+      clipped = true,
+      compositeAlpha = compositeAlpha,
+      oldSwapchain = VkSwapchainKHR.Null
+    };
 
     vkCreateSwapchainKHR(_device.LogicalDevice, &swapchainCI, null, out _handle).CheckResult();
 
@@ -216,15 +209,16 @@ public class VulkanDynamicSwapchain : IDisposable {
 
     ImageViews = new VkImageView[imageCount];
     for (int i = 0; i < Images.Length; i++) {
-      VkImageViewCreateInfo colorAttachmentView = new();
-      colorAttachmentView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-      colorAttachmentView.pNext = null;
-      colorAttachmentView.format = ColorFormat;
-      colorAttachmentView.components = new() {
-        r = VK_COMPONENT_SWIZZLE_R,
-        g = VK_COMPONENT_SWIZZLE_G,
-        b = VK_COMPONENT_SWIZZLE_B,
-        a = VK_COMPONENT_SWIZZLE_A
+      VkImageViewCreateInfo colorAttachmentView = new() {
+        sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        pNext = null,
+        format = ColorFormat,
+        components = new() {
+          r = VK_COMPONENT_SWIZZLE_R,
+          g = VK_COMPONENT_SWIZZLE_G,
+          b = VK_COMPONENT_SWIZZLE_B,
+          a = VK_COMPONENT_SWIZZLE_A
+        }
       };
       colorAttachmentView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
       colorAttachmentView.subresourceRange.baseMipLevel = 0;
@@ -273,6 +267,8 @@ public class VulkanDynamicSwapchain : IDisposable {
   }
 
   public unsafe void Dispose() {
+    _device.WaitDevice();
+
     if (_handle != VkSwapchainKHR.Null) {
       for (int i = 0; i < Images.Length; i++) {
         vkDestroyImageView(_device.LogicalDevice, ImageViews[i], null);
@@ -280,7 +276,5 @@ public class VulkanDynamicSwapchain : IDisposable {
       }
       vkDestroySwapchainKHR(_device.LogicalDevice, _handle, null);
     }
-
-    _handle = VkSwapchainKHR.Null;
   }
 }

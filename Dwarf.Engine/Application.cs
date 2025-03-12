@@ -98,6 +98,7 @@ public class Application {
   public const int ThreadTimeoutTimeMS = 1000;
 
   public Vector3 FogValue = Vector3.UnitX;
+  public Vector4 FogColor = Vector4.One;
   public bool UseFog = true;
 
   public Application(
@@ -700,8 +701,6 @@ public class Application {
       _currentFrame.TextureManager = _textureManager;
       _currentFrame.ImportantEntity = _entities.Where(x => x.IsImportant).FirstOrDefault() ?? null!;
 
-      // _currentFrame.DepthTexture = Renderer.Swapchain
-
       _ubo->Projection = _camera.TryGetComponent<Camera>()?.GetProjectionMatrix() ?? Matrix4x4.Identity;
       _ubo->View = _camera.TryGetComponent<Camera>()?.GetViewMatrix() ?? Matrix4x4.Identity;
       _ubo->CameraPosition = _camera.TryGetComponent<Transform>()?.Position ?? Vector3.Zero;
@@ -712,6 +711,7 @@ public class Application {
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
       // _ubo->Fog = FogValue;
       _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
+      _ubo->FogColor = FogColor;
       _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
       _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
@@ -770,21 +770,13 @@ public class Application {
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
-      // render
-      // Renderer.BeginSwapchainRenderPass(commandBuffer);
       Renderer.BeginRendering(commandBuffer);
 
       _onRender?.Invoke();
-      // _skybox?.Render(_currentFrame);
+      _skybox?.Render(_currentFrame);
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
-
-      // Renderer.NextSwapchainSubpass(commandBuffer);
-
-      // Renderer.EndSwapchainRenderPass(commandBuffer);
-      // Renderer.BeginPostProcessRenderPass(commandBuffer);
-      // Systems.PostProcessingSystem?.Render(FrameInfo);
       Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
@@ -797,11 +789,7 @@ public class Application {
       }
 
       Renderer.EndRendering(commandBuffer);
-      // Renderer.EndPostProcessRenderPass(commandBuffer);
-
-      // Mutex.WaitOne();
       Renderer.EndFrame();
-      // Mutex.ReleaseMutex();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
       StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
@@ -832,17 +820,12 @@ public class Application {
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
 
-      // Renderer.BeginSwapchainRenderPass(commandBuffer);
-      // Renderer.NextSwapchainSubpass(commandBuffer);
-      // Renderer.EndSwapchainRenderPass(commandBuffer);
-      // Renderer.BeginPostProcessRenderPass(commandBuffer);
       Renderer.BeginRendering(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
       }
-      // Renderer.EndPostProcessRenderPass(commandBuffer);
       Renderer.EndRendering(commandBuffer);
 
       Renderer.EndFrame();

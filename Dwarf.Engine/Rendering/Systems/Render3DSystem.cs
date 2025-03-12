@@ -23,7 +23,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public const string Skinned3D = "skinned3D";
 
   public const string HatchTextureName = "./Resources/T_crossHatching13_D.png";
-  public static float HatchScale = 5;
+  public static float HatchScale = 1;
 
   public const bool GlobalVertexBuffer = false;
 

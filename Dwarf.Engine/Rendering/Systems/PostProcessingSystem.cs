@@ -9,6 +9,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering;
 
+[StructLayout(LayoutKind.Sequential)]
 public struct PostProcessInfo {
   public Vector2 WindowSize;
   public float DepthMin;
@@ -17,15 +18,17 @@ public struct PostProcessInfo {
   public float EdgeHigh;
   public float Contrast;
   public float Stripple;
+  public Vector3 Luminance;
 }
 
 public class PostProcessingSystem : SystemBase, IDisposable {
   public static float DepthMax = 0.995f;
   public static float DepthMin = 0.990f;
-  public static float EdgeLow = 0;
-  public static float EdgeHigh = 2;
-  public static float Contrast = 2.0f;
-  public static float Stipple = 0.39f;
+  public static float EdgeLow = 0.5f;
+  public static float EdgeHigh = 0.6f;
+  public static float Contrast = 2.0f; // 2.0f / 0.56f
+  public static float Stipple = 0.7f; // 0.39f / 0.706f
+  public static Vector3 Luminance = new(0.299f, 0.587f, 0.114f);
 
   private readonly unsafe PostProcessInfo* _postProcessInfoPushConstant =
     (PostProcessInfo*)Marshal.AllocHGlobal(Unsafe.SizeOf<PostProcessInfo>());
@@ -35,9 +38,9 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   private VulkanTexture _hatchTexture2 = null!;
   private VulkanTexture _hatchTexture3 = null!;
 
-  private const string HatchOneTextureName = "./Resources/T_crossHatching15_D.png";
+  private const string HatchOneTextureName = "./Resources/T_crossHatching01_D.png";
   private const string HatchTwoTextureName = "./Resources/T_crossHatching02_D.png";
-  private const string HatchThreeTextureName = "./Resources/T_crossHatching01_D.png";
+  private const string HatchThreeTextureName = "./Resources/T_crossHatching05_D.png";
 
   public PostProcessingSystem(
     VmaAllocator vmaAllocator,
@@ -133,6 +136,7 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       _postProcessInfoPushConstant->EdgeHigh = EdgeHigh;
       _postProcessInfoPushConstant->Contrast = Contrast;
       _postProcessInfoPushConstant->Stripple = Stipple;
+      _postProcessInfoPushConstant->Luminance = Luminance;
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,

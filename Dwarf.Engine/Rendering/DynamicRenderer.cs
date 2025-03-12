@@ -30,13 +30,12 @@ public unsafe class DynamicRenderer : IRenderer {
   public VkSampler DepthSampler { get; private set; }
   public VkSampler ImageSampler { get; private set; }
 
-  internal class DepthStencil {
+  internal class AttachmentImage {
     internal VkImage Image;
     internal VkImageView ImageView;
     internal VkDeviceMemory ImageMemory;
-    // internal VkDescriptorSet ImageDescriptor = VkDescriptorSet.Null;
   }
-  private DepthStencil[] _depthStencil = [];
+  private AttachmentImage[] _depthStencil = [];
 
   internal class Semaphores {
     internal VkSemaphore PresentComplete;
@@ -85,7 +84,6 @@ public unsafe class DynamicRenderer : IRenderer {
       dstBinding = 1,
       pImageInfo = &descriptorImageInfo[1]
     };
-
     vkUpdateDescriptorSets(_device.LogicalDevice, 2, writeDescriptorSets, 0, null);
   }
 
@@ -224,12 +222,7 @@ public unsafe class DynamicRenderer : IRenderer {
       vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores[i].PresentComplete).CheckResult();
       vkCreateSemaphore(_device.LogicalDevice, &semaphoreCreateInfo, null, out _semaphores[i].RenderComplete).CheckResult();
     }
-
-    // VkPipelineStageFlags* waitStages = stackalloc VkPipelineStageFlags[1];
-    // waitStages[0] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
   }
-
   private void CreateDepthStencil(int index) {
     DepthFormat = FindDepthFormat();
 
@@ -300,7 +293,7 @@ public unsafe class DynamicRenderer : IRenderer {
     Swapchain?.Dispose();
     Swapchain = new(_device, extent);
     if (_depthStencil.Length < 1) {
-      _depthStencil = new DepthStencil[Swapchain.Images.Length];
+      _depthStencil = new AttachmentImage[Swapchain.Images.Length];
       for (int i = 0; i < Swapchain.Images.Length; i++) {
         _depthStencil[i] = new();
       }
@@ -420,7 +413,7 @@ public unsafe class DynamicRenderer : IRenderer {
     colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.clearValue.color = new(0.35f, 0.35f, 0.35f, 0.0f);
+    colorAttachment.clearValue.color = new(0.137f, 0.137f, 0.137f, 0.0f);
 
     VkRenderingAttachmentInfo depthStencilAttachment = new();
     depthStencilAttachment.imageView = _depthStencil[_imageIndex].ImageView;

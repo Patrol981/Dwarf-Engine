@@ -74,13 +74,13 @@ void main() {
   }
 
   // float hatchScale = 5.0;
-  vec3 worldCoords = fragPositionWorld * 0.1;
-  vec2 hatchCoords = vec2(worldCoords.x, worldCoords.z);
-  vec4 hatch = texture(
-    sampler2D(_hatchTexture, _hatchSampler),
-    vec2(1.001f, sin(0.5)) * gl_FragCoord.xy * ubo.hatchScale
-  );
-  hatch *= hatch * hatch * hatch;
+  // vec3 worldCoords = fragPositionWorld * 0.1;
+  // vec2 hatchCoords = vec2(worldCoords.x, worldCoords.z);
+  // vec4 hatch = texture(
+  //   sampler2D(_hatchTexture, _hatchSampler),
+  //   vec2(1.001f, sin(0.5)) * gl_FragCoord.xy * ubo.hatchScale
+  // );
+  // hatch *= hatch * hatch * hatch;
 
   vec3 xnm = fragNormalWorld;
   vec3 col = vec3(xnm.x + xnm.y + xnm.z) / 3.0;
@@ -98,6 +98,6 @@ void main() {
 
   // outColor = texColor * hatch * vec4(col, 1.0) * vec4(result, alpha) * vec4(whitescaleColor, 1.0);
   outColor = texColor * vec4(result, alpha);
-  outColor = mix(vec4(1.0), outColor, fogVisiblity);
+  outColor = mix(ubo.fogColor, outColor, fogVisiblity);
   // outColor = vec4(mix(hatch.rgb, texColor.rgb, 0.7), 1.0) * vec4(result, alpha);
 }

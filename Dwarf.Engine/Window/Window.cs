@@ -10,9 +10,6 @@ using Vortice.Vulkan;
 
 using static SDL3.SDL3;
 
-// using Dwarf.Extensions.GLFW;
-// using static Dwarf.Extensions.GLFW.GLFW;
-
 namespace Dwarf.Windowing;
 
 [Flags]

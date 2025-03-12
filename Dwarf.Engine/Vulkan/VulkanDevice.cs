@@ -526,6 +526,7 @@ public class VulkanDevice : IDevice {
       geometryShader = true,
       robustBufferAccess = true,
       shaderStorageBufferArrayDynamicIndexing = true,
+      independentBlend = true,
       depthClamp = true,
     };
 

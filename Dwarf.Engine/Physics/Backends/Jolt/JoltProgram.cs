@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace Dwarf.Physics.Backends.Jolt;
 public class JoltProgram : IPhysicsProgram {
   // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
   public float DeltaTime = 1.0f / 60.0f;
-  public int CollisionSteps = 1;
+  public int CollisionSteps = 2;
   public JobSystem? JobSystem { get; private set; }
 
   public PhysicsSystemSettings JoltSettings;
@@ -47,7 +48,7 @@ public class JoltProgram : IPhysicsProgram {
     PhysicsSystem = new(JoltSettings);
 
     // ContactListener
-    PhysicsSystem.OnContactValidate += OnContactValidate;
+    // PhysicsSystem.OnContactValidate += OnContactValidate;
     PhysicsSystem.OnContactAdded += OnContactAdded;
     PhysicsSystem.OnContactPersisted += OnContactPersisted;
     PhysicsSystem.OnContactRemoved += OnContactRemoved;
@@ -58,13 +59,19 @@ public class JoltProgram : IPhysicsProgram {
     // Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
     // You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
     // Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
-    PhysicsSystem.OptimizeBroadPhase();
+    // PhysicsSystem.OptimizeBroadPhase();
     PhysicsSystem.Gravity *= -1;
     Logger.Info($"[GRAVITY] {PhysicsSystem.Gravity}");
   }
 
   public void Update() {
-    PhysicsSystem.Update(DeltaTime, CollisionSteps, JobSystem!);
+    Debug.Assert(JobSystem != null);
+    Debug.Assert(CollisionSteps > 0);
+
+    var result = PhysicsSystem.Update(DeltaTime, CollisionSteps, JobSystem);
+    if (result != PhysicsUpdateError.None) {
+      throw new Exception(result.ToString());
+    }
   }
 
   public void Init(Span<Entity> entities) {
@@ -91,7 +98,12 @@ public class JoltProgram : IPhysicsProgram {
     JoltSettings.ObjectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
   }
 
-  public ValidateResult OnContactValidate(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, IntPtr collisionResult) {
+  // public static ValidateResult OnContactValidate(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, IntPtr collisionResult) {
+  //   // Allows you to ignore a contact before it is created (using layers to not make objects collide is cheaper!)
+  //   return ValidateResult.AcceptAllContactsForThisBodyPair;
+  // }
+
+  public static ValidateResult OnContactValidate(JoltPhysicsSharp.PhysicsSystem system, in Body body1, in Body body2, Double3 baseOffset, in CollideShapeResult collisionResult) {
     // Allows you to ignore a contact before it is created (using layers to not make objects collide is cheaper!)
     return ValidateResult.AcceptAllContactsForThisBodyPair;
   }

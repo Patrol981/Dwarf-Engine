@@ -310,7 +310,6 @@ public partial class ImGuiController : IDisposable {
     colors[(int)ImGuiCol.TableRowBgAlt] = new(1.00f, 1.00f, 1.00f, 0.06f);
     colors[(int)ImGuiCol.TextSelectedBg] = new(0.20f, 0.22f, 0.23f, 1.00f);
     colors[(int)ImGuiCol.DragDropTarget] = new(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[(int)ImGuiCol.NavHighlight] = new(1.00f, 1.00f, 0.00f, 1.00f);
     colors[(int)ImGuiCol.NavWindowingHighlight] = new(1.00f, 1.00f, 0.00f, 0.70f);
     colors[(int)ImGuiCol.NavWindowingDimBg] = new(1.00f, 1.00f, 0.00f, 0.20f);
     colors[(int)ImGuiCol.ModalWindowDimBg] = new(1.00f, 1.00f, 0.00f, 0.35f);
@@ -353,7 +352,12 @@ public partial class ImGuiController : IDisposable {
       _width / _scaleFactor.X,
       _height / _scaleFactor.Y);
     io.DisplayFramebufferScale = _scaleFactor;
-    io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
+    if (deltaSeconds > 0) {
+      io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
+    } else {
+      io.DeltaTime = 0.00001f;
+    }
+
   }
 
   public void Render(FrameInfo frameInfo) {

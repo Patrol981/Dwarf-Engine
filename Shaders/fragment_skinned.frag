@@ -82,17 +82,17 @@ void main() {
   // );
   // hatch *= hatch * hatch * hatch;
 
-  vec3 xnm = fragNormalWorld;
-  vec3 col = vec3(xnm.x + xnm.y + xnm.z) / 3.0;
+  // vec3 xnm = fragNormalWorld;
+  // vec3 col = vec3(xnm.x + xnm.y + xnm.z) / 3.0;
 
-  col.rgb *= 2.1;
-  col.rgb *= (floor(6.0 * col.rgb) * 4.0) / 9.0;
+  // col.rgb *= 2.1;
+  // col.rgb *= (floor(6.0 * col.rgb) * 4.0) / 9.0;
 
   vec4 texColor = texture(sampler2D(_texture, _sampler), texCoord).rgba;
 
   // vec3 prevColor = texture(_prevColor, screenTexCoord).rgb;
-  float intensity = 0.2126 * texColor.r + 0.7152 * texColor.g + 0.0722 * texColor.b;
-  vec3 canvasTone = mix(vec3(0.9, 0.9, 0.9), vec3(1.0, 0.9, 0.9), intensity);
+  // float intensity = 0.2126 * texColor.r + 0.7152 * texColor.g + 0.0722 * texColor.b;
+  // vec3 canvasTone = mix(vec3(0.9, 0.9, 0.9), vec3(1.0, 0.9, 0.9), intensity);
   // texColor.rgb = canvasTone; // Replace texColor's RGB with grayscale intensity
   // vec3 whitescaleColor = vec3(intensity);
 

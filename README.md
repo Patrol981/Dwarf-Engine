@@ -1,195 +1,68 @@
-# Dwarf Engine
+# What's Dwarf Engine?
 
-Hello, my name is Patrick and I'm author of this game engine Dwarf Engine is my
-approach for game engines topic.
+Dwarf is a game engine targeting C-RPG and RTS genres because author is
+passionate about theese :relaxed:, so it will work best with this type of games
+but do feel free to create any other game with it!
 
-The engine itself is not meant by any means for enterprice general use cases; it
-is strictly designed to match my expectations of an game engine so I can create
-some cool games with it :)
+# Features
 
-## Requirements
+- 3D/2D environment
+- Native AOT compatible
+- Customizable system pipeline
+- Entity component system
+- Modern graphics API using Vulkan
 
-- Vulkan SDK
+# Platform Support
 
-## Features
+| Platform | Is supported       |
+| -------- | ------------------ |
+| Windows  | :white_check_mark: |
+| Linux    | :white_check_mark: |
+| MacOS    | :x:                |
+| Android  | :x:                |
+| iOS      | :x:                |
 
-- 2D
-- 3D
-- Block-styled systems
-- Cross-platform
-- Entity Component System
+Engine supports for now only Windows and Linux platform, because I'm using
+Vulkan 1.4. When MoltenVk capabilities will be close enough to this version
+MacOS port will be here aswell :sunglasses:
 
-## How to use it
+Android support is planned too along with iOS but not in the nearest future
+:confounded:
 
-Project itself is a library, so you can reference it in your .csproj, but
-beforehand you must compile shaders (you can just use compile.bat)
+# Scripting
 
-NOTE: Keep in mind that this is being under development and things may change
-often. Also some things may be messy (for example you need to copy Mappings,
-Fonts and Textures folders into your project, because the engine assumes that
-theese exists in client project itself - it is subject to change though -)
+For now the only language that is fully supported is C#, allthough I'm planning
+to publish official bindings for both TypeScript and Python
 
-NOTE#2: Engine may be less stable for now, since I'm changing it's architecture
-a bit (mostly optimalizations and multithreading)
+# Building
 
-## Example code
+There are/will be 3 diffrent ways to create games using the engine
 
-```csharp
-//Program.cs
-using Dwarf.Client;
-var main = new App();
+## 1. Using as project dependency in your .csproj
+
+It's fairly simple, just clone repo and add it to your client project and you're
+good to go
+
+## 2. Importing as .DLL
+
+You can precompile engine, since it is a Library project it will output .DLL
+files for you to use. Then in your .csproj you have to specify dlls that you'll
+be using:
+
+```xml
+<ItemGroup>
+	<Reference  Include="Dwarf">
+		<HintPath>dlls\Dwarf.dll</HintPath>
+	</Reference>
+	<Reference  Include="Dwarf.AbstractionLayer">
+		<HintPath>dlls\Dwarf.AbstractionLayer.dll</HintPath>
+	</Reference>
+</ItemGroup>
 ```
 
-```csharp
-//App.cs
-using Dwarf.Engine;
-using Dwarf.Engine.Global;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Rendering;
+## 3. Using Dwarf Foundry (WIP)
 
-namespace TanksGame;
-public class App {
-  private readonly Application _application;
-  private float _time = 0.0f;
-  private double _frames = 0.0f;
-
-  public  App() {
-    var  systems = SystemCreationFlags.Renderer3D |
-                   SystemCreationFlags.Physics3D  |
-                   SystemCreationFlags.RendererUI;
-
-    _application = new Application("Tanks!", systems);
-    var  scene = new DebugScene(_application);
-    _application.SetupScene(scene);
-    _application.SetUpdateCallback(Update);
-    _application.Init();
-    _application.Run();
-  }
-
-  public void Update() {
-    _frames = Frames.GetFrames();
-    _time += Time.DeltaTime;
-    if (_time > 2) {
-      _time = 0;
-      _application.Window.SetWindowName($"Tanks! - {_frames} FPS");
-    }
-  }
-}
-```
-
-```csharp
-//DebugScene.cs
-
-using System.Numerics;
-using Dwarf.Engine;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Rendering.UI;
-
-namespace TanksGame;
-
-public class DebugScene : Scene {
-  public DebugScene(Application  app) : base(app) { }
-
-  public async override void LoadEntities() {
-    base.LoadEntities();
-
-    var canvas = new Entity();
-    canvas.AddComponent(new Canvas());
-    canvas.GetComponent<Canvas>().CreateText("HP:0", Anchor.Bottom, new(0, 100), "hpInfo", 2);
-    AddEntity(canvas);
-
-    // One way of creating game object
-    var tank = await EntityCreator.Create3DModel(
-    "player",
-    "./Resources/tank.glb",
-    null!,
-    new(0, 0, 0),
-    new(180, 0, 0),
-    new(1, 1, 1),
-    false,
-    0
-    );
-    EntityCreator.AddRigdbody(_app.Device, ref tank,PrimitiveType.Convex, 1, false);
-    tank.Name = "tank1";
-    tank.AddComponent(new TankController());
-    AddEntity(tank);
-
-    // Alternative option for creating game object, using builder pattern
-    var otherTank = new Entity();
-    otherTank.Name = "tank2";
-    otherTank.AddTransform(new(1, 0, 3), new(180, 0, 0), Vector3.One);
-    otherTank.AddMaterial();
-    otherTank.AddModel("./Resources/tank.glb", 0);
-    otherTank.AddRigdbody(PrimitiveType.Convex, false, 0.4f);
-    otherTank.AddComponent(new TankData());
-    AddEntity(otherTank);
-
-    var camera = new Entity();
-    camera.AddComponent(new Transform(new  Vector3(0, -10, 0)));
-    camera.AddComponent(new Camera(50, _app.Renderer.AspectRatio));
-    camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.0f, 100f);
-    camera.GetComponent<Camera>().Pitch = 90;
-    CameraState.SetCamera(camera.GetComponent<Camera>());
-    CameraState.SetCameraEntity(camera);
-    CameraState.SetCameraSpeed(CameraState.GetCameraSpeed() *  2);
-    _app.SetCamera(camera);
-  }
-
-
-  public override void LoadTextures() {
-    base.LoadTextures();
-    string[] paths  = {
-      $"./Fonts/atlas.png",
-      $"./Resources/gigachad.png"
-    };
-    List<List<string>> loaderPaths  =  new() { paths.ToList() };
-    SetTexturePaths(loaderPaths);
-  }
-}
-```
-
-```csharp
-// TankController
-
-using Dwarf.Engine;
-using Dwarf.Engine.EntityComponentSystem;
-using Dwarf.Engine.Globals;
-using Dwarf.Engine.Physics;
-using Dwarf.Extensions.Logging;
-using System.Numerics;
-
-namespace TanksGame;
-public class TankController : DwarfScript {
-
-  private Rigidbody? _rigidbody;
-  private Transform? _transform;
-
-  public override void Start() {
-    base.Start();
-    _rigidbody = Owner!.GetComponent<Rigidbody>();
-    _transform = Owner!.GetComponent<Transform>();
-  }
-
-  public override void Update() {
-    base.Update();
-    if (Input.GetKey(Dwarf.Keys.GLFW_KEY_UP)) {
-      _rigidbody?.Translate(-_transform!.Forward * Time.DeltaTime);
-    }
-
-    if (Input.GetKey(Dwarf.Keys.GLFW_KEY_DOWN)) {
-      _rigidbody?.Translate(_transform!.Forward * Time.DeltaTime);
-    }
-
-    if (Input.GetKey(Dwarf.Keys.GLFW_KEY_LEFT)) {
-      var rotation = new Vector3(0, 1, 0) * 70 * Time.DeltaTime;
-      _transform?.IncreaseRotation(rotation);
-    }
-
-    if (Input.GetKey(Dwarf.Keys.GLFW_KEY_RIGHT)) {
-      var rotation = new Vector3(0, -1, 0) * 70 * Time.DeltaTime;
-      _transform?.IncreaseRotation(rotation);
-    }
-  }
-}
-```
+You may got the feeling that creating project with Dwarf.dll can be a bit tricky
+to get it right, hence there is an official launcher in development that will
+improve your experience. When it will be ready You will find link to download
+<b>here</b>

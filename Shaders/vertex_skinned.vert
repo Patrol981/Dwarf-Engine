@@ -80,15 +80,21 @@ void main() {
     screenTexCoord = ndc.xy * 0.5 + 0.5;
     // screenTexCoord.y = 1.0 - screenTexCoord.y;
 
-    if(ubo.hasImportantEntity == 1) {
-      entityToFragDistance = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);
+    entityToFragDistance = distance(fragPositionWorld.xz, ubo.cameraPosition.xz);
+    float normalizedDistance = entityToFragDistance / ubo.fog.x;
+    fogVisiblity = exp(-pow(normalizedDistance, 2.0));
+    fogVisiblity = clamp(fogVisiblity, 0.0, 1.0);
 
-      float normalizedDistance = entityToFragDistance / ubo.fog.x;
-      fogVisiblity = exp(-pow(normalizedDistance, 2.0));
-      fogVisiblity = clamp(fogVisiblity, 0.0, 1.0);
-    } else {
-      entityToFragDistance = -1;
-    }
+    // if(ubo.hasImportantEntity == 1) {
+    //   // entityToFragDistance = distance(fragPositionWorld.xz, ubo.importantEntityPosition.xz);
+    //   entityToFragDistance = distance(fragPositionWorld.xz, ubo.cameraPosition.xz);
+
+    //   float normalizedDistance = entityToFragDistance / ubo.fog.x;
+    //   fogVisiblity = exp(-pow(normalizedDistance, 2.0));
+    //   fogVisiblity = clamp(fogVisiblity, 0.0, 1.0);
+    // } else {
+    //   entityToFragDistance = -1;
+    // }
 
     if(ubo.useFog == 0) {
       fogVisiblity = 1.0;

@@ -41,6 +41,8 @@ public class Node : ICloneable, IDisposable, IComparable<Node> {
   public MeshRenderer ParentRenderer = null!;
   public BoundingBox BoundingVolume;
   public BoundingBox AABB;
+  public float Radius = 0;
+  public Vector3 Center { get; private set; }
 
   public bool Enabled { get; set; } = true;
   public bool FilterMeInShader { get; set; } = false;
@@ -136,6 +138,18 @@ public class Node : ICloneable, IDisposable, IComparable<Node> {
     foreach (var child in Children) {
       child.Update();
     }
+  }
+
+  public void CalculateMeshCenter() {
+    if (!HasMesh) return;
+
+    var sum = Vector3.Zero;
+
+    foreach (var vtx in Mesh!.Vertices) {
+      sum += vtx.Position;
+    }
+
+    Center = sum / Mesh.VertexCount;
   }
 
   public bool HasMesh => Mesh != null;

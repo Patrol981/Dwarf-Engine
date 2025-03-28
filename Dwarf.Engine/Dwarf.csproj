@@ -6,12 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Configurations>Debug;Release;EditorRelease;EditorDebug</Configurations>
+    <Configurations>Debug;Release;EditorRelease;EditorDebug;ReleaseAOT</Configurations>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <AnalysisLevel>latest</AnalysisLevel>
-    <PublishAot>true</PublishAot>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,6 +21,27 @@
     <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
     <DefineConstants>RUNTIME</DefineConstants>
     <Optimize>True</Optimize>
+    <PublishAot>false</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <OptimizationPreference>Speed</OptimizationPreference>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAOT|AnyCPU'">
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <DefineConstants>RUNTIME</DefineConstants>
+    <Optimize>True</Optimize>
+    <PublishAot>false</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <OptimizationPreference>Speed</OptimizationPreference>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseAOT|AnyCPU'">
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <DefineConstants>RUNTIME</DefineConstants>
+    <Optimize>True</Optimize>
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <OptimizationPreference>Speed</OptimizationPreference>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='EditorDebug|AnyCPU'">
@@ -44,7 +63,7 @@
     <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
     <PackageReference Include="JoltPhysicsSharp" Version="2.15.4" />
     <PackageReference Include="Vortice.Vulkan" Version="2.1.1" />
-    <PackageReference Include="Vortice.VulkanMemoryAllocator" Version="1.6.1"/>
+    <PackageReference Include="Vortice.VulkanMemoryAllocator" Version="1.6.1" />
     <PackageReference Include="OpenTK" Version="4.7.7" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
 	  <PackageReference Include="YamlDotNet" Version="16.2.0" />

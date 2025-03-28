@@ -85,7 +85,7 @@ public class PointLightSystem : SystemBase {
       unsafe {
         _lightPushConstant->Color = light.Color;
         _lightPushConstant->Position = new Vector4(pos.Position, 1.0f);
-        _lightPushConstant->Radius = pos.Scale.X;
+        _lightPushConstant->Radius = pos.Scale.X / 10;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,

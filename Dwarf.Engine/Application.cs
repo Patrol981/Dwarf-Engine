@@ -1016,4 +1016,10 @@ public class Application {
   public unsafe GlobalUniformBufferObject GlobalUbo => *_ubo;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
+
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
+  public unsafe static explicit operator nint(Application app) {
+    return (nint)(&app);
+  }
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 }

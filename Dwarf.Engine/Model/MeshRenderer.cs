@@ -238,6 +238,15 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     var bb = BoundingBox.GetBoundingBox(meshNode.Mesh?.Vertices);
 
     if (bb.HasValue) {
+      meshNode.BoundingVolume = bb.Value;
+      var x = MathF.Abs(MathF.Abs(bb.Value.Min.X) + MathF.Abs(bb.Value.Max.X));
+      var y = MathF.Abs(MathF.Abs(bb.Value.Min.Y) + MathF.Abs(bb.Value.Max.Y));
+      if (x > y) {
+        meshNode.Radius = x / 2;
+      } else {
+        meshNode.Radius = y / 2;
+      }
+      meshNode.CalculateMeshCenter();
       boundingBox.Min = Vector3.Min(boundingBox.Min, bb.Value.Min);
       boundingBox.Max = Vector3.Max(boundingBox.Max, bb.Value.Max);
     }

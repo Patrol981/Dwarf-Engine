@@ -27,7 +27,6 @@ Vulkan 1.4. When MoltenVk capabilities will be close enough to this version
 MacOS port will be here aswell :sunglasses:
 
 Android support is planned too along with iOS but not in the nearest future
-:confounded:
 
 # Scripting
 

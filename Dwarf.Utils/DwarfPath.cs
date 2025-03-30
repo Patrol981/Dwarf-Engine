@@ -28,6 +28,14 @@ public static class DwarfPath {
     }
   }
 
+  public static string UserDocuments {
+    get {
+      string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+      return path;
+    }
+  }
+
   private static string AssemblyDirectoryOld {
     get {
       string? codeBase = (Assembly.GetEntryAssembly()?.Location) ?? throw new Exception("Could not found proper assembly.");

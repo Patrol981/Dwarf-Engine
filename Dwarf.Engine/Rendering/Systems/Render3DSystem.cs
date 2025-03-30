@@ -451,86 +451,6 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     PerfMonitor.Render3DComputeTime = PerfMonitor.ComunnalStopwatch.ElapsedMilliseconds;
   }
-
-  public void Update_Old(
-    Span<IRender3DElement> entities,
-    out ObjectData[] objectData,
-    out ObjectData[] skinnedObjects,
-    out List<Matrix4x4> flatJoints
-  ) {
-    if (entities.Length < 1) {
-      objectData = [];
-      skinnedObjects = [];
-      flatJoints = [];
-      return;
-    }
-
-    PerfMonitor.ComunnalStopwatch.Restart();
-    Frustum.GetFrustrum(out var planes);
-    entities = Frustum.FilterObjectsByPlanes(in planes, entities).ToArray();
-
-    List<KeyValuePair<Node, ObjectData>> nodeObjectsSkinned = [];
-    List<KeyValuePair<Node, ObjectData>> nodeObjectsNotSkinned = [];
-
-
-    int offset = 0;
-    flatJoints = [];
-
-    foreach (var entity in entities) {
-      var transform = entity.GetOwner().GetComponent<Transform>();
-      foreach (var node in entity.MeshedNodes) {
-        if (node.HasSkin) {
-          nodeObjectsSkinned.Add(
-            new(
-              node,
-              new ObjectData {
-                ModelMatrix = transform.Matrix4,
-                NormalMatrix = transform.NormalMatrix,
-                NodeMatrix = node.Mesh!.Matrix,
-                JointsBufferOffset = new Vector4(offset, 0, 0, 0),
-                FilterFlag = node.FilterMeInShader == true ? 1 : 0
-              }
-            )
-          );
-          flatJoints.AddRange(node.Skin!.OutputNodeMatrices);
-          offset += node.Skin!.OutputNodeMatrices.Length;
-        } else {
-          nodeObjectsNotSkinned.Add(
-            new(
-              node,
-              new ObjectData {
-                ModelMatrix = transform.Matrix4,
-                NormalMatrix = transform.NormalMatrix,
-                NodeMatrix = node.Mesh!.Matrix,
-                JointsBufferOffset = Vector4.Zero,
-                FilterFlag = node.FilterMeInShader == true ? 1 : 0
-              }
-            )
-          );
-        }
-      }
-    }
-
-    nodeObjectsSkinned.Sort((x, y) => x.Key.CompareTo(y.Key));
-    nodeObjectsNotSkinned.Sort((x, y) => x.Key.CompareTo(y.Key));
-
-    _skinnedGroups = [.. nodeObjectsSkinned
-      .GroupBy(x => x.Key.Name)
-      .Select(group => (Key: group.Key, Count: group.Count()))];
-
-    _notSkinnedGroups = [.. nodeObjectsNotSkinned
-      .GroupBy(x => x.Key.Name)
-      .Select(group => (Key: group.Key, Count: group.Count()))];
-
-    _skinnedNodesCache = [.. nodeObjectsSkinned.Select(x => x.Key)];
-    _notSkinnedNodesCache = [.. nodeObjectsNotSkinned.Select(x => x.Key)];
-
-    objectData = [.. nodeObjectsNotSkinned.Select(x => x.Value), .. nodeObjectsSkinned.Select(x => x.Value)];
-    skinnedObjects = [.. nodeObjectsSkinned.Select(x => x.Value)];
-
-    PerfMonitor.Render3DComputeTime = PerfMonitor.ComunnalStopwatch.ElapsedMilliseconds;
-  }
-
   private List<Indirect3DBatch> CreateBatch(List<KeyValuePair<Node, ObjectData>> nodeObjects) {
     List<Indirect3DBatch> batches = [];
 
@@ -571,6 +491,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     if (_skinnedNodesCache.Length > 0) {
       RenderComplex(frameInfo, _skinnedNodesCache, _notSkinnedNodesCache.Length);
     }
+  }
+
+  public void RenderTargets() {
+    throw new NotImplementedException();
   }
 
   private void RenderSimple(FrameInfo frameInfo, Span<Node> nodes) {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -52,6 +53,9 @@ public partial class ImGuiController : IDisposable {
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
+  public ImFontPtr SmallFont { get; private set; }
+  public ImFontPtr MediumFont { get; private set; }
+  public ImFontPtr LargeFont { get; private set; }
   public ImFontPtr CurrentFont { get; private set; }
 
   // private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
@@ -123,12 +127,17 @@ public partial class ImGuiController : IDisposable {
     var io = ImGui.GetIO();
     io.Fonts.ClearFonts();
     var dwarfPath = DwarfPath.AssemblyDirectory;
-    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 14);
+    SmallFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 15);
+    MediumFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 20);
+    LargeFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 30);
+
+    CurrentFont = SmallFont;
+
+    // io.Fonts.Build();
     unsafe {
-      if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
-        Logger.Error($"Could not load font! [{dwarfPath}/Resources/fonts/DroidSans.ttf]");
-        throw new ArgumentException("Could not load font!");
-      }
+      Debug.Assert((IntPtr)SmallFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)MediumFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)LargeFont.NativePtr != IntPtr.Zero);
     }
     io.Fonts.SetTexID(_fontAtlasId);
 

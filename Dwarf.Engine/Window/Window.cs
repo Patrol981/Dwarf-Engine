@@ -50,7 +50,7 @@ public class Window : IDisposable {
   }
 
   private unsafe void InitWindow(string windowName, bool fullscreen, bool debug) {
-    if (!SDL_Init(SDL_InitFlags.Video | SDL_InitFlags.Gamepad)) {
+    if (!SDL_Init(SDL_InitFlags.Video | SDL_InitFlags.Gamepad | SDL_InitFlags.Audio)) {
       throw new Exception("Failed to initalize Window");
     }
 

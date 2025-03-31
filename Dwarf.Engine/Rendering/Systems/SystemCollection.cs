@@ -139,7 +139,7 @@ public class SystemCollection : IDisposable {
       configInfo
     );
     // _subpassConnectorSystem = new(vmaAllocator, device, renderer, layouts, new SecondSubpassPipeline());
-    _postProcessingSystem = new(vmaAllocator, device, renderer, layouts, new PostProcessingPipeline());
+    _postProcessingSystem = new(vmaAllocator, device, renderer, systemConfiguration, layouts, new PostProcessingPipeline());
 
     var entities = app.GetEntities();
     var objs3D = entities.DistinctInterface<IRender3DElement>();

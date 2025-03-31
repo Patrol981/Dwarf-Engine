@@ -10,18 +10,6 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct PostProcessInfo2 {
-  public Vector2 WindowSize;
-  public float DepthMin;
-  public float DepthMax;
-  public float EdgeLow;
-  public float EdgeHigh;
-  public float Contrast;
-  public float Stripple;
-  public Vector3 Luminance;
-}
-
-[StructLayout(LayoutKind.Sequential)]
 public struct PostProcessInfo {
   public float Float_1_1;
   public float Float_1_2;
@@ -110,21 +98,24 @@ public class PostProcessingSystem : SystemBase, IDisposable {
     (PostProcessInfo*)Marshal.AllocHGlobal(Unsafe.SizeOf<PostProcessInfo>());
   private readonly TextureManager _textureManager;
 
-  private VulkanTexture _hatchTexture1 = null!;
-  private VulkanTexture _hatchTexture2 = null!;
-  private VulkanTexture _hatchTexture3 = null!;
+  // private VulkanTexture _inputTexture1 = null!;
+  // private VulkanTexture _inputTexture2 = null!;
+  // private VulkanTexture _inputTexture3 = null!;
 
-  private const string HatchOneTextureName = "./Resources/zaarg.png";
-  // "./Resources/twilight-5-1x.png";
-  // "./Resources/lv-corinthian-slate-801-1x.png";
-  // "./Resources/zaarg.png";
-  private const string HatchTwoTextureName = "./Resources/slso8-1x.png";
-  private const string HatchThreeTextureName = "./Resources/justparchment8-1x.png";
+  // private const string HatchOneTextureName = "./Resources/zaarg.png";
+  // // "./Resources/twilight-5-1x.png";
+  // // "./Resources/lv-corinthian-slate-801-1x.png";
+  // // "./Resources/zaarg.png";
+  // private const string HatchTwoTextureName = "./Resources/slso8-1x.png";
+  // private const string HatchThreeTextureName = "./Resources/justparchment8-1x.png";
+
+  private readonly VulkanTexture[] _inputTextures = [];
 
   public PostProcessingSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
     IRenderer renderer,
+    SystemConfiguration systemConfiguration,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -161,10 +152,14 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       DescriptorSetLayouts = layouts
     });
 
-    Setup();
+    if (systemConfiguration.PostProcessInputTextures != null) {
+      _inputTextures = new VulkanTexture[systemConfiguration.PostProcessInputTextures.Length];
+    }
+
+    Setup(systemConfiguration);
   }
 
-  public void Setup() {
+  public void Setup(SystemConfiguration systemConfiguration) {
     _device.WaitQueue();
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
@@ -175,25 +170,15 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
-    if (_hatchTexture1 == null) {
-      _textureManager.AddTextureGlobal(HatchOneTextureName).Wait();
-      var id = _textureManager.GetTextureIdGlobal(HatchOneTextureName);
-      _hatchTexture1 = (VulkanTexture)_textureManager.GetTextureGlobal(id);
-      _hatchTexture1.BuildDescriptor(_textureSetLayout, _descriptorPool);
-    }
+    var texLen = systemConfiguration.PostProcessInputTextures?.Length;
+    if (!texLen.HasValue) return;
 
-    if (_hatchTexture2 == null) {
-      _textureManager.AddTextureGlobal(HatchTwoTextureName).Wait();
-      var id = _textureManager.GetTextureIdGlobal(HatchTwoTextureName);
-      _hatchTexture2 = (VulkanTexture)_textureManager.GetTextureGlobal(id);
-      _hatchTexture2.BuildDescriptor(_textureSetLayout, _descriptorPool);
-    }
-
-    if (_hatchTexture3 == null) {
-      _textureManager.AddTextureGlobal(HatchThreeTextureName).Wait();
-      var id = _textureManager.GetTextureIdGlobal(HatchThreeTextureName);
-      _hatchTexture3 = (VulkanTexture)_textureManager.GetTextureGlobal(id);
-      _hatchTexture3.BuildDescriptor(_textureSetLayout, _descriptorPool);
+    for (int i = 0; i < texLen; i++) {
+      if (_inputTextures[i] != null) continue;
+      _textureManager.AddTextureGlobal(systemConfiguration.PostProcessInputTextures![i]).Wait();
+      var id = _textureManager.GetTextureIdGlobal(systemConfiguration.PostProcessInputTextures[i]);
+      _inputTextures[i] = (VulkanTexture)_textureManager.GetTextureGlobal(id);
+      _inputTextures[i].BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
   }
 
@@ -275,27 +260,15 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       frameInfo.GlobalDescriptorSet
     );
 
-    vkCmdBindDescriptorSets(
-      frameInfo.CommandBuffer,
-      VkPipelineBindPoint.Graphics,
-      PipelineLayout,
-      2,
-      _hatchTexture1.TextureDescriptor
-    );
-    vkCmdBindDescriptorSets(
-      frameInfo.CommandBuffer,
-      VkPipelineBindPoint.Graphics,
-      PipelineLayout,
-      3,
-      _hatchTexture2.TextureDescriptor
-    );
-    vkCmdBindDescriptorSets(
-      frameInfo.CommandBuffer,
-      VkPipelineBindPoint.Graphics,
-      PipelineLayout,
-      4,
-      _hatchTexture3.TextureDescriptor
-    );
+    for (uint i = 2, j = 0; i <= _inputTextures.Length + 1; i++, j++) {
+      vkCmdBindDescriptorSets(
+        frameInfo.CommandBuffer,
+        VkPipelineBindPoint.Graphics,
+        PipelineLayout,
+        i,
+        _inputTextures[j].TextureDescriptor
+      );
+    }
 
     vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
   }

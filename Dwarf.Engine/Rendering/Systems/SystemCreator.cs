@@ -29,6 +29,7 @@ public enum PostProcessingConfigurationFlags {
 public record SystemConfiguration {
   public Dwarf.Physics.Backends.BackendKind PhysiscsBackend { get; init; }
   public PostProcessingConfigurationFlags PostProcessingFlags { get; init; }
+  public string[]? PostProcessInputTextures { get; init; }
 
   public static SystemConfiguration Default => new() {
     PhysiscsBackend = Physics.Backends.BackendKind.Default,

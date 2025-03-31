@@ -98,6 +98,7 @@ public class Application {
   public const int ThreadTimeoutTimeMS = 1000;
 
   public Vector3 FogValue = Vector3.UnitX;
+  public Vector4 FogColor = Vector4.One;
   public bool UseFog = true;
 
   public Application(
@@ -118,8 +119,8 @@ public class Application {
 
     windowSize ??= new(1200, 900);
 
-    Window = new Window(windowSize.X, windowSize.Y);
-    Window.Init(appName, Fullscreen, debugMode);
+    Window = new Window();
+    Window.Init(appName, Fullscreen, windowSize.X, windowSize.Y, debugMode);
 
     Device = new VulkanDevice(Window);
 
@@ -134,7 +135,8 @@ public class Application {
     vmaCreateAllocator(allocatorCreateInfo, out var allocator);
     VmaAllocator = allocator;
 
-    Renderer = new Renderer(Window, Device);
+    // Renderer = new Renderer(Window, Device);
+    Renderer = new DynamicRenderer(Window, Device);
     Systems = new SystemCollection();
     StorageCollection = new StorageCollection(VmaAllocator, Device);
 
@@ -287,6 +289,8 @@ public class Application {
     while (_renderThread!.IsAlive) {
     }
 
+    _renderShouldClose = false;
+    Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };
@@ -649,6 +653,8 @@ public class Application {
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
     // Time.Tick();
+    // Logger.Info("TICK");
+
     Time.RenderTick();
     if (Window.IsMinimalized) return;
 
@@ -684,7 +690,7 @@ public class Application {
     }
 
     if (commandBuffer != VkCommandBuffer.Null && camera != null) {
-      int frameIndex = Renderer.GetFrameIndex();
+      int frameIndex = Renderer.FrameIndex;
       _currentFrame.Camera = camera;
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
@@ -694,8 +700,6 @@ public class Application {
       _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
       _currentFrame.TextureManager = _textureManager;
       _currentFrame.ImportantEntity = _entities.Where(x => x.IsImportant).FirstOrDefault() ?? null!;
-
-      // _currentFrame.DepthTexture = Renderer.Swapchain
 
       _ubo->Projection = _camera.TryGetComponent<Camera>()?.GetProjectionMatrix() ?? Matrix4x4.Identity;
       _ubo->View = _camera.TryGetComponent<Camera>()?.GetViewMatrix() ?? Matrix4x4.Identity;
@@ -707,6 +711,7 @@ public class Application {
       _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
       // _ubo->Fog = FogValue;
       _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
+      _ubo->FogColor = FogColor;
       _ubo->UseFog = UseFog ? 1 : 0;
       // _ubo->ImportantEntityPosition = new(6, 9);
       _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
@@ -765,20 +770,13 @@ public class Application {
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
-      // render
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
 
       _onRender?.Invoke();
       _skybox?.Render(_currentFrame);
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
-
-      Renderer.NextSwapchainSubpass(commandBuffer);
-
-      Renderer.EndSwapchainRenderPass(commandBuffer);
-      Renderer.BeginPostProcessRenderPass(commandBuffer);
-      // Systems.PostProcessingSystem?.Render(FrameInfo);
       Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
@@ -789,11 +787,9 @@ public class Application {
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
-      Renderer.EndPostProcessRenderPass(commandBuffer);
 
-      Mutex.WaitOne();
+      Renderer.EndRendering(commandBuffer);
       Renderer.EndFrame();
-      Mutex.ReleaseMutex();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
       StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
@@ -819,21 +815,18 @@ public class Application {
   internal unsafe void RenderLoader() {
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
-      int frameIndex = Renderer.GetFrameIndex();
+      int frameIndex = Renderer.FrameIndex;
 
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
 
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
-      Renderer.NextSwapchainSubpass(commandBuffer);
-      Renderer.EndSwapchainRenderPass(commandBuffer);
-      Renderer.BeginPostProcessRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
         _onAppLoading?.Invoke();
         GuiController.Render(_currentFrame);
       }
-      Renderer.EndPostProcessRenderPass(commandBuffer);
+      Renderer.EndRendering(commandBuffer);
 
       Renderer.EndFrame();
     }
@@ -867,7 +860,19 @@ public class Application {
     }
 
     fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
-      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+      // vkFreeCommandBuffers(
+      //   Device.LogicalDevice,
+      //   threadInfo.CommandPool,
+      //   (uint)Renderer.MAX_FRAMES_IN_FLIGHT,
+      //   cmdBfPtrEnd
+      // );
+
+      vkFreeCommandBuffers(
+        Device.LogicalDevice,
+        threadInfo.CommandPool,
+        (uint)threadInfo.CommandBuffer.Length,
+        cmdBfPtrEnd
+      );
     }
 
     Device.WaitQueue();
@@ -887,9 +892,11 @@ public class Application {
     };
 
     Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+    // Renderer.BuildCommandBuffers(() => { });
     Mutex.ReleaseMutex();
 
     while (!_renderShouldClose) {
+      // Logger.Warn("SPINNING " + !_renderShouldClose);
       if (Window.IsMinimalized) continue;
 
       Render(threadInfo);
@@ -996,7 +1003,8 @@ public class Application {
   public Mutex Mutex { get; private set; }
   public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
-  public Renderer Renderer { get; } = null!;
+  // public Renderer Renderer { get; } = null!;
+  public DynamicRenderer Renderer { get; } = null!;
   public VmaAllocator VmaAllocator { get; private set; }
   public FrameInfo FrameInfo => _currentFrame;
   public DirectionalLight DirectionalLight = DirectionalLight.New();
@@ -1008,4 +1016,10 @@ public class Application {
   public unsafe GlobalUniformBufferObject GlobalUbo => *_ubo;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
+
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
+  public unsafe static explicit operator nint(Application app) {
+    return (nint)(&app);
+  }
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 }

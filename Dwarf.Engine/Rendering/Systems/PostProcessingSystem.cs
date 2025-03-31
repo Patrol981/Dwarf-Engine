@@ -9,7 +9,8 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering;
 
-public struct PostProcessInfo {
+[StructLayout(LayoutKind.Sequential)]
+public struct PostProcessInfo2 {
   public Vector2 WindowSize;
   public float DepthMin;
   public float DepthMax;
@@ -17,15 +18,93 @@ public struct PostProcessInfo {
   public float EdgeHigh;
   public float Contrast;
   public float Stripple;
+  public Vector3 Luminance;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct PostProcessInfo {
+  public float Float_1_1;
+  public float Float_1_2;
+  public float Float_1_3;
+  public float Float_1_4;
+
+  public float Float_2_1;
+  public float Float_2_2;
+  public float Float_2_3;
+  public float Float_2_4;
+
+  public float Float_3_1;
+  public float Float_3_2;
+  public float Float_3_3;
+  public float Float_3_4;
+
+  public float Float_4_1;
+  public float Float_4_2;
+  public float Float_4_3;
+  public float Float_4_4;
+
+  public float Float_5_1;
+  public float Float_5_2;
+  public float Float_5_3;
+  public float Float_5_4;
+
+  public float Float_6_1;
+  public float Float_6_2;
+  public float Float_6_3;
+  public float Float_6_4;
+
+  public float Float_7_1;
+  public float Float_7_2;
+  public float Float_7_3;
+  public float Float_7_4;
+
+  public float Float_8_1;
+  public float Float_8_2;
+  public float Float_8_3;
+  public float Float_8_4;
 }
 
 public class PostProcessingSystem : SystemBase, IDisposable {
-  public static float DepthMax = 0.995f;
-  public static float DepthMin = 0.990f;
-  public static float EdgeLow = 0;
-  public static float EdgeHigh = 2;
-  public static float Contrast = 2.0f;
-  public static float Stipple = 0.39f;
+  // public static float DepthMax = 0.995f;
+  // public static float DepthMin = 0.990f;
+  // public static float EdgeLow = 100f;
+  // public static float EdgeHigh = 65f;
+  // public static float Contrast = 0.5f; // 2.0f / 0.56f
+  // public static float Stipple = 64f; // 0.39f / 0.706f
+  // public static Vector3 Luminance = new(0.299f, 0.587f, 0.114f);
+
+  public static PostProcessInfo PostProcessInfo = new() {
+    Float_1_1 = 100,
+    Float_1_2 = 65,
+    Float_1_3 = 0.5f,
+    Float_1_4 = 64,
+
+    Float_2_1 = 0.299f,
+    Float_2_2 = 0.587f,
+    Float_2_3 = 0.114f,
+    Float_2_4 = 1,
+
+    Float_3_1 = 0.9f,
+    Float_3_4 = 1.0f,
+
+    Float_4_1 = 0.3f,
+    Float_4_2 = 0.7f,
+    Float_4_3 = 0.5f,
+    Float_4_4 = 0.3f,
+
+    Float_5_1 = 0.2f,
+    Float_5_2 = 0.0f,
+    Float_5_3 = 0.4f,
+    Float_5_4 = 0.4f,
+
+    Float_6_1 = 0.5f,
+    Float_6_2 = 0.0f,
+    Float_6_3 = 0.0f,
+    Float_6_4 = 0.2f,
+
+    Float_7_1 = 0.1f,
+    Float_7_2 = 0.0f,
+  };
 
   private readonly unsafe PostProcessInfo* _postProcessInfoPushConstant =
     (PostProcessInfo*)Marshal.AllocHGlobal(Unsafe.SizeOf<PostProcessInfo>());
@@ -35,14 +114,17 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   private VulkanTexture _hatchTexture2 = null!;
   private VulkanTexture _hatchTexture3 = null!;
 
-  private const string HatchOneTextureName = "./Resources/T_crossHatching15_D.png";
-  private const string HatchTwoTextureName = "./Resources/T_crossHatching02_D.png";
-  private const string HatchThreeTextureName = "./Resources/T_crossHatching01_D.png";
+  private const string HatchOneTextureName = "./Resources/zaarg.png";
+  // "./Resources/twilight-5-1x.png";
+  // "./Resources/lv-corinthian-slate-801-1x.png";
+  // "./Resources/zaarg.png";
+  private const string HatchTwoTextureName = "./Resources/slso8-1x.png";
+  private const string HatchThreeTextureName = "./Resources/justparchment8-1x.png";
 
   public PostProcessingSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -73,7 +155,8 @@ public class PostProcessingSystem : SystemBase, IDisposable {
     AddPipelineData<PostProcessInfo>(new() {
       RenderPass = renderer.GetPostProcessingPass(),
       VertexName = "post_process_index_vertex",
-      FragmentName = "post_process_index_fragment",
+      FragmentName = "post_process_jpaint0_fragment",
+      // FragmentName = "post_process_toon_shader_fragment",
       PipelineProvider = new SecondSubpassPipelineProvider(),
       DescriptorSetLayouts = layouts
     });
@@ -115,23 +198,56 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   }
 
   private void UpdateDescriptors(int currentFrame) {
-    _renderer.Swapchain.UpdateDescriptors(currentFrame);
-    _renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
+    // _renderer.Swapchain.UpdateDescriptors(currentFrame);
+    // _ renderer.Swapchain.UpdatePostProcessDescriptors(currentFrame);
+    _renderer.UpdateDescriptors();
   }
 
   public void Render(FrameInfo frameInfo) {
-    UpdateDescriptors(_renderer.GetFrameIndex());
+    UpdateDescriptors(_renderer.FrameIndex);
     BindPipeline(frameInfo.CommandBuffer);
 
     var window = Application.Instance.Window;
     unsafe {
-      _postProcessInfoPushConstant->DepthMax = DepthMax;
-      _postProcessInfoPushConstant->DepthMin = DepthMin;
-      _postProcessInfoPushConstant->WindowSize = new(window.Extent.Width, window.Extent.Height);
-      _postProcessInfoPushConstant->EdgeLow = EdgeLow;
-      _postProcessInfoPushConstant->EdgeHigh = EdgeHigh;
-      _postProcessInfoPushConstant->Contrast = Contrast;
-      _postProcessInfoPushConstant->Stripple = Stipple;
+      _postProcessInfoPushConstant->Float_1_1 = PostProcessInfo.Float_1_1;
+      _postProcessInfoPushConstant->Float_1_2 = PostProcessInfo.Float_1_2;
+      _postProcessInfoPushConstant->Float_1_3 = PostProcessInfo.Float_1_3;
+      _postProcessInfoPushConstant->Float_1_4 = PostProcessInfo.Float_1_4;
+
+      _postProcessInfoPushConstant->Float_2_1 = PostProcessInfo.Float_2_1;
+      _postProcessInfoPushConstant->Float_2_2 = PostProcessInfo.Float_2_2;
+      _postProcessInfoPushConstant->Float_2_3 = PostProcessInfo.Float_2_3;
+      _postProcessInfoPushConstant->Float_2_4 = PostProcessInfo.Float_2_4;
+
+      _postProcessInfoPushConstant->Float_3_1 = PostProcessInfo.Float_3_1;
+      _postProcessInfoPushConstant->Float_3_2 = PostProcessInfo.Float_3_2;
+      _postProcessInfoPushConstant->Float_3_3 = PostProcessInfo.Float_3_3;
+      _postProcessInfoPushConstant->Float_3_4 = PostProcessInfo.Float_3_4;
+
+      _postProcessInfoPushConstant->Float_4_1 = PostProcessInfo.Float_4_1;
+      _postProcessInfoPushConstant->Float_4_2 = PostProcessInfo.Float_4_2;
+      _postProcessInfoPushConstant->Float_4_3 = PostProcessInfo.Float_4_3;
+      _postProcessInfoPushConstant->Float_4_4 = PostProcessInfo.Float_4_4;
+
+      _postProcessInfoPushConstant->Float_5_1 = PostProcessInfo.Float_5_1;
+      _postProcessInfoPushConstant->Float_5_2 = PostProcessInfo.Float_5_2;
+      _postProcessInfoPushConstant->Float_5_3 = PostProcessInfo.Float_5_3;
+      _postProcessInfoPushConstant->Float_5_4 = PostProcessInfo.Float_5_4;
+
+      _postProcessInfoPushConstant->Float_6_1 = PostProcessInfo.Float_6_1;
+      _postProcessInfoPushConstant->Float_6_2 = PostProcessInfo.Float_6_2;
+      _postProcessInfoPushConstant->Float_6_3 = PostProcessInfo.Float_6_3;
+      _postProcessInfoPushConstant->Float_6_4 = PostProcessInfo.Float_6_4;
+
+      _postProcessInfoPushConstant->Float_7_1 = PostProcessInfo.Float_7_1;
+      _postProcessInfoPushConstant->Float_7_2 = PostProcessInfo.Float_7_2;
+      _postProcessInfoPushConstant->Float_7_3 = PostProcessInfo.Float_7_3;
+      _postProcessInfoPushConstant->Float_7_4 = PostProcessInfo.Float_7_4;
+
+      _postProcessInfoPushConstant->Float_8_1 = PostProcessInfo.Float_8_1;
+      _postProcessInfoPushConstant->Float_8_2 = PostProcessInfo.Float_8_2;
+      _postProcessInfoPushConstant->Float_8_3 = PostProcessInfo.Float_8_3;
+      _postProcessInfoPushConstant->Float_8_4 = PostProcessInfo.Float_8_4;
 
       vkCmdPushConstants(
         frameInfo.CommandBuffer,
@@ -148,7 +264,7 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       VkPipelineBindPoint.Graphics,
       PipelineLayout,
       0,
-      _renderer.Swapchain.PostProcessDecriptor
+      _renderer.PostProcessDecriptor
     );
 
     vkCmdBindDescriptorSets(

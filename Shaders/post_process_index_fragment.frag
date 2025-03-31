@@ -4,6 +4,7 @@
 #include point_light
 
 layout(location = 0) in vec2 uv;
+layout(location = 1) in vec2 position;
 
 layout(location = 0) out vec4 outColor;
 
@@ -14,10 +15,13 @@ layout (push_constant) uniform Push {
   vec2 windowSize;
   float depthMin;
   float depthMax;
+
   float edgeLow;
   float edgeHigh;
   float contrast;
   float stipple;
+
+  vec3 luminance;
 } push;
 
 layout(set = 1, binding = 0) #include global_ubo
@@ -44,18 +48,18 @@ float edgeDetection(vec2 pTexCoords) {
     float dx = 1.0 / push.windowSize.x;
     float dy = 1.0 / push.windowSize.y;
 
-    // float kernel[9] = float[](
-    //     -1, -1, -1,
-    //     -1,  8, -1,
-    //     -1, -1, -1
-    // );
-     float kernel[25] = float[](
-        -1, -1, -1, -1, -1,
-        -1,  1,  2,  1, -1,
-        -1,  2,  4,  2, -1,
-        -1,  1,  2,  1, -1,
-        -1, -1, -1, -1, -1
+    float kernel[9] = float[](
+        -1, -1, -1,
+        -1,  8, -1,
+        -1, -1, -1
     );
+    //  float kernel[25] = float[](
+    //     -1, -1, -1, -1, -1,
+    //     -1,  1,  2,  1, -1,
+    //     -1,  2,  4,  2, -1,
+    //     -1,  1,  2,  1, -1,
+    //     -1, -1, -1, -1, -1
+    // );
 
     float edge = 0.0;
     int index = 0;
@@ -101,11 +105,14 @@ vec3 calculateFog(vec3 pColor) {
 
 void main() {
   vec3 screen_color = texture(_colorSampler, uv).rgb;
+  vec3 screen_normal = texture(_colorSampler, uv).rgb * 2.0 - 1.0;
+  screen_normal = normalize(screen_normal);  // Ensure normalization
 
   float edge = edgeDetection(uv);
   vec3 edge_result = mix(screen_color, vec3(0.0), edge);
 
-  float luminance = dot(screen_color, vec3(0.299, 0.587, 0.114));
+  // float luminance = dot(screen_color, vec3(0.299, 0.587, 0.114));
+  float luminance = dot(screen_color, push.luminance);
 
   float r_channel = screen_color.r;
   float pow_r = pow(r_channel,0.3);
@@ -114,8 +121,8 @@ void main() {
   luminance = 1.0 - luminance;
   vec3 final_color = vec3(luminance);
 
-  vec3 normal_sample = normalize(texture(_colorSampler, uv).rgb * 2.0 - 1.0);
-  vec2 distorted_uv = uv + normal_sample.xy * push.contrast;
+  vec3 normal_sample = normalize(screen_normal * 2.0 - 1.0);
+  vec2 distorted_uv = uv + normal_sample.xy * ubo.hatchScale;
    if (luminance > 0.001) {
     if (luminance < push.edgeLow) {
       vec3 hatch1_color = 1.0 - texture(sampler2D(_hatchTexture1, _hatchSampler1), distorted_uv * 15.0).rgb;
@@ -123,7 +130,7 @@ void main() {
     } else if ( luminance < push.edgeHigh) {
       vec3 hatch2_color = 1.0 - texture(sampler2D(_hatchTexture2, _hatchSampler2), distorted_uv * 15.0).rgb;
       final_color *= hatch2_color;
-    } else{
+    } else {
       vec3 hatch3_color = 1.0 - texture(sampler2D(_hatchTexture3, _hatchSampler3), distorted_uv * 15.0).rgb;
       final_color *= hatch3_color;
     }
@@ -132,4 +139,6 @@ void main() {
   final_color = mix(vec3(1.0), vec3(0.0), final_color * push.contrast);
   vec3 mix_result = mix(final_color, screen_color, push.stipple);
   outColor = vec4(mix(mix_result, vec3(0.0), edge), 1.0);
+  // outColor = vec4(screen_normal * 0.5 + 0.5, 1.0);
+  // outColor = vec4(screen_normal, 1.0);
 }

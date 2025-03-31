@@ -89,5 +89,5 @@ void main() {
     }
 
     outColor = colorMod * vec4(result, alpha);
-    outColor = mix(vec4(1.0), outColor, fogVisiblity);
+    outColor = mix(ubo.fogColor, outColor, fogVisiblity);
 }

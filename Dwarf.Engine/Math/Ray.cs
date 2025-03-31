@@ -220,7 +220,9 @@ public class Ray {
         float t1 = (e + model.AABB.Min.Y) / f;
         float t2 = (e + model.AABB.Max.Y) / f;
 
-        if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
+        if (t1 > t2) {
+          (t2, t1) = (t1, t2);
+        }
 
         if (t2 < tMax) {
           hitResult.Point = rayData.RayOrigin + rayData.RayDirection * t2;
@@ -249,7 +251,9 @@ public class Ray {
       if (MathF.Abs(f) > 0.001) {
         float t1 = (e + model.AABB.Min.Z) / f;
         float t2 = (e + model.AABB.Max.Z) / f;
-        if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
+        if (t1 > t2) {
+          (t2, t1) = (t1, t2);
+        }
 
         if (t2 < tMax) {
           hitResult.Point = rayData.RayOrigin + rayData.RayDirection * t2;
@@ -281,7 +285,7 @@ public class Ray {
     float normalizedY = 1.0f - 2.0f * point.Y / screenSize.Y;
 
     Matrix4x4.Invert(camera.GetProjectionMatrix(), out var unProject);
-    Vector4 nearPoint = new Vector4(normalizedX, normalizedY, 0.0f, 1.0f);
+    Vector4 nearPoint = new(normalizedX, normalizedY, 0.0f, 1.0f);
     Vector4 worldPoint = Vector4.Transform(nearPoint, unProject);
     var tmp = new Vector2 {
       X = worldPoint.X / worldPoint.W,
@@ -293,4 +297,24 @@ public class Ray {
     return tmp;
   }
 
+  public static Vector2 WorldToScreenPoint(Camera camera, Vector3 point, Vector2 screenSize) {
+    var vp = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+
+    Vector4 clipSpace = Vector4.Transform(new Vector4(point, 1.0f), vp);
+
+    if (MathF.Abs(clipSpace.W) < 1e-6f || clipSpace.W < 0.0f) {
+      return new Vector2(float.NaN, float.NaN);
+    }
+
+    var ndc = new Vector3(
+      clipSpace.X / clipSpace.W,
+      clipSpace.Y / clipSpace.W,
+      clipSpace.Z / clipSpace.W
+    );
+
+    float screenX = (ndc.X + 1.0f) * 0.5f * screenSize.X;
+    float screenY = (1.0f + ndc.Y) * 0.5f * screenSize.Y;
+
+    return new Vector2(screenX, screenY);
+  }
 }

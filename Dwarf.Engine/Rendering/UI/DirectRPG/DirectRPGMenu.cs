@@ -63,8 +63,6 @@ public partial class DirectRPG {
     s_menuOffset = 0;
     s_startOffsetY = 0;
   }
-
-  public static Vector2 DisplaySize => ImGui.GetIO().DisplaySize;
   public static Vector2 MenuSize => s_menuConfig.Size;
 
   public static void SetOffsetY(float value) {

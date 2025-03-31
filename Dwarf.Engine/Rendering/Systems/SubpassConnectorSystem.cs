@@ -31,7 +31,7 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
   public SubpassConnectorSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Dictionary<string, DescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -56,7 +56,7 @@ public class SubpassConnectorSystem : SystemBase, IDisposable {
   }
 
   public void Redner(FrameInfo frameInfo) {
-    UpdateDescriptors(_renderer.GetFrameIndex());
+    UpdateDescriptors(_renderer.FrameIndex);
     BindPipeline(frameInfo.CommandBuffer, Subpass);
 
     vkCmdBindDescriptorSets(

@@ -1,13 +1,13 @@
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.Particles;
+using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
-using Dwarf.Rendering.Particles;
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-using Dwarf.Utils;
-using System.Numerics;
 
 namespace Dwarf.Rendering;
 
@@ -26,7 +26,7 @@ public class ParticleSystem : SystemBase {
   public ParticleSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {

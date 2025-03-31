@@ -17,19 +17,19 @@ namespace Dwarf;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
   private readonly IDevice _device = null!;
-  private readonly Renderer _renderer = null!;
+  private readonly IRenderer _renderer = null!;
   private readonly AABB _mergedAABB = new();
 
   private VkDescriptorSet _skinDescriptor = VkDescriptorSet.Null;
 
   public MeshRenderer() { }
 
-  public MeshRenderer(IDevice device, Renderer renderer) {
+  public MeshRenderer(IDevice device, IRenderer renderer) {
     _device = device;
     _renderer = renderer;
   }
 
-  public MeshRenderer(IDevice device, Renderer renderer, Node[] nodes, Node[] linearNodes) {
+  public MeshRenderer(IDevice device, IRenderer renderer, Node[] nodes, Node[] linearNodes) {
     _device = device;
     _renderer = renderer;
     Init(nodes, linearNodes);
@@ -37,7 +37,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
 
   public MeshRenderer(
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     Node[] nodes,
     Node[] linearNodes,
     string fileName
@@ -238,6 +238,15 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
     var bb = BoundingBox.GetBoundingBox(meshNode.Mesh?.Vertices);
 
     if (bb.HasValue) {
+      meshNode.BoundingVolume = bb.Value;
+      var x = MathF.Abs(MathF.Abs(bb.Value.Min.X) + MathF.Abs(bb.Value.Max.X));
+      var y = MathF.Abs(MathF.Abs(bb.Value.Min.Y) + MathF.Abs(bb.Value.Max.Y));
+      if (x > y) {
+        meshNode.Radius = x / 2;
+      } else {
+        meshNode.Radius = y / 2;
+      }
+      meshNode.CalculateMeshCenter();
       boundingBox.Min = Vector3.Min(boundingBox.Min, bb.Value.Min);
       boundingBox.Max = Vector3.Max(boundingBox.Max, bb.Value.Max);
     }
@@ -432,7 +441,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public bool FilterMeInShader { get; set; }
 
   public Entity GetOwner() => Owner!;
-  public Renderer Renderer => _renderer;
+  public IRenderer Renderer => _renderer;
   public AABB[] AABBArray { get; private set; } = [];
 
   public AABBFilter AABBFilter { get; set; } = AABBFilter.Default;

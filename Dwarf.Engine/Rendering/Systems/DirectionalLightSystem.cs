@@ -12,7 +12,7 @@ public class DirectionalLightSystem : SystemBase {
   public DirectionalLightSystem(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
@@ -21,7 +21,7 @@ public class DirectionalLightSystem : SystemBase {
     ];
 
     AddPipelineData(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = VkRenderPass.Null,
       VertexName = "directional_light_vertex",
       FragmentName = "directional_light_fragment",
       PipelineProvider = new PipelinePointLightProvider(),

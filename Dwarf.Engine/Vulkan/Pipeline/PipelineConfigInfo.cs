@@ -1,4 +1,5 @@
 using Vortice.Vulkan;
+using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
@@ -10,6 +11,7 @@ public class PipelineConfigInfo {
   public VkPipelineColorBlendAttachmentState ColorBlendAttachment;
   public VkPipelineColorBlendStateCreateInfo ColorBlendInfo;
   public VkPipelineDepthStencilStateCreateInfo DepthStencilInfo;
+  public VkPipelineRenderingCreateInfo RenderingCreateInfo;
 
   public VkDynamicState[] DynamicStatesEnables = new VkDynamicState[0];
   public VkPipelineDynamicStateCreateInfo DynamicStateInfo;
@@ -77,7 +79,7 @@ public class PipelineConfigInfo {
     configInfo.ColorBlendInfo = new() {
       logicOpEnable = false,
       logicOp = VkLogicOp.Copy,  // Optional
-      attachmentCount = 1
+      attachmentCount = 1,
     };
     fixed (VkPipelineColorBlendAttachmentState* colorBlendAttachment = &configInfo.ColorBlendAttachment) {
       configInfo.ColorBlendInfo.pAttachments = colorBlendAttachment;

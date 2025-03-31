@@ -10,6 +10,7 @@ uniform GlobalUbo {
   vec3 importantEntityDirection;
   vec3 fog;
   int useFog;
+  vec4 fogColor;
   vec2 screenSize;
   float hatchScale;
 } ubo;

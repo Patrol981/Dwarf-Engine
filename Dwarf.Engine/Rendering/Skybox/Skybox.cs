@@ -17,7 +17,7 @@ public class Skybox : IDisposable {
   private readonly VulkanDevice _device;
   private readonly VmaAllocator _vmaAllocator;
   private readonly TextureManager _textureManager;
-  private readonly Renderer _renderer;
+  private readonly IRenderer _renderer;
   private readonly float[] _vertices = [
     // positions
     -1.0f,
@@ -240,7 +240,7 @@ public class Skybox : IDisposable {
   private readonly string[] _cubemapNames = new string[6];
   private CubeMapTexture _cubemapTexture = null!;
 
-  public Skybox(VmaAllocator vmaAllocator, VulkanDevice device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
+  public Skybox(VmaAllocator vmaAllocator, VulkanDevice device, TextureManager textureManager, IRenderer renderer, VkDescriptorSetLayout globalSetLayout) {
     _vmaAllocator = vmaAllocator;
     _device = device;
     _textureManager = textureManager;
@@ -278,7 +278,7 @@ public class Skybox : IDisposable {
     ];
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetSwapchainRenderPass(), "skybox_vertex", "skybox_fragment", new PipelineSkyboxProvider());
+    CreatePipeline(VkRenderPass.Null, "skybox_vertex", "skybox_fragment", new PipelineSkyboxProvider());
 
     InitCubeMapTexture();
   }
@@ -386,7 +386,7 @@ public class Skybox : IDisposable {
       MemoryProperty.DeviceLocal
     );
 
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
+    // _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
   }
 
@@ -442,7 +442,17 @@ public class Skybox : IDisposable {
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+    var colorFormat = _renderer.DynamicSwapchain.ColorFormat;
+    var depthFormat = _renderer.DepthFormat;
+    _pipeline = new Pipeline(
+      _device,
+      vertexName,
+      fragmentName,
+      pipelineConfig,
+      pipelineProvider,
+      depthFormat,
+      colorFormat
+    );
   }
 
   protected unsafe void Dispose(bool disposing) {

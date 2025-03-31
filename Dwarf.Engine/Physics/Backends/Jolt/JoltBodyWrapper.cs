@@ -79,7 +79,9 @@ public class JoltBodyWrapper : IPhysicsBody {
       vertices.Add(v.Position);
     }
 
-    ConvexHullShapeSettings settings = new([.. vertices], 0.01f);
+    ConvexHullShapeSettings settings = new([.. vertices]);
+    // ConvexHullShapeSettings settings = new ()
+    // BoxShapeSettings settings = new(new(1, 1, 1));
     return settings;
   }
 

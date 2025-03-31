@@ -19,8 +19,10 @@ public struct GlobalUniformBufferObject {
   [FieldOffset(224)] public Vector3 ImportantEntityDirection;
   [FieldOffset(240)] public Vector3 Fog; // X,Y for coords Z for alpha
   [FieldOffset(252)] public int UseFog;
-  [FieldOffset(256)] public Vector2 ScreenSize;
-  [FieldOffset(264)] public float HatchScale;
+  [FieldOffset(256)] public Vector4 FogColor;
+  [FieldOffset(272)] public Vector2 ScreenSize;
+  [FieldOffset(280)] public float HatchScale;
+  // [FieldOffset(284)] public Vector3 Luminance;
 
   // [FieldOffset(208)] public PointLight[] PointLights;
   // [FieldOffset(192)] public unsafe PointLight* PointLights;

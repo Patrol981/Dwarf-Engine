@@ -40,7 +40,17 @@ public partial class ImGuiController {
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _systemPipelineLayout;
-    _systemPipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+    var colorFormat = _renderer.DynamicSwapchain.ColorFormat;
+    var depthFormat = _renderer.DepthFormat;
+    _systemPipeline = new Pipeline(
+      _device,
+      vertexName,
+      fragmentName,
+      pipelineConfig,
+      pipelineProvider,
+      depthFormat,
+      colorFormat
+    );
   }
 
   public unsafe void InitTexture() {

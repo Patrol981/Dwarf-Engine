@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,7 +21,7 @@ namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly VmaAllocator _vmaAllocator;
-  private readonly Renderer _renderer;
+  private readonly IRenderer _renderer;
 
   private DwarfBuffer _vertexBuffer = default!;
   private DwarfBuffer _indexBuffer = default!;
@@ -52,6 +53,9 @@ public partial class ImGuiController : IDisposable {
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
+  public ImFontPtr SmallFont { get; private set; }
+  public ImFontPtr MediumFont { get; private set; }
+  public ImFontPtr LargeFont { get; private set; }
   public ImFontPtr CurrentFont { get; private set; }
 
   // private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
@@ -64,7 +68,7 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, Renderer renderer) {
+  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, IRenderer renderer) {
     _device = device;
     _vmaAllocator = vmaAllocator;
     _renderer = renderer;
@@ -101,7 +105,8 @@ public partial class ImGuiController : IDisposable {
     vkCreatePipelineCache(_device.LogicalDevice, &pipelineCacheCreateInfo, null, out _pipelineCache).CheckResult();
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    // CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    CreatePipeline(VkRenderPass.Null, "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
 
     return Task.CompletedTask;
   }
@@ -122,12 +127,17 @@ public partial class ImGuiController : IDisposable {
     var io = ImGui.GetIO();
     io.Fonts.ClearFonts();
     var dwarfPath = DwarfPath.AssemblyDirectory;
-    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 14);
+    SmallFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 15);
+    MediumFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 20);
+    LargeFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 30);
+
+    CurrentFont = SmallFont;
+
+    // io.Fonts.Build();
     unsafe {
-      if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
-        Logger.Error($"Could not load font! [{dwarfPath}/Resources/fonts/DroidSans.ttf]");
-        throw new ArgumentException("Could not load font!");
-      }
+      Debug.Assert((IntPtr)SmallFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)MediumFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)LargeFont.NativePtr != IntPtr.Zero);
     }
     io.Fonts.SetTexID(_fontAtlasId);
 
@@ -309,7 +319,6 @@ public partial class ImGuiController : IDisposable {
     colors[(int)ImGuiCol.TableRowBgAlt] = new(1.00f, 1.00f, 1.00f, 0.06f);
     colors[(int)ImGuiCol.TextSelectedBg] = new(0.20f, 0.22f, 0.23f, 1.00f);
     colors[(int)ImGuiCol.DragDropTarget] = new(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[(int)ImGuiCol.NavHighlight] = new(1.00f, 1.00f, 0.00f, 1.00f);
     colors[(int)ImGuiCol.NavWindowingHighlight] = new(1.00f, 1.00f, 0.00f, 0.70f);
     colors[(int)ImGuiCol.NavWindowingDimBg] = new(1.00f, 1.00f, 0.00f, 0.20f);
     colors[(int)ImGuiCol.ModalWindowDimBg] = new(1.00f, 1.00f, 0.00f, 0.35f);
@@ -352,7 +361,12 @@ public partial class ImGuiController : IDisposable {
       _width / _scaleFactor.X,
       _height / _scaleFactor.Y);
     io.DisplayFramebufferScale = _scaleFactor;
-    io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
+    if (deltaSeconds > 0) {
+      io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
+    } else {
+      io.DeltaTime = 0.00001f;
+    }
+
   }
 
   public void Render(FrameInfo frameInfo) {

@@ -18,7 +18,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   public Render2DSystem(
     VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {

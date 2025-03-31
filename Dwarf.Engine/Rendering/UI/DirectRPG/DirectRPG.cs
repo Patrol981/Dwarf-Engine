@@ -31,6 +31,9 @@ public partial class DirectRPG {
     ImGui.End();
   }
 
+  public static Vector2 DisplaySize => ImGui.GetIO().DisplaySize;
+  public static ImGuiController GuiController => Application.Instance.GuiController;
+
   public static void UploadTexture(ITexture texture) {
     Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
   }

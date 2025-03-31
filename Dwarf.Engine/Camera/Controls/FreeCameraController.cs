@@ -1,4 +1,6 @@
+using System.Numerics;
 using Dwarf.EntityComponentSystem;
+using Dwarf.EntityComponentSystem.Lightning;
 using Dwarf.Globals;
 using Dwarf.Windowing;
 // using Dwarf.Extensions.GLFW;
@@ -13,6 +15,7 @@ public class FreeCameraController : DwarfScript {
 
     } else {
       MoveByPC();
+      LightHandler();
     }
   }
   public unsafe void MoveByPC() {
@@ -51,6 +54,24 @@ public class FreeCameraController : DwarfScript {
       //if (glfwGetKey(_window.GLFWwindow, (int)GLFWKeyMap.Keys.GLFW_KEY_F) == (int)GLFWKeyMap.KeyAction.GLFW_PRESS) {
       //WindowState.FocusOnWindow();
       //}
+    }
+  }
+
+  public void LightHandler() {
+    if (Input.GetKeyDown(Keycode.L)) {
+      var app = Application.Instance;
+      var light = new Entity() {
+        Name = "pointlight"
+      };
+      light.AddTransform(Owner.GetComponent<Transform>().Position);
+      light.AddComponent(new PointLightComponent());
+      light.GetComponent<PointLightComponent>().Color = new Vector4(
+        1,
+        1f,
+        1f,
+        0.4f
+      );
+      app.AddEntity(light);
     }
   }
 }

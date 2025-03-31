@@ -1,4 +1,6 @@
 using System.Numerics;
+using Dwarf.Globals;
+using Dwarf.Windowing;
 
 namespace Dwarf.Math;
 
@@ -11,6 +13,14 @@ public static class Converter {
   public static float RadiansToDegrees(float rad) {
     float deg = 180 / MathF.PI * rad;
     return deg;
+  }
+
+  public static Vector2I ToVec2I(this Vector2 vec2) {
+    return new Vector2I((int)vec2.X, (int)vec2.Y);
+  }
+
+  public static Vector2 FromVec2I(this Vector2I vec2) {
+    return new Vector2(vec2.X, vec2.Y);
   }
 
   public static Vector4I ToVec4I(this Vector4 vec4) {

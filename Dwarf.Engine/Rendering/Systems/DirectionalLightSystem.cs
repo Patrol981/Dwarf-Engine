@@ -1,4 +1,5 @@
 using Dwarf.AbstractionLayer;
+using Dwarf.Globals;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Vulkan;
 
@@ -9,17 +10,18 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.Systems;
 public class DirectionalLightSystem : SystemBase {
   public DirectionalLightSystem(
+    VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];
 
     AddPipelineData(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = VkRenderPass.Null,
       VertexName = "directional_light_vertex",
       FragmentName = "directional_light_fragment",
       PipelineProvider = new PipelinePointLightProvider(),
@@ -32,6 +34,8 @@ public class DirectionalLightSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
+    if (!PerfMonitor.IsDebug) return;
+
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
       vkCmdBindDescriptorSets(

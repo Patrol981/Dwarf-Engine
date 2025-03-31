@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
@@ -14,8 +15,9 @@ public class Skybox : IDisposable {
   }
 
   private readonly VulkanDevice _device;
+  private readonly VmaAllocator _vmaAllocator;
   private readonly TextureManager _textureManager;
-  private readonly Renderer _renderer;
+  private readonly IRenderer _renderer;
   private readonly float[] _vertices = [
     // positions
     -1.0f,
@@ -220,7 +222,7 @@ public class Skybox : IDisposable {
   ];
   private readonly SkyboxMesh _mesh;
   private readonly Transform _transform;
-  private readonly Material _material;
+  private readonly MaterialComponent _material;
 
   private PipelineConfigInfo _pipelineConfigInfo = null!;
   private VkPipelineLayout _pipelineLayout;
@@ -238,12 +240,13 @@ public class Skybox : IDisposable {
   private readonly string[] _cubemapNames = new string[6];
   private CubeMapTexture _cubemapTexture = null!;
 
-  public Skybox(VulkanDevice device, TextureManager textureManager, Renderer renderer, VkDescriptorSetLayout globalSetLayout) {
+  public Skybox(VmaAllocator vmaAllocator, VulkanDevice device, TextureManager textureManager, IRenderer renderer, VkDescriptorSetLayout globalSetLayout) {
+    _vmaAllocator = vmaAllocator;
     _device = device;
     _textureManager = textureManager;
     _renderer = renderer;
     _transform = new();
-    _material = new(new(1.0f, 1.0f, 1.0f));
+    _material = new(new Vector3(1.0f, 1.0f, 1.0f));
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
     .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
@@ -275,14 +278,14 @@ public class Skybox : IDisposable {
     ];
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetSwapchainRenderPass(), "skybox_vertex", "skybox_fragment", new PipelineSkyboxProvider());
+    CreatePipeline(VkRenderPass.Null, "skybox_vertex", "skybox_fragment", new PipelineSkyboxProvider());
 
     InitCubeMapTexture();
   }
 
   private async void InitCubeMapTexture() {
     var data = await CubeMapTexture.LoadDataFromPath(_cubemapNames[0]);
-    _cubemapTexture = new CubeMapTexture(_device, data.Width, data.Height, _cubemapNames, "cubemap0");
+    _cubemapTexture = new CubeMapTexture(_vmaAllocator, _device, data.Width, data.Height, _cubemapNames, "cubemap0");
 
     CreateVertexBuffer(_mesh.Vertices);
     CreateBuffers();
@@ -358,6 +361,7 @@ public class Skybox : IDisposable {
     ulong vertexSize = (ulong)Unsafe.SizeOf<TexturedVertex>();
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -374,6 +378,7 @@ public class Skybox : IDisposable {
     // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -381,7 +386,7 @@ public class Skybox : IDisposable {
       MemoryProperty.DeviceLocal
     );
 
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
+    // _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
     stagingBuffer.Dispose();
   }
 
@@ -399,6 +404,7 @@ public class Skybox : IDisposable {
       .Build();
 
     _skyboxBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)Unsafe.SizeOf<SkyboxBufferObject>(),
       1,
@@ -436,7 +442,17 @@ public class Skybox : IDisposable {
     var pipelineConfig = _pipelineConfigInfo.GetConfigInfo();
     pipelineConfig.RenderPass = renderPass;
     pipelineConfig.PipelineLayout = _pipelineLayout;
-    _pipeline = new Pipeline(_device, vertexName, fragmentName, pipelineConfig, pipelineProvider);
+    var colorFormat = _renderer.DynamicSwapchain.ColorFormat;
+    var depthFormat = _renderer.DepthFormat;
+    _pipeline = new Pipeline(
+      _device,
+      vertexName,
+      fragmentName,
+      pipelineConfig,
+      pipelineProvider,
+      depthFormat,
+      colorFormat
+    );
   }
 
   protected unsafe void Dispose(bool disposing) {

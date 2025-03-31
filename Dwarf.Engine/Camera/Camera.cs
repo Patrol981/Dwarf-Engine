@@ -39,6 +39,11 @@ public class Camera : Component {
     _cameraType = CameraType.Orthographic;
   }
 
+  public void SetOrthograpicProjection(float near, float far) {
+    SetOrthograpicProjection(-_aspect, _aspect, -1, 1, near, far);
+    _cameraType = CameraType.Orthographic;
+  }
+
   public void SetOrthograpicProjection(float left, float right, float top, float bottom, float near, float far) {
     _projectionMatrix = Matrix4x4.Identity;
     _projectionMatrix[0, 0] = 2.0f / (right - left);
@@ -48,6 +53,9 @@ public class Camera : Component {
     _projectionMatrix[1, 3] = -(bottom + top) / (bottom - top);
     _projectionMatrix[2, 3] = -near / (far - near);
     _cameraType = CameraType.Orthographic;
+
+    Near = near;
+    Far = far;
   }
 
   public void SetPerspectiveProjection(float near, float far) {
@@ -57,6 +65,9 @@ public class Camera : Component {
       near,
       far
     );
+
+    Near = near;
+    Far = far;
 
     _cameraType = CameraType.Perspective;
   }
@@ -70,9 +81,9 @@ public class Camera : Component {
     var projectionMatrix = new Matrix4x4();
     projectionMatrix[0, 0] = 1.0f / (_aspect * tanHalfFovy);
     projectionMatrix[1, 1] = 1.0f / (tanHalfFovy);
-    projectionMatrix[2, 2] = 100.0f / (100.0f - 0.01f);
+    projectionMatrix[2, 2] = 100.0f / (100.0f - 0.0f);
     projectionMatrix[2, 3] = 1.0f;
-    projectionMatrix[3, 2] = -(100.0f * 0.01f) / (100.0f - 0.01f);
+    projectionMatrix[3, 2] = -(100.0f * 0.0f) / (100.0f - 0.0f);
     return projectionMatrix;
   }
 
@@ -133,4 +144,7 @@ public class Camera : Component {
   public Vector3 Right => _right;
   public Vector3 Up => _up;
   public CameraType CameraType => _cameraType;
+
+  public float Far { get; private set; }
+  public float Near { get; private set; }
 }

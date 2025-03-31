@@ -33,10 +33,18 @@ public class Pipeline : IDisposable {
 
   private readonly object _pipelineLock = new();
 
-  public Pipeline(IDevice device, string vertexName, string fragmentName, PipelineConfigInfo configInfo, PipelineProvider pipelineProvider) {
+  public Pipeline(
+    IDevice device,
+    string vertexName,
+    string fragmentName,
+    PipelineConfigInfo configInfo,
+    PipelineProvider pipelineProvider,
+    VkFormat depthFormat,
+    VkFormat colorFormat
+  ) {
     _device = device;
     _pipelineProvider = pipelineProvider;
-    CreateGraphicsPipeline(vertexName, fragmentName, configInfo);
+    CreateGraphicsPipeline(vertexName, fragmentName, configInfo, depthFormat, colorFormat);
   }
 
   public void Bind(VkCommandBuffer commandBuffer) {
@@ -45,7 +53,20 @@ public class Pipeline : IDisposable {
     }
   }
 
-  private unsafe void CreateGraphicsPipeline(string vertexName, string fragmentName, PipelineConfigInfo configInfo) {
+  private unsafe void CreateGraphicsPipeline(
+    string vertexName,
+    string fragmentName,
+    PipelineConfigInfo configInfo,
+    VkFormat depthFormat,
+    VkFormat colorFormat
+  ) {
+    configInfo.RenderingCreateInfo = new() {
+      colorAttachmentCount = 1,
+      pColorAttachmentFormats = &colorFormat,
+      depthAttachmentFormat = depthFormat,
+      // stencilAttachmentFormat = depthFormat
+    };
+
     var vertexPath = Path.Combine(AppContext.BaseDirectory, "CompiledShaders", $"{vertexName}.spv");
     var fragmentPath = Path.Combine(AppContext.BaseDirectory, "CompiledShaders", $"{fragmentName}.spv");
     var vertexCode = File.ReadAllBytes(vertexPath);
@@ -99,6 +120,7 @@ public class Pipeline : IDisposable {
     fixed (VkPipelineMultisampleStateCreateInfo* multisampleInfo = &configInfo.MultisampleInfo)
     fixed (VkPipelineColorBlendStateCreateInfo* colorBlendInfo = &configInfo.ColorBlendInfo)
     fixed (VkPipelineDepthStencilStateCreateInfo* depthStencilInfo = &configInfo.DepthStencilInfo)
+    fixed (VkPipelineRenderingCreateInfo* dynamicRenderInfo = &configInfo.RenderingCreateInfo)
     fixed (VkPipelineDynamicStateCreateInfo* dynamicStateInfo = &configInfo.DynamicStateInfo) {
       pipelineInfo.pInputAssemblyState = inputAssemblyInfo;
       pipelineInfo.pViewportState = viewportInfo;
@@ -107,6 +129,7 @@ public class Pipeline : IDisposable {
       pipelineInfo.pColorBlendState = colorBlendInfo;
       pipelineInfo.pDepthStencilState = depthStencilInfo;
       pipelineInfo.pDynamicState = dynamicStateInfo;
+      pipelineInfo.pNext = dynamicRenderInfo;
     }
     // pipelineInfo.pInputAssemblyState = &configInfo.InputAssemblyInfo;
     // pipelineInfo.pViewportState = &configInfo.ViewportInfo;
@@ -117,8 +140,8 @@ public class Pipeline : IDisposable {
     // pipelineInfo.pDynamicState = &configInfo.DynamicStateInfo;
 
     pipelineInfo.layout = configInfo.PipelineLayout;
-    pipelineInfo.renderPass = configInfo.RenderPass;
-    pipelineInfo.subpass = configInfo.Subpass;
+    // pipelineInfo.renderPass = configInfo.RenderPass;
+    // pipelineInfo.subpass = configInfo.Subpass;
 
     pipelineInfo.basePipelineIndex = -1;
     pipelineInfo.basePipelineHandle = VkPipeline.Null;

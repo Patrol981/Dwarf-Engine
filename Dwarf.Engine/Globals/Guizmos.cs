@@ -59,9 +59,18 @@ public static class Guizmos {
   }
 
   public static void Clear() {
-    s_guizmos.Clear();
+    if (s_guizmos.Count > 0)
+      s_guizmos.Clear();
   }
 
-  public static Span<Guizmo> Data => s_guizmos.ToArray();
+  public static List<Guizmo> Data {
+    get {
+      if (s_guizmos.Count < 1) {
+        return [];
+      } else {
+        return s_guizmos;
+      }
+    }
+  }
   public static Span<Guizmo> PerFrameGuizmos => s_perFrameGuizmos.ToArray();
 }

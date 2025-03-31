@@ -1,0 +1,7 @@
+struct ObjectData {
+  mat4 transformMatrix;
+  mat4 normalMatrix;
+  mat4 nodeMatrix;
+  int filterFlag;
+  vec4 jointsBufferOffset;
+};

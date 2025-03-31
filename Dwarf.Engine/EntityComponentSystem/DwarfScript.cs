@@ -11,7 +11,15 @@ public class DwarfScript : Component {
     if (DidAwake) return;
     DidAwake = true;
   }
+
+  /// <summary>
+  /// Performs update calculations in <b> Parallel </b>
+  /// </summary>
   public virtual void Update() { }
+
+  /// <summary>
+  /// Performs update calculations on <b> Main Threead </b>
+  /// </summary>
   public virtual void FixedUpdate() { }
   public virtual void RenderUpdate() { }
 

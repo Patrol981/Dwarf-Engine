@@ -110,6 +110,10 @@ public static class MemoryUtils {
     return Marshal.AllocHGlobal(size);
   }
 
+  public static unsafe T* AllocateMemory<T>(int count) where T : struct {
+    return (T*)Marshal.AllocHGlobal(Unsafe.SizeOf<T>() * count);
+  }
+
   public static T? FromIntPtr<T>(nint ptr) {
     var obj = Marshal.PtrToStructure<T>(ptr);
     Marshal.FreeHGlobal(ptr);

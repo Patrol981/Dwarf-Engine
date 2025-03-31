@@ -25,26 +25,49 @@ public struct MaterialData {
   public float Shininess;
 }
 
-public class Material : Component {
+public struct TexCoordSets {
+  public uint BaseColor;
+  public uint MetallicRoughness;
+  public uint SpecularGlossiness;
+  public uint Normal;
+  public uint Occlusion;
+  public uint Emissive;
+}
+
+public enum AlphaMode {
+  Opaque,
+  Mask,
+  Blend
+}
+
+public class MaterialComponent : Component {
   private MaterialData _materialData;
 
-  public Material(Vector3 color) {
+  public MaterialComponent() {
     Init();
+  }
 
+  public MaterialComponent(Vector3 color) {
+    Init();
     _materialData.Color = color;
   }
 
-  public Material() {
+  public MaterialComponent(MaterialData materialData) {
     Init();
+    if (materialData.Color != default) _materialData.Color = materialData.Color;
+    if (materialData.Shininess != default) _materialData.Shininess = materialData.Shininess;
+    if (materialData.Ambient != default) _materialData.Ambient = materialData.Ambient;
+    if (materialData.Diffuse != default) _materialData.Diffuse = materialData.Diffuse;
+    if (materialData.Specular != default) _materialData.Specular = materialData.Specular;
   }
 
   private void Init() {
     _materialData = new() {
       Color = new(1, 1, 1),
-      Shininess = 1.0f,
+      Shininess = 0.001f,
       Ambient = new(1.0f, 1.0f, 1.0f),
-      Diffuse = new(0.0f, 0.0f, 0.0f),
-      Specular = new(0, 0, 0)
+      Diffuse = new(0.5f, 0.5f, 0.5f),
+      Specular = new(1, 1, 1)
     };
   }
 
@@ -74,4 +97,23 @@ public class Material : Component {
   }
 
   public MaterialData Data => _materialData;
+}
+
+public class Material(string name = Material.NO_MATERIAL) {
+  const string NO_MATERIAL = "no_material";
+  public string Name { get; init; } = name;
+
+  public int BaseColorTextureIndex { get; set; }
+  public int MetallicRoughnessTextureIndex { get; set; }
+  public int NormalTextureIndex { get; set; }
+  public int OcclusionTextureIndex { get; set; }
+  public int EmissiveTextureIndex { get; set; }
+
+  public AlphaMode AlphaMode = AlphaMode.Opaque;
+  public TexCoordSets TexCoordSets { get; set; }
+  public bool DoubleSided { get; set; }
+
+  public float AlphaCutoff = 1.0f;
+  public float MetallicFactor = 1.0f;
+  public float RoughnessFactor = 1.0f;
 }

@@ -1,5 +1,3 @@
-using static Dwarf.GLFW.GLFW;
-
 namespace Dwarf.Globals;
 public static class Frames {
   // private static int s_frameCount = 0;
@@ -8,15 +6,15 @@ public static class Frames {
   private static DateTime s_endTime;
   // private static double s_frameRate = 0.0f;
 
-  public static float GetFramesDelta() {
-    var lastUpdate = Time.DeltaTime;
+  public static double GetFramesDelta() {
+    var lastUpdate = Time.DeltaTimeRender;
     return lastUpdate;
   }
 
   public static double GetFrames() {
-    return (s_startTime - s_endTime).TotalMilliseconds;
+    var frame = (s_startTime - s_endTime).TotalMilliseconds;
     // return Time.DeltaTime;
-    // return MathF.Round(, 5, MidpointRounding.ToZero);
+    return MathF.Round((float)frame, 5, MidpointRounding.ToZero);
   }
 
   public static void TickStart() {

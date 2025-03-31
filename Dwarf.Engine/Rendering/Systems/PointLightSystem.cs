@@ -21,11 +21,12 @@ public class PointLightSystem : SystemBase {
     (PointLightPushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<PointLightPushConstant>());
 
   public PointLightSystem(
+    VmaAllocator vmaAllocator,
     IDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];
@@ -84,7 +85,7 @@ public class PointLightSystem : SystemBase {
       unsafe {
         _lightPushConstant->Color = light.Color;
         _lightPushConstant->Position = new Vector4(pos.Position, 1.0f);
-        _lightPushConstant->Radius = pos.Scale.X;
+        _lightPushConstant->Radius = pos.Scale.X / 10;
 
         vkCmdPushConstants(
           frameInfo.CommandBuffer,

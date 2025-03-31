@@ -1,7 +1,5 @@
 using Dwarf.EntityComponentSystem;
-
-using OpenTK.Mathematics;
-
+using System.Numerics;
 namespace Dwarf.Globals;
 
 public static class CameraState {
@@ -10,7 +8,7 @@ public static class CameraState {
   private static float _cameraSpeed = 3.0f;
   private static float _sensitivity = 0.2f;
   private static bool _firstMove = true;
-  private static Vector2d _lastPos;
+  private static Vector2 _lastPos;
 
   public static void SetCamera(Camera camera) {
     _camera = camera;
@@ -31,7 +29,7 @@ public static class CameraState {
   public static void SetFirstMove(bool firstMove) {
     _firstMove = firstMove;
   }
-  public static void SetLastPosition(Vector2d lastPos) {
+  public static void SetLastPosition(Vector2 lastPos) {
     _lastPos = lastPos;
   }
 
@@ -60,7 +58,7 @@ public static class CameraState {
   public static bool GetFirstMove() {
     return _firstMove;
   }
-  public static Vector2d GetLastPosition() {
+  public static Vector2 GetLastPosition() {
     return _lastPos;
   }
 }

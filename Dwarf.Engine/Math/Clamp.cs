@@ -19,4 +19,10 @@ public static class Clamp {
 
     return closestAngle;
   }
+
+  public static float ClampTo(float x, float lowerlimit = 0.0f, float upperlimit = 1.0f) {
+    if (x < lowerlimit) return lowerlimit;
+    if (x > upperlimit) return upperlimit;
+    return x;
+  }
 }

@@ -16,11 +16,12 @@ public class Render2DSystem : SystemBase, IRenderSystem {
   private DwarfBuffer _spriteBuffer = null!;
 
   public Render2DSystem(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -70,13 +71,14 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     .Build();
 
     _spriteBuffer = new DwarfBuffer(
-        _device,
-        (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
-        (uint)entities.Length,
-        BufferUsage.UniformBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
-      );
+      _vmaAllocator,
+      _device,
+      (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+      (uint)entities.Length,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
+    );
     _descriptorSets = new VkDescriptorSet[entities.Length];
     _textureSets = new();
 
@@ -137,7 +139,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
       var pushConstantData = new SpriteUniformBufferObject {
         SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4,
-        SpriteColor = entities[i].GetComponent<Material>().Color,
+        SpriteColor = entities[i].GetComponent<MaterialComponent>().Color,
         UseTexture = true
       };
 
@@ -163,7 +165,7 @@ public class Render2DSystem : SystemBase, IRenderSystem {
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
     var id = entity.GetComponent<Sprite>().GetTextureIdReference();
-    var texture = textureManager.GetTexture(id);
+    var texture = textureManager.GetTextureLocal(id);
     VkDescriptorImageInfo imageInfo = new() {
       sampler = texture.Sampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,

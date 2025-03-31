@@ -1,5 +1,4 @@
 using Dwarf.AbstractionLayer;
-using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
@@ -22,8 +21,27 @@ public class VulkanCommandList : CommandList {
     }
   }
 
-  public override void BindIndex(nint commandBuffer, uint meshIndex, DwarfBuffer[] indexBuffers) {
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffers[meshIndex].GetBuffer(), 0, VkIndexType.Uint32);
+  public override void BindVertex(
+    IntPtr commandBuffer,
+    DwarfBuffer vertexBuffer,
+    ulong vertexOffset
+  ) {
+    unsafe {
+      VkBuffer[] vBuffers = [vertexBuffer.GetBuffer()];
+      ulong[] offsets = [vertexOffset];
+      fixed (VkBuffer* buffersPtr = vBuffers)
+      fixed (ulong* offsetsPtr = offsets) {
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
+      }
+    }
+  }
+
+  public override void BindIndex(nint commandBuffer, uint meshIndex, DwarfBuffer[] indexBuffers, ulong offset = 0) {
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffers[meshIndex].GetBuffer(), offset, VkIndexType.Uint32);
+  }
+
+  public override void BindIndex(nint commandBuffer, DwarfBuffer indexBuffer, ulong offset = 0) {
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer.GetBuffer(), offset, VkIndexType.Uint32);
   }
 
   public override void Draw(
@@ -37,6 +55,16 @@ public class VulkanCommandList : CommandList {
     vkCmdDraw(commandBuffer, (uint)vertexCount[meshIndex], instanceCount, firstVertex, firstInstance);
   }
 
+  public override void Draw(
+    nint commandBuffer,
+    ulong vertexCount,
+    uint instanceCount,
+    uint firstVertex,
+    uint firstInstance
+  ) {
+    vkCmdDraw(commandBuffer, (uint)vertexCount, instanceCount, firstVertex, firstInstance);
+  }
+
   public override void DrawIndexed(
     nint commandBuffer,
     uint meshIndex,
@@ -47,6 +75,17 @@ public class VulkanCommandList : CommandList {
     uint firstInstance
   ) {
     vkCmdDrawIndexed(commandBuffer, (uint)indexCount[meshIndex], instanceCount, firstIndex, vertexOffset, firstInstance);
+  }
+
+  public override void DrawIndexed(
+    nint commandBuffer,
+    ulong indexCount,
+    uint instanceCount,
+    uint firstIndex,
+    int vertexOffset,
+    uint firstInstance
+  ) {
+    vkCmdDrawIndexed(commandBuffer, (uint)indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
   }
 
   public override void SetViewport(

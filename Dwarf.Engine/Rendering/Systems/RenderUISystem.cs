@@ -18,11 +18,12 @@ public class RenderUISystem : SystemBase {
   private DwarfBuffer _uiBuffer = null!;
 
   public RenderUISystem(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
       .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
       .Build();
@@ -76,6 +77,7 @@ public class RenderUISystem : SystemBase {
     .Build();
 
     _uiBuffer = new DwarfBuffer(
+      _vmaAllocator,
         _device,
         (ulong)Unsafe.SizeOf<UIUniformObject>(),
         (uint)entities.Length,
@@ -164,7 +166,7 @@ public class RenderUISystem : SystemBase {
 
   private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
     var id = entity.GetDrawable<IUIElement>() as IUIElement;
-    var texture = textureManager.GetTexture(id!.GetTextureIdReference());
+    var texture = textureManager.GetTextureLocal(id!.GetTextureIdReference());
 
     VkDescriptorImageInfo imageInfo = new() {
       sampler = texture.Sampler,

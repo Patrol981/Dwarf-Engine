@@ -21,7 +21,7 @@ public class Ray {
   public record Plane(Vector3 Normal, Vector3 Point);
 
   public static Vector2 MouseToWorld2D(Camera camera, Vector2 screenSize) {
-    var mousePos = MouseState.GetInstance().MousePosition;
+    var mousePos = Input.MousePosition;
     float normalizedX = 2.0f * (float)mousePos.X / screenSize.X - 1.0f;
     float normalizedY = 1.0f - 2.0f * (float)mousePos.Y / screenSize.Y;
 
@@ -39,7 +39,7 @@ public class Ray {
   }
 
   public static RayResult GetRayInfo(Camera camera, Vector2 screenSize) {
-    var mousePos = MouseState.GetInstance().MousePosition;
+    var mousePos = Input.MousePosition;
     var rayStartNDC = new Vector4(
       ((float)mousePos.X / screenSize.X - 0.5f) * 2.0f,
       ((float)mousePos.Y / screenSize.Y - 0.5f) * 2.0f,
@@ -95,7 +95,53 @@ public class Ray {
     return hitResult;
   }
 
-  public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance) {
+  public static ReadOnlySpan<Entity> Raycast(AABBFilter aabbFilter = AABBFilter.None) {
+    var entities = Application.Instance.GetEntities();
+    var result = new Dictionary<Entity, RaycastHitResult>();
+
+    foreach (var entity in entities.Where(x => !x.CanBeDisposed)) {
+      var enTransform = entity.TryGetComponent<Transform>();
+      var enDistance = Vector3.Distance(
+        CameraState.GetCameraEntity().GetComponent<Transform>().Position,
+        enTransform != null ? enTransform.Position : Vector3.Zero
+      );
+
+      var enResult = Ray.CastRayIntersect(entity, enDistance, aabbFilter);
+      if (enResult.Present) {
+        result.TryAdd(entity, enResult);
+      }
+    }
+
+    return result
+      .OrderBy(pair => pair.Value.Distance)
+      .Select(pair => pair.Key)
+      .ToArray();
+  }
+
+  public static ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>> RaycastWithRayInfo(AABBFilter aabbFilter = AABBFilter.None) {
+    var entities = Application.Instance.GetEntities();
+    var result = new Dictionary<Entity, RaycastHitResult>();
+
+    for (int i = 0; i < entities.Count; i++) {
+      if (entities[i].CanBeDisposed) continue;
+      var enTransform = entities[i].TryGetComponent<Transform>();
+      var enDistance = Vector3.Distance(
+        CameraState.GetCameraEntity().GetComponent<Transform>().Position,
+        enTransform != null ? enTransform.Position : Vector3.Zero
+      );
+
+      var enResult = Ray.CastRayIntersect(entities[i], enDistance, aabbFilter);
+      if (enResult.Present) {
+        result.TryAdd(entities[i], enResult);
+      }
+    }
+
+    return new ReadOnlySpan<KeyValuePair<Entity, RaycastHitResult>>(
+        [.. result.OrderBy(pair => pair.Value.Distance)]
+    );
+  }
+
+  public static RaycastHitResult CastRayIntersect(Entity entity, float maxDistance, AABBFilter aabbFilter = AABBFilter.None) {
     var camera = CameraState.GetCamera();
     var screenSize = Application.Instance.Window.Extent;
 
@@ -104,15 +150,18 @@ public class Ray {
     var transform = entity.GetComponent<Transform>();
     var model = entity.GetComponent<MeshRenderer>();
 
-    var modelMatrix = transform.Matrix4;
-    var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);
-    var delta = positionWorldspace - rayData.RayOrigin;
-
     var collisionPoint = Vector3.Zero;
     var hitResult = new RaycastHitResult {
       Present = false,
       Point = collisionPoint
     };
+
+    if (model == null || transform == null) return hitResult;
+    if (model.AABBFilter != aabbFilter && model.AABBFilter != AABBFilter.None) return hitResult;
+
+    var modelMatrix = transform.Matrix4;
+    var positionWorldspace = new Vector3(modelMatrix[3, 0], modelMatrix[3, 1], modelMatrix[3, 2]);
+    var delta = positionWorldspace - rayData.RayOrigin;
 
     return AABBIntersection(hitResult, modelMatrix, rayData, delta, model, maxDistance);
   }
@@ -125,6 +174,8 @@ public class Ray {
     MeshRenderer model,
     float maxDistance
   ) {
+    if (model == null) return hitResult;
+
     float tMin = 0.0f;
     float tMax = maxDistance;
 
@@ -169,7 +220,9 @@ public class Ray {
         float t1 = (e + model.AABB.Min.Y) / f;
         float t2 = (e + model.AABB.Max.Y) / f;
 
-        if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
+        if (t1 > t2) {
+          (t2, t1) = (t1, t2);
+        }
 
         if (t2 < tMax) {
           hitResult.Point = rayData.RayOrigin + rayData.RayDirection * t2;
@@ -198,7 +251,9 @@ public class Ray {
       if (MathF.Abs(f) > 0.001) {
         float t1 = (e + model.AABB.Min.Z) / f;
         float t2 = (e + model.AABB.Max.Z) / f;
-        if (t1 > t2) { float w = t1; t1 = t2; t2 = w; }
+        if (t1 > t2) {
+          (t2, t1) = (t1, t2);
+        }
 
         if (t2 < tMax) {
           hitResult.Point = rayData.RayOrigin + rayData.RayDirection * t2;
@@ -230,7 +285,7 @@ public class Ray {
     float normalizedY = 1.0f - 2.0f * point.Y / screenSize.Y;
 
     Matrix4x4.Invert(camera.GetProjectionMatrix(), out var unProject);
-    Vector4 nearPoint = new Vector4(normalizedX, normalizedY, 0.0f, 1.0f);
+    Vector4 nearPoint = new(normalizedX, normalizedY, 0.0f, 1.0f);
     Vector4 worldPoint = Vector4.Transform(nearPoint, unProject);
     var tmp = new Vector2 {
       X = worldPoint.X / worldPoint.W,
@@ -242,4 +297,24 @@ public class Ray {
     return tmp;
   }
 
+  public static Vector2 WorldToScreenPoint(Camera camera, Vector3 point, Vector2 screenSize) {
+    var vp = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+
+    Vector4 clipSpace = Vector4.Transform(new Vector4(point, 1.0f), vp);
+
+    if (MathF.Abs(clipSpace.W) < 1e-6f || clipSpace.W < 0.0f) {
+      return new Vector2(float.NaN, float.NaN);
+    }
+
+    var ndc = new Vector3(
+      clipSpace.X / clipSpace.W,
+      clipSpace.Y / clipSpace.W,
+      clipSpace.Z / clipSpace.W
+    );
+
+    float screenX = (ndc.X + 1.0f) * 0.5f * screenSize.X;
+    float screenY = (1.0f + ndc.Y) * 0.5f * screenSize.Y;
+
+    return new Vector2(screenX, screenY);
+  }
 }

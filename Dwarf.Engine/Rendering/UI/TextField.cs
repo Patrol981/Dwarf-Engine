@@ -15,6 +15,7 @@ public class TextField : Component, IUIElement {
   private readonly Application _app = null!;
 
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private Mesh _textMesh = null!;
@@ -40,12 +41,13 @@ public class TextField : Component, IUIElement {
   public TextField(Application app) {
     _app = app;
     _device = _app.Device;
+    _vmaAllocator = _app.VmaAllocator;
 
     _glyphOffset = _cursorX / 1024;
   }
 
   public void Init() {
-    _textMesh = new();
+    _textMesh = new(_vmaAllocator, _device);
 
     // setup chars mappings
     int currX = 0;
@@ -90,14 +92,14 @@ public class TextField : Component, IUIElement {
   }
 
   private void CreateQuads() {
-    _textMesh = new();
+    _textMesh = new(_vmaAllocator, _device);
 
     var pos = Owner!.GetComponent<RectTransform>().Position;
     float offsetMeshX = pos.X;
     float offsetMeshY = pos.Y;
 
     for (int i = 0; i < Text.Length; i++) {
-      var tempMesh = new Mesh();
+      var tempMesh = new Mesh(_vmaAllocator, _device);
       var targetChar = _charactersOnAtlas[Text[i]];
       tempMesh.Vertices = new Vertex[6];
 
@@ -200,6 +202,7 @@ public class TextField : Component, IUIElement {
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -216,6 +219,7 @@ public class TextField : Component, IUIElement {
     // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -235,6 +239,7 @@ public class TextField : Component, IUIElement {
     ulong indexSize = (ulong)sizeof(uint);
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,
@@ -250,6 +255,7 @@ public class TextField : Component, IUIElement {
     stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,
@@ -265,7 +271,7 @@ public class TextField : Component, IUIElement {
     TextureManager textureManager,
     string texturePath
   ) {
-    _textAtlasId = textureManager.GetTextureId(texturePath);
+    _textAtlasId = textureManager.GetTextureIdLocal(texturePath);
 
     if (_textAtlasId == Guid.Empty) {
       Logger.Warn($"Could not bind texture to text ({texturePath}) - no such texture in manager");

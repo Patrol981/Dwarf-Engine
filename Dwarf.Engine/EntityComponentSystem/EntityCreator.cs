@@ -1,8 +1,9 @@
 using System.Numerics;
 
 using Dwarf.Extensions.Logging;
-using Dwarf.Loader.Providers;
 using Dwarf.Loaders;
+using Dwarf.Model;
+using Dwarf.Model.Animation;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
 
@@ -31,7 +32,7 @@ public static class EntityCreator {
     entity.AddComponent(new Transform(position.Value));
     entity.GetComponent<Transform>().Rotation = rotation.Value;
     entity.GetComponent<Transform>().Scale = scale.Value;
-    entity.AddComponent(new Material(new(1.0f, 1.0f, 1.0f)));
+    entity.AddComponent(new MaterialComponent(new Vector3(1.0f, 1.0f, 1.0f)));
 
     return Task.FromResult(entity);
   }
@@ -74,16 +75,18 @@ public static class EntityCreator {
     entity.AddMaterial(Vector3.One);
   }
 
+  public static void AddMaterial(this Entity entity, MaterialData materialData) {
+    entity.AddComponent(new MaterialComponent(materialData));
+  }
+
   public static void AddMaterial(this Entity entity, Vector3? color) {
     if (color == null) { color = Vector3.One; }
-
-    entity.AddComponent(new Material(color.Value));
+    entity.AddComponent(new MaterialComponent(color.Value));
   }
 
   public static async Task<Entity> Create3DModel(
     string entityName,
     string modelPath,
-    string[] texturePaths,
     Vector3? position = null,
     Vector3? rotation = null,
     Vector3? scale = null,
@@ -94,37 +97,13 @@ public static class EntityCreator {
 
     var entity = await CreateBase(entityName, position, rotation, scale);
     if (modelPath.Contains("glb")) {
-      var preload = texturePaths != null;
-
-      entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, preload, flip));
-
-      if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
-        throw new Exception("Mesh is empty");
-      }
-
-      if (texturePaths != null) {
-        if (texturePaths.Length > 1) {
-          entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
-        } else {
-          if (sameTexture) {
-            entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
-          } else {
-            entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePaths[0]);
-          }
-        }
+      entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, flip));
+      if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
+        entity.AddComponent(new AnimationController());
+        entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());
       }
     } else {
-      entity.AddComponent(await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, modelPath));
-
-      if (texturePaths.Length > 1) {
-        entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, texturePaths);
-      } else {
-        if (sameTexture) {
-          entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTexture(app.TextureManager, texturePaths[0]);
-        } else {
-          entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePaths[0]);
-        }
-      }
+      throw new Exception("Only .glb/gltf file are supported");
     }
 
     return entity;
@@ -138,11 +117,23 @@ public static class EntityCreator {
     }
 
     Logger.Info($"{entity.Name} Mesh init");
-    entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
+    // entity.AddComponent(await GLTFLoader.LoadGLTF(app, modelPath, false, flip));
+    entity.AddComponent(await GLTFLoaderKHR.LoadGLTF(app, modelPath, flip));
+    if (entity.GetComponent<MeshRenderer>().Animations.Count > 0) {
+      entity.AddComponent(new AnimationController());
+      entity.GetComponent<AnimationController>().Init(entity.GetComponent<MeshRenderer>());
+    }
 
-    if (entity.GetComponent<MeshRenderer>().MeshsesCount < 1) {
+    if (entity.GetComponent<MeshRenderer>().MeshedNodesCount < 1) {
       throw new Exception("Mesh is empty");
     }
+  }
+
+  public static MeshRenderer CopyModel(in MeshRenderer copyRef) {
+    var app = Application.Instance;
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    copyRef.CopyTo(ref model);
+    return model;
   }
 
   public static async Task<Entity> Create3DPrimitive(
@@ -158,9 +149,13 @@ public static class EntityCreator {
     var entity = await CreateBase(entityName, position, rotation, scale);
     app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    Node node = new() { Mesh = mesh };
+    node.Mesh.BindToTexture(app.TextureManager, texturePath);
+    model.AddLinearNode(node);
+    model.Init();
     entity.AddComponent(model);
-    entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
 
     return entity;
@@ -171,43 +166,95 @@ public static class EntityCreator {
 
     app.Mutex.WaitOne();
     var mesh = Primitives.CreatePrimitive(primitiveType);
-    var model = new MeshRenderer(app.Device, app.Renderer, [mesh]);
+    var model = new MeshRenderer(app.Device, app.Renderer);
+    Node node = new() { Mesh = mesh };
+    node.Mesh.BindToTexture(app.TextureManager, texturePath);
+    model.AddLinearNode(node);
+    model.Init();
     entity.AddComponent(model);
-    await app.TextureManager.AddTexture(texturePath);
-    entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
+    await app.TextureManager.AddTextureLocal(texturePath);
+    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
   }
 
-  public static void AddRigdbody(
-    VulkanDevice device,
+  public static void AddRigidbody(
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float radius,
-    bool kinematic = false,
-    bool flip = false
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, radius, kinematic, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip, useMesh: useMesh));
+    entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(
-    VulkanDevice device,
+  public static void AddRigidbody(
+    Application app,
+    ref Entity entity,
+    in Mesh mesh,
+    PrimitiveType primitiveType,
+    float radius,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, radius, motionType, flip, useMesh: useMesh));
+    entity.GetComponent<Rigidbody>().InitBase(mesh);
+  }
+
+  public static void AddRigidbody(
+    Application app,
+    ref Entity entity,
+    in Mesh mesh,
+    PrimitiveType primitiveType,
+    Vector3 size,
+    Vector3 offset,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
+  ) {
+    if (entity == null) return;
+
+    entity.AddComponent(
+      new Rigidbody(
+        app.VmaAllocator,
+        app.Device,
+        primitiveType,
+        motionType,
+        size: size,
+        offset: offset,
+        flip,
+        useMesh: useMesh
+      )
+    );
+    entity.GetComponent<Rigidbody>().InitBase(mesh);
+  }
+
+  public static void AddRigidbody(
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
     float sizeY = 1,
     float sizeZ = 1,
-    bool kinematic = false,
-    bool flip = false
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, kinematic, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, motionType, flip, useMesh: useMesh));
+    entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(
-    VulkanDevice device,
+  public static void AddRigidbody(
+    Application app,
     ref Entity entity,
     PrimitiveType primitiveType,
     float sizeX = 1,
@@ -216,21 +263,23 @@ public static class EntityCreator {
     float offsetX = 0,
     float offsetY = 0,
     float offsetZ = 0,
-    bool kinematic = false,
-    bool flip = false
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
   ) {
     if (entity == null) return;
 
-    entity.AddComponent(new Rigidbody(device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, kinematic, flip));
+    entity.AddComponent(new Rigidbody(app.VmaAllocator, app.Device, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip, useMesh: useMesh));
+    entity.GetComponent<Rigidbody>().InitBase();
   }
 
-  public static void AddRigdbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, bool kinematic = false, float radius = 1) {
-    var device = Application.Instance.Device;
+  public static void AddRigidbody(this Entity entity, PrimitiveType primitiveType = PrimitiveType.Convex, MotionType motionType = MotionType.Dynamic, float radius = 1) {
+    var app = Application.Instance;
 
-    AddRigdbody(device, ref entity, primitiveType, radius, kinematic);
+    AddRigidbody(app, ref entity, primitiveType, radius, motionType);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     float sizeX = 1,
@@ -239,32 +288,67 @@ public static class EntityCreator {
     float offsetX = 0,
     float offsetY = 0,
     float offsetZ = 0,
-    bool kinematic = false,
+    MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, kinematic, flip);
+    var app = Application.Instance;
+    AddRigidbody(app, ref entity, primitiveType, sizeX, sizeY, sizeZ, offsetX, offsetY, offsetZ, motionType, flip);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
     Vector3 size = default,
     Vector3 offset = default,
-    bool kinematic = false,
-    bool flip = false
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, kinematic, flip);
+    var app = Application.Instance;
+    AddRigidbody(app, ref entity, primitiveType, size.X, size.Y, size.Z, offset.X, offset.Y, offset.Z, motionType: motionType, flip: flip, useMesh: useMesh);
   }
 
-  public static void AddRigdbody(
+  public static void AddRigidbody(
     this Entity entity,
     PrimitiveType primitiveType = PrimitiveType.Convex,
-    bool kinematic = false,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false,
+    bool useMesh = true
+  ) {
+    var app = Application.Instance;
+    AddRigidbody(app, ref entity, primitiveType, default, motionType: motionType, flip: flip, useMesh: useMesh);
+  }
+
+  public static void AddRigidbody(
+    this Entity entity,
+    in Mesh mesh,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    MotionType motionType = MotionType.Dynamic,
     bool flip = false
   ) {
-    var device = Application.Instance.Device;
-    AddRigdbody(device, ref entity, primitiveType, default, kinematic, flip);
+    var app = Application.Instance;
+    AddRigidbody(app, ref entity, mesh, primitiveType, default, motionType, flip);
+  }
+
+  public static void AddRigidbody(
+    this Entity entity,
+    in Mesh mesh,
+    Vector3 size,
+    Vector3 offset,
+    PrimitiveType primitiveType = PrimitiveType.Convex,
+    MotionType motionType = MotionType.Dynamic,
+    bool flip = false
+  ) {
+    var app = Application.Instance;
+    AddRigidbody(
+      app,
+      ref entity,
+      mesh: in mesh,
+      size: size,
+      offset: offset,
+      primitiveType: primitiveType,
+      motionType: motionType,
+      flip: flip
+    );
   }
 }

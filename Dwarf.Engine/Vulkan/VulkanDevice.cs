@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
@@ -7,20 +8,20 @@ using Dwarf.Windowing;
 
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
+using static SDL3.SDL3;
+
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
 public class VulkanDevice : IDevice {
-  private readonly string[] VALIDATION_LAYERS = { "VK_LAYER_KHRONOS_validation" };
+  private readonly string[] VALIDATION_LAYERS = ["VK_LAYER_KHRONOS_validation"];
   public static bool s_EnableValidationLayers = true;
   private readonly Window _window;
 
   private VkDebugUtilsMessengerEXT _debugMessenger = VkDebugUtilsMessengerEXT.Null;
 
   private VkInstance _vkInstance = VkInstance.Null;
-  private VkSurfaceKHR _surface = VkSurfaceKHR.Null;
   private VkPhysicalDevice _physicalDevice = VkPhysicalDevice.Null;
   private VkDevice _logicalDevice = VkDevice.Null;
 
@@ -28,14 +29,14 @@ public class VulkanDevice : IDevice {
   private readonly object _commandPoolLock = new object();
 
   private VkQueue _graphicsQueue = VkQueue.Null;
-  private VkQueue _presentQueue = VkQueue.Null;
-  private readonly VkQueue _transferQueue = VkQueue.Null;
+  // private VkQueue _presentQueue = VkQueue.Null;
+  // private readonly VkQueue _transferQueue = VkQueue.Null;
 
   internal readonly object _queueLock = new object();
 
-  private readonly VkFence _singleTimeFence = VkFence.Null;
+  // private readonly VkFence _singleTimeFence = VkFence.Null;
 
-  private readonly VkSemaphore _semaphore = VkSemaphore.Null;
+  // private readonly VkSemaphore _semaphore = VkSemaphore.Null;
   // private readonly ulong _timeline = 0;
 
   public VkPhysicalDeviceProperties Properties;
@@ -278,11 +279,9 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void WaitDevice() {
-    lock (_queueLock) {
-      var result = vkDeviceWaitIdle(_logicalDevice);
-      if (result == VkResult.ErrorDeviceLost) {
-        throw new VkException($"Device Lost! {result.ToString()}");
-      }
+    var result = vkDeviceWaitIdle(_logicalDevice);
+    if (result == VkResult.ErrorDeviceLost) {
+      throw new VkException($"[DWARF] Device Lost! {result.ToString()}");
     }
   }
 
@@ -293,14 +292,18 @@ public class VulkanDevice : IDevice {
     return fence;
   }
 
-  private unsafe void WaitQueue(VkQueue queue) {
-    lock (_queueLock) {
-      vkQueueWaitIdle(queue);
-    }
+  public unsafe void WaitQueue(VkQueue queue) {
+    vkQueueWaitIdle(queue);
   }
 
   public void WaitQueue() {
+    // WaitQueue(_graphicsQueue);
+    WaitAllQueues();
+  }
+
+  public void WaitAllQueues() {
     WaitQueue(_graphicsQueue);
+    // WaitQueue(_presentQueue);
   }
 
   private unsafe void SubmitQueue(VkQueue queue, VkCommandBuffer commandBuffer) {
@@ -318,10 +321,18 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
+    vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+    vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
+    if (destroy) {
+      vkDestroyFence(_logicalDevice, fence);
+    }
+  }
+
+  public unsafe void SubmitQueue2(uint submitCount, VkSubmitInfo2* pSubmits, VkFence fence, bool destroy = false) {
     try {
       Application.Instance.Mutex.WaitOne();
-      vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
-      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, FenceTimeout);
+      vkQueueSubmit2(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
+      vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
       if (destroy) {
         vkDestroyFence(_logicalDevice, fence);
       }
@@ -365,22 +376,26 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateInstance() {
-    HashSet<VkUtf8String> availableInstanceLayers = new(DeviceHelper.EnumerateInstanceLayers());
-    HashSet<VkUtf8String> availableInstanceExtensions = new(DeviceHelper.GetInstanceExtensions());
+    HashSet<VkUtf8String> availableInstanceLayers = [.. DeviceHelper.EnumerateInstanceLayers()];
+    HashSet<VkUtf8String> availableInstanceExtensions = [.. DeviceHelper.GetInstanceExtensions()];
 
     var appInfo = new VkApplicationInfo {
       pApplicationName = _window.AppName,
       applicationVersion = new(1, 0, 0),
       pEngineName = _window.EngineName,
       engineVersion = new(1, 0, 0),
-      apiVersion = VkVersion.Version_1_3
+      apiVersion = VkVersion.Version_1_4
     };
 
     var createInfo = new VkInstanceCreateInfo {
       pApplicationInfo = &appInfo
     };
 
-    List<VkUtf8String> instanceExtensions = [.. glfwGetRequiredInstanceExtensions()];
+    List<VkUtf8String> instanceExtensions = [];
+    foreach (var ext in SDL_Vulkan_GetInstanceExtensions()) {
+      ReadOnlySpan<byte> sdlExtSpan = Encoding.UTF8.GetBytes(ext);
+      instanceExtensions.Add(sdlExtSpan);
+    }
 
     List<VkUtf8String> instanceLayers = new();
     // Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
@@ -392,6 +407,9 @@ public class VulkanDevice : IDevice {
       }
     }
     // instanceExtensions.Add(VK_EXT_PIPELINE_CREATION_CACHE_CONTROL_EXTENSION_NAME);
+    // instanceExtensions.Add(VK_EXT_dynamic_rendering_unused_attachments);
+    // instanceExtensions.Add(VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME);
+    // instanceExtensions.Add(VK_EXT_dynamic_rendering_unused_attachments)
 
     if (s_EnableValidationLayers) {
       DeviceHelper.GetOptimalValidationLayers(availableInstanceLayers, instanceLayers);
@@ -470,21 +488,19 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateSurface() {
-    VkSurfaceKHR surface;
-    _window.CreateSurface(_vkInstance.Handle, &surface);
-    _surface = surface;
+    Surface = _window.CreateSurface(_vkInstance.Handle);
   }
 
   private unsafe void PickPhysicalDevice() {
-    _physicalDevice = DeviceHelper.GetPhysicalDevice(_vkInstance, _surface);
+    _physicalDevice = DeviceHelper.GetPhysicalDevice(_vkInstance, Surface);
   }
 
   private unsafe void CreateLogicalDevice() {
     vkGetPhysicalDeviceProperties(_physicalDevice, out Properties);
-    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
+    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, Surface);
     var availableDeviceExtensions = vkEnumerateDeviceExtensionProperties(_physicalDevice);
 
-    HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily, queueFamilies.presentFamily];
+    HashSet<uint> uniqueQueueFamilies = [queueFamilies.graphicsFamily];
 
     float priority = 1.0f;
     uint queueCount = 0;
@@ -494,7 +510,8 @@ public class VulkanDevice : IDevice {
       VkDeviceQueueCreateInfo queueCreateInfo = new() {
         queueFamilyIndex = queueFamily,
         queueCount = 1,
-        pQueuePriorities = &priority
+        pQueuePriorities = &priority,
+        flags = VkDeviceQueueCreateFlags.None
       };
 
       queueCreateInfos[queueCount++] = queueCreateInfo;
@@ -507,7 +524,10 @@ public class VulkanDevice : IDevice {
       sampleRateShading = true,
       multiDrawIndirect = true,
       geometryShader = true,
+      robustBufferAccess = true,
       shaderStorageBufferArrayDynamicIndexing = true,
+      independentBlend = true,
+      depthClamp = true,
     };
 
     VkPhysicalDeviceVulkan11Features vk11Features = new() {
@@ -516,21 +536,53 @@ public class VulkanDevice : IDevice {
 
     VkPhysicalDeviceVulkan12Features vk12Features = new() {
       timelineSemaphore = true,
-      pNext = &vk11Features
+      descriptorIndexing = true,
+      pNext = &vk11Features,
+    };
+
+    VkPhysicalDeviceVulkan13Features vk13Features = new() {
+      synchronization2 = true,
+      dynamicRendering = true,
+      inlineUniformBlock = true,
+      pNext = &vk12Features,
+    };
+
+    VkPhysicalDeviceVulkan14Features vk14Features = new() {
+      hostImageCopy = true,
+      pushDescriptor = true,
+      dynamicRenderingLocalRead = true,
+      pNext = &vk13Features
+    };
+
+    VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeaturesEXT = new() {
+      dynamicRenderingUnusedAttachments = true,
+      pNext = &vk14Features
     };
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
+      pNext = &unusedAttachmentsFeaturesEXT
     };
-    createInfo.pNext = &vk12Features;
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
       createInfo.pQueueCreateInfos = ptr;
     }
 
-    List<VkUtf8String> enabledExtensions = [
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    ];
+    List<VkUtf8String> enabledExtensions;
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+      enabledExtensions = [
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME,
+        VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
+      ];
+    } else {
+      enabledExtensions = [
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
+      ];
+    }
 
     using var deviceExtensionNames = new VkStringArray(enabledExtensions);
 
@@ -542,16 +594,16 @@ public class VulkanDevice : IDevice {
     DeviceExtensions = enabledExtensions;
 
     var result = vkCreateDevice(_physicalDevice, &createInfo, null, out _logicalDevice);
-    if (result != VkResult.Success) throw new Exception("Failed to create a device!");
+    if (result != VkResult.Success) throw new Exception($"Failed to create a device! [{result}]");
 
     vkLoadDevice(_logicalDevice);
 
     vkGetDeviceQueue(_logicalDevice, queueFamilies.graphicsFamily, 0, out _graphicsQueue);
-    vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
+    // vkGetDeviceQueue(_logicalDevice, queueFamilies.presentFamily, 0, out _presentQueue);
   }
 
   public unsafe ulong CreateCommandPool() {
-    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, _surface);
+    var queueFamilies = DeviceHelper.FindQueueFamilies(_physicalDevice, Surface);
 
     VkCommandPoolCreateInfo poolCreateInfo = new() {
       queueFamilyIndex = queueFamilies.graphicsFamily,
@@ -565,14 +617,14 @@ public class VulkanDevice : IDevice {
   public unsafe void Dispose() {
     vkDestroyCommandPool(_logicalDevice, _commandPool);
     vkDestroyDevice(_logicalDevice);
-    vkDestroySurfaceKHR(_vkInstance, _surface);
+    vkDestroySurfaceKHR(_vkInstance, Surface);
     vkDestroyDebugUtilsMessengerEXT(_vkInstance, _debugMessenger);
     vkDestroyInstance(_vkInstance);
   }
 
   public IntPtr LogicalDevice => _logicalDevice;
   public IntPtr PhysicalDevice => _physicalDevice;
-  public ulong Surface => _surface;
+  public ulong Surface { get; private set; } = VkSurfaceKHR.Null;
 
   public ulong CommandPool {
     get {
@@ -587,7 +639,8 @@ public class VulkanDevice : IDevice {
   }
 
   public IntPtr PresentQueue {
-    get { return _presentQueue; }
+    // get { return _presentQueue; }
+    get { return IntPtr.Zero; }
   }
 
   public VkInstance VkInstance => _vkInstance;

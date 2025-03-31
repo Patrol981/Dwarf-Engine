@@ -1,6 +1,5 @@
 using System.Numerics;
 
-using Dwarf;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
 using Dwarf.Loaders;
@@ -13,7 +12,7 @@ namespace Dwarf.AssetSystem;
 public struct GameAssetRigidbodyData {
   public Vector3 Size;
   public Vector3 Offset;
-  public bool IsKinematic;
+  public MotionType MotionType;
   public PrimitiveType PrimitiveType;
   public bool Flip;
 }
@@ -73,9 +72,9 @@ public class GameAsset {
     if (meshInfo != null) {
       AssetResourcePaths?.Add(meshInfo.FileName);
       if (meshInfo.FileName.Contains(".obj")) {
-        for (int i = 0; i < meshInfo.MeshsesCount; i++) {
+        for (int i = 0; i < meshInfo.MeshedNodesCount; i++) {
           var texId = meshInfo.GetTextureIdReference(i);
-          var tex = Application.Instance.TextureManager.GetTexture(texId);
+          var tex = Application.Instance.TextureManager.GetTextureLocal(texId);
           AssetResourcePaths?.Add(tex.TextureName);
         }
       }
@@ -119,7 +118,7 @@ public class GameAsset {
         Size = rigidbody.Size,
         Offset = rigidbody.Offset,
         PrimitiveType = rigidbody.PrimitiveType,
-        IsKinematic = rigidbody.Kinematic,
+        MotionType = rigidbody.MotionType,
         Flip = rigidbody.Flipped
       };
     }
@@ -146,7 +145,7 @@ public class GameAsset {
     return entity;
   }
 
-  private async Task<Task> HandleAssetResources(Entity entity) {
+  private Task HandleAssetResources(Entity entity) {
     if (AssetResourcePaths == null) return Task.CompletedTask;
     if (AssetResourcePaths.Count < 1) return Task.CompletedTask;
 
@@ -154,24 +153,6 @@ public class GameAsset {
     if (glb != null) {
       entity.AddMaterial();
       entity.AddModel(glb, TextureFlip);
-    }
-
-    var obj = AssetResourcePaths?.Where(x => x.Contains(".obj")).FirstOrDefault();
-    if (obj != null) {
-      // entity.AddModel(obj);
-      entity.AddMaterial();
-      var app = Application.Instance;
-      entity.AddComponent(
-        await new GenericLoader().LoadModelOptimized(app.Device, app.Renderer, obj)
-      );
-
-      if (AssetResourcePaths?.Count > 2) {
-        var textures = AssetResourcePaths;
-        textures.Remove(obj);
-        entity.GetComponent<MeshRenderer>().BindMultipleModelPartsToTextures(app.TextureManager, textures.ToArray());
-      } else {
-        entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, AssetResourcePaths![1]);
-      }
     }
 
     return Task.CompletedTask;
@@ -197,7 +178,7 @@ public class GameAsset {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));
       entity.GetComponent<Terrain3D>().Setup(new(150, 150), default);
-      entity.AddRigdbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.IsKinematic, false);
+      // entity.AddRigidbody(RigidbodyData!.Value.PrimitiveType, RigidbodyData!.Value.MotionType, false);
     }
   }
 
@@ -205,7 +186,7 @@ public class GameAsset {
     if (RigidbodyData == null) return;
     var rbData = RigidbodyData!.Value;
 
-    entity.AddRigdbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.IsKinematic);
+    // entity.AddRigidbody(rbData.PrimitiveType, rbData.Size, rbData.Offset, rbData.MotionType);
   }
 
   private void HandleCamera(Entity entity) {
@@ -214,7 +195,7 @@ public class GameAsset {
     var app = Application.Instance;
     var cameraData = CameraAsset!.Value;
     entity.AddComponent(new Camera(cameraData.Fov, app.Renderer.AspectRatio));
-    entity.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+    entity.GetComponent<Camera>()?.SetPerspectiveProjection(0.0f, 100f);
     entity.GetComponent<Camera>().Yaw = cameraData.Yaw;
 
 #if RUNTIME

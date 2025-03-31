@@ -31,8 +31,11 @@ public partial class DirectRPG {
     ImGui.End();
   }
 
-  public static void UploadTexture(VulkanTexture texture) {
-    Application.Instance.GuiController.GetOrCreateImGuiBinding(texture);
+  public static Vector2 DisplaySize => ImGui.GetIO().DisplaySize;
+  public static ImGuiController GuiController => Application.Instance.GuiController;
+
+  public static void UploadTexture(ITexture texture) {
+    Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
   }
 
   public static nint GetStoredTexture(string id) {
@@ -41,10 +44,30 @@ public partial class DirectRPG {
     return Application.Instance.GuiController.GetOrCreateImGuiBinding(target);
   }
 
+  public static nint GetStoredTexture(ITexture texture) {
+    return Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
+  }
+
   public static void AlignNextWindow(Anchor anchor, Vector2 size, bool stick = true) {
     //
     // ValidateAnchor(size, anchor);
     SetWindowAlignment(size, anchor, stick);
     // ImGui.SetNextWindowPos(new(0, 0));
+  }
+
+  public static void Image(ITexture texture) {
+    var winSize = DirectRPG.DisplaySize;
+    var aspect = (float)texture.Width / (float)texture.Height;
+    var newWidth = winSize.X;
+    var newHeight = winSize.X / aspect;
+    if (newHeight > winSize.Y) {
+      newHeight = winSize.Y;
+      newWidth = newHeight * aspect;
+    }
+
+    var topLeft = new Vector2((winSize.X - newWidth) * 0.5f, (winSize.Y - newHeight) * 0.5f);
+    var bottomRight = new Vector2(topLeft.X + newWidth, topLeft.Y + newHeight);
+
+    ImGui.GetBackgroundDrawList().AddImage(GetStoredTexture(texture), topLeft, bottomRight);
   }
 }

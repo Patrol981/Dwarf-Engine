@@ -74,7 +74,7 @@ public class Canvas : Component, IDisposable {
     _window = Application.Instance.Window;
     _application = Application.Instance;
 
-    _maxCanvasSize = new Vector2(_window.Size.X, _window.Size.Y);
+    _maxCanvasSize = new Vector2(_window.Extent.Width, _window.Extent.Height);
     _currentResoltionScale = null!;
     CheckResolution();
   }
@@ -83,9 +83,6 @@ public class Canvas : Component, IDisposable {
     await CheckResolution();
 
     foreach (var entity in _entities) {
-      if (entity.HasComponent<FreeTypeText>()) {
-        continue;
-      }
       var rect = entity.GetComponent<RectTransform>();
       await CheckScale(rect);
       await CheckAnchor(rect);
@@ -123,7 +120,7 @@ public class Canvas : Component, IDisposable {
     button.Name = buttonName;
     _entities.Add(button);
 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
-    MouseState.GetInstance().ClickEvent += button.GetComponent<Button>().CheckCollision;
+    Input.ClickEvent += button.GetComponent<Button>().CheckCollision;
 #pragma warning restore CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
     return button;
   }
@@ -142,7 +139,7 @@ public class Canvas : Component, IDisposable {
     image.GetComponent<RectTransform>().Anchor = anchor;
     image.GetComponent<RectTransform>().OffsetFromVector = offsetFromAnchor;
     image.GetComponent<RectTransform>().OriginScale = originScale;
-    image.AddComponent(new GuiTexture(_application.Device));
+    image.AddComponent(new GuiTexture(_application.VmaAllocator, _application.Device));
     image.GetComponent<GuiTexture>().BindToTexture(_application.TextureManager, texturePath, false);
     image.Name = imageName;
     _entities.Add(image);

@@ -1,187 +1,274 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-
 using Dwarf.Extensions.Logging;
-using Dwarf.GLFW;
-using Dwarf.GLFW.Core;
 using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Utils;
-
+using SDL3;
 using StbImageSharp;
-
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
-
-// using Dwarf.Extensions.GLFW;
-// using static Dwarf.Extensions.GLFW.GLFW;
+using static SDL3.SDL3;
 
 namespace Dwarf.Windowing;
 
-public unsafe class Window : IDisposable {
+[Flags]
+public enum WindowFlags {
+  None = 0,
+  Fullscreen = 1 << 0,
+  Borderless = 1 << 1,
+  Resizable = 1 << 2,
+  Minimized = 1 << 3,
+  Maximized = 1 << 4,
+}
+
+public enum CursorState {
+  Normal,
+  Centered,
+  Hidden
+}
+
+public class Window : IDisposable {
   public VkUtf8String AppName = "Dwarf App"u8;
   public VkUtf8String EngineName = "Dwarf Engine"u8;
   private DwarfExtent2D _extent;
-  private bool _windowMinimalized = false;
+  private readonly bool _windowMinimalized = false;
 
-  public event EventHandler? OnResizedEventDispatcher;
+  private SDL_Cursor _cursor;
 
-  private readonly object _windowLock = new();
-
-  public Window(int width, int height, string windowName, bool fullscreen) {
-    Size = new Vector2I(width, height);
-    InitWindow(windowName, fullscreen);
+  internal void Init(string windowName, bool fullscreen, int width, int height, bool debug = false) {
+    InitWindow(windowName, fullscreen, debug, width, height);
     LoadIcons();
-    LoadGamePadInput();
+    Show();
+    RefreshRate = GetRefreshRate();
+    Logger.Info($"[WINDOW] Refresh rate set to {RefreshRate}");
+    // EnumerateAvailableGameControllers();
+  }
+
+  private unsafe void InitWindow(string windowName, bool fullscreen, bool debug, int width, int height) {
+    if (!SDL_Init(SDL_InitFlags.Video | SDL_InitFlags.Gamepad | SDL_InitFlags.Audio)) {
+      throw new Exception("Failed to initalize Window");
+    }
+
+    if (debug) {
+      Logger.Info("Setting Debug For SDL");
+      SDL_SetLogPriorities(SDL_LogPriority.Verbose);
+      SDL_SetLogOutputFunction(LogSDL);
+    }
+
+    if (!SDL_Vulkan_LoadLibrary()) {
+      throw new Exception("Failed to initialize Vulkan");
+    }
+
+    var windowFlags = SDL_WindowFlags.Vulkan |
+                      // SDL_WindowFlags.Maximized |
+                      SDL_WindowFlags.Occluded |
+                      SDL_WindowFlags.MouseFocus |
+                      SDL_WindowFlags.InputFocus |
+                      SDL_WindowFlags.Resizable;
+
+    if (fullscreen) {
+      windowFlags |= SDL_WindowFlags.Fullscreen | SDL_WindowFlags.Borderless;
+    }
+
+    SDLWindow = SDL_CreateWindow(windowName, width, height, windowFlags);
+    if (SDLWindow.IsNull) {
+      throw new Exception("Failed to create SDL window");
+    }
+
+    _ = SDL_SetWindowPosition(SDLWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+    Application.Instance.Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
+  }
+
+  private unsafe void LoadIcons() {
+    var engineIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/dwarf_ico.png");
+    var engineIco = ImageResult.FromStream(engineIcoStream, ColorComponents.RedGreenBlueAlpha);
+    var engineSurface = SDL_CreateSurface(engineIco.Width, engineIco.Height, SDL_PixelFormat.Abgr8888);
+    fixed (byte* pixPtr = engineIco.Data) {
+      engineSurface->pixels = (nint)pixPtr;
+    }
+    if (!SDL_SetWindowIcon(SDLWindow, engineSurface)) {
+      throw new Exception("Failed to load window icon");
+    }
+    Marshal.FreeHGlobal((nint)engineSurface);
+    engineIcoStream.Dispose();
+
+    var cursorIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/cursor.png");
+    var cursorIco = ImageResult.FromStream(cursorIcoStream, ColorComponents.RedGreenBlueAlpha);
+    var cursorSurface = SDL_CreateSurface(cursorIco.Width, cursorIco.Height, SDL_PixelFormat.Argb8888);
+    fixed (byte* cursorPtr = cursorIco.Data) {
+      cursorSurface->pixels = (nint)cursorPtr;
+    }
+    _cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
+    SDL_SetCursor(_cursor);
+    cursorIcoStream.Dispose();
+  }
+
+  public void Terminate() {
+
+  }
+
+  public void Show() {
+    _ = SDL_ShowWindow(SDLWindow);
+  }
+
+  public void Dispose() {
+    SDL_DestroyWindow(SDLWindow);
   }
 
   public void ResetWindowResizedFlag() {
     FramebufferResized = false;
   }
 
-  public unsafe void SetWindowName(string name) {
-    glfwSetWindowTitle(GLFWwindow, name);
-  }
-
-  private unsafe void InitWindow(string windowName, bool fullscreen) {
-    glfwInit();
-    glfwWindowHint((int)WindowHintClientApi.ClientApi, 0);
-    glfwWindowHint((int)WindowHintBool.Resizable, 1);
-    glfwWindowHint((int)WindowHintBool.Decorated, 0);
-    glfwWindowHint((int)WindowHintBool.Floating, 0);
-    glfwWindowHint((int)WindowHintBool.DoubleBuffer, 1);
-
-    if (fullscreen) {
-      GLFWmonitor = glfwGetPrimaryMonitor();
-      GLFWvidmode = glfwGetVideoMode(GLFWmonitor);
-
-      glfwWindowHint((int)WindowHintBool.RedBits, GLFWvidmode->RedBits);
-      glfwWindowHint((int)WindowHintBool.GreenBits, GLFWvidmode->GreenBits);
-      glfwWindowHint((int)WindowHintBool.BlueBits, GLFWvidmode->BlueBits);
-      glfwWindowHint((int)WindowHintBool.RefreshRate, GLFWvidmode->RefreshRate);
-
-      GLFWwindow = glfwCreateWindow(GLFWvidmode->Width, GLFWvidmode->Height, windowName, GLFWmonitor, null);
-      _extent = new DwarfExtent2D(GLFWvidmode->Width, GLFWvidmode->Height);
-    } else {
-      GLFWwindow = glfwCreateWindow(Size.X, Size.Y, windowName, GLFWmonitor, null);
-      _extent = new DwarfExtent2D(Size.X, Size.Y);
+  public void PollEvents() {
+    while (SDL_PollEvent(out SDL_Event e)) {
+      switch (e.type) {
+        case SDL_EventType.Quit:
+          ShouldClose = true;
+          break;
+        case SDL_EventType.KeyDown:
+          Input.KeyCallback(SDLWindow, e.key, e.type);
+          break;
+        case SDL_EventType.GamepadButtonDown:
+          Input.GamepadCallback(SDLWindow, e.gbutton, e.type);
+          break;
+        case SDL_EventType.MouseMotion:
+          switch (MouseCursorState) {
+            case CursorState.Centered:
+              Input.RelativeMouseCallback(e.motion.xrel, e.motion.yrel);
+              break;
+            default:
+              Input.WindowMouseCallback(e.motion.x, e.motion.y);
+              break;
+          }
+          break;
+        case SDL_EventType.MouseWheel:
+          Input.ScrollCallback(e.wheel.x, e.wheel.y);
+          break;
+        case SDL_EventType.MouseButtonUp:
+          Input.MouseButtonCallbackUp(e.button.Button);
+          break;
+        case SDL_EventType.MouseButtonDown:
+          Input.MouseButtonCallbackDown(e.button.Button);
+          break;
+        case SDL_EventType.WindowResized:
+          FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
+        case SDL_EventType.WindowMaximized:
+          FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
+        case SDL_EventType.WindowRestored:
+          IsMinimalized = false;
+          // FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
+        case SDL_EventType.WindowMinimized:
+          IsMinimalized = true;
+          break;
+        case SDL_EventType.LowMemory:
+          throw new Exception("Memory Leak");
+        case SDL_EventType.GamepadAdded:
+          if (GameController.IsNull) {
+            GameController = SDL_OpenGamepad(e.gdevice.which);
+            Logger.Info($"[SDL] Connected {SDL_GetGamepadName(GameController)}");
+          }
+          break;
+        case SDL_EventType.GamepadRemoved:
+          var instanceId = e.gdevice.which;
+          if (GameController.IsNotNull && SDL_GetGamepadID(GameController) == instanceId) {
+            Logger.Info($"[SDL] Disconnected {SDL_GetGamepadName(GameController)}");
+            SDL_CloseGamepad(GameController);
+          }
+          break;
+        default:
+          break;
+      }
     }
-
-    // FrambufferResizedCallback(this, _windowSize.X, _windowSize.Y);
-    //var w = this;
-    //var ptr = GetWindowPtr(&w);
-    // glfwSetWindowUserPointer(GLFWwindow, this);
-    WindowState.s_Window = this;
-    glfwSetFramebufferSizeCallback(GLFWwindow, FrambufferResizedCallback);
-    glfwSetCursorPosCallback(GLFWwindow, MouseState.MouseCallback);
-    glfwSetScrollCallback(GLFWwindow, MouseState.ScrollCallback);
-    glfwSetMouseButtonCallback(GLFWwindow, MouseState.MouseButtonCallback);
-    glfwSetKeyCallback(GLFWwindow, KeyboardState.KeyCallback);
-    glfwSetWindowIconifyCallback(GLFWwindow, IconifyCallback);
-
-    WindowState.CenterWindow();
-    // WindowState.MaximizeWindow();
-    WindowState.FocusOnWindow();
-    //WindowState.SetCursorMode(InputValue.GLFW_CURSOR_DISABLED);
   }
 
-  private unsafe void LoadIcons() {
-    // Load Engine Icon
-    var engineIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/dwarf_ico.png");
-    var engineIco = ImageResult.FromStream(engineIcoStream, ColorComponents.RedGreenBlueAlpha);
-    IntPtr engineIcoPtr = Marshal.AllocHGlobal(engineIco.Data.Length * sizeof(char));
-    Marshal.Copy(engineIco.Data, 0, engineIcoPtr, engineIco.Data.Length);
-    GLFWImage engineImage = new() {
-      Width = engineIco.Width,
-      Height = engineIco.Height,
-      Pixels = (char*)engineIcoPtr
-    };
-    glfwSetWindowIcon(GLFWwindow, 1, &engineImage);
-    Marshal.FreeHGlobal(engineIcoPtr);
-    engineIcoStream.Dispose();
-
-    // Load Cursor
-    var cursorIcoStream = File.OpenRead($"{DwarfPath.AssemblyDirectory}/Resources/ico/cursor.png");
-    var cursorIco = ImageResult.FromStream(cursorIcoStream, ColorComponents.RedGreenBlueAlpha);
-    IntPtr cursorPtr = Marshal.AllocHGlobal(cursorIco.Data.Length * sizeof(char));
-    Marshal.Copy(cursorIco.Data, 0, cursorPtr, cursorIco.Data.Length);
-    GLFWImage cursorImage = new() {
-      Width = cursorIco.Width,
-      Height = cursorIco.Height,
-      Pixels = (char*)cursorPtr
-    };
-    var cursor = glfwCreateCursor(&cursorImage, 0, 0);
-    CursorHandle = new IntPtr(cursor);
-    glfwSetCursor(GLFWwindow, (void*)CursorHandle);
-    Marshal.FreeHGlobal(cursorPtr);
-    cursorIcoStream.Dispose();
+  public void WaitEvents() {
+    // SDL_WaitEvent()
   }
 
-  private void LoadGamePadInput() {
-    var db = File.ReadAllText($"{DwarfPath.AssemblyDirectory}/Resources/gamecontrollerdb.txt");
-    IntPtr mappingsPtr = Marshal.AllocHGlobal(db.Length * sizeof(char));
-    Marshal.Copy(db.ToCharArray(), 0, mappingsPtr, db.Length);
-
-    glfwUpdateGamepadMappings((char*)mappingsPtr);
-    var name = glfwGetGamepadName(0);
-    var isJoystick = glfwJoystickPresent(0);
-
-    int axesCount = 0;
-
-    if (isJoystick == 1) {
-      var axes = glfwGetJoystickAxes(0, &axesCount);
-    }
-
-    glfwSetJoystickCallback(JoystickState.JoystickCallback);
-
-    Marshal.FreeHGlobal(mappingsPtr);
-  }
-
-  private static unsafe void FrambufferResizedCallback(GLFWwindow* window, int width, int height) {
+  private static unsafe void FrambufferResizedCallback(int width, int height) {
     if (width <= 0 || height <= 0) return;
     Logger.Info($"RESISING {width} {height}");
-    WindowState.s_Window.FramebufferResized = true;
-    WindowState.s_Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
-    WindowState.s_Window.OnResizedEvent(null!);
+    Application.Instance.Window.FramebufferResized = true;
+    Application.Instance.Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
+    Application.Instance.Window.OnResizedEvent(null!);
   }
 
-  private static unsafe void IconifyCallback(GLFWwindow* window, int iconified) {
-    WindowState.s_Window._windowMinimalized = iconified != 0;
-    Logger.Info($"Window Minimalized: {WindowState.s_Window._windowMinimalized}");
-    if (!WindowState.s_Window._windowMinimalized) {
-      // Application.Instance.Renderer.RecreateSwapchain();
+  private static void LogSDL(SDL_LogCategory category, SDL_LogPriority priority, string? description) {
+    if (priority >= SDL_LogPriority.Error) {
+      Logger.Error($"[{priority}] SDL: {description}");
+      throw new Exception(description);
+    } else {
+      Logger.Info($"[{priority}] SDL: {description}");
     }
   }
 
   private void OnResizedEvent(EventArgs e) {
-    WindowState.s_Window.OnResizedEventDispatcher?.Invoke(this, e);
-  }
-
-  public void Dispose() {
-    // glfwDestroyWindow(_window);
-    glfwDestroyCursor((void*)CursorHandle);
-    glfwTerminate();
+    Application.Instance.Window.OnResizedEventDispatcher?.Invoke(this, e);
   }
 
   public bool WasWindowResized() => FramebufferResized;
   public bool WasWindowMinimalized() => _windowMinimalized;
 
-  public VkResult CreateSurface(VkInstance instance, VkSurfaceKHR* surface) {
-    return glfwCreateWindowSurface(instance, GLFWwindow, null, surface);
+  public unsafe VkSurfaceKHR CreateSurface(VkInstance instance) {
+    VkSurfaceKHR surface;
+    return SDL_Vulkan_CreateSurface(SDLWindow, instance, IntPtr.Zero, (ulong**)&surface) == false
+      ? throw new Exception("Failed to create SDL Surface")
+      : surface;
   }
 
-  public bool ShouldClose => glfwWindowShouldClose(GLFWwindow);
-  public bool FramebufferResized { get; private set; } = false;
+  public unsafe float GetRefreshRate() {
+    var displays = SDL_GetDisplays();
+    var displayMode = SDL_GetCurrentDisplayMode(displays[0]);
+    return displayMode->refresh_rate;
+  }
 
-  public bool IsMinimalized {
-    get {
-      lock (_windowLock) {
-        return _windowMinimalized;
-      }
+  public static unsafe void SetCursorMode(CursorState cursorState) {
+    var prevMousePos = Input.MousePosition;
+
+    MouseCursorState = cursorState;
+
+    Logger.Info($"Setting cursor state to: {MouseCursorState}");
+
+    switch (cursorState) {
+      case CursorState.Normal:
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        break;
+      case CursorState.Centered:
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, true);
+        Input.MousePosition = prevMousePos;
+        // SDL_WarpMouseInWindow(s_Window.SDLWindow, s_Window.Size.X / 2, s_Window.Size.Y / 2);
+        break;
+      case CursorState.Hidden:
+        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        SDL_HideCursor();
+        break;
     }
-    private set {
-      lock (_windowLock) {
-        _windowMinimalized = value;
+  }
+
+  public static void FocusOnWindow() {
+    if (MouseCursorState == CursorState.Centered) {
+      SetCursorMode(CursorState.Normal);
+    } else {
+      SetCursorMode(CursorState.Centered);
+    }
+  }
+
+  public static unsafe void MaximizeWindow() {
+    Application.Instance.Device.WaitDevice();
+    SDL_MaximizeWindow(Application.Instance.Window.SDLWindow);
+  }
+
+  public void EnumerateAvailableGameControllers() {
+    var gamepads = SDL_GetJoysticks();
+    foreach (var gamepad in gamepads) {
+      if (SDL_IsGamepad(gamepad)) {
+        GameController = SDL_OpenGamepad(gamepad);
+        Logger.Info($"[SDL] Connected {SDL_GetGamepadName(GameController)}");
       }
     }
   }
@@ -190,9 +277,12 @@ public unsafe class Window : IDisposable {
     get { return _extent; }
     private set { _extent = value; }
   }
-  public Vector2I Size { get; }
-  public GLFWwindow* GLFWwindow { get; private set; }
-  public GLFWvidmode* GLFWvidmode { get; private set; }
-  public GLFWmonitor* GLFWmonitor { get; private set; }
-  public nint CursorHandle { get; private set; }
+  public bool ShouldClose { get; set; } = false;
+  public bool FramebufferResized { get; private set; } = false;
+  public bool IsMinimalized { get; private set; } = false;
+  public event EventHandler? OnResizedEventDispatcher;
+  public float RefreshRate { get; private set; }
+  public static SDL_Gamepad GameController { get; private set; }
+  public SDL_Window SDLWindow { get; private set; }
+  public static CursorState MouseCursorState = CursorState.Normal;
 }

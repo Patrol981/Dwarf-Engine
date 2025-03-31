@@ -15,6 +15,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.UI;
 public class GuiTexture : Component, IUIElement {
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator;
   private readonly bool _hasIndexBuffer = false;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
@@ -26,8 +27,9 @@ public class GuiTexture : Component, IUIElement {
 
   public GuiTexture() { }
 
-  public GuiTexture(VulkanDevice device) {
+  public GuiTexture(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
 
     CreateVertexData();
 
@@ -97,7 +99,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   public void BindToTexture(TextureManager textureManager, string texturePath, bool useLocalPath = false) {
-    _textureIdRef = useLocalPath ? textureManager.GetTextureId($"./Textures/{texturePath}") : textureManager.GetTextureId(texturePath);
+    _textureIdRef = useLocalPath ? textureManager.GetTextureIdLocal($"./Textures/{texturePath}") : textureManager.GetTextureIdLocal(texturePath);
 
     if (_textureIdRef != Guid.Empty) {
       if (useLocalPath) {
@@ -125,7 +127,7 @@ public class GuiTexture : Component, IUIElement {
   }
 
   private void CreateVertexData() {
-    Mesh = new();
+    Mesh = new(_vmaAllocator, _device);
 
     Mesh.Vertices = new Vertex[4];
     Mesh.Vertices[0] = new Vertex {
@@ -166,6 +168,7 @@ public class GuiTexture : Component, IUIElement {
     ulong vertexSize = ((ulong)Unsafe.SizeOf<Vertex>());
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -180,6 +183,7 @@ public class GuiTexture : Component, IUIElement {
     // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
 
     _vertexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       vertexSize,
       _vertexCount,
@@ -198,6 +202,7 @@ public class GuiTexture : Component, IUIElement {
     ulong indexSize = (ulong)sizeof(uint);
 
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,
@@ -213,6 +218,7 @@ public class GuiTexture : Component, IUIElement {
     //stagingBuffer.Unmap();
 
     _indexBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       indexSize,
       _indexCount,

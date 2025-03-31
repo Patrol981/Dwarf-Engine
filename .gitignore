@@ -6,7 +6,9 @@ CompiledShaders/**
 TranspiledShaders/**
 Shaders_backup/**
 .vs/**
+.vs
 .vscode/**
+.vscode
 *.sln
 *.user
 *.pubxml

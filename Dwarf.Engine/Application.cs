@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -5,6 +6,7 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Rendering.UI;
@@ -12,10 +14,11 @@ using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-using ImGuiNET;
+
 using Vortice.Vulkan;
 
-using static Dwarf.GLFW.GLFW;
+using static Vortice.Vulkan.Vma;
+// using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf;
@@ -59,25 +62,28 @@ public class Application {
   private EventCallback? _onLoadPrimaryResources;
   private TextureManager _textureManager = null!;
 
-  private readonly List<Entity> _entities = new();
+  private List<Entity> _entities = [];
+  private readonly Queue<Entity> _entitiesQueue = new();
+  private readonly Queue<MeshRenderer> _reloadQueue = new();
   private readonly object _entitiesLock = new object();
 
   private Entity _camera = new();
 
-  private Scene _currentScene = null!;
-
   // ubos
   private DescriptorPool _globalPool = null!;
-  private readonly Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
+  private Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
+  private readonly SystemConfiguration _systemConfiguration;
 
   private Thread? _renderThread;
   private bool _renderShouldClose = false;
   private bool _newSceneShouldLoad = false;
   private bool _appExitRequest = false;
 
-  private Skybox _skybox = null!;
+  private Skybox? _skybox = null;
+  public bool UseSkybox = true;
+
   // private GlobalUniformBufferObject _ubo;
   private readonly unsafe GlobalUniformBufferObject* _ubo =
     (GlobalUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<GlobalUniformBufferObject>());
@@ -89,28 +95,56 @@ public class Application {
   public bool Fullscreen { get; init; } = false;
   public readonly object ApplicationLock = new object();
 
+  public const int ThreadTimeoutTimeMS = 1000;
+
+  public Vector3 FogValue = Vector3.UnitX;
+  public Vector4 FogColor = Vector4.One;
+  public bool UseFog = true;
+
   public Application(
     string appName = "Dwarf Vulkan",
+    Vector2I windowSize = default!,
     SystemCreationFlags systemCreationFlags = SystemCreationFlags.Renderer3D,
+    SystemConfiguration? systemConfiguration = default,
     bool vsync = false,
     bool fullscreen = false,
     bool debugMode = true
   ) {
-    Application.Instance = this;
+    Instance = this;
     CurrentAPI = RenderAPI.Vulkan;
     VSync = vsync;
     Fullscreen = fullscreen;
 
     VulkanDevice.s_EnableValidationLayers = debugMode;
 
-    Window = new Window(1200, 900, appName, Fullscreen);
-    Device = new VulkanDevice(Window);
-    Renderer = new Renderer(Window, Device);
-    Systems = new SystemCollection();
-    StorageCollection = new StorageCollection(Device);
+    windowSize ??= new(1200, 900);
 
-    _textureManager = new(Device);
+    Window = new Window();
+    Window.Init(appName, Fullscreen, windowSize.X, windowSize.Y, debugMode);
+
+    Device = new VulkanDevice(Window);
+
+    VmaAllocatorCreateFlags allocatorFlags = VmaAllocatorCreateFlags.KHRDedicatedAllocation | VmaAllocatorCreateFlags.KHRBindMemory2;
+    VmaAllocatorCreateInfo allocatorCreateInfo = new() {
+      flags = allocatorFlags,
+      instance = Device.VkInstance,
+      vulkanApiVersion = VkVersion.Version_1_4,
+      physicalDevice = Device.PhysicalDevice,
+      device = Device.LogicalDevice,
+    };
+    vmaCreateAllocator(allocatorCreateInfo, out var allocator);
+    VmaAllocator = allocator;
+
+    // Renderer = new Renderer(Window, Device);
+    Renderer = new DynamicRenderer(Window, Device);
+    Systems = new SystemCollection();
+    StorageCollection = new StorageCollection(VmaAllocator, Device);
+
+    _textureManager = new(VmaAllocator, Device);
     _systemCreationFlags = systemCreationFlags;
+
+    systemConfiguration ??= SystemConfiguration.Default;
+    _systemConfiguration = systemConfiguration;
 
     Mutex = new Mutex(false);
 
@@ -119,18 +153,24 @@ public class Application {
       DirectRPG.CanvasText("Loading...");
       DirectRPG.EndCanvas();
     };
+
+    Time.Init();
   }
 
   public void SetCurrentScene(Scene scene) {
-    _currentScene = scene;
+    CurrentScene = scene;
   }
 
   public void LoadScene(Scene scene) {
     SetCurrentScene(scene);
     _newSceneShouldLoad = true;
   }
-
   private async void SceneLoadReactor() {
+    Mutex.WaitOne();
+    Device.WaitDevice();
+    Device.WaitQueue();
+    Mutex.ReleaseMutex();
+
     await Coroutines.CoroutineRunner.Instance.StopAllCoroutines();
 
     Guizmos.Clear();
@@ -139,64 +179,85 @@ public class Application {
       e.CanBeDisposed = true;
     }
 
-    Logger.Info($"Waiting for entities to dispose... [{_entities.Count()}]");
-    if (_entities.Count() > 0) {
+    // Mutex.WaitOne();
+    // while (_entities.Count > 0) {
+    //   Logger.Info($"Waiting for entities to dispose... [{_entities.Count}]");
+    //   Collect();
+    //   _entities.Clear();
+    //   _entities = [];
+    // }
+
+    Logger.Info($"Waiting for entities to dispose... [{_entities.Count}]");
+    if (_entities.Count > 0) {
       return;
     }
 
-    if (!_renderShouldClose) {
-      _renderShouldClose = true;
-      return;
-    }
+    // Mutex.ReleaseMutex();
+
+    _renderShouldClose = true;
+    // if (!_renderShouldClose) {
+
+    //   return;
+    // }
+
+    // while (_renderShouldClose) {
+
+    // }
 
     Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
     while (_renderThread!.IsAlive) {
     }
+
     _renderThread = new Thread(LoaderLoop) {
       Name = "App Loading Frontend Thread"
     };
     _renderThread.Start();
 
-    var usedPhysicsBefore = Systems.PhysicsSystem != null;
-    Systems.PhysicsSystem?.Dispose();
-
-    await SetupScene();
-    MasterAwake(_entities.GetScripts());
-    MasterStart(_entities.GetScripts());
-
-    if (usedPhysicsBefore) {
-      Systems.PhysicsSystem = new();
-      Systems.PhysicsSystem.Init(_entities.DistinctInterface<IRender3DElement>());
+    Mutex.WaitOne();
+    Systems.Dispose();
+    StorageCollection.Dispose();
+    foreach (var layout in _descriptorSetLayouts) {
+      layout.Value.Dispose();
     }
+    _descriptorSetLayouts = [];
+    _globalPool.Dispose();
+    _globalPool = null!;
+    _skybox?.Dispose();
+    _textureManager.DisposeLocal();
+
+    StorageCollection = new(VmaAllocator, Device);
+    Mutex.ReleaseMutex();
+    await Init();
 
     _renderShouldClose = true;
-    Logger.Info("Waiting for loading render process to close...");
-    while (_renderShouldClose) {
+    Logger.Info("[Scene Reactor Finalizer] Waiting for loading render process to close...");
+    // while (_renderShouldClose) {
+
+    // }
+    while (_renderThread.IsAlive) {
 
     }
 
+    _newSceneShouldLoad = false;
     _renderThread.Join();
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };
     _renderThread.Start();
 
-    _newSceneShouldLoad = false;
   }
 
   private async Task<Task> SetupScene() {
-    if (_currentScene == null) return Task.CompletedTask;
+    if (CurrentScene == null) return Task.CompletedTask;
 
     await LoadTextures();
     await LoadEntities();
 
     Logger.Info($"Loaded entities: {_entities.Count}");
-    Logger.Info($"Loaded textures: {_textureManager.LoadedTextures.Count}");
+    Logger.Info($"Loaded textures: {_textureManager.PerSceneLoadedTextures.Count}");
 
     return Task.CompletedTask;
   }
@@ -206,46 +267,53 @@ public class Application {
 
     _onLoadPrimaryResources?.Invoke();
 
-    GuiController = new(Device, Renderer);
-    await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    if (UseImGui) {
+      GuiController = new(VmaAllocator, Device, Renderer);
+      await GuiController.Init((int)Window.Extent.Width, (int)Window.Extent.Height);
+    }
 
-    _renderThread = new Thread(LoaderLoop);
-    _renderThread.Name = "App Loading Frontend Thread";
+    _renderThread = new Thread(LoaderLoop) {
+      Name = "App Loading Frontend Thread"
+    };
     _renderThread.Start();
 
     await Init();
 
     _renderShouldClose = true;
-    Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
+    Logger.Info("Waiting for renderer to close...");
+    int x = 0;
+    while (_renderShouldClose) { Console.Write(""); }
+    _renderThread?.Join();
 
+    Logger.Info("Waiting for render thread to close...");
+    while (_renderThread!.IsAlive) {
     }
-    _renderThread.Join();
+
+    _renderShouldClose = false;
+    Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
     _renderThread = new Thread(RenderLoop) {
       Name = "Render Thread"
     };
     _renderThread.Start();
-    // _calculationThread = new Thread(CalculationLoop);
 
     Logger.Info("[APPLICATION] Application loaded. Starting render thread.");
-    WindowState.FocusOnWindow();
 
     while (!Window.ShouldClose) {
-      MouseState.GetInstance().ScrollDelta = 0.0f;
-      if (Window.IsMinimalized) {
-        glfwWaitEvents();
+      Input.ScrollDelta = 0.0f;
+      Time.Tick();
+      Window.PollEvents();
+      if (!Window.IsMinimalized) {
+        Window.Show();
       } else {
-        glfwPollEvents();
+        Window.WaitEvents();
       }
 
-      Time.Tick();
-
-      // Render();
       PerformCalculations();
 
-      _onUpdate?.Invoke();
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
-      MasterUpdate(updatable.GetScripts());
+      MasterFixedUpdate(updatable.GetScriptsAsSpan());
+      _onUpdate?.Invoke();
+      MasterUpdate(updatable.GetScriptsAsArray());
 
       if (_newSceneShouldLoad) {
         SceneLoadReactor();
@@ -255,7 +323,7 @@ public class Application {
         HandleExit();
       }
 
-      GC.Collect(2, GCCollectionMode.Optimized, false);
+      // GC.Collect(2, GCCollectionMode.Optimized, false);
     }
 
     Mutex.WaitOne();
@@ -267,7 +335,6 @@ public class Application {
     } finally {
       Mutex.ReleaseMutex();
     }
-
 
     _renderShouldClose = true;
 
@@ -286,6 +353,9 @@ public class Application {
       .SetMaxSets(10)
       .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(VkDescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
       .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
       .Build();
 
@@ -298,9 +368,23 @@ public class Application {
       .Build());
 
     _descriptorSetLayouts.TryAdd("ObjectData", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
       // .AddBinding(1, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
       .Build());
+
+    _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
+      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
+      .Build());
+
+    // _descriptorSetLayouts.TryAdd("InputAttachments", new DescriptorSetLayout.Builder(Device)
+    //   .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+    //   .Build());
+
+    // StorageCollection.CreateStorage(
+    //   Device,
+    //   VkDescriptorType.InputAttachment,
+    //   BufferUsage.UniformBuffer
+    // )
 
     StorageCollection.CreateStorage(
       Device,
@@ -328,29 +412,61 @@ public class Application {
       Device.Properties.limits.minStorageBufferOffsetAlignment
     );
 
-    _descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-      .Build());
+    //_descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
+    //  .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    //  .Build());
 
     Mutex.WaitOne();
     // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
-    Systems.Setup(this, _systemCreationFlags, Device, Renderer, _descriptorSetLayouts, null!, ref _textureManager);
+    Systems.Setup(
+      this,
+      _systemCreationFlags,
+      _systemConfiguration,
+      VmaAllocator,
+      Device,
+      Renderer,
+      _descriptorSetLayouts,
+      null!,
+      ref _textureManager
+    );
 
     StorageCollection.CreateStorage(
-     Device,
-     VkDescriptorType.StorageBuffer,
-     BufferUsage.StorageBuffer,
-     Renderer.MAX_FRAMES_IN_FLIGHT,
-     (ulong)Unsafe.SizeOf<ObjectData>(),
-     (ulong)Systems.Render3DSystem.LastKnownElemCount,
-     _descriptorSetLayouts["ObjectData"],
-     null!,
-     "ObjectStorage",
-     Device.Properties.limits.minStorageBufferOffsetAlignment,
-     true
+      Device,
+      VkDescriptorType.StorageBuffer,
+      BufferUsage.StorageBuffer,
+      Renderer.MAX_FRAMES_IN_FLIGHT,
+      (ulong)Unsafe.SizeOf<ObjectData>(),
+      (ulong)Systems.Render3DSystem.LastKnownElemCount,
+      _descriptorSetLayouts["ObjectData"],
+      null!,
+      "ObjectStorage",
+      Device.Properties.limits.minStorageBufferOffsetAlignment,
+      true
    );
 
-    _skybox = new(Device, _textureManager, Renderer, _descriptorSetLayouts["Global"].GetDescriptorSetLayout());
+    StorageCollection.CreateStorage(
+      Device,
+      VkDescriptorType.StorageBuffer,
+      BufferUsage.StorageBuffer,
+      Renderer.MAX_FRAMES_IN_FLIGHT,
+      (ulong)Unsafe.SizeOf<Matrix4x4>(),
+      Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
+      _descriptorSetLayouts["JointsBuffer"],
+      null!,
+      "JointsStorage",
+      Device.Properties.limits.minStorageBufferOffsetAlignment,
+      true
+    );
+
+    if (UseSkybox) {
+      _skybox = new(
+        VmaAllocator,
+        Device,
+        _textureManager,
+        Renderer,
+        _descriptorSetLayouts["Global"].GetDescriptorSetLayout()
+      );
+    }
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
@@ -364,32 +480,29 @@ public class Application {
   private async Task<Task> Init() {
     var tasks = new Task[] {
       await SetupScene(),
-      InitResources(),
+      InitResources()
     };
 
-    // await SetupScene();
-    // InitResources();
     await Task.WhenAll(tasks);
 
     return Task.CompletedTask;
   }
 
   private async Task<Task> LoadTextures() {
-    if (_currentScene == null) return Task.CompletedTask;
-    _currentScene.LoadTextures();
-    var paths = _currentScene.GetTexturePaths();
+    if (CurrentScene == null) return Task.CompletedTask;
+    CurrentScene.LoadTextures();
+    var paths = CurrentScene.GetTexturePaths();
 
     var startTime = DateTime.UtcNow;
-    List<Task> tasks = [];
 
     List<List<ITexture>> textures = [];
     for (int i = 0; i < paths.Count; i++) {
-      var t = await TextureManager.AddTextures(Device, [.. paths[i]]);
+      var t = await TextureManager.AddTextures(VmaAllocator, Device, [.. paths[i]]);
       textures.Add([.. t]);
     }
 
     for (int i = 0; i < paths.Count; i++) {
-      _textureManager.AddRange([.. textures[i]]);
+      _textureManager.AddRangeLocal([.. textures[i]]);
     }
 
     var endTime = DateTime.Now;
@@ -400,12 +513,12 @@ public class Application {
   }
 
   private Task LoadEntities() {
-    if (_currentScene == null) return Task.CompletedTask;
+    if (CurrentScene == null) return Task.CompletedTask;
     var startTime = DateTime.UtcNow;
 
     Mutex.WaitOne();
-    _currentScene.LoadEntities();
-    _entities.AddRange(_currentScene.GetEntities());
+    CurrentScene.LoadEntities();
+    _entities.AddRange(CurrentScene.GetEntities());
     Mutex.ReleaseMutex();
 
     var targetCnv = _entities.Distinct<Canvas>();
@@ -422,24 +535,35 @@ public class Application {
   #region ENTITY_FLOW
   private static void MasterAwake(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
-    for (short i = 0; i < entities.Length; i++) {
-      entities[i].Awake();
-    }
+    var ents = entities.ToArray();
+    Parallel.ForEach(ents, (entity) => {
+      entity.Awake();
+    });
 #endif
   }
 
   private static void MasterStart(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
-    for (short i = 0; i < entities.Length; i++) {
-      entities[i].Start();
-    }
+    var ents = entities.ToArray();
+    Parallel.ForEach(ents, (entity) => {
+      entity.Start();
+    });
 #endif
   }
 
-  private static void MasterUpdate(ReadOnlySpan<DwarfScript> entities) {
+  private static void MasterUpdate(DwarfScript[] entities) {
+#if RUNTIME
+    Parallel.For(0, entities.Length, i => { entities[i].Update(); });
+    // for (short i = 0; i < entities.Length; i++) {
+    //   entities[i].Update();
+    // }
+#endif
+  }
+
+  private static void MasterFixedUpdate(ReadOnlySpan<DwarfScript> entities) {
 #if RUNTIME
     for (short i = 0; i < entities.Length; i++) {
-      entities[i].Update();
+      entities[i].FixedUpdate();
     }
 #endif
   }
@@ -455,13 +579,13 @@ public class Application {
   public void AddEntity(Entity entity) {
     lock (_entitiesLock) {
       var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      _entities.Add(entity);
-      MasterAwake(new[] { entity }.GetScripts());
-      MasterStart(new[] { entity }.GetScripts());
+      MasterAwake(new[] { entity }.GetScriptsAsSpan());
+      MasterStart(new[] { entity }.GetScriptsAsSpan());
       vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
       unsafe {
         vkDestroyFence(Device.LogicalDevice, fence);
       }
+      _entitiesQueue.Enqueue(entity);
     }
   }
 
@@ -501,7 +625,9 @@ public class Application {
 
   public void RemoveEntity(Guid id) {
     lock (_entitiesLock) {
-      var target = _entities.Where((x) => x.EntityID == id).First();
+      if (_entities.Count == 0) return;
+      var target = _entities.Where((x) => x.EntityID == id).FirstOrDefault();
+      if (target == null) return;
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.Remove(target);
@@ -519,24 +645,34 @@ public class Application {
       _entities.RemoveRange(index, count);
     }
   }
+
+  public void AddModelToReloadQueue(MeshRenderer meshRenderer) {
+    _reloadQueue.Enqueue(meshRenderer);
+  }
   #endregion ENTITY_FLOW
   #region APPLICATION_LOOP
   private unsafe void Render(ThreadInfo threadInfo) {
-    Frames.TickStart();
+    // Time.Tick();
+    // Logger.Info("TICK");
+
+    Time.RenderTick();
+    if (Window.IsMinimalized) return;
+
     Systems.ValidateSystems(
         _entities.ToArray(),
-        Device, Renderer,
+        VmaAllocator, Device, Renderer,
         _descriptorSetLayouts,
         CurrentPipelineConfig,
         ref _textureManager
       );
 
     float aspect = Renderer.AspectRatio;
-    if (aspect != _camera.GetComponent<Camera>().Aspect) {
+    var cameraAsppect = _camera.TryGetComponent<Camera>()?.Aspect;
+    if (aspect != cameraAsppect && cameraAsppect != null) {
       _camera.GetComponent<Camera>().Aspect = aspect;
       switch (_camera.GetComponent<Camera>().CameraType) {
         case CameraType.Perspective:
-          _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.01f, 100f);
+          _camera.GetComponent<Camera>()?.SetPerspectiveProjection(0.1f, 100f);
           break;
         case CameraType.Orthographic:
           _camera.GetComponent<Camera>()?.SetOrthograpicProjection();
@@ -546,30 +682,47 @@ public class Application {
       }
     }
 
-    var commandBuffer = Renderer.BeginFrame();
-    if (commandBuffer != VkCommandBuffer.Null) {
-      int frameIndex = Renderer.GetFrameIndex();
-      _ubo->Projection = _camera.GetComponent<Camera>().GetProjectionMatrix();
-      _ubo->View = _camera.GetComponent<Camera>().GetViewMatrix();
-      _ubo->CameraPosition = _camera.GetComponent<Transform>().Position;
-      _ubo->Layer = 1;
+    var camera = _camera.TryGetComponent<Camera>();
+    VkCommandBuffer commandBuffer = VkCommandBuffer.Null;
 
-      // _ubo.LightPosition = DirectionalLight.LightPosition;
-      // _ubo.LightColor = DirectionalLight.LightColor;
-      // _ubo.AmbientColor = DirectionalLight.AmbientColor;
+    if (camera != null) {
+      commandBuffer = Renderer.BeginFrame();
+    }
+
+    if (commandBuffer != VkCommandBuffer.Null && camera != null) {
+      int frameIndex = Renderer.FrameIndex;
+      _currentFrame.Camera = camera;
+      _currentFrame.CommandBuffer = commandBuffer;
+      _currentFrame.FrameIndex = frameIndex;
+      _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
+      _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
+      _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
+      _currentFrame.JointsBufferDescriptorSet = StorageCollection.GetDescriptor("JointsStorage", frameIndex);
+      _currentFrame.TextureManager = _textureManager;
+      _currentFrame.ImportantEntity = _entities.Where(x => x.IsImportant).FirstOrDefault() ?? null!;
+
+      _ubo->Projection = _camera.TryGetComponent<Camera>()?.GetProjectionMatrix() ?? Matrix4x4.Identity;
+      _ubo->View = _camera.TryGetComponent<Camera>()?.GetViewMatrix() ?? Matrix4x4.Identity;
+      _ubo->CameraPosition = _camera.TryGetComponent<Transform>()?.Position ?? Vector3.Zero;
+      _ubo->Fov = 60;
+      _ubo->ImportantEntityPosition = _currentFrame.ImportantEntity?.TryGetComponent<Transform>()?.Position ?? Vector3.Zero;
+      _ubo->ImportantEntityPosition.Z += 0.5f;
+      _ubo->ImportantEntityDirection = _currentFrame.ImportantEntity?.TryGetComponent<Transform>()?.Forward ?? Vector3.Zero;
+      _ubo->HasImportantEntity = _currentFrame.ImportantEntity != null ? 1 : 0;
+      // _ubo->Fog = FogValue;
+      _ubo->Fog = new(FogValue.X, Window.Extent.Width, Window.Extent.Height);
+      _ubo->FogColor = FogColor;
+      _ubo->UseFog = UseFog ? 1 : 0;
+      // _ubo->ImportantEntityPosition = new(6, 9);
+      _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
+      _ubo->HatchScale = Render3DSystem.HatchScale;
 
       _ubo->DirectionalLight = DirectionalLight;
-      /*
-      _ubo.LightPosition = DirectionalLight.LightPosition;
-      _ubo.LightColor = DirectionalLight.LightColor;
-      _ubo.AmientLightColor = DirectionalLight.AmbientColor;
-      _ubo.CameraPosition = _camera.GetComponent<Transform>().Position;
-      */
 
-      // Systems.PointLightSystem?.Update(ref _currentFrame, ref *_ubo, _entities.ToArray());
+      ReadOnlySpan<Entity> entities = _entities.ToArray();
 
       if (Systems.PointLightSystem != null) {
-        Systems.PointLightSystem.Update(_entities.ToArray(), out var pointLights);
+        Systems.PointLightSystem.Update(entities, out var pointLights);
         if (pointLights.Length > 1) {
           _ubo->PointLightsLength = pointLights.Length;
           fixed (PointLight* pPointLights = pointLights) {
@@ -577,7 +730,7 @@ public class Application {
               "PointStorage",
               frameIndex,
               (nint)pPointLights,
-              (ulong)Unsafe.SizeOf<PointLight>() * (ulong)MAX_POINT_LIGHTS_COUNT
+              (ulong)Unsafe.SizeOf<PointLight>() * MAX_POINT_LIGHTS_COUNT
             );
           }
         } else {
@@ -585,7 +738,12 @@ public class Application {
         }
       }
 
-      Systems.Render3DSystem.Update(_entities.ToArray().DistinctI3D(), out var objectData);
+      Systems.Render3DSystem.Update(
+        _entities.ToArray().DistinctI3D(),
+        out var objectData,
+        out var skinnedObjects,
+        out var flatJoints
+      );
       fixed (ObjectData* pObjectData = objectData) {
         StorageCollection.WriteBuffer(
           "ObjectStorage",
@@ -595,80 +753,87 @@ public class Application {
         );
       }
 
+      ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
+      fixed (Matrix4x4* pMatrices = flatArray) {
+        StorageCollection.WriteBuffer(
+          "JointsStorage",
+          frameIndex,
+          (nint)pMatrices,
+          (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
+        );
+      }
+
       StorageCollection.WriteBuffer(
         "GlobalStorage",
         frameIndex,
-        (nint)(_ubo),
+        (nint)_ubo,
         (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>()
       );
 
-      // _uboBuffers[frameIndex].WriteToBuffer((nint)(_ubo), (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>());
-      // var currentFrame = new FrameInfo();
-      _currentFrame.Camera = _camera.GetComponent<Camera>();
-      _currentFrame.CommandBuffer = commandBuffer;
-      _currentFrame.FrameIndex = frameIndex;
-      _currentFrame.GlobalDescriptorSet = StorageCollection.GetDescriptor("GlobalStorage", frameIndex);
-      _currentFrame.PointLightsDescriptorSet = StorageCollection.GetDescriptor("PointStorage", frameIndex);
-      _currentFrame.ObjectDataDescriptorSet = StorageCollection.GetDescriptor("ObjectStorage", frameIndex);
-      // _currentFrame.GlobalDescriptorSet = _globalDescriptorSets[frameIndex];
-      // _currentFrame.PointLightsDescriptorSet = _storageDescriptorSets[frameIndex];
-      // _currentFrame.ObjectDataDescriptorSet = _objectDescriptorSets[frameIndex];
-      _currentFrame.TextureManager = _textureManager;
-
-      // Logger.Info($"{_ubo->PointLights.LightPosition}");
-
-      // render
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
 
       _onRender?.Invoke();
-      _skybox.Render(_currentFrame);
-      Systems.UpdateSystems(_entities.ToArray(), _currentFrame);
+      _skybox?.Render(_currentFrame);
+      Entity[] toUpdate = [.. _entities];
+      Systems.UpdateSystems(toUpdate, _currentFrame);
 
-      GuiController.Update(Time.DeltaTime);
-      _onGUI?.Invoke();
+      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
+      if (UseImGui) {
+        GuiController.Update(Time.StopwatchDelta);
+      }
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
-      MasterRenderUpdate(updatable.GetScripts());
-      GuiController.Render(_currentFrame);
+      MasterRenderUpdate(updatable.GetScriptsAsSpan());
+      _onGUI?.Invoke();
+      if (UseImGui) {
+        GuiController.Render(_currentFrame);
+      }
 
-      Renderer.EndSwapchainRenderPass(commandBuffer);
+      Renderer.EndRendering(commandBuffer);
       Renderer.EndFrame();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
+      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
 
-      Collect();
+      while (_reloadQueue.Count > 0) {
+        var item = _reloadQueue.Dequeue();
+        item.Dispose();
+        item.Init(item.AABBFilter);
+      }
     }
 
-    Frames.TickEnd();
+    Collect();
+
+    if (_entitiesQueue.Count > 0) {
+      Mutex.WaitOne();
+      while (_entitiesQueue.Count > 0) {
+        _entities.Add(_entitiesQueue.Dequeue());
+      }
+      Mutex.ReleaseMutex();
+    }
   }
 
   internal unsafe void RenderLoader() {
-    Frames.TickStart();
-
     var commandBuffer = Renderer.BeginFrame();
     if (commandBuffer != VkCommandBuffer.Null) {
-      int frameIndex = Renderer.GetFrameIndex();
+      int frameIndex = Renderer.FrameIndex;
 
       _currentFrame.CommandBuffer = commandBuffer;
       _currentFrame.FrameIndex = frameIndex;
 
-      Renderer.BeginSwapchainRenderPass(commandBuffer);
+      Renderer.BeginRendering(commandBuffer);
+      if (UseImGui) {
+        GuiController.Update(Time.StopwatchDelta);
+        _onAppLoading?.Invoke();
+        GuiController.Render(_currentFrame);
+      }
+      Renderer.EndRendering(commandBuffer);
 
-      GuiController.Update(Time.DeltaTime);
-      _onAppLoading?.Invoke();
-      GuiController.Render(_currentFrame);
-
-      Mutex.WaitOne();
-      Renderer.EndSwapchainRenderPass(commandBuffer);
       Renderer.EndFrame();
-      Mutex.ReleaseMutex();
     }
-
-
-    Frames.TickEnd();
   }
 
   private void PerformCalculations() {
-    Systems.UpdateCalculationSystems(GetEntities().ToArray());
+    Systems.UpdateCalculationSystems([.. GetEntities()]);
   }
 
   internal unsafe void LoaderLoop() {
@@ -678,10 +843,11 @@ public class Application {
       CommandBuffer = [Renderer.MAX_FRAMES_IN_FLIGHT]
     };
 
-    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new();
-    secondaryCmdBufAllocateInfo.level = VkCommandBufferLevel.Primary;
-    secondaryCmdBufAllocateInfo.commandPool = threadInfo.CommandPool;
-    secondaryCmdBufAllocateInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo secondaryCmdBufAllocateInfo = new() {
+      level = VkCommandBufferLevel.Primary,
+      commandPool = threadInfo.CommandPool,
+      commandBufferCount = 1
+    };
 
     fixed (VkCommandBuffer* cmdBfPtr = threadInfo.CommandBuffer) {
       vkAllocateCommandBuffers(Device.LogicalDevice, &secondaryCmdBufAllocateInfo, cmdBfPtr).CheckResult();
@@ -694,7 +860,19 @@ public class Application {
     }
 
     fixed (VkCommandBuffer* cmdBfPtrEnd = threadInfo.CommandBuffer) {
-      vkFreeCommandBuffers(Device.LogicalDevice, threadInfo.CommandPool, (uint)Renderer.MAX_FRAMES_IN_FLIGHT, cmdBfPtrEnd);
+      // vkFreeCommandBuffers(
+      //   Device.LogicalDevice,
+      //   threadInfo.CommandPool,
+      //   (uint)Renderer.MAX_FRAMES_IN_FLIGHT,
+      //   cmdBfPtrEnd
+      // );
+
+      vkFreeCommandBuffers(
+        Device.LogicalDevice,
+        threadInfo.CommandPool,
+        (uint)threadInfo.CommandBuffer.Length,
+        cmdBfPtrEnd
+      );
     }
 
     Device.WaitQueue();
@@ -706,6 +884,7 @@ public class Application {
   }
 
   internal unsafe void RenderLoop() {
+    Mutex.WaitOne();
     var pool = Device.CreateCommandPool();
     var threadInfo = new ThreadInfo() {
       CommandPool = pool,
@@ -713,15 +892,19 @@ public class Application {
     };
 
     Renderer.CreateCommandBuffers(threadInfo.CommandPool, VkCommandBufferLevel.Primary);
+    // Renderer.BuildCommandBuffers(() => { });
+    Mutex.ReleaseMutex();
 
     while (!_renderShouldClose) {
+      // Logger.Warn("SPINNING " + !_renderShouldClose);
       if (Window.IsMinimalized) continue;
 
       Render(threadInfo);
 
       GC.Collect(2, GCCollectionMode.Optimized, false);
     }
-    Logger.Info("Closing Renderer");
+
+    Logger.Info("[RENDER LOOP] Closing Renderer");
 
     Device.WaitQueue();
     Device.WaitDevice();
@@ -738,13 +921,14 @@ public class Application {
 
     Span<Entity> entities = _entities.ToArray();
     for (int i = 0; i < entities.Length; i++) {
-      entities[i].GetComponent<Sprite>()?.Dispose();
+      // entities[i].GetComponent<Sprite>()?.Dispose();
 
-      var u = entities[i].GetDrawables<IDrawable>();
-      foreach (var e in u) {
-        var t = e as IDrawable;
-        t?.Dispose();
-      }
+      // var u = entities[i].GetDrawables<IDrawable>();
+      // foreach (var e in u) {
+      //   var t = e as IDrawable;
+      //   t?.Dispose();
+      // }
+      entities[i].DisposeEverything();
     }
 
     _textureManager?.Dispose();
@@ -759,14 +943,21 @@ public class Application {
     Systems?.Dispose();
     Renderer?.Dispose();
     Window?.Dispose();
+    if (VmaAllocator.IsNotNull) {
+      vmaDestroyAllocator(VmaAllocator);
+    }
     Device?.Dispose();
   }
 
   private void Collect() {
+    if (_entities.Count == 0) return;
     for (short i = 0; i < _entities.Count; i++) {
       if (_entities[i].CanBeDisposed) {
-        Device.WaitDevice();
 
+
+        if (_entities[i].Collected) continue;
+
+        _entities[i].Collected = true;
         _entities[i].DisposeEverything();
         RemoveEntity(_entities[i].EntityID);
       }
@@ -797,8 +988,6 @@ public class Application {
     }
 
     Logger.Info("Waiting for render process to close...");
-    while (_renderShouldClose) {
-    }
     _renderThread?.Join();
 
     Logger.Info("Waiting for render thread to close...");
@@ -807,7 +996,6 @@ public class Application {
 
     Systems.PhysicsSystem?.Dispose();
 
-    glfwTerminate();
     System.Environment.Exit(1);
   }
 
@@ -815,13 +1003,23 @@ public class Application {
   public Mutex Mutex { get; private set; }
   public Window Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
-  public Renderer Renderer { get; } = null!;
+  // public Renderer Renderer { get; } = null!;
+  public DynamicRenderer Renderer { get; } = null!;
+  public VmaAllocator VmaAllocator { get; private set; }
   public FrameInfo FrameInfo => _currentFrame;
-  public DirectionalLight DirectionalLight { get; set; } = DirectionalLight.New();
+  public DirectionalLight DirectionalLight = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
-  public StorageCollection StorageCollection { get; } = null!;
-  public Scene CurrentScene => _currentScene;
+  public StorageCollection StorageCollection { get; private set; } = null!;
+  public Scene CurrentScene { get; private set; } = null!;
+  public bool UseImGui { get; } = true;
+  public unsafe GlobalUniformBufferObject GlobalUbo => *_ubo;
 
   public const int MAX_POINT_LIGHTS_COUNT = 128;
+
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
+  public unsafe static explicit operator nint(Application app) {
+    return (nint)(&app);
+  }
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 }

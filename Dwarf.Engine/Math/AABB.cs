@@ -1,7 +1,21 @@
 ﻿using System.Numerics;
+using Dwarf.EntityComponentSystem;
+using Dwarf.Physics;
 
 namespace Dwarf.Math;
+
+public enum AABBFilter {
+  None,
+  Default,
+  Actors,
+  Environment,
+  Terrain
+}
+
 public class AABB {
+  public static Vector3 MIN = new Vector3(-1, 1, -1);
+  public static Vector3 MAX = new Vector3(1, -1, 1);
+
   private Vector3 _min;
   private Vector3 _max;
 
@@ -13,6 +27,32 @@ public class AABB {
   public AABB(Vector3 min, Vector3 max) {
     _max = max;
     _min = min;
+  }
+
+  public unsafe void CalculateOnFly(ColliderMesh colliderMesh, Transform transform) {
+    if (colliderMesh == null || transform == null) return;
+
+    int len = colliderMesh.Mesh.Vertices.Length;
+
+    Vector3* aabbTransformed = stackalloc Vector3[len];
+    for (short i = 0; i < len; i++) {
+      aabbTransformed[i] = colliderMesh.Mesh.Vertices[i].Position;
+      aabbTransformed[i] = Vector3.Transform(aabbTransformed[i], transform.RotationMatrix);
+      aabbTransformed[i] = Vector3.Transform(aabbTransformed[i], transform.ScaleMatrix);
+    }
+
+    Max = MAX;
+    Min = MIN;
+
+    for (short i = 0; i < len; i++) {
+      _min.X = MathF.Min(_min.X, aabbTransformed[i].X);
+      _min.Y = MathF.Min(_min.Y, aabbTransformed[i].Y);
+      _min.Z = MathF.Min(_min.Z, aabbTransformed[i].Z);
+
+      _max.X = MathF.Max(_max.X, aabbTransformed[i].X);
+      _max.Y = MathF.Max(_max.Y, aabbTransformed[i].Y);
+      _max.Z = MathF.Max(_max.Z, aabbTransformed[i].Z);
+    }
   }
 
   public static AABB CalculateOnFlyWithMatrix(Mesh mesh, Transform transform) {
@@ -78,6 +118,33 @@ public class AABB {
       _max.Y = MathF.Max(_max.Y, aabb.Max.Y);
       _max.Z = MathF.Max(_max.Z, aabb.Max.Z);
     }
+  }
+
+  public void GetBounds(Matrix4x4 m) {
+    var min = new Vector3(m[3, 0], m[3, 1], m[3, 2]);
+    var max = min;
+    Vector3 v0, v1;
+
+    var right = new Vector3(m[0, 0], m[0, 1], m[0, 2]);
+    v0 = right * Min.X;
+    v1 = right * max.X;
+    min += Vector3.Min(v0, v1);
+    max += Vector3.Max(v0, v1);
+
+    var up = new Vector3(m[1, 0], m[1, 1], m[1, 2]);
+    v0 = up * Min.Y;
+    v1 = up * Max.Y;
+    min += Vector3.Min(v0, v1);
+    max += Vector3.Max(v0, v1);
+
+    var back = new Vector3(m[2, 0], m[2, 1], m[2, 2]);
+    v0 = back * Min.Z;
+    v1 = back * Max.Z;
+    min += Vector3.Min(v0, v1);
+    max += Vector3.Max(v0, v1);
+
+    _min = min;
+    _max = max;
   }
 
   public Vector3 Min {

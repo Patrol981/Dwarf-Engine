@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
+using Dwarf.Extensions.Logging;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -18,15 +19,17 @@ public struct StorageData {
 
 public class StorageCollection : IDisposable {
   private readonly VulkanDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private readonly DescriptorPool _dynamicPool = null!;
 
-  public StorageCollection(VulkanDevice device) {
+  public StorageCollection(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
 
     _dynamicPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(10)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 10)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .SetMaxSets(30)
+      .AddPoolSize(VkDescriptorType.StorageBuffer, 30)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
       .Build();
   }
 
@@ -43,6 +46,8 @@ public class StorageCollection : IDisposable {
     ulong offsetAlignment,
     bool mapWholeBuffer = false
   ) {
+    if (bufferCount == 0) bufferCount = 1;
+
     pool ??= _dynamicPool;
 
     var storage = new StorageData {
@@ -50,6 +55,7 @@ public class StorageCollection : IDisposable {
     };
     for (int i = 0; i < arraySize; i++) {
       storage.Buffers[i] = new(
+        _vmaAllocator,
         device,
         bufferSize,
         bufferCount,
@@ -85,6 +91,7 @@ public class StorageCollection : IDisposable {
     bool mapWholeBuffer = false) {
     if (!Storages.TryGetValue(key, out var storageData)) return;
     if (storageData.Buffers.Length < index) return;
+    if (elemCount < 1) return;
     var buff = storageData.Buffers[index];
 
     if (buff.GetBufferSize() < buff.GetAlignmentSize() * (ulong)elemCount ||
@@ -92,6 +99,7 @@ public class StorageCollection : IDisposable {
     ) {
       Storages[key].Buffers[index]?.Dispose();
       Storages[key].Buffers[index] = new(
+        _vmaAllocator,
         _device,
         (ulong)Unsafe.SizeOf<ObjectData>(),
         (ulong)elemCount,
@@ -106,17 +114,24 @@ public class StorageCollection : IDisposable {
       _ = new VulkanDescriptorWriter(layout, _dynamicPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out Storages[key].Descriptors[index]);
+
+      Logger.Info($"[Storage Collection] Updated Sizes of {key}[{index}].");
     }
   }
 
   public void WriteBuffer(string key, int index, nint data, ulong size = VK_WHOLE_SIZE) {
     if (!Storages.TryGetValue(key, out var storage)) return;
     if (storage.Buffers[index] == null) return;
+    Application.Instance.Mutex.WaitOne();
     Storages[key].Buffers[index].WriteToBuffer(data, size);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public VkDescriptorSet GetDescriptor(string key, int index) {
-    return Storages[key].Descriptors[index];
+    // Storages[key].Descriptors[index]
+    return Storages.TryGetValue(key, out var storageData)
+      ? storageData.Descriptors[index] != VkDescriptorSet.Null ? storageData.Descriptors[index] : VkDescriptorSet.Null
+      : VkDescriptorSet.Null;
   }
 
   public void Dispose() {

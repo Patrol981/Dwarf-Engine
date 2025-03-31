@@ -34,7 +34,7 @@ public class VulkanDescriptorWriter {
 
     var tmp = _writes.ToList();
     tmp.Add(write);
-    _writes = tmp.ToArray();
+    _writes = [.. tmp];
     return this;
   }
 
@@ -50,7 +50,27 @@ public class VulkanDescriptorWriter {
 
     var tmp = _writes.ToList();
     tmp.Add(write);
-    _writes = tmp.ToArray();
+    _writes = [.. tmp];
+    return this;
+  }
+
+  public unsafe VulkanDescriptorWriter WriteSampler(uint binding, VkSampler sampler) {
+    var bindingDescription = _setLayout.Bindings[binding];
+
+    VkDescriptorImageInfo samplerInfo = new() {
+      sampler = sampler
+    };
+
+    VkWriteDescriptorSet imageWriteDescriptorSet = new() {
+      descriptorType = bindingDescription.descriptorType,
+      dstBinding = binding,
+      descriptorCount = 1,
+      pImageInfo = &samplerInfo
+    };
+
+    var tmp = _writes.ToList();
+    tmp.Add(imageWriteDescriptorSet);
+    _writes = [.. tmp];
     return this;
   }
 
@@ -65,9 +85,13 @@ public class VulkanDescriptorWriter {
   }
 
   public unsafe void Overwrite(ref VkDescriptorSet set) {
+    if (_writes.Length < 1) throw new ArgumentException("Writes length is less than 1");
+    if (set.IsNull) throw new ArgumentException("Set is null"); ;
+
     for (uint i = 0; i < _writes.Length; i++) {
       _writes[i].dstSet = set;
     }
+
     vkUpdateDescriptorSets(_pool.Device.LogicalDevice, _writes);
   }
 

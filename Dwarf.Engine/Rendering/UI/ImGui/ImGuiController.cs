@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -7,8 +8,10 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
-
+using Dwarf.Windowing;
 using ImGuiNET;
+
+using SDL3;
 
 using Vortice.Vulkan;
 
@@ -17,7 +20,8 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.UI;
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
-  private readonly Renderer _renderer;
+  private readonly VmaAllocator _vmaAllocator;
+  private readonly IRenderer _renderer;
 
   private DwarfBuffer _vertexBuffer = default!;
   private DwarfBuffer _indexBuffer = default!;
@@ -43,11 +47,15 @@ public partial class ImGuiController : IDisposable {
   private VulkanTexture _fontTexture = default!;
 
   private bool _frameBegun = false;
+  private bool _firstFrame = false;
 
   private int _width;
   private int _height;
   private System.Numerics.Vector2 _scaleFactor = System.Numerics.Vector2.One;
 
+  public ImFontPtr SmallFont { get; private set; }
+  public ImFontPtr MediumFont { get; private set; }
+  public ImFontPtr LargeFont { get; private set; }
   public ImFontPtr CurrentFont { get; private set; }
 
   // private readonly Keys[] _allKeys = Enum.GetValues<Keys>();
@@ -60,9 +68,12 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(VulkanDevice device, Renderer renderer) {
+  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, IRenderer renderer) {
     _device = device;
+    _vmaAllocator = vmaAllocator;
     _renderer = renderer;
+
+    _firstFrame = false;
 
     ImGui.CreateContext();
   }
@@ -70,36 +81,45 @@ public partial class ImGuiController : IDisposable {
   public unsafe Task InitResources() {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
-    _systemDescriptorPool = new DescriptorPool.Builder(_device)
-      .SetMaxSets(1000)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
+    _systemSetLayout = new DescriptorSetLayout.Builder(_device)
+      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
       .Build();
 
-    _systemSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.All)
+    _systemDescriptorPool = new DescriptorPool.Builder(_device)
+      .SetMaxSets(10000)
+      .AddPoolSize(VkDescriptorType.SampledImage, 1000)
+      .AddPoolSize(VkDescriptorType.Sampler, 1000)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
+
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       _systemSetLayout.GetDescriptorSetLayout()
     ];
 
     InitTexture(_device.GraphicsQueue);
+    // InitTexture();
 
     VkPipelineCacheCreateInfo pipelineCacheCreateInfo = new();
     vkCreatePipelineCache(_device.LogicalDevice, &pipelineCacheCreateInfo, null, out _pipelineCache).CheckResult();
 
     CreatePipelineLayout(descriptorSetLayouts);
-    CreatePipeline(_renderer.GetSwapchainRenderPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    // CreatePipeline(_renderer.GetPostProcessingPass(), "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
+    CreatePipeline(VkRenderPass.Null, "imgui_vertex", "imgui_fragment", new PipelineImGuiProvider());
 
     return Task.CompletedTask;
   }
 
-  public async Task<Task> Init(int width, int height) {
+  public async Task<Task> Init(int width, int height, bool createBuffers = true) {
     _width = width;
     _height = height;
 
-    CreateBuffers();
+    _firstFrame = false;
+
+    if (createBuffers) {
+      CreateBuffers();
+    }
 
     IntPtr context = ImGui.CreateContext();
     ImGui.SetCurrentContext(context);
@@ -107,12 +127,17 @@ public partial class ImGuiController : IDisposable {
     var io = ImGui.GetIO();
     io.Fonts.ClearFonts();
     var dwarfPath = DwarfPath.AssemblyDirectory;
-    CurrentFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}./Resources/fonts/PixelifySans-SemiBold.ttf", 14);
+    SmallFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 15);
+    MediumFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 20);
+    LargeFont = io.Fonts.AddFontFromFileTTF($"{dwarfPath}/Resources/fonts/DroidSans.ttf", 30);
+
+    CurrentFont = SmallFont;
+
+    // io.Fonts.Build();
     unsafe {
-      if ((IntPtr)CurrentFont.NativePtr == IntPtr.Zero) {
-        Logger.Error("Could not load font!");
-        throw new ArgumentException("Could not load font!");
-      }
+      Debug.Assert((IntPtr)SmallFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)MediumFont.NativePtr != IntPtr.Zero);
+      Debug.Assert((IntPtr)LargeFont.NativePtr != IntPtr.Zero);
     }
     io.Fonts.SetTexID(_fontAtlasId);
 
@@ -123,13 +148,13 @@ public partial class ImGuiController : IDisposable {
     // InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
     await InitResources();
 
-    SetPerFrameImGuiData(1f / 60f);
+    SetPerFrameImGuiData(Time.StopwatchDelta);
     CreateStyles();
 
     ImGui.NewFrame();
     _frameBegun = true;
 
-    WindowState.s_Window.OnResizedEventDispatcher += WindowResized;
+    Application.Instance.Window.OnResizedEventDispatcher += WindowResized;
 
     return Task.CompletedTask;
   }
@@ -281,9 +306,6 @@ public partial class ImGuiController : IDisposable {
     colors[(int)ImGuiCol.ResizeGripActive] = new(0.40f, 0.44f, 0.47f, 1.00f);
     colors[(int)ImGuiCol.Tab] = new(0.00f, 0.00f, 0.00f, 0.52f);
     colors[(int)ImGuiCol.TabHovered] = new(0.14f, 0.14f, 0.14f, 1.00f);
-    colors[(int)ImGuiCol.TabActive] = new(0.20f, 0.20f, 0.20f, 0.36f);
-    colors[(int)ImGuiCol.TabUnfocused] = new(0.00f, 0.00f, 0.00f, 0.52f);
-    colors[(int)ImGuiCol.TabUnfocusedActive] = new(0.14f, 0.14f, 0.14f, 1.00f);
     colors[(int)ImGuiCol.DockingPreview] = new(0.33f, 0.67f, 0.86f, 1.00f);
     colors[(int)ImGuiCol.DockingEmptyBg] = new(1.00f, 0.00f, 0.00f, 1.00f);
     colors[(int)ImGuiCol.PlotLines] = new(1.00f, 1.00f, 0.00f, 1.00f);
@@ -297,7 +319,6 @@ public partial class ImGuiController : IDisposable {
     colors[(int)ImGuiCol.TableRowBgAlt] = new(1.00f, 1.00f, 1.00f, 0.06f);
     colors[(int)ImGuiCol.TextSelectedBg] = new(0.20f, 0.22f, 0.23f, 1.00f);
     colors[(int)ImGuiCol.DragDropTarget] = new(0.33f, 0.67f, 0.86f, 1.00f);
-    colors[(int)ImGuiCol.NavHighlight] = new(1.00f, 1.00f, 0.00f, 1.00f);
     colors[(int)ImGuiCol.NavWindowingHighlight] = new(1.00f, 1.00f, 0.00f, 0.70f);
     colors[(int)ImGuiCol.NavWindowingDimBg] = new(1.00f, 1.00f, 0.00f, 0.20f);
     colors[(int)ImGuiCol.ModalWindowDimBg] = new(1.00f, 1.00f, 0.00f, 0.35f);
@@ -328,19 +349,24 @@ public partial class ImGuiController : IDisposable {
   }
 
   private void WindowResized(object? sender, EventArgs e) {
-    var windowExtent = WindowState.s_Window.Extent;
+    var windowExtent = Application.Instance.Window.Extent;
     _width = (int)windowExtent.Width;
     _height = (int)windowExtent.Height;
     Logger.Info($"[ImGUI] Window Resized ({_width}{_height})");
   }
 
-  private void SetPerFrameImGuiData(float deltaSeconds) {
+  private void SetPerFrameImGuiData(double deltaSeconds) {
     ImGuiIOPtr io = ImGui.GetIO();
     io.DisplaySize = new System.Numerics.Vector2(
       _width / _scaleFactor.X,
       _height / _scaleFactor.Y);
     io.DisplayFramebufferScale = _scaleFactor;
-    io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
+    if (deltaSeconds > 0) {
+      io.DeltaTime = (float)deltaSeconds; // DeltaTime is in seconds.
+    } else {
+      io.DeltaTime = 0.00001f;
+    }
+
   }
 
   public void Render(FrameInfo frameInfo) {
@@ -349,9 +375,11 @@ public partial class ImGuiController : IDisposable {
       ImGui.Render();
       RenderImDrawData(ImGui.GetDrawData(), frameInfo);
     }
+
+    _firstFrame = true;
   }
 
-  public void Update(float deltaSeconds) {
+  public void Update(double deltaSeconds) {
     if (_frameBegun) {
       ImGui.Render();
     }
@@ -365,11 +393,11 @@ public partial class ImGuiController : IDisposable {
 
   public void UpdateImGuiInput() {
     ImGuiIOPtr io = ImGui.GetIO();
-    io.MouseDown[0] = MouseState.GetInstance().QuickStateMouseButtons.Left;
-    io.MouseDown[1] = MouseState.GetInstance().QuickStateMouseButtons.Right;
-    io.MouseDown[2] = MouseState.GetInstance().QuickStateMouseButtons.Middle;
-    var screenPoint = new Vector2((int)MouseState.GetInstance().MousePosition.X, (int)MouseState.GetInstance().MousePosition.Y);
-    if (WindowState.s_MouseCursorState != GLFW.InputValue.GLFW_CURSOR_DISABLED) {
+    io.MouseDown[0] = Input.QuickStateMouseButtons.Left;
+    io.MouseDown[1] = Input.QuickStateMouseButtons.Right;
+    io.MouseDown[2] = Input.QuickStateMouseButtons.Middle;
+    var screenPoint = new Vector2((int)Input.MousePosition.X, (int)Input.MousePosition.Y);
+    if (Window.MouseCursorState != CursorState.Centered && Window.MouseCursorState != CursorState.Hidden) {
       io.MousePos = new System.Numerics.Vector2(screenPoint.X, screenPoint.Y);
     }
 
@@ -383,8 +411,8 @@ public partial class ImGuiController : IDisposable {
 
       // io.InputQueueCharacters.
 
-      if (KeyboardState.Instance.KeyStates.TryGetValue(key, out var state)) {
-        if (Input.GetKeyDown((Keys)key)) {
+      if (Input.KeyStates.TryGetValue(key, out var state)) {
+        if (Input.GetKeyDown((Keycode)key)) {
           io.AddInputCharacter((char)key);
         }
       }
@@ -395,11 +423,7 @@ public partial class ImGuiController : IDisposable {
 
       if (TryMapKey((Keys)key, out var imKey)) {
         // io.AddKeyEvent(imKey, true);
-        io.AddKeyEvent(imKey, Input.GetKey((Keys)key));
-        if (Input.GetKeyDown(Keys.GLFW_KEY_BACKSPACE)) {
-          Logger.Info("ayo");
-
-        }
+        io.AddKeyEvent(imKey, Input.GetKey((Scancode)key));
       }
     }
   }
@@ -408,6 +432,8 @@ public partial class ImGuiController : IDisposable {
     var vertexBufferSize = drawData.TotalVtxCount * sizeof(ImDrawVert);
     var indexBufferSize = drawData.TotalIdxCount * sizeof(ushort);
 
+    // Logger.Info($"{drawData.TotalVtxCount} {drawData.TotalIdxCount}");
+
     if ((vertexBufferSize == 0) || (indexBufferSize == 0)) {
       return;
     }
@@ -415,27 +441,49 @@ public partial class ImGuiController : IDisposable {
     if ((_vertexBuffer.GetBuffer() == VkBuffer.Null) || (_vertexCount < drawData.TotalVtxCount)) {
       _vertexCount = drawData.TotalVtxCount;
 
+      Application.Instance.Mutex.WaitOne();
+
+      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
+      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+
       _vertexBuffer?.Dispose();
+
+      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+
       _vertexBuffer = new(
+        _vmaAllocator,
         _device,
         (ulong)sizeof(ImDrawVert),
         (ulong)drawData.TotalVtxCount,
         BufferUsage.VertexBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        allocationStrategy: AllocationStrategy.Custom
       );
+      Application.Instance.Mutex.ReleaseMutex();
     }
 
     if ((_indexBuffer.GetBuffer() == VkBuffer.Null) || (_indexCount < drawData.TotalIdxCount)) {
       _indexCount = drawData.TotalIdxCount;
 
+      Application.Instance.Mutex.WaitOne();
+
+      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
+      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+
       _indexBuffer?.Dispose();
+
+      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+
       _indexBuffer = new(
+        _vmaAllocator,
         _device,
         (ulong)sizeof(ushort),
         (ulong)drawData.TotalIdxCount,
         BufferUsage.IndexBuffer,
-        MemoryProperty.HostVisible | MemoryProperty.HostCoherent
+        MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+        allocationStrategy: AllocationStrategy.Custom
       );
+      Application.Instance.Mutex.ReleaseMutex();
     }
 
     ImDrawVert* vtxDst = null;
@@ -462,8 +510,6 @@ public partial class ImGuiController : IDisposable {
     // update buffers
 
     UpdateBuffers(drawData);
-
-
     BindShaderData(frameInfo);
 
     int vertexOffset = 0;
@@ -487,28 +533,14 @@ public partial class ImGuiController : IDisposable {
           if (pcmd.TextureId == 0) {
             BindTexture(frameInfo);
           } else {
-            /*
-            // var target = _userTextures.Where(x => x.Value = pcmd.TextureId)
-            foreach (var userTex in _userTextures) {
-              if (userTex.Value == pcmd.TextureId) {
-                Logger.Error($"{userTex.Key.TextureName} {_userTextures.Count}");
-                BindTexture(frameInfo, userTex.Key.TextureDescriptor);
-                break;
-              }
-            }
-            */
-
             var target = _userTextures.TryGetValue(pcmd.TextureId, out var texture);
             if (target) {
               BindTexture(frameInfo, texture!.TextureDescriptor);
             }
-
           }
 
 
           SetScissorRect(frameInfo, pcmd, drawData);
-          // vkCmdDrawIndexed(frameInfo.CommandBuffer, pcmd.ElemCount, 1, indexOffset, vertexOffset, 0);
-
           vkCmdDrawIndexed(
             frameInfo.CommandBuffer,
             pcmd.ElemCount,

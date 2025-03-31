@@ -1,9 +1,9 @@
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
+using Dwarf.Windowing;
+
 // using Dwarf.Extensions.GLFW;
 // using static Dwarf.Extensions.GLFW.GLFW;
-using Dwarf.GLFW;
-
 using OpenTK.Mathematics;
 
 namespace Dwarf;
@@ -29,7 +29,7 @@ public class ThirdPersonCamera : DwarfScript {
     HandleMovement();
   }
   private void CalculateZoom() {
-    float zoomWheel = (float)MouseState.GetInstance().ScrollDelta * 0.1f;
+    float zoomWheel = (float)Input.ScrollDelta * 0.1f;
     _distanceFromTarget -= zoomWheel;
   }
 
@@ -71,14 +71,14 @@ public class ThirdPersonCamera : DwarfScript {
   private unsafe void HandleMovement() {
     if (CameraState.GetFirstMove()) {
       CameraState.SetFirstMove(false);
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+      CameraState.SetLastPosition(Input.MousePosition);
 
     } else {
-      var deltaX = (float)MouseState.GetInstance().MousePosition.X - (float)CameraState.GetLastPosition().X;
-      var deltaY = (float)MouseState.GetInstance().MousePosition.Y - (float)CameraState.GetLastPosition().Y;
-      CameraState.SetLastPosition(MouseState.GetInstance().MousePosition);
+      var deltaX = (float)Input.MousePosition.X - (float)CameraState.GetLastPosition().X;
+      var deltaY = (float)Input.MousePosition.Y - (float)CameraState.GetLastPosition().Y;
+      CameraState.SetLastPosition(Input.MousePosition);
 
-      if (WindowState.s_MouseCursorState != InputValue.GLFW_CURSOR_DISABLED) return;
+      if (Window.MouseCursorState != CursorState.Centered) return;
 
       CalculateZoom();
       CalculateAngle(deltaX);

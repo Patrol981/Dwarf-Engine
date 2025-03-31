@@ -1,9 +1,13 @@
+using Dwarf.Model.Animation;
+using Dwarf.Physics;
 using Dwarf.Rendering;
 namespace Dwarf.EntityComponentSystem;
 
 public class Entity {
   public bool CanBeDisposed = false;
+  public bool Collected = false;
   public EntityLayer Layer = EntityLayer.Default;
+  public bool IsImportant = false;
 
   private readonly ComponentManager _componentManager;
   private readonly object _componentLock = new object();
@@ -19,26 +23,32 @@ public class Entity {
   }
 
   public void AddComponent(Component component) {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     component.Owner = this;
     _componentManager.AddComponent(component);
   }
 
   public T GetComponent<T>() where T : Component, new() {
     lock (_componentLock) {
+      if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
       return _componentManager.GetComponent<T>();
     }
   }
 
   public T? TryGetComponent<T>() where T : Component, new() {
+    if (CanBeDisposed) return null;
     return HasComponent<T>() ? GetComponent<T>() : null;
   }
 
   public T GetScript<T>() where T : DwarfScript {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     return _componentManager.GetComponent<T>();
   }
 
   public DwarfScript[] GetScripts() {
     lock (_componentLock) {
+      if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
+
       var components = _componentManager.GetAllComponents();
       var list = new List<DwarfScript>();
 
@@ -50,11 +60,12 @@ public class Entity {
         }
       }
 
-      return list.ToArray();
+      return [.. list];
     }
   }
 
   public Component GetDrawable<T>() where T : IDrawable {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     var components = _componentManager.GetAllComponents();
 
     foreach (var component in components) {
@@ -68,6 +79,7 @@ public class Entity {
   }
 
   public Component[] GetDrawables<T>() where T : IDrawable {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     var components = _componentManager.GetAllComponents();
 
     var list = new List<Component>();
@@ -107,15 +119,18 @@ public class Entity {
   }
 
   public bool HasComponent<T>() where T : Component {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     return _componentManager.GetComponent<T>() != null;
   }
 
   public bool IsDrawable<T>() where T : IDrawable {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     var d = GetDrawable<T>();
     return d != null;
   }
 
   public void RemoveComponent<T>() where T : Component {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     _componentManager.RemoveComponent<T>();
   }
 
@@ -125,23 +140,60 @@ public class Entity {
 
   public static T? FindComponentOfType<T>() where T : Component, new() {
     var entities = Application.Instance.GetEntities();
-    var target = entities.Where(x => x.HasComponent<T>())
+    var target = entities.Where(x => x.HasComponent<T>() && !x.CanBeDisposed)
       .FirstOrDefault();
     return target == null ? null : target.GetComponent<T>();
   }
 
   public static T? FindComponentByName<T>(string name) where T : Component, new() {
     var entities = Application.Instance.GetEntities();
-    var target = entities.Where(x => x.Name == name)
+    var target = entities.Where(x => x.Name == name && !x.CanBeDisposed)
       .FirstOrDefault();
     return target == null ? null : target.GetComponent<T>();
   }
 
   public static Entity? FindEntityByName(string name) {
     var entities = Application.Instance.GetEntities();
-    var target = entities.Where(x => x.Name == name)
+    var target = entities.Where(x => x.Name == name && !x.CanBeDisposed)
       .FirstOrDefault();
     return target ?? null!;
+  }
+
+  public Entity Clone() {
+    if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
+
+    var clone = new Entity() {
+      Name = $"{Name} [CLONE]"
+    };
+
+    var transform = TryGetComponent<Transform>();
+    var material = TryGetComponent<MaterialComponent>();
+    var model = TryGetComponent<MeshRenderer>();
+    var rigidbody = TryGetComponent<Rigidbody>();
+
+    if (transform != null) {
+      clone.AddTransform(transform.Position, transform.Rotation, transform.Scale);
+    }
+    if (material != null) {
+      clone.AddMaterial(material.Color);
+    }
+    if (model != null) {
+      clone.AddComponent(EntityCreator.CopyModel(in model));
+      clone.AddComponent(new AnimationController());
+      clone.GetComponent<AnimationController>().Init(clone.GetComponent<MeshRenderer>());
+    }
+    if (rigidbody != null) {
+      clone.AddRigidbody(
+        rigidbody.PrimitiveType,
+        rigidbody.Size,
+        rigidbody.Offset,
+        MotionType.Dynamic,
+        rigidbody.Flipped
+      );
+      Application.Instance.Systems.PhysicsSystem.Init([clone]);
+    }
+
+    return clone;
   }
 
   public bool Active { get; set; } = true;

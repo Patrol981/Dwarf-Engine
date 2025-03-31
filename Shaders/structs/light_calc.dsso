@@ -20,7 +20,7 @@ vec3 calc_point_light(PointLight light, vec3 normal, vec3 viewDir) {
 }
 
 vec3 calc_dir_light(DirectionalLight directionalLight, vec3 normal, vec3 viewDir) {
-  vec3 lightDirection = normalize(directionalLight.lightPosition - fragPositionWorld);
+  vec3 lightDirection = normalize(-directionalLight.lightPosition);
   // diffuse shading
   float diff = max(dot(normal, lightDirection), 0.0);
   // specular shading

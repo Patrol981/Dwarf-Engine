@@ -1,19 +1,21 @@
-using Dwarf.EntityComponentSystem;
 using System.Numerics;
 
+using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
-using Dwarf.Extensions.Logging;
+using Dwarf.Model;
 
 namespace Dwarf.Procedural;
 public class Terrain3D : Component {
   const int HEIGHT = 512;
   const int WIDTH = 512;
 
-  private double[,] _points;
+  private readonly double[,] _points;
   private readonly Application _app = default!;
 
   private Vector2 _size = Vector2.Zero;
   private string _texturePath = string.Empty;
+  private int _repX;
+  private int _repY;
 
   public Terrain3D() {
     _points = new double[HEIGHT, WIDTH];
@@ -24,16 +26,16 @@ public class Terrain3D : Component {
     _points = new double[HEIGHT, WIDTH];
   }
 
-  public void Setup(Vector2 size, string? texturePath = default) {
+  public void Setup(Vector2 size, string? texturePath = default, int repX = 15, int repY = 15) {
     _size = size;
-    if (texturePath != null) {
-      _texturePath = texturePath;
-    } else {
-      _texturePath = "./Resources/Textures/base/no_texture.png";
-    }
+    _repX = repX;
+    _repY = repY;
+    _texturePath = texturePath != null ? texturePath : "./Resources/Textures/base/no_texture.png";
     var mesh = Generate(_app);
     SetupTexture(_app);
-    Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer, [mesh]));
+    Owner!.AddComponent(new MeshRenderer(_app.Device, _app.Renderer));
+    Owner!.GetComponent<MeshRenderer>().AddLinearNode(new Node() { Mesh = mesh, });
+    Owner!.GetComponent<MeshRenderer>().Init();
     Owner!.GetComponent<MeshRenderer>().BindToTexture(_app.TextureManager, _texturePath);
   }
 
@@ -52,7 +54,7 @@ public class Terrain3D : Component {
       new(0, 0, 0),
       new(100, 100),
       new(_size.X, _size.Y),
-      new(15, 15)
+      new(_repX, _repY)
     );
 
     // ApplyPerlinNoiseToMesh(ref mesh, _points, _size, new(WIDTH, HEIGHT));
@@ -62,7 +64,7 @@ public class Terrain3D : Component {
 
   private async void SetupTexture(Application app) {
     app.Mutex.WaitOne();
-    await app.TextureManager.AddTexture(_texturePath);
+    await app.TextureManager.AddTextureLocal(_texturePath);
     app.Mutex.ReleaseMutex();
   }
 

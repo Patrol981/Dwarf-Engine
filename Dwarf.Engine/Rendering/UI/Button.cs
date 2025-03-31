@@ -21,13 +21,13 @@ public class Button : Component, I2DCollision, IUIElement {
   }
   public Button(Application application, string texturePath) {
     _application = application;
-    _guiTexture = new GuiTexture(application.Device);
+    _guiTexture = new GuiTexture(application.VmaAllocator, application.Device);
     _guiTexture.BindToTexture(_application.TextureManager, texturePath, false);
   }
 
   public void CheckCollision(object sender, EventArgs e) {
     var camera = CameraState.GetCamera();
-    var size = WindowState.s_Window.Extent;
+    var size = Application.Instance.Window.Extent;
     var collResult = Collision2D.MouseClickedCollision(this, camera, new(size.Width, size.Height));
     if (collResult) {
       Logger.Info("COLL DETECTED");

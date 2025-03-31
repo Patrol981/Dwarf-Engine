@@ -1,0 +1,6 @@
+@Dwarf.WebApi_HostAddress = http://localhost:5235
+
+GET {{Dwarf.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

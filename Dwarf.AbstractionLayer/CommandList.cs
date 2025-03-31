@@ -7,7 +7,16 @@ public abstract class CommandList {
     ulong[] vertexOffsets
   );
 
-  public abstract void BindIndex(IntPtr commandBuffer, uint index, DwarfBuffer[] indexBuffers);
+  public abstract void BindVertex(
+    IntPtr commandBuffer,
+    DwarfBuffer vertexBuffer,
+    ulong vertexOffset
+  );
+
+  public abstract void BindIndex(IntPtr commandBuffer, uint index, DwarfBuffer[] indexBuffers, ulong offset = 0);
+
+  public abstract void BindIndex(IntPtr commandBuffer, DwarfBuffer indexBuffer, ulong offset = 0);
+
   public abstract void Draw(
     nint commandBuffer,
     uint meshIndex,
@@ -16,10 +25,28 @@ public abstract class CommandList {
     uint firstVertex,
     uint firstInstance
   );
+
+  public abstract void Draw(
+    nint commandBuffer,
+    ulong vertexCount,
+    uint instanceCount,
+    uint firstVertex,
+    uint firstInstance
+  );
+
   public abstract void DrawIndexed(
     nint commandBuffer,
     uint meshIndex,
     ulong[] indexCount,
+    uint instanceCount,
+    uint firstIndex,
+    int vertexOffset,
+    uint firstInstance
+  );
+
+  public abstract void DrawIndexed(
+    nint commandBuffer,
+    ulong indexCount,
     uint instanceCount,
     uint firstIndex,
     int vertexOffset,

@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Physics;
 using Dwarf.Vulkan;
 
@@ -11,18 +12,19 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering.Systems;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
-    Renderer renderer,
+    IRenderer renderer,
     VkDescriptorSetLayout globalSetLayout,
     PipelineConfigInfo configInfo = null!
-  ) : base(device, renderer, configInfo) {
+  ) : base(vmaAllocator, device, renderer, configInfo) {
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
       globalSetLayout,
     ];
 
     AddPipelineData<ColliderMeshPushConstant>(new() {
-      RenderPass = renderer.GetSwapchainRenderPass(),
+      RenderPass = renderer.GetPostProcessingPass(),
       VertexName = "debug_vertex",
       FragmentName = "debug_fragment",
       PipelineProvider = new PipelineModelProvider(),
@@ -57,9 +59,13 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
         // pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
         // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
 
-        ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
-          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
-          entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
+        // ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
+        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
+        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
+
+        // ModelMatrix = entities[i].GetComponent<MeshRenderer>().
+
+        ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
       };
 
       vkCmdPushConstants(

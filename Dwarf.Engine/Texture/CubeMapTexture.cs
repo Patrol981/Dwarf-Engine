@@ -14,12 +14,13 @@ public class CubeMapTexture : VulkanTexture {
   private PackedTexture _cubemapPack;
 
   public CubeMapTexture(
+    VmaAllocator vmaAllocator,
     VulkanDevice device,
     int width,
     int height,
     string[] paths,
     string textureName = ""
-  ) : base(device, width, height, textureName) {
+  ) : base(vmaAllocator, device, width, height, textureName) {
     _paths = paths;
 
     var textures = ImageUtils.LoadTextures(_paths);
@@ -33,6 +34,7 @@ public class CubeMapTexture : VulkanTexture {
 
   public new void SetTextureData(byte[] data) {
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -55,6 +57,7 @@ public class CubeMapTexture : VulkanTexture {
 
   public new void SetTextureData(nint dataPtr) {
     var stagingBuffer = new DwarfBuffer(
+      _vmaAllocator,
       _device,
       (ulong)_cubemapPack.Size,
       BufferUsage.TransferSrc,
@@ -82,18 +85,18 @@ public class CubeMapTexture : VulkanTexture {
 
   private void ProcessTexture(DwarfBuffer stagingBuffer, VkImageCreateFlags createFlags = VkImageCreateFlags.None) {
     unsafe {
-      if (_textureImage.IsNotNull) {
+      if (_textureSampler.TextureImage.IsNotNull) {
         _device.WaitDevice();
-        vkDestroyImage(_device.LogicalDevice, _textureImage);
+        vkDestroyImage(_device.LogicalDevice, _textureSampler.TextureImage);
       }
 
-      if (_textureImageMemory.IsNotNull) {
+      if (_textureSampler.TextureImageMemory.IsNotNull) {
         _device.WaitDevice();
-        vkFreeMemory(_device.LogicalDevice, _textureImageMemory);
+        vkFreeMemory(_device.LogicalDevice, _textureSampler.TextureImageMemory);
       }
     }
 
-    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Unorm, out _textureImage, out _textureImageMemory);
+    CreateImage(_device, (uint)_width, (uint)_height, VkFormat.R8G8B8A8Unorm, out _textureSampler.TextureImage, out _textureSampler.TextureImageMemory);
     HandleCubemap(stagingBuffer.GetBuffer(), VkFormat.R8G8B8A8Unorm, 1);
   }
 
@@ -172,7 +175,7 @@ public class CubeMapTexture : VulkanTexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.Undefined,
       VkImageLayout.TransferDstOptimal,
       subresourceRange
@@ -181,7 +184,7 @@ public class CubeMapTexture : VulkanTexture {
       vkCmdCopyBufferToImage(
         copyCmd,
         stagingBuffer,
-        _textureImage,
+        _textureSampler.TextureImage,
         VkImageLayout.TransferDstOptimal,
         (uint)bufferCopyRegions.Count,
         imageCopyPtr
@@ -190,7 +193,7 @@ public class CubeMapTexture : VulkanTexture {
 
     VkUtils.SetImageLayout(
       copyCmd,
-      _textureImage,
+      _textureSampler.TextureImage,
       VkImageLayout.TransferDstOptimal,
       VkImageLayout.ShaderReadOnlyOptimal,
       subresourceRange
@@ -216,7 +219,7 @@ public class CubeMapTexture : VulkanTexture {
       samplerInfo.maxAnisotropy = _device.Properties.limits.maxSamplerAnisotropy;
       samplerInfo.anisotropyEnable = true;
     }
-    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _imageSampler).CheckResult();
+    vkCreateSampler(_device.LogicalDevice, &samplerInfo, null, out _textureSampler.ImageSampler).CheckResult();
 
     // create image view
     var viewInfo = new VkImageViewCreateInfo();
@@ -228,7 +231,7 @@ public class CubeMapTexture : VulkanTexture {
     viewInfo.subresourceRange.layerCount = 6;
     // number of mip levels
     viewInfo.subresourceRange.levelCount = mipLevels;
-    viewInfo.image = _textureImage;
-    vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _imageView).CheckResult();
+    viewInfo.image = _textureSampler.TextureImage;
+    vkCreateImageView(_device.LogicalDevice, &viewInfo, null, out _textureSampler.ImageView).CheckResult();
   }
 }

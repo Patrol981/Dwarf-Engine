@@ -1,3 +1,4 @@
+using Dwarf.EntityComponentSystem;
 using Vortice.Vulkan;
 
 namespace Dwarf;
@@ -8,5 +9,7 @@ public struct FrameInfo {
   public VkDescriptorSet GlobalDescriptorSet;
   public VkDescriptorSet PointLightsDescriptorSet;
   public VkDescriptorSet ObjectDataDescriptorSet;
+  public VkDescriptorSet JointsBufferDescriptorSet;
   public TextureManager TextureManager;
+  public Entity ImportantEntity;
 }

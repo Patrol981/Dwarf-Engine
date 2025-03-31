@@ -41,7 +41,7 @@ public class PipelineModelProvider : PipelineProvider {
 
     attributeDescriptions[4].binding = 0;
     attributeDescriptions[4].location = 4;
-    attributeDescriptions[4].format = VkFormat.R32G32B32A32Sfloat;
+    attributeDescriptions[4].format = VkFormat.R32G32B32A32Sint;
     attributeDescriptions[4].offset = (uint)Marshal.OffsetOf<Vertex>("JointIndices");
 
     attributeDescriptions[5].binding = 0;

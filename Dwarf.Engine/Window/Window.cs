@@ -36,12 +36,8 @@ public class Window : IDisposable {
 
   private SDL_Cursor _cursor;
 
-  public Window(int width, int height) {
-    Size = new Vector2I(width, height);
-  }
-
-  internal void Init(string windowName, bool fullscreen, bool debug = false) {
-    InitWindow(windowName, fullscreen, debug);
+  internal void Init(string windowName, bool fullscreen, int width, int height, bool debug = false) {
+    InitWindow(windowName, fullscreen, debug, width, height);
     LoadIcons();
     Show();
     RefreshRate = GetRefreshRate();
@@ -49,7 +45,7 @@ public class Window : IDisposable {
     // EnumerateAvailableGameControllers();
   }
 
-  private unsafe void InitWindow(string windowName, bool fullscreen, bool debug) {
+  private unsafe void InitWindow(string windowName, bool fullscreen, bool debug, int width, int height) {
     if (!SDL_Init(SDL_InitFlags.Video | SDL_InitFlags.Gamepad | SDL_InitFlags.Audio)) {
       throw new Exception("Failed to initalize Window");
     }
@@ -57,7 +53,7 @@ public class Window : IDisposable {
     if (debug) {
       Logger.Info("Setting Debug For SDL");
       SDL_SetLogPriorities(SDL_LogPriority.Verbose);
-      SDL_SetLogOutputFunction(Log_SDL);
+      SDL_SetLogOutputFunction(LogSDL);
     }
 
     if (!SDL_Vulkan_LoadLibrary()) {
@@ -75,14 +71,14 @@ public class Window : IDisposable {
       windowFlags |= SDL_WindowFlags.Fullscreen | SDL_WindowFlags.Borderless;
     }
 
-    SDLWindow = SDL_CreateWindow(windowName, Size.X, Size.Y, windowFlags);
+    SDLWindow = SDL_CreateWindow(windowName, width, height, windowFlags);
     if (SDLWindow.IsNull) {
       throw new Exception("Failed to create SDL window");
     }
 
     _ = SDL_SetWindowPosition(SDLWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
-    Application.Instance.Window.Extent = new DwarfExtent2D((uint)Size.X, (uint)Size.Y);
+    Application.Instance.Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
   }
 
   private unsafe void LoadIcons() {
@@ -159,6 +155,9 @@ public class Window : IDisposable {
         case SDL_EventType.WindowResized:
           FrambufferResizedCallback(e.window.data1, e.window.data2);
           break;
+        case SDL_EventType.WindowMaximized:
+          FrambufferResizedCallback(e.window.data1, e.window.data2);
+          break;
         case SDL_EventType.WindowRestored:
           IsMinimalized = false;
           // FrambufferResizedCallback(e.window.data1, e.window.data2);
@@ -199,7 +198,7 @@ public class Window : IDisposable {
     Application.Instance.Window.OnResizedEvent(null!);
   }
 
-  private static void Log_SDL(SDL_LogCategory category, SDL_LogPriority priority, string description) {
+  private static void LogSDL(SDL_LogCategory category, SDL_LogPriority priority, string? description) {
     if (priority >= SDL_LogPriority.Error) {
       Logger.Error($"[{priority}] SDL: {description}");
       throw new Exception(description);
@@ -278,7 +277,6 @@ public class Window : IDisposable {
     get { return _extent; }
     private set { _extent = value; }
   }
-  public Vector2I Size { get; private set; }
   public bool ShouldClose { get; set; } = false;
   public bool FramebufferResized { get; private set; } = false;
   public bool IsMinimalized { get; private set; } = false;

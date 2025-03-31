@@ -114,7 +114,10 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   private VulkanTexture _hatchTexture2 = null!;
   private VulkanTexture _hatchTexture3 = null!;
 
-  private const string HatchOneTextureName = "./Resources/twilight-5-1x.png";
+  private const string HatchOneTextureName = "./Resources/zaarg.png";
+  // "./Resources/twilight-5-1x.png";
+  // "./Resources/lv-corinthian-slate-801-1x.png";
+  // "./Resources/zaarg.png";
   private const string HatchTwoTextureName = "./Resources/slso8-1x.png";
   private const string HatchThreeTextureName = "./Resources/justparchment8-1x.png";
 

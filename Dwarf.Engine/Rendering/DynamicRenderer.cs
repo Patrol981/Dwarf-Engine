@@ -61,12 +61,12 @@ public unsafe class DynamicRenderer : IRenderer {
     descriptorImageInfo[0] = new() {
       imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
       imageView = Swapchain.ImageViews[_imageIndex],
-      sampler = ImageSampler // Sampler for the color image
+      sampler = ImageSampler
     };
     descriptorImageInfo[1] = new() {
       imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
       imageView = _depthStencil[_imageIndex].ImageView,
-      sampler = DepthSampler // Sampler for the depth image
+      sampler = DepthSampler
     };
 
     VkWriteDescriptorSet* writeDescriptorSets = stackalloc VkWriteDescriptorSet[2];
@@ -188,20 +188,21 @@ public unsafe class DynamicRenderer : IRenderer {
 
     if (result != VkResult.Success && result != VkResult.SuboptimalKHR) {
       result.CheckResult();
+      RecreateSwapchain();
     }
   }
 
   private void SubmitFrame() {
     var result = Swapchain.QueuePresent(_device.GraphicsQueue, _imageIndex, _semaphores[Swapchain.CurrentFrame].RenderComplete);
-    if (result != VkResult.Success || result != VkResult.SuboptimalKHR || _window.WasWindowResized()) {
-      if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        _window.ResetWindowResizedFlag();
-        RecreateSwapchain();
-        return;
-      } else {
-        result.CheckResult();
-      }
+
+    if (result == VkResult.ErrorOutOfDateKHR || result == VkResult.SuboptimalKHR || _window.WasWindowResized()) {
+      _window.ResetWindowResizedFlag();
+      RecreateSwapchain();
+      return;
+    } else if (result != VkResult.Success) {
+      result.CheckResult();
     }
+
     FrameIndex = (FrameIndex + 1) % Swapchain.Images.Length;
     vkQueueWaitIdle(_device.GraphicsQueue).CheckResult();
   }
@@ -357,11 +358,6 @@ public unsafe class DynamicRenderer : IRenderer {
       submitInfo.signalSemaphoreCount = 1;
       submitInfo.pSignalSemaphores = renderPtr;
       submitInfo.pNext = null;
-
-      // fixed (VkFence* waitFences = _waitFences) {
-      //   vkWaitForFences(_device.LogicalDevice, (uint)_waitFences.Length, waitFences, true, UInt64.MaxValue);
-      //
-      // }
 
       vkResetFences(_device.LogicalDevice, _waitFences[Swapchain.CurrentFrame]);
 

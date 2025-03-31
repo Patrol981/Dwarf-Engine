@@ -74,7 +74,7 @@ public class Canvas : Component, IDisposable {
     _window = Application.Instance.Window;
     _application = Application.Instance;
 
-    _maxCanvasSize = new Vector2(_window.Size.X, _window.Size.Y);
+    _maxCanvasSize = new Vector2(_window.Extent.Width, _window.Extent.Height);
     _currentResoltionScale = null!;
     CheckResolution();
   }

@@ -119,8 +119,8 @@ public class Application {
 
     windowSize ??= new(1200, 900);
 
-    Window = new Window(windowSize.X, windowSize.Y);
-    Window.Init(appName, Fullscreen, debugMode);
+    Window = new Window();
+    Window.Init(appName, Fullscreen, windowSize.X, windowSize.Y, debugMode);
 
     Device = new VulkanDevice(Window);
 

@@ -17,6 +17,7 @@ public enum SystemCreationFlags {
   Guizmos = 1 << 6,
   WebApi = 1 << 7,
   Particles = 1 << 8,
+  Shadows = 1 << 9,
 }
 
 [Flags]
@@ -62,12 +63,14 @@ public class SystemCreator {
     var hasGuizmos = flags.HasFlag(SystemCreationFlags.Guizmos);
     var hasWebApi = flags.HasFlag(SystemCreationFlags.WebApi);
     var hasParticles = flags.HasFlag(SystemCreationFlags.Particles);
+    var hasShadows = flags.HasFlag(SystemCreationFlags.Shadows);
 
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
       systemCollection.RenderUISystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
     }
+
     if (hasRenderer3D) {
       Logger.Info("[SYSTEM CREATOR] Creating 3D Renderer");
       systemCollection.Render3DSystem =
@@ -78,38 +81,51 @@ public class SystemCreator {
       systemCollection.RenderDebugSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), debugConfig);
     }
+
     if (hasRenderer2D) {
       Logger.Info("[SYSTEM CREATOR] Creating 2D Renderer");
       systemCollection.Render2DSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
     }
+
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
       systemCollection.PhysicsSystem = new(systemConfig.PhysiscsBackend);
     }
+
     if (hasDirectionalLight) {
       Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");
       systemCollection.DirectionalLightSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
+
     if (hasPointLights) {
       Logger.Info("[SYSTEM CREATOR] Creating Point Light System");
       systemCollection.PointLightSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
+
     if (hasGuizmos) {
       Logger.Info("[SYSTEM CREATOR] Creating Guizmos Rendering System");
       systemCollection.GuizmoRenderSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
     }
+
     if (hasWebApi) {
       Logger.Info("[SYSTEM CREATOR] Creating WebApi");
       systemCollection.WebApi = new(app: Application.Instance);
     }
+
     if (hasParticles) {
       Logger.Info("[SYSTEM CREATOR] Creating Particle System");
       systemCollection.ParticleSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), new ParticlePipelineConfigInfo());
+    }
+
+    if (hasShadows) {
+      Logger.Info("[SYSTEM CREATOR] Creating Shadows System");
+      systemCollection.ShadowRenderSystem =
+        new(vmaAllocator, device, renderer, systemConfig, layouts, new ModelPipelineConfig());
     }
   }
 }

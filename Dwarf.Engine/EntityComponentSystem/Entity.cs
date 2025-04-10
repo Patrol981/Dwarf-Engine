@@ -10,7 +10,7 @@ public class Entity {
   public bool IsImportant = false;
 
   private readonly ComponentManager _componentManager;
-  private readonly object _componentLock = new object();
+  private readonly object _componentLock = new();
 
   public Entity() {
     EntityID = Guid.NewGuid();

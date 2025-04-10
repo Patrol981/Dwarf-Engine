@@ -166,6 +166,7 @@ public class VulkanDynamicSwapchain : IDisposable {
 
     // Find a supported composite alpha format (not all devices support alpha opaque)
     VkCompositeAlphaFlagsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    // VkCompositeAlphaFlagsKHR compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
     // Simply select the first composite alpha format available
     VkCompositeAlphaFlagsKHR[] compositeAlphaFlags = [
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,

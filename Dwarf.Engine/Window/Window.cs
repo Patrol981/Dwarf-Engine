@@ -62,6 +62,7 @@ public class Window : IDisposable {
 
     var windowFlags = SDL_WindowFlags.Vulkan |
                       // SDL_WindowFlags.Maximized |
+                      // SDL_WindowFlags.Transparent |
                       SDL_WindowFlags.Occluded |
                       SDL_WindowFlags.MouseFocus |
                       SDL_WindowFlags.InputFocus |
@@ -77,6 +78,7 @@ public class Window : IDisposable {
     }
 
     _ = SDL_SetWindowPosition(SDLWindow, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    // SDL_SetWindowOpacity(SDLWindow, 0.1f);
 
     Application.Instance.Window.Extent = new DwarfExtent2D((uint)width, (uint)height);
   }

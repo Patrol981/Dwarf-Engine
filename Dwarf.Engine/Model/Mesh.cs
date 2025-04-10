@@ -36,10 +36,18 @@ public class Mesh : IDisposable, ICloneable {
     Matrix = matrix;
   }
 
-  public unsafe Task CreateVertexBuffer() {
+  public unsafe Task CreateVertexBuffer(ulong size = 0) {
+    ulong bufferSize;
+    ulong vertexSize;
     VertexCount = (ulong)Vertices.Length;
-    ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * VertexCount;
-    ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
+
+    if (size > 0) {
+      bufferSize = size * VertexCount;
+      vertexSize = size;
+    } else {
+      bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * VertexCount;
+      vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
+    }
 
     var stagingBuffer = new DwarfBuffer(
       _vmaAllocator,

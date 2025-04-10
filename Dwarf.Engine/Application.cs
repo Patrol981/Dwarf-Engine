@@ -716,6 +716,7 @@ public class Application {
       // _ubo->ImportantEntityPosition = new(6, 9);
       _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
       _ubo->HatchScale = Render3DSystem.HatchScale;
+      _ubo->DeltaTime = Time.DeltaTime;
 
       _ubo->DirectionalLight = DirectionalLight;
 
@@ -738,30 +739,36 @@ public class Application {
         }
       }
 
-      Systems.Render3DSystem.Update(
-        _entities.ToArray().DistinctI3D(),
-        out var objectData,
-        out var skinnedObjects,
-        out var flatJoints
-      );
-      fixed (ObjectData* pObjectData = objectData) {
-        StorageCollection.WriteBuffer(
-          "ObjectStorage",
-          frameIndex,
-          (nint)pObjectData,
-          (ulong)Unsafe.SizeOf<ObjectData>() * (ulong)objectData.Length
+      var i3D = _entities.ToArray().DistinctI3D();
+
+      if (Systems.Render3DSystem != null) {
+        Systems.Render3DSystem.Update(
+          i3D,
+          out var objectData,
+          out var skinnedObjects,
+          out var flatJoints
         );
+        fixed (ObjectData* pObjectData = objectData) {
+          StorageCollection.WriteBuffer(
+            "ObjectStorage",
+            frameIndex,
+            (nint)pObjectData,
+            (ulong)Unsafe.SizeOf<ObjectData>() * (ulong)objectData.Length
+          );
+        }
+
+        ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
+        fixed (Matrix4x4* pMatrices = flatArray) {
+          StorageCollection.WriteBuffer(
+            "JointsStorage",
+            frameIndex,
+            (nint)pMatrices,
+            (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
+          );
+        }
       }
 
-      ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
-      fixed (Matrix4x4* pMatrices = flatArray) {
-        StorageCollection.WriteBuffer(
-          "JointsStorage",
-          frameIndex,
-          (nint)pMatrices,
-          (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
-        );
-      }
+      Systems.ShadowRenderSystem?.Update(i3D);
 
       StorageCollection.WriteBuffer(
         "GlobalStorage",
@@ -777,18 +784,21 @@ public class Application {
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
-      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
+      // Renderer.EndRendering(commandBuffer);
+
+      // Renderer.BeginRendering(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
       }
+      Systems.UpdateSystems2(toUpdate, _currentFrame);
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScriptsAsSpan());
       _onGUI?.Invoke();
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
-
       Renderer.EndRendering(commandBuffer);
+
       Renderer.EndFrame();
 
       StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);

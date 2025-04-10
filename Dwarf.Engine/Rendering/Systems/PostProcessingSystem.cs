@@ -52,7 +52,7 @@ public struct PostProcessInfo {
   public float Float_8_4;
 }
 
-public class PostProcessingSystem : SystemBase, IDisposable {
+public class PostProcessingSystem : SystemBase {
   // public static float DepthMax = 0.995f;
   // public static float DepthMin = 0.990f;
   // public static float EdgeLow = 100f;
@@ -62,10 +62,10 @@ public class PostProcessingSystem : SystemBase, IDisposable {
   // public static Vector3 Luminance = new(0.299f, 0.587f, 0.114f);
 
   public static PostProcessInfo PostProcessInfo = new() {
-    Float_1_1 = 100,
+    Float_1_1 = 1.4f,
     Float_1_2 = 65,
     Float_1_3 = 0.5f,
-    Float_1_4 = 64,
+    Float_1_4 = 128,
 
     Float_2_1 = 0.299f,
     Float_2_2 = 0.587f,
@@ -148,6 +148,8 @@ public class PostProcessingSystem : SystemBase, IDisposable {
       VertexName = "post_process_index_vertex",
       FragmentName = "post_process_jpaint0_fragment",
       // FragmentName = "post_process_toon_shader_fragment",
+      // FragmentName = "post_process_kuwahara_shader_fragment",
+      // FragmentName = "post_process_waterpaint_fragment",
       PipelineProvider = new SecondSubpassPipelineProvider(),
       DescriptorSetLayouts = layouts
     });
@@ -273,9 +275,8 @@ public class PostProcessingSystem : SystemBase, IDisposable {
     vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
   }
 
-  public unsafe void Dispose() {
+  public unsafe override void Dispose() {
     MemoryUtils.FreeIntPtr<PostProcessInfo>((nint)_postProcessInfoPushConstant);
-
     base.Dispose();
   }
 }

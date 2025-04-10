@@ -16,45 +16,40 @@ public class SystemCollection : IDisposable {
   private Render2DSystem? _render2DSystem;
   private RenderUISystem? _renderUISystem;
   private RenderDebugSystem? _renderDebugSystem;
-
   private DirectionalLightSystem? _directionaLightSystem;
   private PointLightSystem? _pointLightSystem;
-
   private GuizmoRenderSystem? _guizmoRenderSystem;
-
   private ParticleSystem? _particleSystem;
+  private ShadowRenderSystem? _shadowRenderSystem;
 
-  private WebApiSystem? _webApi;
-
-  private Canvas? _canvas = null;
+  private SubpassConnectorSystem? _subpassConnectorSystem;
+  private PostProcessingSystem? _postProcessingSystem;
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
+  private WebApiSystem? _webApi;
+
+  private Canvas? _canvas = null;
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
   public bool ReloadUISystem = false;
   public bool ReloadParticleSystem = false;
 
-  private SubpassConnectorSystem? _subpassConnectorSystem;
-  private PostProcessingSystem? _postProcessingSystem;
-
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
-    _render3DSystem?.Render(
-        frameInfo
-      );
+    _render3DSystem?.Render(frameInfo);
     _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
-    //
+    _shadowRenderSystem?.Render(frameInfo);
     _directionaLightSystem?.Render(frameInfo);
     _pointLightSystem?.Render(frameInfo);
-    _guizmoRenderSystem?.Render(frameInfo);
-    _renderUISystem?.DrawUI(frameInfo, _canvas);
+    _postProcessingSystem?.Render(frameInfo);
   }
 
-  public void UpdateSecondPassSystems(Entity[] entities, FrameInfo frameInfo) {
-    _postProcessingSystem?.Render(frameInfo);
+  public void UpdateSystems2(Entity[] entities, FrameInfo frameInfo) {
+    _guizmoRenderSystem?.Render(frameInfo);
     _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
     _particleSystem?.Render(frameInfo);
+    _renderUISystem?.DrawUI(frameInfo, _canvas);
   }
 
   public Task UpdateCalculationSystems(Entity[] entities) {
@@ -283,6 +278,11 @@ public class SystemCollection : IDisposable {
     set { _particleSystem = value; }
   }
 
+  public ShadowRenderSystem ShadowRenderSystem {
+    get { return _shadowRenderSystem ?? null!; }
+    set { _shadowRenderSystem = value; }
+  }
+
   public WebApiSystem WebApi {
     get { return _webApi ?? null!; }
     set { _webApi = value; }
@@ -309,5 +309,7 @@ public class SystemCollection : IDisposable {
     _pointLightSystem?.Dispose();
     _webApi?.Dispose();
     _particleSystem?.Dispose();
+    _shadowRenderSystem?.Dispose();
+    GC.SuppressFinalize(this);
   }
 }

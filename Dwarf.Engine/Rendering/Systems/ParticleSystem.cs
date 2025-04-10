@@ -115,8 +115,9 @@ public class ParticleSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
-    var basic = s_particles.Where(x => !x.HasTexture).ToArray();
-    var textured = s_particles.Where(x => x.HasTexture).ToArray();
+    var tmp = s_particles.ToArray();
+    var basic = tmp.Where(x => !x.HasTexture).ToArray();
+    var textured = tmp.Where(x => x.HasTexture).ToArray();
     RenderBasic(frameInfo, basic);
     RenderTextured(frameInfo, textured);
   }

@@ -104,6 +104,23 @@ public class Transform : Component {
   }
 
   /// <summary>
+  /// Sets Transform euler angle to given position
+  /// </summary>
+  /// <param name="position"></param>
+  public static Vector3 LookAt(Transform transform, Vector3 position) {
+    var rotation = Vector3.Zero;
+    var direction = position - transform.Position;
+    direction = Vector3.Normalize(direction);
+    var yaw = MathF.Atan2(-direction.X, -direction.Z);
+    yaw = Converter.RadiansToDegrees(yaw);
+    var pitch = MathF.Asin(direction.Y);
+    pitch = -Converter.RadiansToDegrees(pitch);
+    rotation.Y = yaw;
+    rotation.X = pitch;
+    return rotation;
+  }
+
+  /// <summary>
   /// Sets Transform euler angle to given position only by Y axis
   /// </summary>
   /// <param name="position"></param>

@@ -23,7 +23,7 @@ public partial class EditorUtils {
   }
 
   private static void HandleNode(Node node, string currDepth) {
-    ImGui.Text($"{currDepth}[NodeID: {node.Index}] {node.Name}");
+    ImGui.Text($"{currDepth}[NodeID: {node.Index}] {node.Name} ({node.Scale})");
     // ImGui.BeginChild($"[NodeID: {node.Index}] {node.Name}");
     // ImGui.TreeNode($"[NodeID: {node.Index}] {node.Name}");
     // ImGui.TreePop();

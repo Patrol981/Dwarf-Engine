@@ -25,28 +25,38 @@ public class WebApiSystem : IDisposable {
   public WebApiSystem(Application app) {
     _application = app;
     _webInstance = new WebInstance();
-    _webInstance.OnMap += MapEndpoints;
+    // _webInstance.OnMap += MapEndpoints;
     _webInstance.Init();
   }
 
+  /*
   public void MapEndpoints() {
-    _webInstance?.WebApplication?.MapGet("/ping", () => {
+    if (_webInstance == null || _webInstance.WebApplication == null) return;
+
+    var api = _webInstance.WebApplication.MapGroup("/api");
+
+    api.MapGet("/ping", () => {
       return Results.Ok("pong");
     });
 
-    _webInstance?.WebApplication?.MapPost("/model", async (IFormFile file) => {
+    api.MapPost("/model", async (HttpContext context) => {
+      var form = await context.Request.ReadFormAsync();
+      var file = form.Files.GetFile("file");
+
       if (file == null || file.Length == 0 || Path.GetExtension(file.FileName).ToLower() != ".glb") {
         return Results.BadRequest("Please upload a valid .glb file.");
       }
 
       var filePath = Path.Combine(DwarfPath.AssemblyDirectory, "Resources", file.FileName);
+
       using (var stream = new FileStream(filePath, FileMode.Create)) {
         await file.CopyToAsync(stream);
       }
 
       _application?.Mutex.WaitOne();
-      var postModel = new Entity();
-      postModel.Name = postModel.EntityID.ToString();
+      var postModel = new Entity {
+        Name = Guid.NewGuid().ToString()
+      };
       postModel.AddTransform();
       postModel.AddMaterial();
       // postModel.AddRigidbody(PrimitiveType.Box, new(.5f, 1f, .5f), new(0, -1f, 0), true, false);
@@ -59,7 +69,18 @@ public class WebApiSystem : IDisposable {
       return Results.Ok();
     }).DisableAntiforgery();
 
-    _webInstance?.WebApplication?.MapPost("/rotate", (string id, RotationData rotation) => {
+    api.MapPost("/rotate", async (HttpContext context) => {
+      var id = context.Request.Query["id"].ToString();
+
+      if (!Guid.TryParse(id, out var guid)) {
+        return Results.BadRequest("Invalid ID format.");
+      }
+
+      var rotation = await context.Request.ReadFromJsonAsync<RotationData>();
+      if (rotation == null) {
+        return Results.BadRequest("Invalid rotation data.");
+      }
+
       var target = _application!.GetEntity(Guid.Parse(id));
 
       if (target == null) {
@@ -73,9 +94,19 @@ public class WebApiSystem : IDisposable {
       return Results.Ok();
     });
 
-    _webInstance?.WebApplication?.MapPost("/translate", (string id, TranslationData transform) => {
-      var target = _application!.GetEntity(Guid.Parse(id));
+    api.MapPost("/translate", async (HttpContext context) => {
+      var id = context.Request.Query["id"].ToString();
 
+      if (!Guid.TryParse(id, out var guid)) {
+        return Results.BadRequest("Invalid ID format.");
+      }
+
+      var transform = await context.Request.ReadFromJsonAsync<TranslationData>();
+      if (transform == null) {
+        return Results.BadRequest("Invalid translation data.");
+      }
+
+      var target = _application!.GetEntity(guid);
       if (target == null) {
         return Results.NotFound();
       }
@@ -87,6 +118,7 @@ public class WebApiSystem : IDisposable {
       return Results.Ok();
     });
   }
+  */
 
   public void Dispose() {
     _webInstance?.Dispose();

@@ -6,6 +6,9 @@ using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Loaders;
 
+[JsonSerializable(typeof(DwarfFile[]))]
+internal partial class DwarfFileJsonSerializerContext : JsonSerializerContext { }
+
 public static class DwarfFileParser {
   public readonly static JsonSerializerOptions ParserOptions = new() {
     WriteIndented = true,

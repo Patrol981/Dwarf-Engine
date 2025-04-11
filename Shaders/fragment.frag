@@ -57,36 +57,29 @@ void main() {
     vec3 surfaceNormal = normalize(fragNormalWorld);
     vec3 viewDir = normalize(ubo.cameraPosition - fragPositionWorld);
 
-    vec3 lightColor = ubo.directionalLight.lightColor.xyz;
     vec3 result = vec3(0, 0, 0);
-
-    float alpha = 1.0;
-    vec4 colorMod;
-
-    if (ubo.hasImportantEntity == 1 && filterFlag == 1) {
-        float radiusHorizontal = 1.0;
-        float distortionStrength = 1.0;
-
-        float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
-        float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
-
-        if (fragToCamera <= entityToCamera && entityToFragDistance < radiusHorizontal) {
-            alpha = 0.5;
-            colorMod = texture(sampler2D(_texture, _sampler), texCoord);
-        } else {
-            colorMod = texture(sampler2D(_texture, _sampler), texCoord);
-        }
-    } else if(ubo.useFog == 1 && ubo.hasImportantEntity == 1) {
-      colorMod = texture(sampler2D(_texture, _sampler), texCoord);
-    }  else {
-      colorMod = texture(sampler2D(_texture, _sampler), texCoord);
-    }
 
     result += calc_dir_light(ubo.directionalLight, surfaceNormal, viewDir);
     for (int i = 0; i < ubo.pointLightLength; i++) {
         PointLight light = pointLightBuffer.pointLights[i];
         result += calc_point_light(light, surfaceNormal, viewDir);
     }
+
+    float alpha = 1.0;
+    vec4 colorMod;
+
+    if (ubo.hasImportantEntity == 1 && filterFlag == 1) {
+        float radiusHorizontal = 1.0;
+
+        float fragToCamera = distance(fragPositionWorld, ubo.cameraPosition);
+        float entityToCamera = distance(ubo.importantEntityPosition, ubo.cameraPosition);
+
+        if (fragToCamera <= entityToCamera && entityToFragDistance < radiusHorizontal) {
+          alpha = 0.5;
+        }
+    }
+
+    colorMod = texture(sampler2D(_texture, _sampler), texCoord);
 
     outColor = colorMod * vec4(result, alpha);
     outColor = mix(ubo.fogColor, outColor, fogVisiblity);

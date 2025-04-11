@@ -23,7 +23,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   public const string HatchTextureName = "./Resources/T_crossHatching13_D.png";
   public static float HatchScale = 1;
 
-  public const bool GlobalVertexBuffer = false;
+  public bool GlobalVertexBuffer { get; private set; } = false;
 
   private DwarfBuffer _modelBuffer = null!;
   private DwarfBuffer _complexVertexBuffer = null!;

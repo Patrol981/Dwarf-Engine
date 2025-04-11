@@ -9,8 +9,8 @@ using Vortice.Vulkan;
 namespace Dwarf.Rendering;
 
 public class Mesh : IDisposable, ICloneable {
-  private readonly IDevice _device;
-  private readonly VmaAllocator _vmaAllocator;
+  private readonly IDevice _device = null!;
+  private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
 
   public Vertex[] Vertices = [];
   public uint[] Indices = [];
@@ -24,7 +24,7 @@ public class Mesh : IDisposable, ICloneable {
   public bool HasIndexBuffer => IndexCount > 0;
 
   public Guid TextureIdReference = Guid.Empty;
-  public Material Material { get; set; }
+  public Material Material { get; set; } = null!;
 
   public Matrix4x4 Matrix = Matrix4x4.Identity;
 

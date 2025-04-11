@@ -16,8 +16,8 @@ namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
   private readonly VulkanDevice _device = null!;
-  private readonly VmaAllocator _vmaAllocator;
-  private IPhysicsBody _bodyInterface;
+  private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
+  private IPhysicsBody _bodyInterface = null!;
   private MotionType _motionType = MotionType.Dynamic;
   private readonly MotionQuality _motionQuality = MotionQuality.LinearCast;
   private readonly bool _physicsControlRotation = false;

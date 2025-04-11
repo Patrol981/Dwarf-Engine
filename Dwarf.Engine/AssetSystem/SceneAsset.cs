@@ -4,6 +4,11 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Dwarf.AssetSystem;
+
+[YamlStaticContext]
+[YamlSerializable(typeof(SceneAsset))]
+public partial class SceneAssetYamlContext : StaticContext { }
+
 public class SceneAsset {
   public string Name { get; set; }
   public List<GameAsset> GameAssets { get; set; }
@@ -28,7 +33,7 @@ public class SceneAsset {
   }
 
   public void SaveSceneAsset() {
-    var serializer = new SerializerBuilder()
+    var serializer = new StaticSerializerBuilder(new SceneAssetYamlContext())
       .WithNamingConvention(PascalCaseNamingConvention.Instance)
       .Build();
 
@@ -51,7 +56,7 @@ public class SceneAsset {
   }
 
   private static async Task<SceneAsset> ProcessScene(Application application, string text) {
-    var desrializer = new DeserializerBuilder()
+    var desrializer = new StaticDeserializerBuilder(new SceneAssetYamlContext())
       .WithNamingConvention(PascalCaseNamingConvention.Instance)
       .Build();
 

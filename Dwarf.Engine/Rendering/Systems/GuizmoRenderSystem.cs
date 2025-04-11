@@ -63,7 +63,7 @@ public class GuizmoRenderSystem : SystemBase {
 
     Draw(frameInfo, guizmos);
 
-    if (perFrameGuizmos != null && perFrameGuizmos.Length > 0) {
+    if (!perFrameGuizmos.IsEmpty && perFrameGuizmos.Length > 0) {
       // Draw(frameInfo, perFrameGuizmos);
       // Guizmos.Free();
     }

@@ -110,9 +110,11 @@ public static class MemoryUtils {
     return Marshal.AllocHGlobal(size);
   }
 
+#pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
   public static unsafe T* AllocateMemory<T>(int count) where T : struct {
     return (T*)Marshal.AllocHGlobal(Unsafe.SizeOf<T>() * count);
   }
+#pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
   public static T? FromIntPtr<T>(nint ptr) {
     var obj = Marshal.PtrToStructure<T>(ptr);

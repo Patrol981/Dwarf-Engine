@@ -45,13 +45,13 @@ public class VulkanSwapchain : IDisposable {
   private unsafe VkFence* _imagesInFlight;
 
   // private Swapchain _oldSwapchain = null!;
-  private DescriptorPool _descriptorPool;
-  private DescriptorSetLayout _inputAttachmentsLayout;
-  private DescriptorSetLayout _postProcessLayout;
+  private DescriptorPool _descriptorPool = null!;
+  private DescriptorSetLayout _inputAttachmentsLayout = null!;
+  private DescriptorSetLayout _postProcessLayout = null!;
   // private VkDescriptorSet[] _colorDescriptors;
   // private VkDescriptorSet[] _depthDescriptors;
-  private VkDescriptorSet[] _imageDescriptors;
-  private VkDescriptorSet[] _postProcessDescriptors;
+  private VkDescriptorSet[] _imageDescriptors = [];
+  private VkDescriptorSet[] _postProcessDescriptors = [];
 
   private int _currentFrame = 0;
   private uint _imageIndex = 0;
@@ -675,17 +675,17 @@ public class VulkanSwapchain : IDisposable {
     out VkFormat imageFormat
   ) {
     VkImageAspectFlags aspectMask = 0;
-    VkImageLayout imageLayout = new();
+    // VkImageLayout imageLayout = new();
 
     imageFormat = format;
 
     if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0) {
       aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      // imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
     if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
       aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-      imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      // imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
 
     VkImageCreateInfo imageCreateInfo = new() {

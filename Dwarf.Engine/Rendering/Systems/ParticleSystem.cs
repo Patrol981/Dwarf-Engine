@@ -21,7 +21,7 @@ public class ParticleSystem : SystemBase {
     (ParticlePushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<ParticlePushConstant>());
   private DescriptorSetLayout _textureLayout = null!;
 
-  private TextureManager _textureManager;
+  private TextureManager _textureManager = null!;
 
   public ParticleSystem(
     VmaAllocator vmaAllocator,

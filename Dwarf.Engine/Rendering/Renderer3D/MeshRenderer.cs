@@ -389,7 +389,7 @@ public class MeshRenderer : Component, IRender3DElement, ICollision {
   public void AddJoint(Node[] jointsToAdd, int nodeIdx, int jointIdx) {
     // node.ParentRenderer = this;
     var targetNode = NodeFromIndex(nodeIdx);
-    var joints = targetNode.Skin.Joints;
+    var joints = targetNode?.Skin?.Joints;
     // targetNode.Skin.Joints.Where(x => x.Index == jointIdx).First().
   }
 

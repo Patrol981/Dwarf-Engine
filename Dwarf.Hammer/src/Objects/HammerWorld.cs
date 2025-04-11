@@ -6,7 +6,7 @@ namespace Dwarf.Hammer;
 public class HammerWorld {
   private List<HammerObject> _hammerObjects = [];
   private List<HammerSolver> _hammerSolvers = [];
-  private float _gravity = 9.807f;
+  // private float _gravity = 9.807f;
 
   public void AddObject(HammerObject hammerObject) {
     _hammerObjects.Add(hammerObject);

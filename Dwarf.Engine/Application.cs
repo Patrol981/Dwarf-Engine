@@ -279,7 +279,6 @@ public class Application {
 
     _renderShouldClose = true;
     Logger.Info("Waiting for renderer to close...");
-    int x = 0;
     while (_renderShouldClose) { Console.Write(""); }
     _renderThread?.Join();
 
@@ -794,8 +793,10 @@ public class Application {
 
       Renderer.EndFrame();
 
-      StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
-      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+      if (Systems.Render3DSystem != null) {
+        StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
+        StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+      }
 
       while (_reloadQueue.Count > 0) {
         var item = _reloadQueue.Dequeue();

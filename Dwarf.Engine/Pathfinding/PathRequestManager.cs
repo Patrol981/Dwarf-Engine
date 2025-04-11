@@ -23,14 +23,14 @@ public class PathRequestManager : DwarfScript {
   public void PaintGuizmos() {
     return;
 
-    foreach (var node in _grid.GridData) {
-      _grid.GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
-      if (_tmpPath != null && _tmpPath.Count > 0) {
-        if (_tmpPath.Contains(node.WorldPosition)) {
-          _grid.GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = new(1.0f, 1.0f, 0.0f);
-        }
-      }
-    }
+    // foreach (var node in _grid.GridData) {
+    //   _grid.GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = node.Walkable ? new(0.2f, 0.7f, 0.2f) : new(1.0f, 0.0f, 0.0f);
+    //   if (_tmpPath != null && _tmpPath.Count > 0) {
+    //     if (_tmpPath.Contains(node.WorldPosition)) {
+    //       _grid.GridGuizmos[node.GridPosition.X, node.GridPosition.Y].Color = new(1.0f, 1.0f, 0.0f);
+    //     }
+    //   }
+    // }
   }
 
   public override void Update() {

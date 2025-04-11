@@ -6,7 +6,7 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Math;
 using Vortice.Vulkan;
 
-namespace Dwarf;
+namespace Dwarf.Rendering;
 
 public class Mesh : IDisposable, ICloneable {
   private readonly IDevice _device;

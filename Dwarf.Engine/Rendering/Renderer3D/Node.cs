@@ -1,9 +1,9 @@
 using System.Numerics;
 using Dwarf.AbstractionLayer;
 using Dwarf.Math;
-using Dwarf.Model.Animation;
+using Dwarf.Rendering.Renderer3D.Animations;
 
-namespace Dwarf.Model;
+namespace Dwarf.Rendering.Renderer3D;
 
 public struct NodeInfo {
   public Vector3 Translation;

@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;

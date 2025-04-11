@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Dwarf.Model.Animation;
+namespace Dwarf.Rendering.Renderer3D.Animations;
 
 [StructLayout(LayoutKind.Explicit)]
 public unsafe struct JointUBO {

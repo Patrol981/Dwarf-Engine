@@ -1,7 +1,7 @@
 using System.Numerics;
 using Dwarf.Loaders;
 
-namespace Dwarf.Model.Animation;
+namespace Dwarf.Rendering.Renderer3D.Animations;
 
 public class AnimationSampler : ICloneable {
   public enum InterpolationType {

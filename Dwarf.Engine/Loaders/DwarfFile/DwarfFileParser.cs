@@ -2,6 +2,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Loaders;
 

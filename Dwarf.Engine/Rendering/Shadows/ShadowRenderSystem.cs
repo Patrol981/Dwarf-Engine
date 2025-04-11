@@ -1,13 +1,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dwarf.AbstractionLayer;
-using Dwarf.Rendering.Shadows;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Systems;
+namespace Dwarf.Rendering.Shadows;
 
 public class ShadowRenderSystem : SystemBase {
   public readonly Application _application;

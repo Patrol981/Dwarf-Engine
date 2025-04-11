@@ -1,7 +1,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
@@ -9,14 +8,13 @@ using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Rendering.UI;
 using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-
 using Vortice.Vulkan;
-
 using static Vortice.Vulkan.Vma;
 // using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
@@ -520,11 +518,6 @@ public class Application {
     CurrentScene.LoadEntities();
     _entities.AddRange(CurrentScene.GetEntities());
     Mutex.ReleaseMutex();
-
-    var targetCnv = _entities.Distinct<Canvas>();
-    if (targetCnv.Length > 0) {
-      Systems.Canvas = targetCnv[0].GetComponent<Canvas>();
-    }
 
     var endTime = DateTime.Now;
     Logger.Info($"[Entities] Load Time {endTime - startTime}");

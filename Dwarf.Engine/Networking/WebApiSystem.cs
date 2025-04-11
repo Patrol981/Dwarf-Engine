@@ -1,5 +1,4 @@
 using Dwarf.EntityComponentSystem;
-using Dwarf.Model.Animation;
 using Dwarf.Utils;
 using Dwarf.WebApi;
 
@@ -52,7 +51,7 @@ public class WebApiSystem : IDisposable {
       postModel.AddMaterial();
       // postModel.AddRigidbody(PrimitiveType.Box, new(.5f, 1f, .5f), new(0, -1f, 0), true, false);
       postModel.AddModel(filePath, 0);
-      postModel.GetComponent<AnimationController>().PlayFirstAnimation();
+      postModel.GetComponent<Rendering.Renderer3D.Animations.AnimationController>().PlayFirstAnimation();
 
       _application?.AddEntity(postModel);
       _application?.Mutex.ReleaseMutex();

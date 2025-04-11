@@ -1,6 +1,6 @@
 using System.Numerics;
-
-using Dwarf.Model;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf;
 

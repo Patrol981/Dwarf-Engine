@@ -1,4 +1,4 @@
-namespace Dwarf.Model.Animation;
+namespace Dwarf.Rendering.Renderer3D.Animations;
 
 public class AnimationChannel : ICloneable {
   public enum PathType {

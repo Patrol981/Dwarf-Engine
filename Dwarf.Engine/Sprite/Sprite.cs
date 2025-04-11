@@ -5,6 +5,8 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using StbImageSharp;

@@ -5,6 +5,7 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using JoltPhysicsSharp;

@@ -1,6 +1,6 @@
 using Dwarf;
 using Dwarf.EntityComponentSystem;
-using Dwarf.Model;
+using Dwarf.Rendering.Renderer3D;
 using ImGuiNET;
 
 namespace Dwarf.Rendering.UI.Utils;

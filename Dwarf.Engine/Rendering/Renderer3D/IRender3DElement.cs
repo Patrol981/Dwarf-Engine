@@ -3,12 +3,11 @@ using System.Numerics;
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
-using Dwarf.Model;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Renderer3D;
 public interface IRender3DElement : IDrawable {
   int NodesCount { get; }
   int MeshedNodesCount { get; }

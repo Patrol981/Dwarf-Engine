@@ -1,6 +1,7 @@
-using Dwarf.Model.Animation;
 using Dwarf.Physics;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Renderer3D.Animations;
 namespace Dwarf.EntityComponentSystem;
 
 public class Entity {

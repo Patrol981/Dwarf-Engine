@@ -2,8 +2,9 @@ using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
+using Dwarf.Rendering.Renderer3D;
 
-namespace Dwarf.Model.Animation;
+namespace Dwarf.Rendering.Renderer3D.Animations;
 
 public class AnimationController : Component {
   private MeshRenderer _meshRenderer;

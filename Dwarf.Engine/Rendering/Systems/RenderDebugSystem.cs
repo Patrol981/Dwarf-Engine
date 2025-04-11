@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Physics;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;

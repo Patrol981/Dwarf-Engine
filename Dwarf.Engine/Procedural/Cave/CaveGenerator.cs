@@ -4,6 +4,8 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Math;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Procedural.Cave;
 

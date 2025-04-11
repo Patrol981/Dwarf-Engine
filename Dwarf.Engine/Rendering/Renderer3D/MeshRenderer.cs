@@ -2,18 +2,15 @@ using System.Numerics;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
-using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Math;
-using Dwarf.Model;
-using Dwarf.Model.Animation;
 using Dwarf.Physics;
-using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf;
+namespace Dwarf.Rendering.Renderer3D;
 
 public class MeshRenderer : Component, IRender3DElement, ICollision {
   private readonly IDevice _device = null!;

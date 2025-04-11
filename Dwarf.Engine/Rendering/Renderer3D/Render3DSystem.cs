@@ -7,16 +7,14 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Math;
-using Dwarf.Model;
-using Dwarf.Model.Animation;
+using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
-using YamlDotNet.Core.Tokens;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Renderer3D;
 
 public class Render3DSystem : SystemBase, IRenderSystem {
   public const string Simple3D = "simple3D";
@@ -42,8 +40,8 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   // private ModelUniformBufferObject _modelUbo = new();
   private readonly unsafe ModelUniformBufferObject* _modelUbo =
     (ModelUniformBufferObject*)Marshal.AllocHGlobal(Unsafe.SizeOf<ModelUniformBufferObject>());
-  private readonly unsafe SimplePushConstantData* _pushConstantData =
-    (SimplePushConstantData*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimplePushConstantData>());
+  private readonly unsafe SimpleModelPushConstant* _pushConstantData =
+    (SimpleModelPushConstant*)Marshal.AllocHGlobal(Unsafe.SizeOf<SimpleModelPushConstant>());
 
   private readonly IRender3DElement[] _notSkinnedEntitiesCache = [];
   private readonly IRender3DElement[] _skinnedEntitiesCache = [];
@@ -751,7 +749,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     _device.WaitQueue();
     _device.WaitDevice();
 
-    MemoryUtils.FreeIntPtr<SimplePushConstantData>((nint)_pushConstantData);
+    MemoryUtils.FreeIntPtr<SimpleModelPushConstant>((nint)_pushConstantData);
     MemoryUtils.FreeIntPtr<ModelUniformBufferObject>((nint)_modelUbo);
 
     _complexVertexBuffer?.Dispose();

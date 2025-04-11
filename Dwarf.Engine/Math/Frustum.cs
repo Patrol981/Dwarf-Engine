@@ -3,8 +3,8 @@ using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
-using Dwarf.Model;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Math;
 

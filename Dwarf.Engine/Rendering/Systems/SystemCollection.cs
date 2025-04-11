@@ -3,6 +3,9 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Networking;
 using Dwarf.Physics;
 using Dwarf.Rendering.Particles;
+using Dwarf.Rendering.PostProcessing;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Shadows;
 using Dwarf.Rendering.Systems;
 using Dwarf.Rendering.UI;
 using Dwarf.Vulkan;
@@ -22,14 +25,11 @@ public class SystemCollection : IDisposable {
   private ParticleSystem? _particleSystem;
   private ShadowRenderSystem? _shadowRenderSystem;
 
-  private SubpassConnectorSystem? _subpassConnectorSystem;
   private PostProcessingSystem? _postProcessingSystem;
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
   private WebApiSystem? _webApi;
-
-  private Canvas? _canvas = null;
 
   public bool Reload3DRenderSystem = false;
   public bool Reload2DRenderSystem = false;
@@ -49,7 +49,7 @@ public class SystemCollection : IDisposable {
     _guizmoRenderSystem?.Render(frameInfo);
     _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
     _particleSystem?.Render(frameInfo);
-    _renderUISystem?.DrawUI(frameInfo, _canvas);
+    // _renderUISystem?.DrawUI(frameInfo, _canvas);
   }
 
   public Task UpdateCalculationSystems(Entity[] entities) {
@@ -92,16 +92,15 @@ public class SystemCollection : IDisposable {
       }
     }
 
-    if (_renderUISystem != null) {
-      var canvasEntities = _canvas!.GetUI();
-      if (canvasEntities.Length < 1) return;
-      var sizes = _renderUISystem.CheckSizes(canvasEntities, _canvas);
-      var textures = _renderUISystem.CheckTextures(canvasEntities);
-      if (!sizes || !textures || ReloadUISystem) {
-        ReloadUISystem = false;
-        ReloadUIRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
-      }
-    }
+    // if (_renderUISystem != null) {
+    //   if (canvasEntities.Length < 1) return;
+    //   var sizes = _renderUISystem.CheckSizes(canvasEntities, _canvas);
+    //   var textures = _renderUISystem.CheckTextures(canvasEntities);
+    //   if (!sizes || !textures || ReloadUISystem) {
+    //     ReloadUISystem = false;
+    //     ReloadUIRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo);
+    //   }
+    // }
 
     if (_particleSystem != null) {
       var particles = _particleSystem.Validate();
@@ -140,17 +139,17 @@ public class SystemCollection : IDisposable {
     var objs3D = entities.DistinctInterface<IRender3DElement>();
     _render3DSystem?.Setup(objs3D, ref textureManager);
     _render2DSystem?.Setup(entities.DistinctAsReadOnlySpan<Sprite>(), ref textureManager);
-    _renderUISystem?.Setup(Canvas, ref textureManager);
+    // _renderUISystem?.Setup(Canvas, ref textureManager);
     _directionaLightSystem?.Setup();
     _pointLightSystem?.Setup();
     _particleSystem?.Setup(ref textureManager);
     _physicsSystem?.Init(entities.ToArray());
   }
 
-  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, Canvas canvas, ref TextureManager textureManager, Renderer renderer) {
+  public void SetupRenderDatas(ReadOnlySpan<Entity> entities, ref TextureManager textureManager, Renderer renderer) {
     _render3DSystem?.Setup(entities.DistinctInterface<IRender3DElement>(), ref textureManager);
     _render2DSystem?.Setup(entities.DistinctReadOnlySpan<Sprite>(), ref textureManager);
-    _renderUISystem?.Setup(canvas, ref textureManager);
+    // _renderUISystem?.Setup(canvas, ref textureManager);
   }
 
   public void Reload3DRenderer(
@@ -209,7 +208,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _renderUISystem?.Setup(_canvas, ref textureManager);
+    // _renderUISystem?.Setup(_canvas, ref textureManager);
   }
 
   public void ReloadParticleRenderer(
@@ -288,19 +287,12 @@ public class SystemCollection : IDisposable {
     set { _webApi = value; }
   }
 
-  public Canvas Canvas {
-    get { return _canvas ?? null!; }
-    set { _canvas = value; }
-  }
-
   public PostProcessingSystem? PostProcessingSystem => _postProcessingSystem;
 
   public void Dispose() {
     _postProcessingSystem?.Dispose();
-    _subpassConnectorSystem?.Dispose();
     _render3DSystem?.Dispose();
     _render2DSystem?.Dispose();
-    _canvas?.Dispose();
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
     _renderDebugSystem?.Dispose();

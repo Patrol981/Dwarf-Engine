@@ -50,7 +50,8 @@ public class RenderUISystem : SystemBase {
     // CreatePipeline(_renderer.GetSwapchainRenderPass(), "gui_vertex", "gui_fragment", new PipelineUIProvider());
   }
 
-  public unsafe void Setup(Canvas? canvas, ref TextureManager textureManager) {
+  /*
+  public unsafe void Setup(ref TextureManager textureManager) {
     if (canvas == null) return;
 
     var entities = canvas.GetUI();
@@ -178,6 +179,7 @@ public class RenderUISystem : SystemBase {
       .Build(out VkDescriptorSet set);
     _textureSets.SetAt(set, index);
   }
+  */
 
   public override unsafe void Dispose() {
     _device.WaitQueue();

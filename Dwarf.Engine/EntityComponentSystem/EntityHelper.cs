@@ -1,4 +1,5 @@
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.EntityComponentSystem;
 public static class EntityHelper {

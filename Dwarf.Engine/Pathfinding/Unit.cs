@@ -2,10 +2,10 @@ using System.Collections;
 using System.Numerics;
 using Dwarf.Coroutines;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Pathfinding.AStar;
-using Dwarf.Extensions.Logging;
-using Dwarf.Model.Animation;
+using Dwarf.Rendering.Renderer3D.Animations;
 
 namespace Dwarf.Pathfinding;
 public class Unit : DwarfScript {

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Dwarf.Math;
 
-namespace Dwarf;
+namespace Dwarf.Rendering;
 
 public struct Vertex {
   public Vector3 Position;

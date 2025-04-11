@@ -7,50 +7,7 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering;
-
-[StructLayout(LayoutKind.Sequential)]
-public struct PostProcessInfo {
-  public float Float_1_1;
-  public float Float_1_2;
-  public float Float_1_3;
-  public float Float_1_4;
-
-  public float Float_2_1;
-  public float Float_2_2;
-  public float Float_2_3;
-  public float Float_2_4;
-
-  public float Float_3_1;
-  public float Float_3_2;
-  public float Float_3_3;
-  public float Float_3_4;
-
-  public float Float_4_1;
-  public float Float_4_2;
-  public float Float_4_3;
-  public float Float_4_4;
-
-  public float Float_5_1;
-  public float Float_5_2;
-  public float Float_5_3;
-  public float Float_5_4;
-
-  public float Float_6_1;
-  public float Float_6_2;
-  public float Float_6_3;
-  public float Float_6_4;
-
-  public float Float_7_1;
-  public float Float_7_2;
-  public float Float_7_3;
-  public float Float_7_4;
-
-  public float Float_8_1;
-  public float Float_8_2;
-  public float Float_8_3;
-  public float Float_8_4;
-}
+namespace Dwarf.Rendering.PostProcessing;
 
 public class PostProcessingSystem : SystemBase {
   // public static float DepthMax = 0.995f;
@@ -143,13 +100,11 @@ public class PostProcessingSystem : SystemBase {
       _textureSetLayout.GetDescriptorSetLayout()
     ];
 
+    var postProcessConfig = GetConfigurationBasedOnFlag(systemConfiguration.PostProcessingFlag);
+
     AddPipelineData<PostProcessInfo>(new() {
-      RenderPass = renderer.GetPostProcessingPass(),
-      VertexName = "post_process_index_vertex",
-      FragmentName = "post_process_jpaint0_fragment",
-      // FragmentName = "post_process_toon_shader_fragment",
-      // FragmentName = "post_process_kuwahara_shader_fragment",
-      // FragmentName = "post_process_waterpaint_fragment",
+      VertexName = postProcessConfig.VertexName,
+      FragmentName = postProcessConfig.FragmentName,
       PipelineProvider = new SecondSubpassPipelineProvider(),
       DescriptorSetLayouts = layouts
     });
@@ -273,6 +228,49 @@ public class PostProcessingSystem : SystemBase {
     }
 
     vkCmdDraw(frameInfo.CommandBuffer, 3, 1, 0, 0);
+  }
+
+  public static PostProcessConfiguration GetConfigurationBasedOnFlag(PostProcessingConfigurationFlag flag) {
+    return new PostProcessConfiguration {
+      FlagIdentifier = flag,
+      VertexName = CorrespondingVertex(flag),
+      FragmentName = CorrespondingFragment(flag)
+    };
+  }
+
+  public static ReadOnlySpan<PostProcessConfiguration> GetConfigurations() {
+    var flags = Enum.GetValues<PostProcessingConfigurationFlag>().ToArray();
+    var configurations = new PostProcessConfiguration[flags.Length];
+    for (uint i = 0; i < configurations.Length; i++) {
+      configurations[i] = new PostProcessConfiguration {
+        FlagIdentifier = flags[i],
+        VertexName = CorrespondingVertex(flags[i]),
+        FragmentName = CorrespondingFragment(flags[i])
+      };
+    }
+    return configurations;
+  }
+
+  private static string CorrespondingFragment(PostProcessingConfigurationFlag flag) {
+    return flag switch {
+      PostProcessingConfigurationFlag.Anime => "post_process_toon_shader_fragment",
+      PostProcessingConfigurationFlag.Sketch => throw new NotImplementedException(),
+      PostProcessingConfigurationFlag.PaletteFilter => "post_process_jpaint0_fragment",
+      PostProcessingConfigurationFlag.Hatch => throw new NotImplementedException(),
+      PostProcessingConfigurationFlag.Custom => "",
+      _ => throw new ArgumentOutOfRangeException(nameof(flag)),
+    };
+  }
+
+  private static string CorrespondingVertex(PostProcessingConfigurationFlag flag) {
+    return flag switch {
+      PostProcessingConfigurationFlag.Anime => "post_process_index_vertex",
+      PostProcessingConfigurationFlag.Sketch => "post_process_index_vertex",
+      PostProcessingConfigurationFlag.PaletteFilter => "post_process_index_vertex",
+      PostProcessingConfigurationFlag.Hatch => "post_process_index_vertex",
+      PostProcessingConfigurationFlag.Custom => "",
+      _ => throw new ArgumentOutOfRangeException(nameof(flag)),
+    };
   }
 
   public unsafe override void Dispose() {

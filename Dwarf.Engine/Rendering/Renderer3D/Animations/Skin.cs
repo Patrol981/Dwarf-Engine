@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Dwarf.Model.Animation;
+namespace Dwarf.Rendering.Renderer3D.Animations;
 
 public class Skin : IDisposable, ICloneable {
   public string Name { get; set; } = default!;

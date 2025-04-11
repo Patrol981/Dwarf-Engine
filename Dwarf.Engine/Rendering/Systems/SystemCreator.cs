@@ -1,5 +1,6 @@
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering.Particles;
+using Dwarf.Rendering.PostProcessing;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
@@ -20,26 +21,19 @@ public enum SystemCreationFlags {
   Shadows = 1 << 9,
 }
 
-[Flags]
-public enum PostProcessingConfigurationFlags {
-  None = 0,
-  Edge = 1,
-  Hatch = 1 << 1,
-}
-
 public record SystemConfiguration {
   public Dwarf.Physics.Backends.BackendKind PhysiscsBackend { get; init; }
-  public PostProcessingConfigurationFlags PostProcessingFlags { get; init; }
+  public PostProcessingConfigurationFlag PostProcessingFlag { get; init; }
   public string[]? PostProcessInputTextures { get; init; }
 
   public static SystemConfiguration Default => new() {
     PhysiscsBackend = Physics.Backends.BackendKind.Default,
-    PostProcessingFlags = PostProcessingConfigurationFlags.None,
+    PostProcessingFlag = PostProcessingConfigurationFlag.Custom,
   };
 
   public static SystemConfiguration GetDefault() => new() {
     PhysiscsBackend = Physics.Backends.BackendKind.Default,
-    PostProcessingFlags = PostProcessingConfigurationFlags.None,
+    PostProcessingFlag = PostProcessingConfigurationFlag.Custom,
   };
 }
 

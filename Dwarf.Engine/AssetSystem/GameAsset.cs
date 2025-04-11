@@ -5,6 +5,7 @@ using Dwarf.Globals;
 using Dwarf.Loaders;
 using Dwarf.Physics;
 using Dwarf.Procedural;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Rendering.UI;
 
 namespace Dwarf.AssetSystem;
@@ -87,11 +88,6 @@ public class GameAsset {
       AssetType = terrain.GetType().FullName!.ToString();
     }
 
-    var canvas = entity.TryGetComponent<Canvas>();
-    if (canvas != null) {
-      AssetType = canvas.GetType().FullName!.ToString();
-    }
-
     var camera = entity.TryGetComponent<Camera>();
     if (camera != null) {
       AssetType = camera.GetType().FullName!.ToString();
@@ -170,10 +166,6 @@ public class GameAsset {
   }
 
   private void HandleComponents(Entity entity) {
-    if (AssetType == typeof(Canvas).FullName) {
-      entity.AddComponent(new Canvas());
-    }
-
     if (AssetType == typeof(Terrain3D).FullName) {
       entity.AddMaterial();
       entity.AddComponent(new Terrain3D(Application.Instance));

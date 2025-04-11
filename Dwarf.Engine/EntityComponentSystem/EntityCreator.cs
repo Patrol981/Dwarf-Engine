@@ -1,10 +1,10 @@
 using System.Numerics;
-
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
-using Dwarf.Model;
-using Dwarf.Model.Animation;
 using Dwarf.Physics;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
 
 namespace Dwarf.EntityComponentSystem;

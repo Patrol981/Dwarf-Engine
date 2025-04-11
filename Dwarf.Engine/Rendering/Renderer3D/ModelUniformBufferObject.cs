@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Dwarf;
+namespace Dwarf.Rendering.Renderer3D;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct ModelUniformBufferObject {

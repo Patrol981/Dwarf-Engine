@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 
 using Dwarf.EntityComponentSystem;
+using Dwarf.Rendering.Renderer2D;
 
 namespace Dwarf.Math;
 public class Collision2D {

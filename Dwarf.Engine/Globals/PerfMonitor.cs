@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 namespace Dwarf.Globals;

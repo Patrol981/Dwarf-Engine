@@ -13,8 +13,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Systems;
-
+namespace Dwarf.Rendering.Lightning;
 public class PointLightSystem : SystemBase {
   private Entity[] _lightsCache = [];
   private readonly unsafe PointLightPushConstant* _lightPushConstant =

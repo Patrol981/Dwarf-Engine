@@ -1,8 +1,9 @@
+using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
-namespace Dwarf.Vulkan;
+namespace Dwarf.Rendering.PostProcessing;
 
-public class SecondSubpassPipeline : PipelineConfigInfo {
+public class PostProcessingPipeline : PipelineConfigInfo {
   public override PipelineConfigInfo GetConfigInfo() {
     var configInfo = base.GetConfigInfo();
 
@@ -10,7 +11,7 @@ public class SecondSubpassPipeline : PipelineConfigInfo {
     configInfo.RasterizationInfo.cullMode = VkCullModeFlags.Back;
     configInfo.DepthStencilInfo.depthWriteEnable = false;
     configInfo.DepthStencilInfo.depthTestEnable = false;
-    configInfo.Subpass = 1;
+    configInfo.Subpass = 0;
     return configInfo;
   }
 }

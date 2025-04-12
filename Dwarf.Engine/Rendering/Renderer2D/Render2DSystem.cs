@@ -10,7 +10,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Renderer2D;
 public class Render2DSystem : SystemBase, IRenderSystem {
   private PublicList<VkDescriptorSet> _textureSets = new();
   private DwarfBuffer _spriteBuffer = null!;

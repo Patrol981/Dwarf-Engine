@@ -5,7 +5,7 @@ using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf;
+namespace Dwarf.Rendering.Renderer2D;
 public class PipelineSpriteProvider : PipelineProvider {
   public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     var bindingDescriptions = new VkVertexInputBindingDescription[1];

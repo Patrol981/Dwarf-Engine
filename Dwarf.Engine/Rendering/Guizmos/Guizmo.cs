@@ -1,6 +1,6 @@
 using System.Numerics;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Guizmos;
 public class Guizmo {
   public Guid Id { get; init; }
   public GuizmoType GuizmoType { get; init; }

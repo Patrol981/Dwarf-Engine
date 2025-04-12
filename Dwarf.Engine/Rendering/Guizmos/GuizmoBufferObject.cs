@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Guizmos;
 
 [StructLayout(LayoutKind.Explicit)]
 public struct GuizmoBufferObject {

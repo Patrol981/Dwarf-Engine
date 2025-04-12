@@ -9,7 +9,7 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Rendering.Particles;
 
 public class ParticleSystem : SystemBase {
   public const int ParticleMargin = 100;

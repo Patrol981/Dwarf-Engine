@@ -5,8 +5,8 @@ using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
-namespace Dwarf;
-public class SecondSubpassPipelineProvider : PipelineProvider {
+namespace Dwarf.Rendering.PostProcessing;
+public class PostProcessingPipelineProvider : PipelineProvider {
   public override unsafe VkVertexInputBindingDescription* GetBindingDescsFunc() {
     return null;
   }

@@ -4,6 +4,7 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Guizmos;
 
 namespace Dwarf.Pathfinding.AStar;
 

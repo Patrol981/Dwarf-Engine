@@ -1,6 +1,7 @@
+using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
-namespace Dwarf.Vulkan;
+namespace Dwarf.Rendering.Renderer3D;
 
 public class VertexDebugPipeline : PipelineConfigInfo {
   public override PipelineConfigInfo GetConfigInfo() {

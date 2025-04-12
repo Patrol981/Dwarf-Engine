@@ -7,7 +7,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Systems;
+namespace Dwarf.Rendering.Lightning;
 public class DirectionalLightSystem : SystemBase {
   public DirectionalLightSystem(
     VmaAllocator vmaAllocator,

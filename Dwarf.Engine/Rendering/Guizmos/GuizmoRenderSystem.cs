@@ -10,7 +10,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Systems;
+namespace Dwarf.Rendering.Guizmos;
 
 public struct GuizmoIndirectBatch {
   public uint First;
@@ -42,7 +42,7 @@ public class GuizmoRenderSystem : SystemBase {
   }
 
   public void Render(FrameInfo frameInfo) {
-    if (Guizmos.Data.Count < 1) return;
+    if (Globals.Guizmos.Data.Count < 1) return;
 
     BindPipeline(frameInfo.CommandBuffer);
     unsafe {
@@ -58,8 +58,8 @@ public class GuizmoRenderSystem : SystemBase {
       );
     }
 
-    var guizmos = Guizmos.Data;
-    var perFrameGuizmos = Guizmos.PerFrameGuizmos;
+    var guizmos = Globals.Guizmos.Data;
+    var perFrameGuizmos = Globals.Guizmos.PerFrameGuizmos;
 
     Draw(frameInfo, guizmos);
 

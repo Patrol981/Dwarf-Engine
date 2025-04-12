@@ -105,7 +105,7 @@ public class PostProcessingSystem : SystemBase {
     AddPipelineData<PostProcessInfo>(new() {
       VertexName = postProcessConfig.VertexName,
       FragmentName = postProcessConfig.FragmentName,
-      PipelineProvider = new SecondSubpassPipelineProvider(),
+      PipelineProvider = new PostProcessingPipelineProvider(),
       DescriptorSetLayouts = layouts
     });
 

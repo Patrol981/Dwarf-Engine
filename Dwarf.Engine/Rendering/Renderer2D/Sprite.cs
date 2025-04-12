@@ -15,7 +15,7 @@ using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf;
+namespace Dwarf.Rendering.Renderer2D;
 public class Sprite : Component, IDisposable, I2DCollision {
   private readonly VulkanDevice _device = null!;
   private readonly VmaAllocator _vmaAllocator;

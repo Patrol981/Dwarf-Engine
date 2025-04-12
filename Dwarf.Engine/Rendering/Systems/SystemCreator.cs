@@ -1,6 +1,7 @@
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering.Particles;
 using Dwarf.Rendering.PostProcessing;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 using Vortice.Vulkan;
 

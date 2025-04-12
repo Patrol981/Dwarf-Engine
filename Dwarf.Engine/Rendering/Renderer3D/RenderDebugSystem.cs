@@ -1,16 +1,14 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.EntityComponentSystem;
-using Dwarf.Extensions.Logging;
 using Dwarf.Physics;
-using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Systems;
+namespace Dwarf.Rendering.Renderer3D;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
     VmaAllocator vmaAllocator,

@@ -11,8 +11,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.Renderer2D;
-public class Render2DSystem : SystemBase, IRenderSystem {
-  private PublicList<VkDescriptorSet> _textureSets = new();
+public class Render2DSystem : SystemBase {
   private DwarfBuffer _spriteBuffer = null!;
 
   public Render2DSystem(
@@ -27,7 +26,8 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
+      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
       .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
@@ -43,12 +43,65 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       PipelineProvider = new PipelineSpriteProvider(),
       DescriptorSetLayouts = descriptorSetLayouts,
     });
-
-    //CreatePipelineLayout<SpriteUniformBufferObject>(descriptorSetLayouts);
-    //CreatePipeline(renderer.GetSwapchainRenderPass(), "sprite_vertex", "sprite_fragment", new PipelineSpriteProvider());
   }
 
-  public unsafe void Setup(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
+  public unsafe void Setup(ReadOnlySpan<IDrawable2D> drawables, ref TextureManager textures) {
+    if (drawables.Length < 1) {
+      Logger.Warn("Entities that are capable of using 2D renderer are less than 1, thus 2D Render System won't be recreated");
+      return;
+    }
+
+    Logger.Info("Recreating Renderer 2D");
+
+    _texturesCount = drawables.Length;
+    _descriptorSets = new VkDescriptorSet[drawables.Length];
+
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
+      .SetMaxSets(5)
+      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)drawables.Length)
+      .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
+      .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .Build();
+
+
+    _spriteBuffer = new DwarfBuffer(
+      _vmaAllocator,
+      _device,
+      (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
+      (uint)drawables.Length,
+      BufferUsage.UniformBuffer,
+      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+      ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
+    );
+
+
+    for (int i = 0; i < drawables.Length; i++) {
+      drawables[i].BuildDescriptors(_textureSetLayout, _descriptorPool);
+
+      var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
+      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
+          .WriteBuffer(0, &bufferInfo)
+          .Build(out _descriptorSets[i]);
+    }
+  }
+
+  public bool CheckSizes(ReadOnlySpan<IDrawable2D> drawables) {
+    if (_spriteBuffer == null) {
+      var textureManager = Application.Instance.TextureManager;
+      Setup(drawables, ref textureManager);
+    }
+    if (drawables.Length > (uint)_spriteBuffer!.GetInstanceCount()) {
+      return false;
+    } else if (drawables.Length < (uint)_spriteBuffer.GetInstanceCount()) {
+      return true;
+    }
+
+    return true;
+  }
+
+  /*
+  public unsafe void Setup_Old(ReadOnlySpan<Entity> entities, ref TextureManager textures) {
     if (entities.Length < 1) {
       Logger.Warn("Entities that are capable of using 2D renderer are less than 1, thus 2D Render System won't be recreated");
       return;
@@ -99,10 +152,18 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     }
   }
 
-  public bool CheckSizes(ReadOnlySpan<Entity> entities) {
+
+
+  public bool CheckTextures(ReadOnlySpan<IDrawable2D> drawables) {
+    var len = drawables.Length;
+    var sets = _textureSets.Size;
+    return len == sets;
+  }
+
+  public bool CheckSizes_Old(ReadOnlySpan<Entity> entities) {
     if (_spriteBuffer == null) {
       var textureManager = Application.Instance.TextureManager;
-      Setup(entities, ref textureManager);
+      Setup_Old(entities, ref textureManager);
     }
     if (entities.Length > (uint)_spriteBuffer!.GetInstanceCount()) {
       return false;
@@ -113,14 +174,15 @@ public class Render2DSystem : SystemBase, IRenderSystem {
     return true;
   }
 
-  public bool CheckTextures(ReadOnlySpan<Entity> entities) {
+
+  public bool CheckTextures_Old(ReadOnlySpan<Entity> entities) {
     var len = entities.Length;
     var sets = _textureSets.Size;
     return len == sets;
   }
+  */
 
-  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
-    // _pipeline.Bind(frameInfo.CommandBuffer);
+  public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<IDrawable2D> drawables) {
     BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -134,12 +196,12 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       null
     );
 
-    for (int i = 0; i < entities.Length; i++) {
-      if (!entities[i].Active) continue;
+    for (int i = 0; i < drawables.Length; i++) {
+      if (!drawables[i].Active) continue;
 
       var pushConstantData = new SpriteUniformBufferObject {
-        SpriteMatrix = entities[i].GetComponent<Transform>().Matrix4,
-        SpriteColor = entities[i].GetComponent<MaterialComponent>().Color,
+        SpriteMatrix = drawables[i].Entity.GetComponent<Transform>().Matrix4,
+        SpriteColor = drawables[i].Entity.GetComponent<MaterialComponent>().Color,
         UseTexture = true
       };
 
@@ -152,13 +214,14 @@ public class Render2DSystem : SystemBase, IRenderSystem {
         &pushConstantData
       );
 
-      var sprite = entities[i].GetComponent<Sprite>();
-      if (!sprite.Owner!.CanBeDisposed && sprite.Owner!.Active) {
-        if (sprite.UsesTexture)
-          // sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, ref _pipeline.PipelineLayout);
-          sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, _pipelines["main"].PipelineLayout);
-        sprite.Bind(frameInfo.CommandBuffer);
-        sprite.Draw(frameInfo.CommandBuffer);
+      // var sprite = drawables[i].Entity.GetComponent<Sprite>();
+      if (!drawables[i].Entity.CanBeDisposed && drawables[i].Active) {
+        // if (sprite.UsesTexture)
+        // Descriptor.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, _pipelines["main"].PipelineLayout, 2, 1);
+        Descriptor.BindDescriptorSet(drawables[i].Texture.TextureDescriptor, frameInfo, _pipelines["main"].PipelineLayout, 2, 1);
+        // sprite.BindDescriptorSet(_textureSets.GetAt(i), frameInfo, _pipelines["main"].PipelineLayout);
+        drawables[i].Bind(frameInfo.CommandBuffer, 0);
+        drawables[i].Draw(frameInfo.CommandBuffer);
       }
     }
   }
@@ -176,14 +239,13 @@ public class Render2DSystem : SystemBase, IRenderSystem {
       .WriteImage(0, &imageInfo)
       .Build(out set);
 
-    _textureSets.SetAt(set, index);
+    // _textureSets.SetAt(set, index);
   }
 
   public override unsafe void Dispose() {
     _device.WaitQueue();
     _spriteBuffer?.Dispose();
     _descriptorPool?.FreeDescriptors(_descriptorSets);
-    _texturePool?.FreeDescriptors(_textureSets);
 
     base.Dispose();
   }

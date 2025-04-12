@@ -39,7 +39,7 @@ public class SystemCollection : IDisposable {
 
   public void UpdateSystems(Entity[] entities, FrameInfo frameInfo) {
     _render3DSystem?.Render(frameInfo);
-    _render2DSystem?.Render(frameInfo, entities.Distinct<Sprite>());
+    _render2DSystem?.Render(frameInfo, entities.DistinctI2D());
     _shadowRenderSystem?.Render(frameInfo);
     _directionaLightSystem?.Render(frameInfo);
     _pointLightSystem?.Render(frameInfo);
@@ -83,11 +83,11 @@ public class SystemCollection : IDisposable {
     }
 
     if (_render2DSystem != null) {
-      var spriteEntities = entities.DistinctReadOnlySpan<Sprite>();
+      var spriteEntities = entities.ToArray().DistinctI2D();
       if (spriteEntities.Length < 1) return;
       var sizes = _render2DSystem.CheckSizes(spriteEntities);
-      var textures = _render2DSystem.CheckTextures(spriteEntities);
-      if (!sizes || !textures || Reload2DRenderSystem) {
+      // var textures = _render2DSystem.CheckTextures(spriteEntities);
+      if (!sizes || Reload2DRenderSystem) {
         Reload2DRenderSystem = false;
         Reload2DRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo, entities);
       }
@@ -139,7 +139,7 @@ public class SystemCollection : IDisposable {
     var entities = app.GetEntities();
     var objs3D = entities.DistinctInterface<IRender3DElement>();
     _render3DSystem?.Setup(objs3D, ref textureManager);
-    _render2DSystem?.Setup(entities.DistinctAsReadOnlySpan<Sprite>(), ref textureManager);
+    _render2DSystem?.Setup(entities.ToArray().DistinctI2D(), ref textureManager);
     // _renderUISystem?.Setup(Canvas, ref textureManager);
     _directionaLightSystem?.Setup();
     _pointLightSystem?.Setup();
@@ -149,7 +149,7 @@ public class SystemCollection : IDisposable {
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, ref TextureManager textureManager, Renderer renderer) {
     _render3DSystem?.Setup(entities.DistinctInterface<IRender3DElement>(), ref textureManager);
-    _render2DSystem?.Setup(entities.DistinctReadOnlySpan<Sprite>(), ref textureManager);
+    _render2DSystem?.Setup(entities.ToArray().DistinctI2D(), ref textureManager);
     // _renderUISystem?.Setup(canvas, ref textureManager);
   }
 
@@ -190,7 +190,7 @@ public class SystemCollection : IDisposable {
       globalLayout,
       pipelineConfig
     );
-    _render2DSystem?.Setup(entities.DistinctReadOnlySpan<Sprite>(), ref textureManager);
+    _render2DSystem?.Setup(entities.ToArray().DistinctI2D(), ref textureManager);
   }
 
   public void ReloadUIRenderer(

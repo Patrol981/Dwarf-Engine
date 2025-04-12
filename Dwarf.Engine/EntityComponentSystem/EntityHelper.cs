@@ -1,4 +1,5 @@
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer2D;
 using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.EntityComponentSystem;
@@ -42,12 +43,22 @@ public static class EntityHelper {
     var drawables3D = new List<IRender3DElement>();
     for (int i = 0; i < entities.Length; i++) {
       if (entities[i].CanBeDisposed) continue;
-      var target = entities[i].GetDrawable<IRender3DElement>() as IRender3DElement;
-      if (target != null) {
+      if (entities[i].GetDrawable<IRender3DElement>() is IRender3DElement target) {
         drawables3D.Add(target);
       }
     }
     return drawables3D.ToArray();
+  }
+
+  public static Span<IDrawable2D> DistinctI2D(this Entity[] entities) {
+    var drawables2D = new List<IDrawable2D>();
+    for (int i = 0; i < entities.Length; i++) {
+      if (entities[i].CanBeDisposed) continue;
+      if (entities[i].GetDrawable<IDrawable2D>() is IDrawable2D target) {
+        drawables2D.Add(target);
+      }
+    }
+    return drawables2D.ToArray();
   }
 
   public static ReadOnlySpan<Entity> DistinctInterface<T>(this ReadOnlySpan<Entity> entities) where T : IDrawable {

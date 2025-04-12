@@ -427,33 +427,35 @@ public class Application {
       ref _textureManager
     );
 
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.StorageBuffer,
-      BufferUsage.StorageBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<ObjectData>(),
-      (ulong)Systems.Render3DSystem.LastKnownElemCount,
-      _descriptorSetLayouts["ObjectData"],
-      null!,
-      "ObjectStorage",
-      Device.Properties.limits.minStorageBufferOffsetAlignment,
-      true
-   );
+    if (Systems.Render3DSystem != null) {
+      StorageCollection.CreateStorage(
+        Device,
+        VkDescriptorType.StorageBuffer,
+        BufferUsage.StorageBuffer,
+        Renderer.MAX_FRAMES_IN_FLIGHT,
+        (ulong)Unsafe.SizeOf<ObjectData>(),
+        (ulong)Systems.Render3DSystem.LastKnownElemCount,
+        _descriptorSetLayouts["ObjectData"],
+        null!,
+        "ObjectStorage",
+        Device.Properties.limits.minStorageBufferOffsetAlignment,
+        true
+      );
 
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.StorageBuffer,
-      BufferUsage.StorageBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<Matrix4x4>(),
-      Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
-      _descriptorSetLayouts["JointsBuffer"],
-      null!,
-      "JointsStorage",
-      Device.Properties.limits.minStorageBufferOffsetAlignment,
-      true
-    );
+      StorageCollection.CreateStorage(
+        Device,
+        VkDescriptorType.StorageBuffer,
+        BufferUsage.StorageBuffer,
+        Renderer.MAX_FRAMES_IN_FLIGHT,
+        (ulong)Unsafe.SizeOf<Matrix4x4>(),
+        Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
+        _descriptorSetLayouts["JointsBuffer"],
+        null!,
+        "JointsStorage",
+        Device.Properties.limits.minStorageBufferOffsetAlignment,
+        true
+      );
+    }
 
     if (UseSkybox) {
       _skybox = new(

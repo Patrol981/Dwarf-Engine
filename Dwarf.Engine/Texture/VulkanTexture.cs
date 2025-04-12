@@ -139,7 +139,7 @@ public class VulkanTexture : ITexture {
     SetTextureData(rgbaData);
   }
 
-  public void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
+  public unsafe void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
     VkDescriptorImageInfo imageInfo = new() {
       sampler = _textureSampler.ImageSampler,
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,

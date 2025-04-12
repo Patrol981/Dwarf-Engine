@@ -16,91 +16,63 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.Renderer2D;
-public class Sprite : Component, IDisposable, I2DCollision {
-  private readonly VulkanDevice _device = null!;
+public class Sprite : Component, IDrawable2D, I2DCollision {
+  private readonly VulkanDevice _device;
   private readonly VmaAllocator _vmaAllocator;
+  private readonly TextureManager _textureManager;
+  private readonly IRenderer _renderer;
 
-  private DwarfBuffer _vertexBuffer = null!;
-  private DwarfBuffer _indexBuffer = null!;
   private Guid _textureIdRef = Guid.Empty;
-  private readonly bool _hasIndexBuffer = false;
-  private ulong _vertexCount = 0;
-  private ulong _indexCount = 0;
-
   private Mesh _spriteMesh = null!;
+  private VulkanTexture _spriteTexture = null!;
   private Vector3 _lastKnownScale = Vector3.Zero;
   private Vector2 _cachedSize = Vector2.Zero;
   private Bounds2D _cachedBounds = Bounds2D.Zero;
 
-  public Sprite() { }
+  public Sprite() {
+    _device = null!;
+    _vmaAllocator = VmaAllocator.Null;
+    _textureManager = null!;
+    _renderer = null!;
+  }
 
-  public Sprite(VmaAllocator vmaAllocator, VulkanDevice device) {
-    _device = device;
-    _vmaAllocator = vmaAllocator;
+  public Sprite(Application app, string? path) {
+    _device = app.Device;
+    _vmaAllocator = app.VmaAllocator;
+    _textureManager = app.TextureManager;
+    _renderer = app.Renderer;
 
     CreateSpriteVertexData();
 
-    if (_spriteMesh.Indices.Length > 0) _hasIndexBuffer = true;
-    CreateVertexBuffer(_spriteMesh.Vertices);
-    CreateIndexBuffer(_spriteMesh.Indices);
-  }
-
-  public unsafe void BindDescriptorSet(VkDescriptorSet textureSet, FrameInfo frameInfo, VkPipelineLayout pipelineLayout) {
-    vkCmdBindDescriptorSets(
-     frameInfo.CommandBuffer,
-     VkPipelineBindPoint.Graphics,
-     pipelineLayout,
-     2,
-     1,
-     &textureSet,
-     0,
-     null
-   );
-  }
-
-  public unsafe void Bind(VkCommandBuffer commandBuffer) {
-    VkBuffer[] buffers = [_vertexBuffer.GetBuffer()];
-    ulong[] offsets = { 0 };
-    fixed (VkBuffer* buffersPtr = buffers)
-    fixed (ulong* offsetsPtr = offsets) {
-      vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffersPtr, offsetsPtr);
-    }
-
-    if (_hasIndexBuffer) {
-      vkCmdBindIndexBuffer(commandBuffer, _indexBuffer.GetBuffer(), 0, VkIndexType.Uint32);
-    }
-  }
-
-  public void BindToTexture(
-    TextureManager textureManager,
-    string texturePath,
-    bool useLocalPath = false
-  ) {
-    _textureIdRef = useLocalPath ? textureManager.GetTextureIdLocal($"./Textures/{texturePath}") : textureManager.GetTextureIdLocal(texturePath);
-
-    if (_textureIdRef != Guid.Empty) {
+    if (!string.IsNullOrEmpty(path)) {
+      _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path).Result;
+      _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
       UsesTexture = true;
-      // if (useLocalPath) {
-      //   SetupProportions($"./Textures/{texturePath}");
-      // } else {
-      //   SetupProportions(texturePath);
-      // }
-
-      Dispose();
-      CreateVertexBuffer(_spriteMesh.Vertices);
-      CreateIndexBuffer(_spriteMesh.Indices);
-
-    } else {
-      Logger.Warn($"Could not bind texture to sprite ({texturePath}) - no such texture in manager");
     }
+
+    _spriteMesh.CreateVertexBuffer();
+    _spriteMesh.CreateIndexBuffer();
   }
 
-  public void Draw(VkCommandBuffer commandBuffer) {
-    if (_hasIndexBuffer) {
-      vkCmdDrawIndexed(commandBuffer, (uint)_indexCount, 1, 0, 0, 0);
+  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+    _spriteTexture.BuildDescriptor(descriptorSetLayout, descriptorPool);
+  }
+
+  public Task Bind(nint commandBuffer, uint index) {
+    _renderer.CommandList.BindVertex(commandBuffer, _spriteMesh.VertexBuffer!, index);
+    if (_spriteMesh.HasIndexBuffer) _renderer.CommandList.BindIndex(commandBuffer, _spriteMesh.IndexBuffer!, index);
+
+    return Task.CompletedTask;
+  }
+
+  public Task Draw(nint commandBuffer, uint index = 0, uint firstInstance = 0) {
+    if (_spriteMesh.HasIndexBuffer) {
+      _renderer.CommandList.DrawIndexed(commandBuffer, _spriteMesh.IndexCount, 1, index, 0, firstInstance);
     } else {
-      vkCmdDraw(commandBuffer, (uint)_vertexCount, 1, 0, 0);
+      _renderer.CommandList.Draw(commandBuffer, _spriteMesh.VertexCount, 1, 0, 0);
     }
+
+    return Task.CompletedTask;
   }
 
   private void CreateSpriteVertexData() {
@@ -108,34 +80,34 @@ public class Sprite : Component, IDisposable, I2DCollision {
       Vertices = new Vertex[4]
     };
     _spriteMesh.Vertices[0] = new Vertex {
-      Position = new Vector3(0.5f, 0.5f, 0.0f),
+      Position = new Vector3(0.25f, 0.25f, 0.0f),
       Uv = new Vector2(0.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[1] = new Vertex {
-      Position = new Vector3(0.5f, -0.5f, 0.0f),
+      Position = new Vector3(0.25f, -0.25f, 0.0f),
       Uv = new Vector2(0.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[2] = new Vertex {
-      Position = new Vector3(-0.5f, -0.5f, 0.0f),
+      Position = new Vector3(-0.25f, -0.25f, 0.0f),
       Uv = new Vector2(1.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[3] = new Vertex {
-      Position = new Vector3(-0.5f, 0.5f, 0.0f),
+      Position = new Vector3(-0.25f, 0.25f, 0.0f),
       Uv = new Vector2(1.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
 
-    _spriteMesh.Indices = new uint[] {
+    _spriteMesh.Indices = [
       0, 1, 3, // first triangle
       1, 2, 3  // second triangle
-    };
+    ];
   }
 
   private void AddPositionsToVertices(Vector2 size, float aspect) {
@@ -220,93 +192,24 @@ public class Sprite : Component, IDisposable, I2DCollision {
     }
   }
 
-  private void SetupProportions(string texturePath, bool pixelPerfect = false) {
-    using var stream = File.OpenRead(texturePath);
-    var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+  // private void SetupProportions(string texturePath, bool pixelPerfect = false) {
+  //   using var stream = File.OpenRead(texturePath);
+  //   var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
 
-    if (pixelPerfect) {
-      CreatePixelPerfectVertices(ref image);
-    } else {
-      CreateStandardVertices(ref image);
-    }
+  //   if (pixelPerfect) {
+  //     CreatePixelPerfectVertices(ref image);
+  //   } else {
+  //     CreateStandardVertices(ref image);
+  //   }
 
-    // _device.WaitDevice();
-    Dispose();
+  //   // _device.WaitDevice();
+  //   Dispose();
 
-    CreateVertexBuffer(_spriteMesh.Vertices);
-    CreateIndexBuffer(_spriteMesh.Indices);
+  //   CreateVertexBuffer(_spriteMesh.Vertices);
+  //   CreateIndexBuffer(_spriteMesh.Indices);
 
-    stream.Dispose();
-  }
-
-  private unsafe void CreateVertexBuffer(Vertex[] vertices) {
-    _vertexCount = (ulong)vertices.Length;
-
-    ulong bufferSize = ((ulong)Unsafe.SizeOf<Vertex>()) * _vertexCount;
-    ulong vertexSize = (ulong)Unsafe.SizeOf<Vertex>();
-
-    var stagingBuffer = new DwarfBuffer(
-      _vmaAllocator,
-      _device,
-      vertexSize,
-      _vertexCount,
-      BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-
-    stagingBuffer.Map(bufferSize);
-    fixed (Vertex* verticesPtr = vertices) {
-      stagingBuffer.WriteToBuffer((nint)verticesPtr, bufferSize);
-    }
-    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(vertices), bufferSize);
-
-    _vertexBuffer = new DwarfBuffer(
-      _vmaAllocator,
-      _device,
-      vertexSize,
-      _vertexCount,
-      BufferUsage.VertexBuffer | BufferUsage.TransferDst,
-      MemoryProperty.DeviceLocal
-    );
-
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _vertexBuffer.GetBuffer(), bufferSize);
-    stagingBuffer.Dispose();
-  }
-
-  private unsafe void CreateIndexBuffer(uint[] indices) {
-    _indexCount = (ulong)indices.Length;
-    if (!_hasIndexBuffer) return;
-    ulong bufferSize = sizeof(uint) * _indexCount;
-    ulong indexSize = sizeof(uint);
-
-    var stagingBuffer = new DwarfBuffer(
-      _vmaAllocator,
-      _device,
-      indexSize,
-      _indexCount,
-      BufferUsage.TransferSrc,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent
-    );
-
-    stagingBuffer.Map(bufferSize);
-    fixed (uint* indicesPtr = indices) {
-      stagingBuffer.WriteToBuffer((nint)indicesPtr, bufferSize);
-    }
-    // stagingBuffer.WriteToBuffer(MemoryUtils.ToIntPtr(indices), bufferSize);
-    //stagingBuffer.Unmap();
-
-    _indexBuffer = new DwarfBuffer(
-      _vmaAllocator,
-      _device,
-      indexSize,
-      _indexCount,
-      BufferUsage.IndexBuffer | BufferUsage.TransferDst,
-      MemoryProperty.DeviceLocal
-    );
-
-    _device.CopyBuffer(stagingBuffer.GetBuffer(), _indexBuffer.GetBuffer(), bufferSize);
-    stagingBuffer.Dispose();
-  }
+  //   stream.Dispose();
+  // }
 
   private Bounds2D GetBounds() {
     var pos = Owner!.GetComponent<Transform>().Position;
@@ -351,10 +254,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
   }
 
   public void Dispose() {
-    _vertexBuffer?.Dispose();
-    if (_hasIndexBuffer) {
-      _indexBuffer?.Dispose();
-    }
+    _spriteMesh.Dispose();
+    GC.SuppressFinalize(this);
   }
   public bool UsesTexture { get; private set; } = false;
   public Guid GetTextureIdReference() {
@@ -364,4 +265,8 @@ public class Sprite : Component, IDisposable, I2DCollision {
   public Bounds2D Bounds => GetBounds();
 
   public bool IsUI => false;
+
+  public Entity Entity => Owner;
+  public bool Active => Owner.Active;
+  public ITexture Texture => _spriteTexture;
 }

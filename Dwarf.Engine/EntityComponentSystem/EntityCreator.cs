@@ -3,6 +3,7 @@ using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
 using Dwarf.Physics;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer2D;
 using Dwarf.Rendering.Renderer3D;
 using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
@@ -136,6 +137,12 @@ public static class EntityCreator {
     return model;
   }
 
+  public static void AddSprite(this Entity entity, string spritePath, int flip = 1) {
+    var app = Application.Instance;
+
+    entity.AddComponent(new Sprite(app, spritePath));
+  }
+
   public static async Task<Entity> Create3DPrimitive(
     string entityName,
     string texturePath,
@@ -155,7 +162,6 @@ public static class EntityCreator {
     model.AddLinearNode(node);
     model.Init();
     entity.AddComponent(model);
-    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
 
     return entity;
@@ -173,7 +179,6 @@ public static class EntityCreator {
     model.Init();
     entity.AddComponent(model);
     await app.TextureManager.AddTextureLocal(texturePath);
-    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
   }
 

@@ -29,11 +29,12 @@ layout (set = 1, binding = 0) uniform SpriteUBO {
 } spriteUBO;
 
 
-layout (set = 2, binding = 0) uniform sampler2D textureSampler;
+layout (set = 2, binding = 0) uniform texture2D _texture;
+layout (set = 2, binding = 1) uniform sampler _sampler;
 
 void main() {
   if(push.useTexture) {
-    outColor = vec4(push.spriteColor, 1.0) * texture(textureSampler, texCoord);
+    outColor = vec4(push.spriteColor, 1.0) * texture(sampler2D(_texture, _sampler), texCoord);
   } else {
     outColor = vec4(push.spriteColor, 1.0);
   }

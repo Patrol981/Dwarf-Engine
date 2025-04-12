@@ -253,6 +253,7 @@ public class PostProcessingSystem : SystemBase {
 
   private static string CorrespondingFragment(PostProcessingConfigurationFlag flag) {
     return flag switch {
+      PostProcessingConfigurationFlag.None => "post_process_none_fragment",
       PostProcessingConfigurationFlag.Anime => "post_process_toon_shader_fragment",
       PostProcessingConfigurationFlag.Sketch => throw new NotImplementedException(),
       PostProcessingConfigurationFlag.PaletteFilter => "post_process_jpaint0_fragment",
@@ -264,6 +265,7 @@ public class PostProcessingSystem : SystemBase {
 
   private static string CorrespondingVertex(PostProcessingConfigurationFlag flag) {
     return flag switch {
+      PostProcessingConfigurationFlag.None => "post_process_index_vertex",
       PostProcessingConfigurationFlag.Anime => "post_process_index_vertex",
       PostProcessingConfigurationFlag.Sketch => "post_process_index_vertex",
       PostProcessingConfigurationFlag.PaletteFilter => "post_process_index_vertex",

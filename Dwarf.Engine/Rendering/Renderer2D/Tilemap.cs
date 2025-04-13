@@ -237,4 +237,8 @@ public class Tilemap : Component, IDrawable2D {
     _tilemapMesh.Dispose();
     GC.SuppressFinalize(this);
   }
+
+  public Vector2I SpriteSheetSize => new(1, 1);
+
+  public int SpriteIndex { get; set; } = 0;
 }

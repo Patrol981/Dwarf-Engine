@@ -1,5 +1,6 @@
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Math;
 using Dwarf.Vulkan;
 
 namespace Dwarf.Rendering.Renderer2D;
@@ -10,4 +11,6 @@ public interface IDrawable2D : IDrawable {
   Entity Entity { get; }
   bool Active { get; }
   ITexture Texture { get; }
+  Vector2I SpriteSheetSize { get; }
+  int SpriteIndex { get; set; }
 }

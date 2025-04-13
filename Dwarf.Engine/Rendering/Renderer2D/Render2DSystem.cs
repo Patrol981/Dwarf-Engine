@@ -194,8 +194,11 @@ public class Render2DSystem : SystemBase {
 
       var pushConstantData = new SpriteUniformBufferObject {
         SpriteMatrix = drawables[i].Entity.GetComponent<Transform>().Matrix4,
-        SpriteColor = drawables[i].Entity.GetComponent<MaterialComponent>().Color,
-        UseTexture = true
+        // SpriteSheetData = drawables[i].Entity.GetComponent<MaterialComponent>().Color,
+        SpriteSheetData = new(drawables[i].SpriteSheetSize.X, drawables[i].SpriteSheetSize.Y, drawables[i].SpriteIndex),
+        UseTexture = true,
+        // SheetSize = drawables[i].SpriteSheetSize,
+        // SpriteIndex = drawables[i].SpriteIndex,
       };
 
       vkCmdPushConstants(

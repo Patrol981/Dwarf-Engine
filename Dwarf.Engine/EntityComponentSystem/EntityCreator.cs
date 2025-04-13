@@ -138,10 +138,33 @@ public static class EntityCreator {
     return model;
   }
 
-  public static void AddSprite(this Entity entity, string spritePath, bool isSpriteSheet = false, int flip = 1) {
+  public static void AddSprite(this Entity entity, string spritePath) {
     var app = Application.Instance;
 
-    entity.AddComponent(new Sprite(app, spritePath, isSpriteSheet, flip));
+    entity.AddComponent(new Sprite(app, spritePath, default, false));
+  }
+
+  public static void AddSpriteSheetWithTileSize(
+    this Entity entity,
+    string spritePath,
+    float spriteSheetTileSize,
+    int flip = 1
+  ) {
+    var app = Application.Instance;
+
+    entity.AddComponent(new Sprite(app, spritePath, spriteSheetTileSize, true, flip));
+  }
+
+  public static void AddSpriteSheetWithCount(
+    this Entity entity,
+    string spritePath,
+    int spritesPerRow,
+    int spritesPerColumn,
+    int flip = 1
+  ) {
+    var app = Application.Instance;
+
+    entity.AddComponent(new Sprite(app, spritePath, spritesPerRow, spritesPerColumn, true, flip));
   }
 
   public static void AddTileMap(this Entity entity, string tmxPath) {

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
+using Dwarf.Loaders.Tiled;
 using Dwarf.Physics;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Renderer2D;
@@ -141,6 +142,12 @@ public static class EntityCreator {
     var app = Application.Instance;
 
     entity.AddComponent(new Sprite(app, spritePath, isSpriteSheet, flip));
+  }
+
+  public static void AddTileMap(this Entity entity, string tmxPath) {
+    var app = Application.Instance;
+
+    entity.AddComponent(TiledLoader.LoadTilemap(app, tmxPath));
   }
 
   public static async Task<Entity> Create3DPrimitive(

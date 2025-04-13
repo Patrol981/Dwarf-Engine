@@ -1,9 +1,14 @@
 namespace Dwarf.Rendering.Renderer2D;
 
 public struct TileInfo {
-  public uint X;
-  public uint Y;
-  public uint TextureX;
-  public uint TextureY;
-  public bool IsEmpty;
+  public int X;
+  public int Y;
+  public int TextureX;
+  public int TextureY;
+  public float UMin;
+  public float UMax;
+  public float VMin;
+  public float VMax;
+  public bool IsNotEmpty;
+  public bool IsCollision;
 }

@@ -58,7 +58,8 @@ public static class EntityHelper {
         drawables2D.Add(target);
       }
     }
-    return drawables2D.ToArray();
+
+    return drawables2D.OrderBy(x => x.Entity.GetComponent<Transform>().Position.Z).ToArray();
   }
 
   public static ReadOnlySpan<Entity> DistinctInterface<T>(this ReadOnlySpan<Entity> entities) where T : IDrawable {

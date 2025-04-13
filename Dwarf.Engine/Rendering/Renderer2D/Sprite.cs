@@ -93,20 +93,25 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
     };
     _spriteMesh.Vertices[2] = new Vertex {
       Position = new Vector3(-0.25f, -0.25f, 0.0f),
-      Uv = new Vector2(1.0f, 1.0f),
+      Uv = new Vector2(-1.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[3] = new Vertex {
       Position = new Vector3(-0.25f, 0.25f, 0.0f),
-      Uv = new Vector2(1.0f, 0.0f),
+      Uv = new Vector2(-1.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
 
+    // _spriteMesh.Indices = [
+    //   0, 1, 3, // first triangle
+    //   1, 2, 3  // second triangle
+    // ];
+
     _spriteMesh.Indices = [
-      0, 1, 3, // first triangle
-      1, 2, 3  // second triangle
+      3, 1, 0, // first triangle
+      3, 2, 1  // second triangle
     ];
   }
 

@@ -16,6 +16,8 @@ namespace Dwarf.Rendering;
 public unsafe class DynamicRenderer : IRenderer {
   private readonly Window _window = null!;
   private readonly VulkanDevice _device;
+  private readonly Application _application;
+
   private VkCommandBuffer[] _commandBuffers = [];
   private DescriptorPool _descriptorPool = null!;
   private uint _imageIndex = 0;
@@ -43,9 +45,10 @@ public unsafe class DynamicRenderer : IRenderer {
   }
   private Semaphores[] _semaphores = [];
 
-  public DynamicRenderer(Window window, VulkanDevice device) {
-    _window = window;
-    _device = device;
+  public DynamicRenderer(Application application) {
+    _application = application;
+    _window = _application.Window;
+    _device = _application.Device;
 
     CommandList = new VulkanCommandList();
 
@@ -292,7 +295,7 @@ public unsafe class DynamicRenderer : IRenderer {
     }
 
     Swapchain?.Dispose();
-    Swapchain = new(_device, extent);
+    Swapchain = new(_device, extent, _application.VSync);
     if (_depthStencil.Length < 1) {
       _depthStencil = new AttachmentImage[Swapchain.Images.Length];
       for (int i = 0; i < Swapchain.Images.Length; i++) {

@@ -134,7 +134,7 @@ public class Application {
     VmaAllocator = allocator;
 
     // Renderer = new Renderer(Window, Device);
-    Renderer = new DynamicRenderer(Window, Device);
+    Renderer = new DynamicRenderer(this);
     Systems = new SystemCollection();
     StorageCollection = new StorageCollection(VmaAllocator, Device);
 

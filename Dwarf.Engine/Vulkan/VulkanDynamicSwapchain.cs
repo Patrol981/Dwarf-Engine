@@ -24,12 +24,12 @@ public class VulkanDynamicSwapchain : IDisposable {
   public int CurrentFrame { get; set; }
   public int PreviousFrame { get; set; } = -1;
 
-  public VulkanDynamicSwapchain(VulkanDevice device, VkExtent2D extent2D) {
+  public VulkanDynamicSwapchain(VulkanDevice device, VkExtent2D extent2D, bool vsync) {
     _device = device;
     Extent2D = extent2D;
 
     InitSurface();
-    Init(true);
+    Init(vsync);
   }
 
   private unsafe void InitSurface() {

@@ -137,10 +137,10 @@ public static class EntityCreator {
     return model;
   }
 
-  public static void AddSprite(this Entity entity, string spritePath, int flip = 1) {
+  public static void AddSprite(this Entity entity, string spritePath, bool isSpriteSheet = false, int flip = 1) {
     var app = Application.Instance;
 
-    entity.AddComponent(new Sprite(app, spritePath));
+    entity.AddComponent(new Sprite(app, spritePath, isSpriteSheet, flip));
   }
 
   public static async Task<Entity> Create3DPrimitive(

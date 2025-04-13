@@ -25,13 +25,6 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
 } globalUBO;
 
 
-layout (set = 1, binding = 0) uniform SpriteUBO {
-  mat4 spriteMatrix;
-  vec3 spriteColor;
-  bool useTexture;
-} spriteUBO;
-
-
 void main() {
   texCoord = uv;
   // vec4 positionWorld = spriteUBO.spriteMatrix * vec4(position, 1.0);

@@ -22,13 +22,6 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
 } globalUBO;
 
 
-layout (set = 1, binding = 0) uniform SpriteUBO {
-  mat4 spriteMatrix;
-  vec3 spriteColor;
-  bool useTexture;
-} spriteUBO;
-
-
 layout (set = 2, binding = 0) uniform texture2D _texture;
 layout (set = 2, binding = 1) uniform sampler _sampler;
 

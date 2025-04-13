@@ -7,15 +7,16 @@ using Dwarf.Utils;
 namespace Dwarf.Loaders.Tiled;
 
 public static class TiledLoader {
-  public static Tilemap LoadTilemap(Application app, string tmxPath, string textureAtlasPath) {
+  public static Tilemap LoadTilemap(Application app, string tmxPath) {
     var loader = Loader.Default();
     var map = loader.LoadMap(Path.Combine(DwarfPath.AssemblyDirectory, tmxPath));
 
     if (map.Infinite) throw new NotSupportedException("Loader does not support infinite maps");
     if (map.Layers.Count > 1) throw new NotSupportedException("Loader does not support multiple layers");
-    if (map.Layers[0] is not DotTiled.TileLayer tileLayer) throw new ArgumentException("No tile layer found"); ;
+    if (map.Layers[0] is not DotTiled.TileLayer tileLayer) throw new ArgumentException("No tile layer found");
 
-    var tilemap = new Tilemap(app, new((int)map.Width, (int)map.Height), textureAtlasPath, (int)map.TileHeight);
+    string imageSource = string.Empty;
+    TileInfo[,] tiles = new TileInfo[(int)map.Width, (int)map.Height];
 
     for (int y = 0; y < tileLayer.Height; y++) {
       for (int x = 0; x < tileLayer.Width; x++) {
@@ -48,6 +49,7 @@ public static class TiledLoader {
 
           if (match == null) continue;
 
+          imageSource = Path.Combine("./Resources", Path.GetFileName(match.Image.Value.Source));
           var localId = tile - match.FirstGID;
 
           // Tileset properties
@@ -86,11 +88,14 @@ public static class TiledLoader {
           tileInfo.VMin = -tileInfo.VMin;
           tileInfo.VMax = -tileInfo.VMax;
 
-          tilemap.Tiles[x, y] = tileInfo;
+          tiles[x, y] = tileInfo;
         }
       }
     }
 
+    var tilemap = new Tilemap(app, new((int)map.Width, (int)map.Height), imageSource, (int)map.TileHeight) {
+      Tiles = tiles
+    };
     tilemap.CreateTilemap();
     return tilemap;
   }

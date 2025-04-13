@@ -54,14 +54,12 @@ public class Render2DSystem : SystemBase {
     Logger.Info("Recreating Renderer 2D");
 
     _texturesCount = drawables.Length;
-    _descriptorSets = new VkDescriptorSet[drawables.Length];
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(5)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)drawables.Length)
       .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
       .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
       .Build();
 
 
@@ -78,11 +76,6 @@ public class Render2DSystem : SystemBase {
 
     for (int i = 0; i < drawables.Length; i++) {
       drawables[i].BuildDescriptors(_textureSetLayout, _descriptorPool);
-
-      var bufferInfo = _spriteBuffer.GetDescriptorBufferInfo((ulong)Unsafe.SizeOf<SpriteUniformBufferObject>());
-      _ = new VulkanDescriptorWriter(_setLayout, _descriptorPool)
-          .WriteBuffer(0, &bufferInfo)
-          .Build(out _descriptorSets[i]);
     }
   }
 
@@ -245,8 +238,6 @@ public class Render2DSystem : SystemBase {
   public override unsafe void Dispose() {
     _device.WaitQueue();
     _spriteBuffer?.Dispose();
-    _descriptorPool?.FreeDescriptors(_descriptorSets);
-
     base.Dispose();
   }
 }

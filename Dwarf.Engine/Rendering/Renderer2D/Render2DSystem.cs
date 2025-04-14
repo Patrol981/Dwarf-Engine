@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
@@ -53,7 +54,7 @@ public class Render2DSystem : SystemBase {
 
     Logger.Info("Recreating Renderer 2D");
 
-    _texturesCount = drawables.Length;
+    _texturesCount = CalculateTextureCount(drawables);
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(5)
@@ -91,6 +92,12 @@ public class Render2DSystem : SystemBase {
     }
 
     return true;
+  }
+
+  private static int CalculateTextureCount(ReadOnlySpan<IDrawable2D> drawables) {
+    int count = 0;
+    drawables.ToImmutableArray().Select(x => count += x.SpriteCount);
+    return count;
   }
 
   /*
@@ -197,6 +204,8 @@ public class Render2DSystem : SystemBase {
         // SpriteSheetData = drawables[i].Entity.GetComponent<MaterialComponent>().Color,
         SpriteSheetData = new(drawables[i].SpriteSheetSize.X, drawables[i].SpriteSheetSize.Y, drawables[i].SpriteIndex),
         UseTexture = true,
+        FlipX = drawables[i].FlipX,
+        FlipY = drawables[i].FlipY
         // SheetSize = drawables[i].SpriteSheetSize,
         // SpriteIndex = drawables[i].SpriteIndex,
       };
@@ -220,22 +229,6 @@ public class Render2DSystem : SystemBase {
         drawables[i].Draw(frameInfo.CommandBuffer);
       }
     }
-  }
-
-  private unsafe void BindDescriptorTexture(Entity entity, ref TextureManager textureManager, int index) {
-    var id = entity.GetComponent<Sprite>().GetTextureIdReference();
-    var texture = textureManager.GetTextureLocal(id);
-    VkDescriptorImageInfo imageInfo = new() {
-      sampler = texture.Sampler,
-      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = texture.ImageView
-    };
-    VkDescriptorSet set;
-    _ = new VulkanDescriptorWriter(_textureSetLayout, _texturePool)
-      .WriteImage(0, &imageInfo)
-      .Build(out set);
-
-    // _textureSets.SetAt(set, index);
   }
 
   public override unsafe void Dispose() {

@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
@@ -13,10 +12,9 @@ using StbImageSharp;
 
 using Vortice.Vulkan;
 
-using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.Renderer2D;
-public class Sprite : Component, IDrawable2D, I2DCollision {
+public class Sprite {
   private const float ASPECT_ONE = 1.0f;
   private const float VERTEX_SIZE = 0.2f;
   public const float SPRITE_TILE_SIZE_NONE = -1.0f;
@@ -32,9 +30,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
   private Guid _textureIdRef = Guid.Empty;
   private Mesh _spriteMesh = null!;
   private VulkanTexture _spriteTexture = null!;
-  private Vector3 _lastKnownScale = Vector3.Zero;
-  private Vector2 _cachedSize = Vector2.Zero;
-  private Bounds2D _cachedBounds = Bounds2D.Zero;
   private float _aspectRatio = ASPECT_ONE;
   private float _spriteSheetTileSize = SPRITE_TILE_SIZE_NONE;
   private int _spritesPerRow = 1;
@@ -67,7 +62,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
 
     _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
-    UsesTexture = true;
     _spritesPerRow = spritesPerRow;
     _spritesPerColumn = spritesPerColumn;
     _isSpriteSheet = isSpriteSheet;
@@ -91,7 +85,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
 
     _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
-    UsesTexture = true;
     _spriteSheetTileSize = spriteSheetTileSize;
     _isSpriteSheet = isSpriteSheet;
 
@@ -102,48 +95,17 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
     _spriteTexture.BuildDescriptor(descriptorSetLayout, descriptorPool);
   }
 
-  public Task Bind(nint commandBuffer, uint index) {
+  public void Bind(nint commandBuffer, uint index) {
     _renderer.CommandList.BindVertex(commandBuffer, _spriteMesh.VertexBuffer!, index);
     if (_spriteMesh.HasIndexBuffer) _renderer.CommandList.BindIndex(commandBuffer, _spriteMesh.IndexBuffer!, index);
-
-    return Task.CompletedTask;
   }
 
-  public Task Draw(nint commandBuffer, uint index = 0, uint firstInstance = 0) {
+  public void Draw(nint commandBuffer, uint index = 0, uint firstInstance = 0) {
     if (_spriteMesh.HasIndexBuffer) {
       _renderer.CommandList.DrawIndexed(commandBuffer, _spriteMesh.IndexCount, 1, index, 0, firstInstance);
     } else {
       _renderer.CommandList.Draw(commandBuffer, _spriteMesh.VertexCount, 1, 0, 0);
     }
-
-    return Task.CompletedTask;
-  }
-
-  public void SetSpriteTile(int spriteX, int spriteY) {
-    int x = spriteX - 1;
-    int y = spriteY - 1;
-
-    if (x < 0 || x >= _spritesPerRow || y < 0 || y >= _spritesPerColumn) {
-      throw new ArgumentOutOfRangeException("Sprite tile coordinates are out of range.");
-    }
-
-    // Calculate the size (in UV space) of one tile.
-    float tileWidth = 1.0f / _spritesPerRow;
-    float tileHeight = 1.0f / _spritesPerColumn;
-
-    // Calculate UVs.
-    float uMin = x * tileWidth;
-    float uMax = uMin + tileWidth;
-
-    // Adjust Y coordinate. Assuming texture origin is at the top-left,
-    // flip the V coordinate so that y=0 is the top row.
-    float vMax = 1.0f - y * tileHeight;
-    float vMin = vMax - tileHeight;
-
-    _spriteMesh.Vertices[0].Uv = new Vector2(-uMin, vMin); // Bottom-left
-    _spriteMesh.Vertices[1].Uv = new Vector2(-uMin, vMax); // Top-left
-    _spriteMesh.Vertices[2].Uv = new Vector2(-uMax, vMax); // Top-right
-    _spriteMesh.Vertices[3].Uv = new Vector2(-uMax, vMin); // Bottom-right
   }
 
   private void Init() {
@@ -165,9 +127,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
       } else {
         throw new ArgumentException("Neither of spriteCount or spriteSheetTileSize was set");
       }
-
-      // HandleSpriteSheetUVs();
-      // SetSpriteTile(1, 1);
     }
 
     _spriteMesh.CreateVertexBuffer();
@@ -195,12 +154,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
   private void CalculateElemCount() {
 
   }
-
-  private void RecreateMesh() {
-    Dispose();
-    Init();
-  }
-
   private void CreateSpriteVertexWithAspect() {
     CreateSpriteVertexBox();
 
@@ -257,43 +210,6 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
     ];
   }
 
-  private void HandleSpriteSheetUVs() {
-    var (uMin, uMax, vMin, vMax) = GetUVCoords(0, 1);
-
-    // // _spriteMesh.Vertices[0].Uv.X = uMin;
-    // _spriteMesh.Vertices[0].Uv.Y = 1.0f - vMin;
-
-    // // _spriteMesh.Vertices[1].Uv.X = uMax;
-    // _spriteMesh.Vertices[1].Uv.Y = 1.0f;
-
-    // // _spriteMesh.Vertices[2].Uv.X = uMax;
-    // _spriteMesh.Vertices[2].Uv.Y = 1.0f;
-
-    // // _spriteMesh.Vertices[3].Uv.X = uMin;
-    // _spriteMesh.Vertices[3].Uv.Y = 1.0f - vMax;
-
-    Logger.Info($"{uMin} {uMax} {vMin} {vMax}");
-    Logger.Info($"STRIDE: {_stride.X} {_stride.Y}");
-
-    SetSpriteTile(1, 1);
-
-    // _spriteMesh.Vertices[0].Position.X /= 2;
-    // _spriteMesh.Vertices[0].Uv.X = 0.0f;
-    // _spriteMesh.Vertices[0].Uv.Y = 1.0f - (0.1666f * 3);
-
-    // // _spriteMesh.Vertices[1].Position.X /= 2;
-    // _spriteMesh.Vertices[1].Uv.X = 0.0f;
-    // _spriteMesh.Vertices[1].Uv.Y = 1.0f;
-
-    // // _spriteMesh.Vertices[2].Position.X /= 2;
-    // _spriteMesh.Vertices[2].Uv.X = -1.0f;
-    // _spriteMesh.Vertices[2].Uv.Y = 1.0f;
-
-    // // _spriteMesh.Vertices[3].Position.X /= 2;
-    // _spriteMesh.Vertices[3].Uv.X = -1.0f;
-    // _spriteMesh.Vertices[3].Uv.Y = 1.0f - (0.1666f * 3);
-  }
-
   private (float, float, float, float) GetUVCoords(int x, int y) {
     int col = y;
     int row = x;
@@ -309,168 +225,24 @@ public class Sprite : Component, IDrawable2D, I2DCollision {
     return (uMin, uMax, vMin, vMax);
   }
 
-  [Obsolete]
-  private void AddPositionsToVertices(Vector2 size, float aspect) {
-    var len = MathF.Round(aspect);
-    var side = false;
-
-    if (size.X > size.Y) {
-      for (uint i = 0; i < len; i++) {
-        if (i == (uint)len - 1 && i + 1 % 2 != 0) {
-          var leftAdd = new Vector3(0.5f, 0, 0);
-          var rightAdd = new Vector3(-0.5f, 0, 0);
-          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, leftAdd);
-          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, leftAdd);
-
-          _spriteMesh.Vertices[2].Position = Vector3.Add(_spriteMesh.Vertices[2].Position, rightAdd);
-          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, rightAdd);
-
-          break;
-        }
-        if (!side) {
-          var newVec = Vector3.Add(_spriteMesh.Vertices[0].Position, new Vector3(0.15f, 0, 0));
-          _spriteMesh.Vertices[0].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0.15f, 0, 0));
-          _spriteMesh.Vertices[1].Position = newVec;
-          side = true;
-        } else {
-          var newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(-0.15f, 0, 0));
-          _spriteMesh.Vertices[2].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(-0.15f, 0, 0));
-          _spriteMesh.Vertices[3].Position = newVec;
-          side = false;
-        }
-      }
-    } else {
-      for (uint i = 0; i < len; i++) {
-        if (i == (uint)len - 1 && i + 1 % 2 != 0) {
-          var bottomAdd = new Vector3(0f, 0.5f, 0);
-          var topAdd = new Vector3(0f, -0.5f, 0);
-
-          _spriteMesh.Vertices[0].Position = Vector3.Add(_spriteMesh.Vertices[0].Position, bottomAdd);
-          _spriteMesh.Vertices[1].Position = Vector3.Add(_spriteMesh.Vertices[1].Position, topAdd);
-
-          _spriteMesh.Vertices[3].Position = Vector3.Add(_spriteMesh.Vertices[3].Position, bottomAdd);
-          _spriteMesh.Vertices[2].Position = Vector3.Add(_spriteMesh.Vertices[2].Position, topAdd);
-
-          break;
-        }
-        if (!side) {
-          var newVec = Vector3.Add(_spriteMesh.Vertices[0].Position, new Vector3(0, 0.75f, 0));
-          _spriteMesh.Vertices[0].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[3].Position, new Vector3(0, 0.75f, 0));
-          _spriteMesh.Vertices[3].Position = newVec;
-          side = true;
-        } else {
-          var newVec = Vector3.Add(_spriteMesh.Vertices[1].Position, new Vector3(0, -0.75f, 0));
-          _spriteMesh.Vertices[1].Position = newVec;
-          newVec = Vector3.Add(_spriteMesh.Vertices[2].Position, new Vector3(0, -0.75f, 0));
-          _spriteMesh.Vertices[2].Position = newVec;
-          side = false;
-        }
-      }
-    }
-  }
-
-  [Obsolete]
-  private void CreatePixelPerfectVertices(ref ImageResult image) {
-    _spriteMesh = new(_vmaAllocator, _device);
-
-    for (uint y = 0; y < image.Height; y++) {
-      for (uint x = 0; x < image.Width; x++) {
-
-      }
-    }
-  }
-
-  [Obsolete]
-  private void CreateStandardVertices(ref ImageResult image) {
-    var size = new Vector2(image.Width, image.Height);
-    var aspect = MathF.Round(image.Width / image.Height);
-    if (aspect < 1) aspect = MathF.Round(image.Height / image.Width);
-
-    if (aspect != 1) {
-      AddPositionsToVertices(size, aspect);
-    }
-  }
-
-  [Obsolete]
-  private void SetupProportions(string texturePath, bool pixelPerfect = false) {
-    using var stream = File.OpenRead(texturePath);
-    var image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-
-    if (pixelPerfect) {
-      CreatePixelPerfectVertices(ref image);
-    } else {
-      CreateStandardVertices(ref image);
-    }
-
-    // _device.WaitDevice();
-    Dispose();
-    _spriteMesh.CreateIndexBuffer();
-    _spriteMesh.CreateVertexBuffer();
-
-    stream.Dispose();
-  }
-
-  private Bounds2D GetBounds() {
-    var pos = Owner!.GetComponent<Transform>().Position;
-    var size = GetSize();
-
-    _cachedBounds = new() {
-      Min = new Vector2(pos.X, pos.Y),
-      Max = new Vector2(pos.X + size.X, pos.Y + size.Y)
-    };
-
-    return _cachedBounds;
-  }
-
-  private Vector2 GetSize() {
-    var scale = Owner!.GetComponent<Transform>().Scale;
-    if (_lastKnownScale == scale) return _cachedSize;
-
-    float minX, minY, maxX, maxY;
-
-    maxX = _spriteMesh.Vertices[0].Position.X;
-    maxY = _spriteMesh.Vertices[0].Position.Y;
-    minX = _spriteMesh.Vertices[0].Position.X;
-    minY = _spriteMesh.Vertices[0].Position.Y;
-
-    for (int i = 0; i < _spriteMesh.Vertices.Length; i++) {
-      if (minX > _spriteMesh.Vertices[i].Position.X) minX = _spriteMesh.Vertices[i].Position.X;
-      if (maxX < _spriteMesh.Vertices[i].Position.X) maxX = _spriteMesh.Vertices[i].Position.X;
-
-      if (minY > _spriteMesh.Vertices[i].Position.Y) minY = _spriteMesh.Vertices[i].Position.Y;
-      if (maxY < _spriteMesh.Vertices[i].Position.Y) maxY = _spriteMesh.Vertices[i].Position.Y;
-    }
-
-    _lastKnownScale = scale;
-
-
-    _cachedSize = new Vector2(
-      MathF.Abs(minX - maxX) * scale.X,
-      MathF.Abs(minY - maxY) * scale.Y
-    );
-
-    return _cachedSize;
-  }
-
   public void Dispose() {
     _spriteMesh.Dispose();
     GC.SuppressFinalize(this);
   }
-  public bool UsesTexture { get; private set; } = false;
   public Guid GetTextureIdReference() {
     return _textureIdRef;
   }
-  public Vector2 Size => GetSize();
-  public Bounds2D Bounds => GetBounds();
-
-  public bool IsUI => false;
-
-  public Entity Entity => Owner;
-  public bool Active => Owner.Active;
   public ITexture Texture => _spriteTexture;
   public Vector2I SpriteSheetSize => new(_spritesPerRow, _spritesPerColumn);
   public int SpriteIndex { get; set; } = 1;
+  public int MaxIndex {
+    get {
+      if (_spritesPerRow == 1) {
+        return _spritesPerColumn;
+      } else {
+        return _spritesPerRow;
+      }
+    }
+  }
+  public Mesh SpriteMesh => _spriteMesh;
 }

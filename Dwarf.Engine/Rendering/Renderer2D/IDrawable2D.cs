@@ -12,5 +12,8 @@ public interface IDrawable2D : IDrawable {
   bool Active { get; }
   ITexture Texture { get; }
   Vector2I SpriteSheetSize { get; }
-  int SpriteIndex { get; set; }
+  int SpriteIndex { get; }
+  int SpriteCount { get; }
+  bool FlipX { get; set; }
+  bool FlipY { get; set; }
 }

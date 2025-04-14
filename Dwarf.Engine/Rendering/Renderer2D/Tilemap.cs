@@ -241,4 +241,8 @@ public class Tilemap : Component, IDrawable2D {
   public Vector2I SpriteSheetSize => new(1, 1);
 
   public int SpriteIndex { get; set; } = 0;
+  public bool FlipX { get; set; }
+  public bool FlipY { get; set; }
+
+  public int SpriteCount => 1;
 }

@@ -19,6 +19,8 @@ layout (push_constant) uniform Push {
   bool useTexture;
   // ivec2 sheetSize;
   // int spriteIndex;
+  bool flipX;
+  bool flipY;
 } push;
 
 
@@ -44,7 +46,11 @@ void main() {
 
   vec2 offset = vec2(col, row) * cellSize;
 
-  vec2 spriteUV = offset + texCoord * cellSize;
+  vec2 adjustedTexCoord = texCoord;
+    if (push.flipX)
+        adjustedTexCoord.x = 1.0 - adjustedTexCoord.x;
+
+  vec2 spriteUV = offset + adjustedTexCoord * cellSize;
 
   outColor = texture(sampler2D(_texture, _sampler), spriteUV);
 

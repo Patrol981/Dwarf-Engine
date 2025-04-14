@@ -20,6 +20,7 @@ public enum SystemCreationFlags {
   WebApi = 1 << 7,
   Particles = 1 << 8,
   Shadows = 1 << 9,
+  Physics2D = 1 << 10
 }
 
 public record SystemConfiguration {
@@ -53,6 +54,7 @@ public class SystemCreator {
     var hasRenderer2D = flags.HasFlag(SystemCreationFlags.Renderer2D);
     var hasRendererUI = flags.HasFlag(SystemCreationFlags.RendererUI);
     var usePhysics3D = flags.HasFlag(SystemCreationFlags.Physics3D);
+    var usePhysics2D = flags.HasFlag(SystemCreationFlags.Physics2D);
     var hasDirectionalLight = flags.HasFlag(SystemCreationFlags.DirectionalLight);
     var hasPointLights = flags.HasFlag(SystemCreationFlags.PointLights);
     var hasGuizmos = flags.HasFlag(SystemCreationFlags.Guizmos);
@@ -86,6 +88,11 @@ public class SystemCreator {
     if (usePhysics3D) {
       Logger.Info("[SYSTEM CREATOR] Setting up Physics 3D");
       systemCollection.PhysicsSystem = new(systemConfig.PhysiscsBackend);
+    }
+
+    if (usePhysics2D) {
+      Logger.Info("[SYSTEM CREATOR] Setting up Physics 2D");
+      systemCollection.PhysicsSystem2D = new(systemConfig.PhysiscsBackend);
     }
 
     if (hasDirectionalLight) {

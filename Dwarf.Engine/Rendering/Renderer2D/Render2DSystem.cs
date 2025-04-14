@@ -55,9 +55,10 @@ public class Render2DSystem : SystemBase {
     Logger.Info("Recreating Renderer 2D");
 
     _texturesCount = CalculateTextureCount(drawables);
+    Logger.Info($"TEX COUNT: {_texturesCount}");
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
-      .SetMaxSets(5)
+      .SetMaxSets((uint)_texturesCount)
       .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
       .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
       .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
@@ -68,7 +69,7 @@ public class Render2DSystem : SystemBase {
       _vmaAllocator,
       _device,
       (ulong)Unsafe.SizeOf<SpriteUniformBufferObject>(),
-      (uint)drawables.Length,
+      (uint)_texturesCount,
       BufferUsage.UniformBuffer,
       MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
       ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
@@ -85,9 +86,10 @@ public class Render2DSystem : SystemBase {
       var textureManager = Application.Instance.TextureManager;
       Setup(drawables, ref textureManager);
     }
-    if (drawables.Length > (uint)_spriteBuffer!.GetInstanceCount()) {
+    var texCount = CalculateTextureCount(drawables);
+    if (texCount > (uint)_spriteBuffer!.GetInstanceCount()) {
       return false;
-    } else if (drawables.Length < (uint)_spriteBuffer.GetInstanceCount()) {
+    } else if (texCount < (uint)_spriteBuffer.GetInstanceCount()) {
       return true;
     }
 
@@ -96,7 +98,9 @@ public class Render2DSystem : SystemBase {
 
   private static int CalculateTextureCount(ReadOnlySpan<IDrawable2D> drawables) {
     int count = 0;
-    drawables.ToImmutableArray().Select(x => count += x.SpriteCount);
+    for (int i = 0; i < drawables.Length; i++) {
+      count += drawables[i].SpriteCount;
+    }
     return count;
   }
 

@@ -29,17 +29,35 @@ public class SpriteRenderer : Component, IDrawable2D {
   public SpriteRenderer() { }
 
   public void Next() {
-    if (Sprites[CurrentSprite].SpriteIndex > Sprites[CurrentSprite].MaxIndex) {
-      Sprites[CurrentSprite].SpriteIndex = 0;
+    if (Sprites[CurrentSprite].SpriteIndex >= Sprites[CurrentSprite].MaxIndex) {
+      Sprites[CurrentSprite].SpriteIndex = 1;
     }
     Sprites[CurrentSprite].SpriteIndex += 1;
   }
 
   public void NextSprite() {
+    ResetSprite(CurrentSprite);
     CurrentSprite += 1;
     if (CurrentSprite > SpriteCount - 1) {
       CurrentSprite = 0;
     }
+  }
+
+  public void SetSpriteSheet(string spriteLike) {
+    ResetSprite(CurrentSprite);
+    var target = Sprites
+      .Select((x, index) => (x, index))
+      .Where(item => item.x.Texture.TextureName.Contains(spriteLike))
+      .FirstOrDefault();
+    if (target.x != null) {
+      CurrentSprite = target.index;
+    } else {
+      CurrentSprite = 0;
+    }
+  }
+
+  public void SetSpriteSheet(int index) {
+    CurrentSprite = index;
   }
 
   public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
@@ -63,6 +81,10 @@ public class SpriteRenderer : Component, IDrawable2D {
       sprite.Dispose();
     }
     GC.SuppressFinalize(this);
+  }
+
+  private void ResetSprite(int index) {
+    Sprites[index].Reset();
   }
 
   private Bounds2D GetBounds() {

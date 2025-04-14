@@ -108,6 +108,10 @@ public class Sprite {
     }
   }
 
+  public void Reset() {
+    SpriteIndex = 1;
+  }
+
   private void Init() {
     GetAspectRatio();
     // if (_aspectRatio == ASPECT_ONE) {

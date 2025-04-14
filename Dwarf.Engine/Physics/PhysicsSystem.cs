@@ -1,8 +1,8 @@
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Physics.Backends;
-using Dwarf.Physics.Backends.Jolt;
 using Dwarf.Physics.Backends.Hammer;
+using Dwarf.Physics.Backends.Jolt;
 
 namespace Dwarf.Physics;
 public class PhysicsSystem : IDisposable {
@@ -12,8 +12,7 @@ public class PhysicsSystem : IDisposable {
     Logger.Info($"[CREATING PHYSICS 3D]");
     PhysicsProgram = backendKind switch {
       BackendKind.Jolt => new JoltProgram(),
-      BackendKind.Hammer => new HammerProgram(),
-      _ => new HammerProgram(),
+      _ => new JoltProgram(),
     };
   }
 

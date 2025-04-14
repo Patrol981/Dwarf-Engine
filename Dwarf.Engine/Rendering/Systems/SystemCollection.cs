@@ -30,6 +30,7 @@ public class SystemCollection : IDisposable {
 
   // Calculation Systems
   private PhysicsSystem? _physicsSystem;
+  private PhysicsSystem2D? _physicsSystem2D;
   private WebApiSystem? _webApi;
 
   public bool Reload3DRenderSystem = false;
@@ -253,6 +254,13 @@ public class SystemCollection : IDisposable {
     }
   }
 
+  public PhysicsSystem2D PhysicsSystem2D {
+    get { return _physicsSystem2D ?? null!; }
+    set {
+      _physicsSystem2D = value;
+    }
+  }
+
   public RenderDebugSystem RenderDebugSystem {
     get { return _renderDebugSystem ?? null!; }
     set { _renderDebugSystem = value; }
@@ -296,6 +304,7 @@ public class SystemCollection : IDisposable {
     _render2DSystem?.Dispose();
     _renderUISystem?.Dispose();
     _physicsSystem?.Dispose();
+    _physicsSystem2D?.Dispose();
     _renderDebugSystem?.Dispose();
     _guizmoRenderSystem?.Dispose();
     _directionaLightSystem?.Dispose();

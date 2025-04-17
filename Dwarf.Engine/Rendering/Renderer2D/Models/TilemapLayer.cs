@@ -1,44 +1,25 @@
 using System.Numerics;
-using Dwarf;
 using Dwarf.AbstractionLayer;
-using Dwarf.EntityComponentSystem;
-using Dwarf.Extensions.Logging;
-using Dwarf.Math;
-using Dwarf.Vulkan;
+using Dwarf.Rendering.Renderer2D.Components;
+using Dwarf.Rendering.Renderer2D.Helpers;
 
-namespace Dwarf.Rendering.Renderer2D;
+namespace Dwarf.Rendering.Renderer2D.Models;
 
-public class Tilemap : Component, IDrawable2D {
-  private readonly Application _application;
+public class TilemapLayer {
+  private readonly Application _app;
+  private readonly Tilemap _parent;
 
-  public Vector2I TilemapSize { get; private set; }
-  public int TileSize { get; private set; }
-  private int _texutresPerRow;
+  public Mesh LayerMesh { get; private set; } = null!;
+  public VulkanTexture LayerTexture { get; private set; } = null!;
   public TileInfo[,] Tiles { get; set; }
+  public bool IsCollision { get; init; }
 
-
-  private Mesh _tilemapMesh = null!;
-  private VulkanTexture? _tilemapAtlas;
-
-  public Entity Entity => Owner;
-  public bool Active => Owner.Active;
-  public ITexture Texture => _tilemapAtlas ?? null!;
-
-  public Tilemap() {
-    _application = Application.Instance;
-    TilemapSize = new Vector2I(0, 0);
-    Tiles = new TileInfo[TilemapSize.X, TilemapSize.Y];
-  }
-
-  public Tilemap(Application app, Vector2I tileMapSize, string textureAtlasPath, int tileSize) {
-    _application = app;
-    TilemapSize = tileMapSize;
-    TileSize = tileSize;
-    Tiles = new TileInfo[TilemapSize.X, TilemapSize.Y];
-
-    _tilemapAtlas = (VulkanTexture)app.TextureManager.AddTextureLocal(textureAtlasPath).Result;
-
-    _texutresPerRow = (int)MathF.Floor(_tilemapAtlas.Width / TileSize);
+  public TilemapLayer(Application app, Tilemap parent, TileInfo[,] tiles, string path, bool isCollision) {
+    _app = app;
+    _parent = parent;
+    Tiles = tiles;
+    IsCollision = isCollision;
+    SetupTexture(path);
   }
 
   public void SetTile(int x, int y, TileInfo tileInfo) {
@@ -60,65 +41,16 @@ public class Tilemap : Component, IDrawable2D {
     return null;
   }
 
-  public Task Bind(nint commandBuffer, uint index) {
-    if (_tilemapMesh.VertexBuffer == null) return Task.CompletedTask;
-
-    _application.Renderer.CommandList.BindVertex(commandBuffer, _tilemapMesh.VertexBuffer, 0);
-    if (_tilemapMesh.IndexBuffer != null) {
-      _application.Renderer.CommandList.BindIndex(commandBuffer, _tilemapMesh.IndexBuffer, 0);
-    }
-
-    return Task.CompletedTask;
-  }
-
-  public Task Draw(nint commandBuffer, uint index, uint firstInstance) {
-    if (_tilemapMesh.VertexBuffer == null) return Task.CompletedTask;
-
-    if (_tilemapMesh.HasIndexBuffer) {
-      _application.Renderer.CommandList.DrawIndexed(commandBuffer, _tilemapMesh.IndexCount, 1, 0, 0, 0);
-    } else {
-      _application.Renderer.CommandList.Draw(commandBuffer, _tilemapMesh.IndexCount, 1, 0, 0);
-    }
-
-    return Task.CompletedTask;
-  }
-
-  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
-    _tilemapAtlas?.BuildDescriptor(descriptorSetLayout, descriptorPool);
-  }
-
-  public void CreateTilemap() {
-    GenerateMesh();
-  }
-
-  private (float, float, float, float) GetUVCoords(TileInfo tileInfo) {
-    int row = tileInfo.TextureY;
-    int col = tileInfo.TextureX;
-
-    float uvSize = 1.0f / TileSize;
-    float uMin = col * uvSize;
-    float vMin = 1.0f - (row + 1) * uvSize;
-    float uMax = (col + 1) * uvSize;
-    float vMax = 1.0f - row * uvSize;
-
-    (vMax, vMin) = (vMin, vMax);
-
-    return (uMin, uMax, vMin, vMax);
-  }
-
-  private void GenerateMesh() {
-    _tilemapMesh = new(_application.VmaAllocator, _application.Device);
+  public void GenerateMesh() {
+    LayerMesh = new(_app.VmaAllocator, _app.Device);
 
     var vertices = new List<Vertex>();
     var indices = new List<uint>();
 
-    var atlasWidth = _tilemapAtlas?.Width ?? 256;
-    var atlasHeight = _tilemapAtlas?.Height ?? 256;
-
     float worldTileSize = 0.10f;
 
-    for (uint y = 0; y < TilemapSize.Y; y++) {
-      for (uint x = 0; x < TilemapSize.X; x++) {
+    for (uint y = 0; y < _parent.TilemapSize.Y; y++) {
+      for (uint x = 0; x < _parent.TilemapSize.X; x++) {
         var tileInfo = Tiles[x, y];
 
         if (!tileInfo.IsNotEmpty) continue;
@@ -178,7 +110,6 @@ public class Tilemap : Component, IDrawable2D {
           indices.Add(baseIndex + 3);
         } else {
           var (uMin, uMax, vMin, vMax) = GetUVCoords(tileInfo);
-          Logger.Info("GETTING UV COORDS");
 
           var bottomLeft = new Vertex {
             Position = new Vector3(posX, posY, 0.0f),
@@ -223,26 +154,36 @@ public class Tilemap : Component, IDrawable2D {
       }
     }
 
-    _tilemapMesh.VertexCount = (ulong)vertices.Count;
-    _tilemapMesh.IndexCount = (ulong)indices.Count;
+    LayerMesh.VertexCount = (ulong)vertices.Count;
+    LayerMesh.IndexCount = (ulong)indices.Count;
 
-    _tilemapMesh.Vertices = [.. vertices];
-    _tilemapMesh.Indices = [.. indices];
+    LayerMesh.Vertices = [.. vertices];
+    LayerMesh.Indices = [.. indices];
 
-    _tilemapMesh.CreateVertexBuffer();
-    _tilemapMesh.CreateIndexBuffer();
+    LayerMesh.CreateVertexBuffer();
+    LayerMesh.CreateIndexBuffer();
+  }
+
+  public void SetupTexture(string path) {
+    LayerTexture = (VulkanTexture)_app.TextureManager.AddTextureLocal(path).Result;
+  }
+
+  private (float, float, float, float) GetUVCoords(TileInfo tileInfo) {
+    int row = tileInfo.TextureY;
+    int col = tileInfo.TextureX;
+
+    float uvSize = 1.0f / _parent.TileSize;
+    float uMin = col * uvSize;
+    float vMin = 1.0f - (row + 1) * uvSize;
+    float uMax = (col + 1) * uvSize;
+    float vMax = 1.0f - row * uvSize;
+
+    (vMax, vMin) = (vMin, vMax);
+
+    return (uMin, uMax, vMin, vMax);
   }
 
   public void Dispose() {
-    _tilemapMesh.Dispose();
-    GC.SuppressFinalize(this);
+    LayerMesh.Dispose();
   }
-
-  public Vector2I SpriteSheetSize => new(1, 1);
-
-  public int SpriteIndex { get; set; } = 0;
-  public bool FlipX { get; set; }
-  public bool FlipY { get; set; }
-
-  public int SpriteCount => 1;
 }

@@ -5,6 +5,8 @@ using Dwarf.Loaders.Tiled;
 using Dwarf.Physics;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Renderer2D;
+using Dwarf.Rendering.Renderer2D.Components;
+using Dwarf.Rendering.Renderer2D.Models;
 using Dwarf.Rendering.Renderer3D;
 using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
@@ -392,5 +394,17 @@ public static class EntityCreator {
       motionType: motionType,
       flip: flip
     );
+  }
+
+  public static void AddRigidbody2D(this Entity entity, PrimitiveType primitiveType) {
+    var app = Application.Instance;
+    entity.AddComponent(new Rigidbody2D(app, primitiveType));
+    entity.GetComponent<Rigidbody2D>().InitBase();
+  }
+
+  public static void AddRigidbody2D(this Entity entity, PrimitiveType primitiveType, Vector2 min, Vector2 max) {
+    var app = Application.Instance;
+    entity.AddComponent(new Rigidbody2D(app, primitiveType, min, max));
+    entity.GetComponent<Rigidbody2D>().InitBase();
   }
 }

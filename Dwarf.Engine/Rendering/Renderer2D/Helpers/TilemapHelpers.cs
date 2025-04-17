@@ -1,4 +1,6 @@
-namespace Dwarf.Rendering.Renderer2D;
+using Dwarf.Rendering.Renderer2D.Models;
+
+namespace Dwarf.Rendering.Renderer2D.Helpers;
 
 public static class TilemapHelpers {
   public static bool IsWithinTilemap(this TileInfo[,] tiles, int x, int y) {

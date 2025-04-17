@@ -13,10 +13,10 @@ using StbImageSharp;
 using Vortice.Vulkan;
 
 
-namespace Dwarf.Rendering.Renderer2D;
+namespace Dwarf.Rendering.Renderer2D.Models;
 public class Sprite {
   private const float ASPECT_ONE = 1.0f;
-  private const float VERTEX_SIZE = 0.2f;
+  public const float VERTEX_SIZE = 0.2f;
   public const float SPRITE_TILE_SIZE_NONE = -1.0f;
   public const float SPRITE_TILE_SIZE_AUTO = 0.0f;
   public const int SPRITE_COUNT_NONE = -1;
@@ -35,6 +35,7 @@ public class Sprite {
   private int _spritesPerRow = 1;
   private int _spritesPerColumn = 1;
   private bool _isSpriteSheet;
+  private int _repeatCount = 1;
 
   private Vector2 _stride = Vector2.Zero;
 
@@ -91,6 +92,28 @@ public class Sprite {
     Init();
   }
 
+  public Sprite(
+    Application app,
+    string? path,
+    float vertexSize = VERTEX_SIZE,
+    int repeatCount = 1,
+    int flip = 1
+  ) {
+    _device = app.Device;
+    _vmaAllocator = app.VmaAllocator;
+    _textureManager = app.TextureManager;
+    _renderer = app.Renderer;
+
+    if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), path);
+
+    _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
+    _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
+    _isSpriteSheet = false;
+    _repeatCount = repeatCount;
+
+    Init(vertexSize);
+  }
+
   public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
     _spriteTexture.BuildDescriptor(descriptorSetLayout, descriptorPool);
   }
@@ -112,15 +135,17 @@ public class Sprite {
     SpriteIndex = 1;
   }
 
-  private void Init() {
+  private void Init(float? vertexSize = null) {
     GetAspectRatio();
-    // if (_aspectRatio == ASPECT_ONE) {
-    //   CreateSpriteVertexBox();
-    // } else {
-    //   CreateSpriteVertexWithAspect();
-    // }
+    if (_repeatCount > 1) {
+      CreateRepeatingSpriteVertexBox(vertexSize);
+    } else if (_aspectRatio == ASPECT_ONE) {
+      CreateSpriteVertexBox(vertexSize);
+    } else {
+      CreateSpriteVertexWithAspect(vertexSize);
+    }
 
-    CreateSpriteVertexBox();
+    // CreateSpriteVertexBox();
 
     if (_isSpriteSheet) {
       if (_spritesPerRow != SPRITE_COUNT_NONE && _spritesPerColumn != SPRITE_COUNT_NONE) {
@@ -138,11 +163,23 @@ public class Sprite {
   }
 
   private void GetAspectRatio() {
-    if (_spriteTexture.Width > _spriteTexture.Height) {
-      _aspectRatio = (float)_spriteTexture.Height / _spriteTexture.Width;
+    if (_isSpriteSheet) {
+      var sheetX = _spriteTexture.Width / _spritesPerRow;
+      var sheetY = _spriteTexture.Height / _spritesPerColumn;
+
+      if (sheetX > sheetY) {
+        _aspectRatio = (float)sheetY / sheetX;
+      } else {
+        _aspectRatio = (float)sheetX / sheetY;
+      }
     } else {
-      _aspectRatio = (float)_spriteTexture.Width / _spriteTexture.Height;
+      if (_spriteTexture.Width > _spriteTexture.Height) {
+        _aspectRatio = (float)_spriteTexture.Height / _spriteTexture.Width;
+      } else {
+        _aspectRatio = (float)_spriteTexture.Width / _spriteTexture.Height;
+      }
     }
+
   }
 
   private void CalculateOffset() {
@@ -158,8 +195,9 @@ public class Sprite {
   private void CalculateElemCount() {
 
   }
-  private void CreateSpriteVertexWithAspect() {
-    CreateSpriteVertexBox();
+
+  private void CreateSpriteVertexWithAspect(float? vertexSize = null) {
+    CreateSpriteVertexBox(vertexSize);
 
     if (_spriteTexture.Width > _spriteTexture.Height) {
       _spriteMesh.Vertices[0].Position.X += _aspectRatio;
@@ -174,30 +212,83 @@ public class Sprite {
     }
   }
 
-  private void CreateSpriteVertexBox() {
+  private void CreateRepeatingSpriteVertexBox(float? vertexSize = null) {
+    float size = vertexSize ?? VERTEX_SIZE;
+    int quadCount = _repeatCount;
+    int vertexCount = quadCount * 4;
+    int indexCount = quadCount * 6;
+
+    _spriteMesh = new(_vmaAllocator, _device) {
+      Vertices = new Vertex[vertexCount],
+      Indices = new uint[indexCount]
+    };
+
+    // Loop through each repetition; here we arrange them horizontally.
+    for (uint i = 0; i < quadCount; i++) {
+      // Compute horizontal offset based on the quad's width (2 * size).
+      float offsetX = i * (2 * size);
+      uint baseVertex = i * 4;
+
+      _spriteMesh.Vertices[baseVertex + 0] = new Vertex {
+        Position = new Vector3(size + offsetX, size, 0.0f),
+        Uv = new Vector2(0.0f, 0.0f),
+        Color = new Vector3(1, 1, 1),
+        Normal = new Vector3(1, 1, 1)
+      };
+      _spriteMesh.Vertices[baseVertex + 1] = new Vertex {
+        Position = new Vector3(size + offsetX, -size, 0.0f),
+        Uv = new Vector2(0.0f, 1.0f),
+        Color = new Vector3(1, 1, 1),
+        Normal = new Vector3(1, 1, 1)
+      };
+      _spriteMesh.Vertices[baseVertex + 2] = new Vertex {
+        Position = new Vector3(-size + offsetX, -size, 0.0f),
+        Uv = new Vector2(1.0f, 1.0f),
+        Color = new Vector3(1, 1, 1),
+        Normal = new Vector3(1, 1, 1)
+      };
+      _spriteMesh.Vertices[baseVertex + 3] = new Vertex {
+        Position = new Vector3(-size + offsetX, size, 0.0f),
+        Uv = new Vector2(1.0f, 0.0f),
+        Color = new Vector3(1, 1, 1),
+        Normal = new Vector3(1, 1, 1)
+      };
+
+      // Each quad uses 6 indices for two triangles.
+      uint baseIndex = i * 6;
+      _spriteMesh.Indices[baseIndex + 0] = baseVertex + 3;
+      _spriteMesh.Indices[baseIndex + 1] = baseVertex + 1;
+      _spriteMesh.Indices[baseIndex + 2] = baseVertex + 0;
+      _spriteMesh.Indices[baseIndex + 3] = baseVertex + 3;
+      _spriteMesh.Indices[baseIndex + 4] = baseVertex + 2;
+      _spriteMesh.Indices[baseIndex + 5] = baseVertex + 1;
+    }
+  }
+
+  private void CreateSpriteVertexBox(float? vertexSize = null) {
     _spriteMesh = new(_vmaAllocator, _device) {
       Vertices = new Vertex[4]
     };
     _spriteMesh.Vertices[0] = new Vertex {
-      Position = new Vector3(VERTEX_SIZE, VERTEX_SIZE, 0.0f),
+      Position = new Vector3(vertexSize ?? VERTEX_SIZE, vertexSize ?? VERTEX_SIZE, 0.0f),
       Uv = new Vector2(0.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[1] = new Vertex {
-      Position = new Vector3(VERTEX_SIZE, -VERTEX_SIZE, 0.0f),
+      Position = new Vector3(vertexSize ?? VERTEX_SIZE, -(vertexSize ?? VERTEX_SIZE), 0.0f),
       Uv = new Vector2(0.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[2] = new Vertex {
-      Position = new Vector3(-VERTEX_SIZE, -VERTEX_SIZE, 0.0f),
+      Position = new Vector3(-(vertexSize ?? VERTEX_SIZE), -(vertexSize ?? VERTEX_SIZE), 0.0f),
       Uv = new Vector2(-1.0f, 1.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)
     };
     _spriteMesh.Vertices[3] = new Vertex {
-      Position = new Vector3(-VERTEX_SIZE, VERTEX_SIZE, 0.0f),
+      Position = new Vector3(-(vertexSize ?? VERTEX_SIZE), vertexSize ?? VERTEX_SIZE, 0.0f),
       Uv = new Vector2(-1.0f, 0.0f),
       Color = new Vector3(1, 1, 1),
       Normal = new Vector3(1, 1, 1)

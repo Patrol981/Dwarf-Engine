@@ -31,7 +31,7 @@ public class PhysicsSystem : IDisposable {
   }
 
   public void Dispose() {
-    GC.SuppressFinalize(this);
     PhysicsProgram?.Dispose();
+    GC.SuppressFinalize(this);
   }
 }

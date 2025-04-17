@@ -2,8 +2,8 @@
 
 using Vortice.Vulkan;
 
-namespace Dwarf.Physics;
-public interface IDebugRender3DObject : IDrawable {
+namespace Dwarf.Physics.Interfaces;
+public interface IDebugRenderObject : IDrawable {
   public bool UsesTexture { get; }
   public bool UsesLight { get; set; }
   public int MeshsesCount { get; }

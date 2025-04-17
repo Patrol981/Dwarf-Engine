@@ -20,7 +20,8 @@ public enum SystemCreationFlags {
   WebApi = 1 << 7,
   Particles = 1 << 8,
   Shadows = 1 << 9,
-  Physics2D = 1 << 10
+  Physics2D = 1 << 10,
+  DebugRenderer = 1 << 11
 }
 
 public record SystemConfiguration {
@@ -61,6 +62,7 @@ public class SystemCreator {
     var hasWebApi = flags.HasFlag(SystemCreationFlags.WebApi);
     var hasParticles = flags.HasFlag(SystemCreationFlags.Particles);
     var hasShadows = flags.HasFlag(SystemCreationFlags.Shadows);
+    var hasDebugRenderer = flags.HasFlag(SystemCreationFlags.DebugRenderer);
 
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
@@ -72,8 +74,10 @@ public class SystemCreator {
       Logger.Info("[SYSTEM CREATOR] Creating 3D Renderer");
       systemCollection.Render3DSystem =
         new(vmaAllocator, device, renderer, layouts, new ModelPipelineConfig());
+    }
 
-      Logger.Info("[SYSTEM CREATOR] Creating 3D Debug Renderer");
+    if (hasDebugRenderer) {
+      Logger.Info("[SYSTEM CREATOR] Creating Debug Renderer");
       var debugConfig = new VertexDebugPipeline();
       systemCollection.RenderDebugSystem =
         new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), debugConfig);

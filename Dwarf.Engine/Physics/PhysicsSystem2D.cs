@@ -15,14 +15,21 @@ public class PhysicsSystem2D : IDisposable {
   }
 
   public void Init(Span<Entity> entities) {
-
+    var diff = entities.ToArray().Where(e => e.HasComponent<Rigidbody2D>()).ToArray();
+    PhysicsProgram?.Init(diff);
   }
 
-  public void Tick() {
+  public void Tick(Entity[] entities) {
+    for (short i = 0; i < entities.Length; i++) {
+      if (entities[i].CanBeDisposed) continue;
+      entities[i].GetComponent<Rigidbody2D>()?.Update();
+    }
 
+    PhysicsProgram.Update();
   }
 
   public void Dispose() {
-
+    PhysicsProgram?.Dispose();
+    GC.SuppressFinalize(this);
   }
 }

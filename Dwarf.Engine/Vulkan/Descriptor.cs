@@ -23,6 +23,25 @@ public static class Descriptor {
     );
   }
 
+  public static unsafe void BindDescriptorSet(
+    VkDescriptorSet descriptorSet,
+    nint commandBuffer,
+    VkPipelineLayout pipelineLayout,
+    uint firstSet,
+    uint setCount
+  ) {
+    vkCmdBindDescriptorSets(
+      commandBuffer,
+      VkPipelineBindPoint.Graphics,
+      pipelineLayout,
+      firstSet,
+      setCount,
+      &descriptorSet,
+      0,
+      null
+    );
+  }
+
   public static unsafe void BindDescriptorSets(
     VkDescriptorSet[] descriptorSets,
     FrameInfo frameInfo,

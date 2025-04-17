@@ -3,10 +3,11 @@ using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Rendering.Renderer2D;
+namespace Dwarf.Rendering.Renderer2D.Interfaces;
 
 public interface IDrawable2D : IDrawable {
   void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool);
+  void CachePipelineLayout(object pipelineLayout);
 
   Entity Entity { get; }
   bool Active { get; }
@@ -16,4 +17,6 @@ public interface IDrawable2D : IDrawable {
   int SpriteCount { get; }
   bool FlipX { get; set; }
   bool FlipY { get; set; }
+  bool NeedPipelineCache { get; }
+  Mesh CollisionMesh { get; }
 }

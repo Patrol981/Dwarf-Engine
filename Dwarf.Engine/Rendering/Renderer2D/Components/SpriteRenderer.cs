@@ -3,18 +3,21 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
+using Dwarf.Rendering.Renderer2D.Interfaces;
+using Dwarf.Rendering.Renderer2D.Models;
 using Dwarf.Vulkan;
 
-namespace Dwarf.Rendering.Renderer2D;
+namespace Dwarf.Rendering.Renderer2D.Components;
 
 public class SpriteRenderer : Component, IDrawable2D {
-  public Sprite[] Sprites { get; init; }
+  public Sprite[] Sprites { get; init; } = [];
   public int CurrentSprite { get; private set; } = 0;
   private Vector3 _lastKnownScale = Vector3.Zero;
   private Vector2 _cachedSize = Vector2.Zero;
   private Bounds2D _cachedBounds = Bounds2D.Zero;
   public Vector2 Size => GetSize();
   public Bounds2D Bounds => GetBounds();
+  public Mesh CollisionMesh => Sprites[CurrentSprite].SpriteMesh;
 
 
   public Entity Entity => Owner;
@@ -25,6 +28,7 @@ public class SpriteRenderer : Component, IDrawable2D {
   public Vector2I SpriteSheetSize => Sprites[CurrentSprite].SpriteSheetSize;
   public bool FlipX { get; set; }
   public bool FlipY { get; set; }
+  public bool NeedPipelineCache => false;
 
   public SpriteRenderer() { }
 
@@ -74,6 +78,10 @@ public class SpriteRenderer : Component, IDrawable2D {
   public Task Draw(nint commandBuffer, uint index = 0, uint firstInstance = 0) {
     Sprites[CurrentSprite].Draw(commandBuffer, index, firstInstance);
     return Task.CompletedTask;
+  }
+
+  public void CachePipelineLayout(object pipelineLayout) {
+    throw new InvalidOperationException("This component does not need caching");
   }
 
   public void Dispose() {
@@ -145,6 +153,11 @@ public class SpriteRenderer : Component, IDrawable2D {
 
     public Builder AddSprite(string spriteTexture) {
       _sprites.Add(new Sprite(_app, spriteTexture, Sprite.SPRITE_TILE_SIZE_NONE, false));
+      return this;
+    }
+
+    public Builder AddSprite(string spriteTexture, float vertexSize, int repeatCount) {
+      _sprites.Add(new Sprite(_app, spriteTexture, vertexSize, repeatCount, 1));
       return this;
     }
 

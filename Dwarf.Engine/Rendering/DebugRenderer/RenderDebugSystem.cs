@@ -2,13 +2,15 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
+using Dwarf.Physics.Interfaces;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering.Renderer3D;
+namespace Dwarf.Rendering.DebugRenderer;
 public class RenderDebugSystem : SystemBase, IRenderSystem {
   public RenderDebugSystem(
     VmaAllocator vmaAllocator,
@@ -29,13 +31,9 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       PipelineProvider = new PipelineModelProvider(),
       DescriptorSetLayouts = descriptorSetLayouts,
     });
-
-    // CreatePipelineLayout<ColliderMeshPushConstant>(descriptorSetLayouts);
-    // CreatePipeline(renderer.GetSwapchainRenderPass(), "debug_vertex", "debug_fragment", new PipelineModelProvider());
   }
 
   public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
-    // _pipeline.Bind(frameInfo.CommandBuffer);
     BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -50,20 +48,10 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
-      var targetEntity = entities[i].GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
-      if (targetEntity == null) continue;
+      if (entities[i].GetDrawable<IDebugRenderObject>() is not IDebugRenderObject targetEntity) continue;
       if (!targetEntity.Enabled) continue;
 
       var pushConstant = new ColliderMeshPushConstant {
-        // pushConstant.ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithoutRotation;
-        // ModelMatrix = entities[i].GetComponent<Transform>().Matrix4
-
-        // ModelMatrix = entities[i].GetComponent<Rigidbody>().PrimitiveType == PrimitiveType.Convex ?
-        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation :
-        //   entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
-
-        // ModelMatrix = entities[i].GetComponent<MeshRenderer>().
-
         ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
       };
 

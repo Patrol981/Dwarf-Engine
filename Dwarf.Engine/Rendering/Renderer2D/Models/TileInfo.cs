@@ -1,4 +1,4 @@
-namespace Dwarf.Rendering.Renderer2D;
+namespace Dwarf.Rendering.Renderer2D.Models;
 
 public struct TileInfo {
   public int X;

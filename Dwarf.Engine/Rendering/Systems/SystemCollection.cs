@@ -2,6 +2,8 @@ using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Networking;
 using Dwarf.Physics;
+using Dwarf.Physics.Interfaces;
+using Dwarf.Rendering.DebugRenderer;
 using Dwarf.Rendering.Guizmos;
 using Dwarf.Rendering.Lightning;
 using Dwarf.Rendering.Particles;
@@ -49,15 +51,14 @@ public class SystemCollection : IDisposable {
 
   public void UpdateSystems2(Entity[] entities, FrameInfo frameInfo) {
     _guizmoRenderSystem?.Render(frameInfo);
-    _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRender3DObject>());
+    _renderDebugSystem?.Render(frameInfo, entities.DistinctInterface<IDebugRenderObject>());
     _particleSystem?.Render(frameInfo);
     // _renderUISystem?.DrawUI(frameInfo, _canvas);
   }
 
   public Task UpdateCalculationSystems(Entity[] entities) {
-    if (_physicsSystem != null) {
-      _physicsSystem!.Tick(entities);
-    }
+    _physicsSystem?.Tick(entities);
+    _physicsSystem2D?.Tick(entities);
     _particleSystem?.Update();
     _particleSystem?.Collect();
     return Task.CompletedTask;
@@ -146,6 +147,7 @@ public class SystemCollection : IDisposable {
     _pointLightSystem?.Setup();
     _particleSystem?.Setup(ref textureManager);
     _physicsSystem?.Init(entities.ToArray());
+    _physicsSystem2D?.Init(entities.ToArray());
   }
 
   public void SetupRenderDatas(ReadOnlySpan<Entity> entities, ref TextureManager textureManager, Renderer renderer) {

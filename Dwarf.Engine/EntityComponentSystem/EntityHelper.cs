@@ -1,5 +1,6 @@
 using Dwarf.Rendering;
 using Dwarf.Rendering.Renderer2D;
+using Dwarf.Rendering.Renderer2D.Interfaces;
 using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.EntityComponentSystem;

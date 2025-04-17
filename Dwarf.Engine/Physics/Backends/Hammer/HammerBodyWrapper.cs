@@ -10,38 +10,51 @@ namespace Dwarf.Physics.Backends.Hammer;
 
 public class HammerBodyWrapper : IPhysicsBody2D {
   private readonly HammerInterface _hammerInterface;
-  private BodyId _bodyId;
+  private BodyId _bodyId = null!;
 
   public HammerBodyWrapper(in HammerInterface hammerInterface) {
     _hammerInterface = hammerInterface;
   }
 
+  public object BodyId => _bodyId;
+
   public Vector2 Position {
     get => _hammerInterface.GetPosition(_bodyId);
     set => _hammerInterface.SetPosition(_bodyId, value);
   }
-  public Vector2 LinearVelocity { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-  public Vector2 AngularVelocity { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-  public float GravityFactor {
-    get => 0.0f;
-    set => Logger.Info("");
+  public Vector2 LinearVelocity {
+    get => _hammerInterface.GetVelocity(_bodyId);
+    set => _hammerInterface.SetVelocity(_bodyId, value);
   }
-  public MotionQuality MotionQuality { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-  public MotionType MotionType { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+  public Vector2 AngularVelocity {
+    get => _hammerInterface.GetVelocity(_bodyId);
+    set => _hammerInterface.SetVelocity(_bodyId, value);
+  }
+  public float GravityFactor {
+    get => _hammerInterface.GetGravity();
+    set => _hammerInterface.SetGravity(value);
+  }
+  public MotionQuality MotionQuality {
+    get => (MotionQuality)_hammerInterface.GetMotionQuality(_bodyId);
+    set => _hammerInterface.SetMotionQuality(_bodyId, (Dwarf.Hammer.Enums.MotionQuality)value);
+  }
+  public MotionType MotionType {
+    get => (MotionType)_hammerInterface.GetMotionType(_bodyId);
+    set => _hammerInterface.SetMotionType(_bodyId, (Dwarf.Hammer.Enums.MotionType)value);
+  }
 
   public object CreateAndAddBody(object settings) {
-    throw new NotImplementedException();
+    _bodyId = _hammerInterface.CreateAndAddBody(Dwarf.Hammer.Enums.MotionType.Dynamic, Vector2.Zero);
+
+    return null!;
   }
 
   public object ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
     throw new NotImplementedException();
   }
 
-  public object BodyId => throw new NotImplementedException();
-
   public void CreateAndAddBody(MotionType motionType, object shapeSettings, Vector2 position) {
-    _bodyId = _hammerInterface.CreateAndAddBody(position);
-    // throw new NotImplementedException();
+    _bodyId = _hammerInterface.CreateAndAddBody((Dwarf.Hammer.Enums.MotionType)motionType, position);
   }
 
   public void SetActive(bool value) {

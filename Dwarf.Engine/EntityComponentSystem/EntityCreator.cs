@@ -396,15 +396,25 @@ public static class EntityCreator {
     );
   }
 
-  public static void AddRigidbody2D(this Entity entity, PrimitiveType primitiveType) {
+  public static void AddRigidbody2D(
+    this Entity entity,
+    PrimitiveType primitiveType,
+    MotionType motionType
+  ) {
     var app = Application.Instance;
-    entity.AddComponent(new Rigidbody2D(app, primitiveType));
+    entity.AddComponent(new Rigidbody2D(app, primitiveType, motionType));
     entity.GetComponent<Rigidbody2D>().InitBase();
   }
 
-  public static void AddRigidbody2D(this Entity entity, PrimitiveType primitiveType, Vector2 min, Vector2 max) {
+  public static void AddRigidbody2D(
+    this Entity entity,
+    PrimitiveType primitiveType,
+    MotionType motionType,
+    Vector2 min,
+    Vector2 max
+  ) {
     var app = Application.Instance;
-    entity.AddComponent(new Rigidbody2D(app, primitiveType, min, max));
+    entity.AddComponent(new Rigidbody2D(app, primitiveType, motionType, min, max));
     entity.GetComponent<Rigidbody2D>().InitBase();
   }
 }

@@ -30,22 +30,26 @@ public class Rigidbody2D : Component, IDisposable {
 
   public Rigidbody2D(
     Application app,
-    PrimitiveType primitiveType
+    PrimitiveType primitiveType,
+    MotionType motionType
   ) {
     _app = app;
     _vmaAllocator = _app.VmaAllocator;
+    MotionType = motionType;
     PrimitiveType = primitiveType;
   }
 
   public Rigidbody2D(
     Application app,
     PrimitiveType primitiveType,
+    MotionType motionType,
     Vector2 min,
     Vector2 max
   ) {
     _app = app;
     _vmaAllocator = _app.VmaAllocator;
     PrimitiveType = primitiveType;
+    MotionType = motionType;
     _min = min;
     _max = max;
   }

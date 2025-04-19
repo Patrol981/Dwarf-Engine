@@ -1,9 +1,12 @@
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
+using Dwarf.Hammer.Models;
 using Dwarf.Math;
 using Dwarf.Physics.Interfaces;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer2D.Components;
+using Dwarf.Rendering.Renderer2D.Helpers;
 using Dwarf.Rendering.Renderer2D.Interfaces;
 using Vortice.Vulkan;
 
@@ -14,8 +17,8 @@ public class Rigidbody2D : Component, IDisposable {
   private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private IPhysicsBody2D _physicsBody2D = null!;
   private Mesh? _collisionShape;
-  private Vector2 _min = Vector2.Zero;
-  private Vector2 _max = Vector2.Zero;
+  public Vector2 Min { get; private set; } = Vector2.Zero;
+  public Vector2 Max { get; private set; } = Vector2.Zero;
   public MotionType MotionType { get; init; } = MotionType.Dynamic;
   public PrimitiveType PrimitiveType { get; init; } = PrimitiveType.None;
 
@@ -50,8 +53,8 @@ public class Rigidbody2D : Component, IDisposable {
     _vmaAllocator = _app.VmaAllocator;
     PrimitiveType = primitiveType;
     MotionType = motionType;
-    _min = min;
-    _max = max;
+    Min = min;
+    Max = max;
   }
 
   public void Init(in IPhysicsBody2D physicsBody2D) {
@@ -63,19 +66,35 @@ public class Rigidbody2D : Component, IDisposable {
     _physicsBody2D = physicsBody2D;
 
     var pos = Owner.GetComponent<Transform>().Position;
-    object shapeSettings = null!;
+    var shapeSettings = _physicsBody2D.ColldierMeshToPhysicsShape(Owner, _collisionShape);
     _physicsBody2D.CreateAndAddBody(MotionType, shapeSettings, pos.ToVector2());
     _physicsBody2D.GravityFactor = 0.1f;
   }
 
   public void InitBase() {
+    var scale = Owner.GetComponent<Transform>().Scale;
+    Min = new Vector2(Min.X * scale.X, Min.Y * scale.Y);
+    Max = new Vector2(Max.X * scale.X, Max.Y * scale.Y);
+
     _collisionShape = PrimitiveType switch {
-      PrimitiveType.Convex => ((IDrawable2D)Owner.GetDrawable<IDrawable2D>()).CollisionMesh.Clone() as Mesh,
-      PrimitiveType.Box => Primitives2D.CreateQuad2D(_min, _max),
+      PrimitiveType.Convex => GetFromOwner(),
+      PrimitiveType.Box => Primitives2D.CreateQuad2D(Min, Max),
       _ => throw new NotImplementedException(),
     };
 
     Owner.AddComponent(new ColliderMesh(_app.VmaAllocator, _app.Device, _collisionShape!));
+  }
+
+  private Mesh GetFromOwner() {
+    var mesh = ((IDrawable2D)Owner.GetDrawable<IDrawable2D>()).CollisionMesh.Clone() as Mesh;
+    var scale = Owner.GetComponent<Transform>().Scale;
+    for (int i = 0; i < mesh!.Vertices.Length; i++) {
+      mesh.Vertices[i].Position.X *= scale.X;
+      mesh.Vertices[i].Position.Y *= scale.Y;
+      mesh.Vertices[i].Position.Z *= scale.Z;
+    }
+
+    return mesh;
   }
 
   public void Update() {
@@ -88,24 +107,29 @@ public class Rigidbody2D : Component, IDisposable {
     transform.Position.Y = pos.HasValue ? pos.Value.Y : 0;
   }
 
-  public void AddForce() {
-
+  public void AddForce(Vector2 vec2) {
+    if (Owner.CanBeDisposed) return;
+    _physicsBody2D.AddForce(vec2);
   }
 
-  public void AddVelocity() {
-
+  public void AddVelocity(Vector2 vec2) {
+    if (Owner.CanBeDisposed) return;
+    _physicsBody2D.AddLinearVelocity(vec2);
   }
 
-  public void AddImpule() {
-
+  public void AddImpule(Vector2 vec2) {
+    if (Owner.CanBeDisposed) return;
+    _physicsBody2D.AddImpulse(vec2);
   }
 
-  public void Translate() {
-
+  public void Translate(Vector2 vec2) {
+    if (Owner.CanBeDisposed) return;
+    _physicsBody2D.AddLinearVelocity(vec2);
   }
 
-  public void SetPosition() {
-
+  public void SetPosition(Vector2 vec2) {
+    if (Owner.CanBeDisposed) return;
+    _physicsBody2D.Position = vec2;
   }
 
   public void InvokeCollision(CollisionState collisionState, Entity otherColl) {

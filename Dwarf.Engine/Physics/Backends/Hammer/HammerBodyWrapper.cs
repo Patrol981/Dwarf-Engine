@@ -5,6 +5,8 @@ using Dwarf.Hammer;
 using Dwarf.Hammer.Models;
 using Dwarf.Physics.Interfaces;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer2D.Components;
+using Dwarf.Rendering.Renderer2D.Helpers;
 
 namespace Dwarf.Physics.Backends.Hammer;
 
@@ -44,17 +46,52 @@ public class HammerBodyWrapper : IPhysicsBody2D {
   }
 
   public object CreateAndAddBody(object settings) {
-    _bodyId = _hammerInterface.CreateAndAddBody(Dwarf.Hammer.Enums.MotionType.Dynamic, Vector2.Zero);
+    _bodyId = _hammerInterface.CreateAndAddBody((ShapeSettings)settings, Dwarf.Hammer.Enums.MotionType.Dynamic, Vector2.Zero);
 
     return null!;
   }
 
   public object ColldierMeshToPhysicsShape(Entity entity, Mesh colliderMesh) {
-    throw new NotImplementedException();
+    var transform = entity.GetComponent<Transform>();
+    List<Dwarf.Hammer.Structs.Vertex> vertices = [];
+    foreach (var m in colliderMesh.Vertices) {
+      Dwarf.Hammer.Structs.Vertex v = new() {
+        X = m.Position.X,
+        Y = m.Position.Y
+      };
+
+      vertices.Add(v);
+    }
+
+    var rigidbody = entity.GetComponent<Rigidbody2D>();
+
+    object userData;
+    Dwarf.Hammer.Enums.ObjectType objectType = Dwarf.Hammer.Enums.ObjectType.Sprite;
+    var tilemap = entity.TryGetComponent<Tilemap>();
+    if (tilemap != null) {
+      userData = tilemap.ExtractEgdges();
+      objectType = Dwarf.Hammer.Enums.ObjectType.Tilemap;
+    } else {
+      userData = (rigidbody.Min, rigidbody.Max);
+    }
+
+    ShapeSettings shapeSettings = new ShapeSettings(
+      new Dwarf.Hammer.Structs.Mesh() {
+        Vertices = [.. vertices],
+      },
+      userData,
+      objectType
+    );
+
+    return shapeSettings;
   }
 
   public void CreateAndAddBody(MotionType motionType, object shapeSettings, Vector2 position) {
-    _bodyId = _hammerInterface.CreateAndAddBody((Dwarf.Hammer.Enums.MotionType)motionType, position);
+    _bodyId = _hammerInterface.CreateAndAddBody(
+      (ShapeSettings)shapeSettings,
+      (Dwarf.Hammer.Enums.MotionType)motionType,
+      position
+    );
   }
 
   public void SetActive(bool value) {
@@ -66,7 +103,7 @@ public class HammerBodyWrapper : IPhysicsBody2D {
   }
 
   public void AddLinearVelocity(Vector2 velocity) {
-    throw new NotImplementedException();
+    _hammerInterface.AddVelocity(_bodyId, velocity);
   }
 
   public void AddImpulse(Vector2 impulse) {

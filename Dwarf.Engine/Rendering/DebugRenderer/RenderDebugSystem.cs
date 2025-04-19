@@ -52,7 +52,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       if (!targetEntity.Enabled) continue;
 
       var pushConstant = new ColliderMeshPushConstant {
-        ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithAngleYRotation
+        ModelMatrix = entities[i].GetComponent<Transform>().MatrixWithAngleYRotationWithoutScale
       };
 
       vkCmdPushConstants(

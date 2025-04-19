@@ -66,6 +66,7 @@ public static class TiledLoader {
           tileInfo.VMax = 0f;
         } else {
           tileInfo.IsNotEmpty = true;
+          tileInfo.IsCollision = true;
 
           Tileset match = null!;
           foreach (var tileset in map.Tilesets) {

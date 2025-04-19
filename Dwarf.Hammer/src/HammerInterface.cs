@@ -1,6 +1,7 @@
 using System.Numerics;
 using Dwarf.Hammer.Enums;
 using Dwarf.Hammer.Models;
+using Dwarf.Hammer.Structs;
 
 namespace Dwarf.Hammer;
 
@@ -17,6 +18,10 @@ public class HammerInterface {
 
   public void SetPosition(in BodyId bodyId, in Vector2 position) {
     _hammerWorld.Bodies[bodyId].Position = position;
+  }
+
+  public void AddVelocity(in BodyId bodyId, in Vector2 velocity) {
+    _hammerWorld.Bodies[bodyId].Velocity += velocity;
   }
 
   public void SetVelocity(in BodyId bodyId, in Vector2 velocity) {
@@ -51,9 +56,17 @@ public class HammerInterface {
     return _hammerWorld.Bodies[bodyId].MotionQuality;
   }
 
-  public BodyId CreateAndAddBody(MotionType motionType, Vector2 position) {
+  public BodyId CreateAndAddBody(ShapeSettings shapeSettings, MotionType motionType, Vector2 position) {
     var body = _hammerWorld.AddBody(position);
     _hammerWorld.Bodies[body].MotionType = motionType;
+    _hammerWorld.Bodies[body].Mesh = shapeSettings.Mesh;
+    _hammerWorld.Bodies[body].ObjectType = shapeSettings.ObjectType;
+    if (shapeSettings.ObjectType == ObjectType.Sprite && shapeSettings.UserData != null) {
+      var minMax = ((Vector2, Vector2))shapeSettings.UserData;
+      _hammerWorld.Bodies[body].AABB = new AABB() { Min = minMax.Item1, Max = minMax.Item2 };
+    } else {
+      _hammerWorld.Bodies[body].AABB = AABB.ComputeAABB(_hammerWorld.Bodies[body]);
+    }
     return body;
   }
 }

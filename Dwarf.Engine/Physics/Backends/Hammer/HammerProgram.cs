@@ -8,7 +8,7 @@ public class HammerProgram : IPhysicsProgram {
   private readonly HammerInstance _hammerInstance = null!;
   public Dictionary<Entity, HammerBodyWrapper> Bodies = [];
   public HammerInterface HammerInterface => _hammerInstance.HammerInterface;
-  public float DeltaTime = 1.0f / 30.0f;
+  public float DeltaTime = 1.0f / 60.0f;
 
   public HammerProgram() {
     _hammerInstance = new();
@@ -20,6 +20,8 @@ public class HammerProgram : IPhysicsProgram {
       Bodies.Add(entity, wrapper);
       entity.GetComponent<Rigidbody2D>()?.Init(wrapper);
     }
+
+    HammerInterface.SetGravity(0.0001f);
   }
 
   public void Update() {

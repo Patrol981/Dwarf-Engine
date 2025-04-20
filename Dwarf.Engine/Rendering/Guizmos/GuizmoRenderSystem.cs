@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -70,11 +71,12 @@ public class GuizmoRenderSystem : SystemBase {
   }
 
   private void Draw(FrameInfo frameInfo, List<Guizmo> guizmos) {
-    for (int i = 0; i < guizmos.Count; i++) {
+    var tmp = guizmos.ToArray().Clone() as Guizmo[];
+    for (int i = 0; i < tmp?.Length; i++) {
       unsafe {
-        var color = guizmos[i].Color;
-        _bufferObject->ModelMatrix = guizmos[i].Transform.Matrix4;
-        _bufferObject->GuizmoType = (int)guizmos[i].GuizmoType;
+        var color = tmp[i]?.Color ?? Vector3.One;
+        _bufferObject->ModelMatrix = tmp[i]?.Transform.Matrix4 ?? Matrix4x4.Identity;
+        _bufferObject->GuizmoType = (int)GuizmoType.Circular;
         _bufferObject->ColorX = color.X;
         _bufferObject->ColorY = color.Y;
         _bufferObject->ColorZ = color.Z;

@@ -32,6 +32,10 @@ public class HammerInterface {
     return _hammerWorld.Bodies[bodyId].Velocity;
   }
 
+  public void AddForce(in BodyId bodyId, in Vector2 force) {
+    _hammerWorld.Bodies[bodyId].Force += force;
+  }
+
   public void SetGravity(float gravity) {
     _hammerWorld.Gravity = gravity;
   }
@@ -65,7 +69,21 @@ public class HammerInterface {
       var minMax = ((Vector2, Vector2))shapeSettings.UserData;
       _hammerWorld.Bodies[body].AABB = new AABB() { Min = minMax.Item1, Max = minMax.Item2 };
     } else {
-      _hammerWorld.Bodies[body].AABB = AABB.ComputeAABB(_hammerWorld.Bodies[body]);
+      try {
+        var edges = (List<Edge>)shapeSettings.UserData!;
+        _hammerWorld.Bodies[body].AABB = AABB.ComputeAABB(_hammerWorld.Bodies[body]);
+        _hammerWorld.Bodies[body].Edges = [.. edges];
+      } catch {
+        var aabbs = (List<(Vector2, Vector2)>)shapeSettings.UserData!;
+        _hammerWorld.Bodies[body].TilemapAABBs = AABB.CreateAABBListFromTilemap(aabbs);
+        // _hammerWorld.Bodies[body].TilemapAABBs = [.. AABB.BuildAABBsFromMesh(_hammerWorld.Bodies[body].Mesh, _hammerWorld.Bodies[body].Position)];
+        // _hammerWorld.Bodies[body].TilemapAABBs = [.. aabbs.Select(x => {
+        //   return new AABB() {
+        //     Min = x.Item1,
+        //     Max = x.Item2
+        //   };
+        // })];
+      }
     }
     return body;
   }

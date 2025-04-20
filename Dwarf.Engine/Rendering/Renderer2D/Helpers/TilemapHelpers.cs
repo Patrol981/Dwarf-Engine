@@ -20,10 +20,11 @@ public static class TilemapHelpers {
     int w = collTimemap.Tiles.GetLength(0), h = collTimemap.Tiles.GetLength(1);
     var tileSize = tilemap.TileSize;
     var edges = new List<Edge>();
+    var scale = tilemap.Owner.GetComponent<Transform>().Scale;
 
     void AddEdge(int x1, int y1, int x2, int y2) {
-      var A = new Vector2(x1, y1) * tileSize;
-      var B = new Vector2(x2, y2) * tileSize;
+      var A = new Vector2(x1 * scale.X, y1 * scale.Y) * tileSize;
+      var B = new Vector2(x2 * scale.X, y2 * scale.Y) * tileSize;
       // Edge direction
       var dir = Vector2.Normalize(B - A);
       // Normal = rotate ninety degrees:
@@ -43,5 +44,33 @@ public static class TilemapHelpers {
     }
 
     return edges;
+  }
+
+  public static List<(Vector2, Vector2)> ExtractAABBs(this Tilemap tilemap) {
+    var list = new List<(Vector2, Vector2)>();
+    var targetLayer = tilemap.Layers.Where(l => l.IsCollision).First();
+    var tilemapTransform = tilemap.Owner.GetComponent<Transform>();
+
+    for (int y = 0; y < targetLayer.Tiles.GetLength(1); y++) {
+      for (int x = 0; x < targetLayer.Tiles.GetLength(0); x++) {
+        var tile = targetLayer.Tiles[x, y];
+        if (!tile.IsNotEmpty) continue;
+
+        float pixelsPerUnit = 320f;
+
+        float worldX = tile.X * (tilemap.TileSize / pixelsPerUnit) * tilemapTransform.Scale.X + tilemapTransform.Position.X;
+        float worldY = tile.Y * (tilemap.TileSize / pixelsPerUnit) * tilemapTransform.Scale.Y + tilemapTransform.Position.Y;
+
+        float tileSizeWorld = (float)tilemap.TileSize / 320 * tilemapTransform.Scale.X;
+        float tileMinX = worldX + tileSizeWorld / 2;
+        float tileMaxX = worldX + tileSizeWorld;
+        float tileMinY = worldY + tileSizeWorld / 2;
+        float tileMaxY = worldY + tileSizeWorld;
+
+        list.Add((new(tileMinX, tileMinY), new(tileMaxX, tileMaxY)));
+      }
+    }
+
+    return list;
   }
 }

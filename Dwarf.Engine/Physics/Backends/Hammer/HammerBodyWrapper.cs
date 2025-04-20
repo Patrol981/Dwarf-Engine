@@ -69,7 +69,19 @@ public class HammerBodyWrapper : IPhysicsBody2D {
     Dwarf.Hammer.Enums.ObjectType objectType = Dwarf.Hammer.Enums.ObjectType.Sprite;
     var tilemap = entity.TryGetComponent<Tilemap>();
     if (tilemap != null) {
-      userData = tilemap.ExtractEgdges();
+      // var edges = tilemap.ExtractEgdges();
+      // var hammerEdges = new List<Dwarf.Hammer.Structs.Edge>();
+      // foreach (var edge in edges) {
+      //   hammerEdges.Add(new() {
+      //     A = edge.A,
+      //     B = edge.B,
+      //     Normal = edge.Normal,
+      //   });
+      // }
+
+      var aabbs = tilemap.ExtractAABBs();
+
+      userData = aabbs;
       objectType = Dwarf.Hammer.Enums.ObjectType.Tilemap;
     } else {
       userData = (rigidbody.Min, rigidbody.Max);
@@ -78,6 +90,7 @@ public class HammerBodyWrapper : IPhysicsBody2D {
     ShapeSettings shapeSettings = new ShapeSettings(
       new Dwarf.Hammer.Structs.Mesh() {
         Vertices = [.. vertices],
+        Indices = colliderMesh.Indices
       },
       userData,
       objectType
@@ -99,7 +112,7 @@ public class HammerBodyWrapper : IPhysicsBody2D {
   }
 
   public void AddForce(Vector2 force) {
-    throw new NotImplementedException();
+    _hammerInterface.AddForce(_bodyId, force);
   }
 
   public void AddLinearVelocity(Vector2 velocity) {

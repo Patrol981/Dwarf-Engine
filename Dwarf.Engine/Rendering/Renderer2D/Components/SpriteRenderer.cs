@@ -10,6 +10,8 @@ using Dwarf.Vulkan;
 namespace Dwarf.Rendering.Renderer2D.Components;
 
 public class SpriteRenderer : Component, IDrawable2D {
+  public delegate void OnAnimationEnd();
+
   public Sprite[] Sprites { get; init; } = [];
   public int CurrentSprite { get; private set; } = 0;
   private Vector3 _lastKnownScale = Vector3.Zero;
@@ -32,9 +34,10 @@ public class SpriteRenderer : Component, IDrawable2D {
 
   public SpriteRenderer() { }
 
-  public void Next() {
+  public void Next(OnAnimationEnd onAnimationEnd) {
     if (Sprites[CurrentSprite].SpriteIndex >= Sprites[CurrentSprite].MaxIndex) {
       Sprites[CurrentSprite].SpriteIndex = 1;
+      onAnimationEnd.Invoke();
     }
     Sprites[CurrentSprite].SpriteIndex += 1;
   }

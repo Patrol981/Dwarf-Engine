@@ -81,6 +81,39 @@ internal class AABB {
     return collX && collY;
   }
 
+  internal static bool CheckCollisionMTV(HammerObject a, HammerObject b, out Vector2 mtv) {
+    float aMinX = a.Position.X;
+    float aMaxX = aMinX + a.AABB.Width;
+    float aMinY = a.Position.Y;
+    float aMaxY = aMinY + a.AABB.Height;
+
+    float bMinX = b.Position.X;
+    float bMaxX = bMinX + b.AABB.Width;
+    float bMinY = b.Position.Y;
+    float bMaxY = bMinY + b.AABB.Height;
+
+    bool overlapX = aMaxX > bMinX && bMaxX > aMinX;
+    bool overlapY = aMaxY > bMinY && bMaxY > aMinY;
+
+    if (overlapX && overlapY) {
+      float overlapXAmount = Math.Min(aMaxX, bMaxX) - Math.Max(aMinX, bMinX);
+      float overlapYAmount = Math.Min(aMaxY, bMaxY) - Math.Max(aMinY, bMinY);
+
+      if (overlapXAmount < overlapYAmount) {
+        float direction = (a.Position.X < b.Position.X) ? -1f : 1f;
+        mtv = new Vector2(overlapXAmount * direction, 0);
+      } else {
+        float direction = (a.Position.Y < b.Position.Y) ? -1f : 1f;
+        mtv = new Vector2(0, overlapYAmount * direction);
+      }
+
+      return true;
+    }
+
+    mtv = Vector2.Zero;
+    return false;
+  }
+
   internal static bool CheckCollisionWithTilemap(
     HammerObject tilemap,
     AABB tilemapAABB,

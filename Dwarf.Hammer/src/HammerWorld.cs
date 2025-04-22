@@ -177,10 +177,11 @@ public class HammerWorld {
       if (body.Value.MotionType == Enums.MotionType.Dynamic) {
         if (!body.Value.Grounded) {
           if (body.Value.Force.Y < 0) {
-            body.Value.Velocity.Y -= dt * Gravity;
+            body.Value.Velocity.Y -= dt * Gravity * body.Value.Mass;
             body.Value.Force.Y += dt * Gravity;
+            // body.Value.Force.Y /= 2 * dt;
           } else {
-            body.Value.Velocity.Y += dt * Gravity;
+            body.Value.Velocity.Y += dt * Gravity * body.Value.Mass;
           }
 
         }

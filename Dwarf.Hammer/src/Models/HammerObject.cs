@@ -8,7 +8,7 @@ internal class HammerObject {
   internal Vector2 Position;
   internal Vector2 Velocity;
   internal Vector2 Force;
-  internal float Mass;
+  internal float Mass = 0.3f;
   internal MotionType MotionType;
   internal MotionQuality MotionQuality;
   internal ObjectType ObjectType;

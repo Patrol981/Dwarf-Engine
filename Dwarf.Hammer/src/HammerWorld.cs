@@ -239,10 +239,18 @@ public class HammerWorld {
         var isColl = AABB.CheckCollisionWithTilemapMTV(sprite.AABB, sprite.Position, aabb, tilemap.Position, out var mtv);
         if (isColl) {
           var dotProduct = Vector2.Dot(sprite.Velocity, sprite.Position);
-
           mtv.Y *= -1;
-          sprite.Position += mtv;
-          sprite.Velocity.Y = 0;
+          if (dotProduct > 0) {
+            sprite.Position.X -= mtv.X;
+            sprite.Velocity.Y = 0;
+          } else {
+            sprite.Position.X += mtv.X;
+            sprite.Velocity.Y = 0;
+          }
+          sprite.Position.Y += mtv.Y;
+
+          // mtv.Y *= -1;
+
 
           collidesWithAnythingGround = true;
         }

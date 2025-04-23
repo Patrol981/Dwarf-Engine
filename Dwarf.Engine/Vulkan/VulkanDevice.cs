@@ -561,7 +561,7 @@ public class VulkanDevice : IDevice {
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
-      pNext = &unusedAttachmentsFeaturesEXT
+      pNext = &vk14Features
     };
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {

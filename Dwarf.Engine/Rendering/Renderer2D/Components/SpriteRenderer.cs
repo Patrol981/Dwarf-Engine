@@ -32,6 +32,8 @@ public class SpriteRenderer : Component, IDrawable2D {
   public bool FlipY { get; set; }
   public bool NeedPipelineCache => false;
 
+  public float DirectionX => FlipX ? -1 : 1;
+
   public SpriteRenderer() { }
 
   public void Next(OnAnimationEnd onAnimationEnd) {

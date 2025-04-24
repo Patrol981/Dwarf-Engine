@@ -62,10 +62,10 @@ public static class TilemapHelpers {
         float worldY = tile.Y * (tilemap.TileSize / pixelsPerUnit) * tilemapTransform.Scale.Y + tilemapTransform.Position.Y;
 
         float tileSizeWorld = (float)tilemap.TileSize / 320 * tilemapTransform.Scale.X;
-        float tileMinX = worldX + tileSizeWorld / 4;
-        float tileMaxX = worldX + tileSizeWorld;
-        float tileMinY = worldY + tileSizeWorld / 4;
-        float tileMaxY = worldY + tileSizeWorld;
+        float tileMinX = worldX + tileSizeWorld / 3;
+        float tileMaxX = worldX + tileSizeWorld + (tileSizeWorld / 3);
+        float tileMinY = worldY + tileSizeWorld / 3;
+        float tileMaxY = worldY + tileSizeWorld + (tileSizeWorld / 3);
 
         list.Add((new(tileMinX, tileMinY), new(tileMaxX, tileMaxY)));
       }

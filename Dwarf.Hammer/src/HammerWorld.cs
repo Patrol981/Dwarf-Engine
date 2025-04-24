@@ -183,7 +183,6 @@ public class HammerWorld {
           } else {
             body.Value.Velocity.Y += dt * Gravity * body.Value.Mass;
           }
-
         }
       }
 
@@ -208,7 +207,6 @@ public class HammerWorld {
       foreach (var sprite2 in sprites) {
         if (sprite1 == sprite2) continue;
 
-        // var isColl = sprite1.AABB.CheckCollision(sprite1.Position, sprite2.Position, sprite2.AABB);
         var isColl = AABB.CheckCollisionMTV(sprite1, sprite2, out var mtv);
         if (isColl) {
           var dotProduct = Vector2.Dot(sprite1.Velocity, sprite2.Position);
@@ -238,19 +236,20 @@ public class HammerWorld {
       foreach (var aabb in tilemap.TilemapAABBs) {
         var isColl = AABB.CheckCollisionWithTilemapMTV(sprite.AABB, sprite.Position, aabb, tilemap.Position, out var mtv);
         if (isColl) {
-          var dotProduct = Vector2.Dot(sprite.Velocity, sprite.Position);
-          mtv.Y *= -1;
-          if (dotProduct > 0) {
+          var dotProductX = Vector2.Dot(sprite.Velocity, sprite.Position);
+
+          if (dotProductX > 0) {
             sprite.Position.X -= mtv.X;
-            sprite.Velocity.Y = 0;
           } else {
             sprite.Position.X += mtv.X;
-            sprite.Velocity.Y = 0;
           }
+
+          if (sprite.Velocity.Y <= 0) {
+            mtv.Y *= -1;
+          }
+
+          sprite.Velocity.Y = 0;
           sprite.Position.Y += mtv.Y;
-
-          // mtv.Y *= -1;
-
 
           collidesWithAnythingGround = true;
         }

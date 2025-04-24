@@ -244,7 +244,7 @@ public class HammerWorld {
             sprite.Position.X += mtv.X;
           }
 
-          if (sprite.Velocity.Y <= 0) {
+          if (sprite.Velocity.Y >= 0) {
             mtv.Y *= -1;
           }
 

@@ -37,8 +37,8 @@ public class SpriteRenderer : Component, IDrawable2D {
   public SpriteRenderer() { }
 
   public void Next(OnAnimationEnd onAnimationEnd) {
-    if (Sprites[CurrentSprite].SpriteIndex >= Sprites[CurrentSprite].MaxIndex) {
-      Sprites[CurrentSprite].SpriteIndex = 1;
+    if (Sprites[CurrentSprite].SpriteIndex > Sprites[CurrentSprite].MaxIndex) {
+      Sprites[CurrentSprite].SpriteIndex = 0;
       onAnimationEnd.Invoke();
     }
     Sprites[CurrentSprite].SpriteIndex += 1;

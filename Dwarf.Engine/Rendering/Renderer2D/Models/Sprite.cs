@@ -132,7 +132,7 @@ public class Sprite {
   }
 
   public void Reset() {
-    SpriteIndex = 1;
+    SpriteIndex = 0;
   }
 
   private void Init(float? vertexSize = null) {
@@ -329,7 +329,7 @@ public class Sprite {
   }
   public ITexture Texture => _spriteTexture;
   public Vector2I SpriteSheetSize => new(_spritesPerRow, _spritesPerColumn);
-  public int SpriteIndex { get; set; } = 1;
+  public int SpriteIndex { get; set; } = 0;
   public int MaxIndex {
     get {
       if (_spritesPerRow == 1) {

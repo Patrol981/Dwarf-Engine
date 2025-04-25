@@ -550,14 +550,14 @@ public class VulkanDevice : IDevice {
     VkPhysicalDeviceVulkan14Features vk14Features = new() {
       hostImageCopy = true,
       pushDescriptor = true,
-      dynamicRenderingLocalRead = true,
+      // dynamicRenderingLocalRead = true,
       pNext = &vk13Features
     };
 
-    VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeaturesEXT = new() {
-      dynamicRenderingUnusedAttachments = true,
-      pNext = &vk14Features
-    };
+    // VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeaturesEXT = new() {
+    //   dynamicRenderingUnusedAttachments = true,
+    //   pNext = &vk14Features
+    // };
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
@@ -572,15 +572,15 @@ public class VulkanDevice : IDevice {
     if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
       enabledExtensions = [
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
-        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME,
+        // VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        // VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME,
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
       ];
     } else {
       enabledExtensions = [
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
-        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
+        // VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        // VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
       ];
     }
 

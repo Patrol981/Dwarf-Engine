@@ -52,15 +52,25 @@ public static class EntityHelper {
   }
 
   public static Span<IDrawable2D> DistinctI2D(this Entity[] entities) {
-    var drawables2D = new List<IDrawable2D>();
-    for (int i = 0; i < entities.Length; i++) {
-      if (entities[i].CanBeDisposed) continue;
-      if (entities[i].GetDrawable<IDrawable2D>() is IDrawable2D target) {
-        drawables2D.Add(target);
-      }
+    int len = entities.Length;
+    var buffer = new IDrawable2D[len];
+    int count = 0;
+
+    for (int i = 0; i < len; i++) {
+      var e = entities[i];
+      if (e.CanBeDisposed)
+        continue;
+
+      var drawable = e.GetDrawable<IDrawable2D>();
+      if (drawable != null)
+        buffer[count++] = (IDrawable2D)drawable;
     }
 
-    return drawables2D.OrderBy(x => x.Entity.GetComponent<Transform>().Position.Z).ToArray();
+    if (count > 1) {
+      Array.Sort(buffer, 0, count, Drawable2DComparer.Instance);
+    }
+
+    return new Span<IDrawable2D>(buffer, 0, count);
   }
 
   public static ReadOnlySpan<Entity> DistinctInterface<T>(this ReadOnlySpan<Entity> entities) where T : IDrawable {
@@ -100,5 +110,18 @@ public static class EntityHelper {
     }
 
     return [.. list];
+  }
+
+  private sealed class Drawable2DComparer : IComparer<IDrawable2D> {
+    public static readonly Drawable2DComparer Instance = new Drawable2DComparer();
+    private Drawable2DComparer() { }
+
+    public int Compare(IDrawable2D? a, IDrawable2D? b) {
+      float az = a!.Entity.GetComponent<Transform>().Position.Z;
+      float bz = b!.Entity.GetComponent<Transform>().Position.Z;
+      if (az < bz) return -1;
+      if (az > bz) return 1;
+      return 0;
+    }
   }
 }

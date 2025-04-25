@@ -9,11 +9,9 @@ layout (location = 0) out vec2 texCoord;
 
 layout (push_constant) uniform Push {
   mat4 transform;
-  // vec3 spriteColor;
   vec3 spriteSheetData;
-  bool useTexture;
-  // ivec2 sheetSize;
-  // int spriteIndex;
+  bool flipX;
+  bool flipY;
 } push;
 
 

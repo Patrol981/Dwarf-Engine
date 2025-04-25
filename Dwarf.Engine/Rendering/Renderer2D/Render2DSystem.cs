@@ -130,24 +130,12 @@ public class Render2DSystem : SystemBase {
 
       var pushConstantData = new SpritePushConstant {
         SpriteMatrix = drawables[i].Entity.GetComponent<Transform>().Matrix4,
-        // SpriteSheetData = drawables[i].Entity.GetComponent<MaterialComponent>().Color,
         SpriteSheetData = new(drawables[i].SpriteSheetSize.X, drawables[i].SpriteSheetSize.Y, drawables[i].SpriteIndex),
-        UseTexture = true,
         FlipX = drawables[i].FlipX,
         FlipY = drawables[i].FlipY
-        // SheetSize = drawables[i].SpriteSheetSize,
-        // SpriteIndex = drawables[i].SpriteIndex,
       };
 
-      if (!drawables[i].Entity.CanBeDisposed && drawables[i].Active) {
-        // var mat4 = drawables[i].Entity.GetComponent<Transform>().Matrix4;
-        // Vector3 spriteSheetData = new(drawables[i].SpriteSheetSize.X, drawables[i].SpriteSheetSize.Y, drawables[i].SpriteIndex);
-        // _spritePushConstant->SpriteMatrix = mat4;
-        // _spritePushConstant->SpriteSheetData = spriteSheetData;
-        // _spritePushConstant->FlipX = drawables[i].FlipX;
-        // _spritePushConstant->FlipY = drawables[i].FlipY;
-
-        vkCmdPushConstants(
+      vkCmdPushConstants(
           frameInfo.CommandBuffer,
           PipelineLayout,
           VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment,
@@ -156,6 +144,7 @@ public class Render2DSystem : SystemBase {
           &pushConstantData
         );
 
+      if (!drawables[i].Entity.CanBeDisposed && drawables[i].Active) {
         var pipelineLayout = _pipelines["main"].PipelineLayout;
         if (drawables[i].NeedPipelineCache) {
           drawables[i].CachePipelineLayout(pipelineLayout);

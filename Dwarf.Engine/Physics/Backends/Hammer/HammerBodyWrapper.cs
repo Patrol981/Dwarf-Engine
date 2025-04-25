@@ -107,6 +107,10 @@ public class HammerBodyWrapper : IPhysicsBody2D {
     );
   }
 
+  public void RemoveBody() {
+    _hammerInterface.RemoveBody((Dwarf.Hammer.Models.BodyId)_bodyId);
+  }
+
   public void SetActive(bool value) {
     throw new NotImplementedException();
   }
@@ -124,6 +128,6 @@ public class HammerBodyWrapper : IPhysicsBody2D {
   }
 
   public void Dispose() {
-    throw new NotImplementedException();
+    RemoveBody();
   }
 }

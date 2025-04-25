@@ -87,4 +87,8 @@ public class HammerInterface {
     }
     return body;
   }
+
+  public void RemoveBody(BodyId bodyId) {
+    _hammerWorld.RemoveBody(bodyId);
+  }
 }

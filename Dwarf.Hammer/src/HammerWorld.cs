@@ -124,7 +124,7 @@ public class HammerWorld {
     return bodyId;
   }
 
-  internal void RemoveBody() {
-
+  internal void RemoveBody(in BodyId bodyId) {
+    Bodies.Remove(bodyId);
   }
 }

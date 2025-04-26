@@ -7,6 +7,7 @@ namespace Dwarf.Hammer;
 public class HammerWorld {
   internal Dictionary<BodyId, HammerObject> Bodies = [];
   internal float Gravity = 9.80665f;
+  const float THRESHOLD = 0.5f;
 
   public Task Simulate(float dt) {
     // await Task.Delay(TimeSpan.FromMilliseconds(dt));
@@ -91,7 +92,8 @@ public class HammerWorld {
 
   internal static void HandleTilemaps(HammerObject sprite, ReadOnlySpan<HammerObject> tilemaps, ref bool collidesWithAnythingGround) {
     foreach (var tilemap in tilemaps) {
-      foreach (var aabb in tilemap.TilemapAABBs) {
+      var aabbss = SortOutTilemap(sprite, tilemap);
+      foreach (var aabb in aabbss) {
         var isColl = AABB.CheckCollisionWithTilemapMTV(sprite.AABB, sprite.Position, aabb, tilemap.Position, out var mtv);
         if (isColl) {
           var dotProductX = Vector2.Dot(sprite.Velocity, sprite.Position);
@@ -113,6 +115,19 @@ public class HammerWorld {
         }
       }
     }
+  }
+
+  private static ReadOnlySpan<AABB> SortOutTilemap(HammerObject sprite, HammerObject tilemap) {
+    var aabbToCheck = new List<AABB>();
+
+    foreach (var aabb in tilemap.TilemapAABBs) {
+      var distance = Vector2.Distance(sprite.Position, aabb.Max);
+      if (distance < THRESHOLD) {
+        aabbToCheck.Add(aabb);
+      }
+    }
+
+    return aabbToCheck.ToArray();
   }
 
   internal BodyId AddBody(Vector2 position) {

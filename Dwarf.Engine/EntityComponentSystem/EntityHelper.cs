@@ -113,7 +113,7 @@ public static class EntityHelper {
   }
 
   private sealed class Drawable2DComparer : IComparer<IDrawable2D> {
-    public static readonly Drawable2DComparer Instance = new Drawable2DComparer();
+    public static readonly Drawable2DComparer Instance = new();
     private Drawable2DComparer() { }
 
     public int Compare(IDrawable2D? a, IDrawable2D? b) {

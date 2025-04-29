@@ -38,6 +38,14 @@ public partial class DirectRPG {
     Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
   }
 
+  public static ITexture CreateTexture(Application app, string path) {
+    app.TextureManager.AddTextureGlobal(path).Wait();
+    var textureId = app.TextureManager.GetTextureIdGlobal(path);
+    var texture = (VulkanTexture)app.TextureManager.GetTextureGlobal(textureId);
+    UploadTexture(texture);
+    return texture;
+  }
+
   public static nint GetStoredTexture(string id) {
     var target = Application.Instance.GuiController.StoredTextures.Where(x => x.TextureName == id).First();
     if (target == null) return IntPtr.Zero;
@@ -69,5 +77,25 @@ public partial class DirectRPG {
     var bottomRight = new Vector2(topLeft.X + newWidth, topLeft.Y + newHeight);
 
     ImGui.GetBackgroundDrawList().AddImage(GetStoredTexture(texture), topLeft, bottomRight);
+  }
+
+  public static void StickyImage(ITexture texture, Vector2 pos) {
+    var winSize = DirectRPG.DisplaySize;
+    var aspect = (float)texture.Width / (float)texture.Height;
+    var newWidth = winSize.X;
+    var newHeight = winSize.X / aspect;
+    if (newHeight > winSize.Y) {
+      newHeight = winSize.Y;
+      newWidth = newHeight * aspect;
+    }
+
+    var topLeft = new Vector2((winSize.X - newWidth) * 0.5f, (winSize.Y - newHeight) * 0.5f);
+    var bottomRight = new Vector2(topLeft.X + newWidth, topLeft.Y + newHeight);
+
+    ImGui.GetBackgroundDrawList().AddImage(GetStoredTexture(texture), topLeft + pos, bottomRight + pos);
+  }
+
+  public static void StickyImage(ITexture texture, Vector2 pos, Vector2 size) {
+
   }
 }

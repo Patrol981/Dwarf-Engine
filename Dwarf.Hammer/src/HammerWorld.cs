@@ -9,27 +9,31 @@ public class HammerWorld {
   internal float Gravity = 9.80665f;
   const float THRESHOLD = 0.5f;
 
+  private HammerObject[] _sprites = [];
+  private float _dt;
+
   public Task Simulate(float dt) {
     // await Task.Delay(TimeSpan.FromMilliseconds(dt));
     // Thread.Sleep(TimeSpan.FromMilliseconds(dt));
 
-    var sprites = Bodies.Values.Where(x => x.ObjectType == Enums.ObjectType.Sprite).ToArray();
+    _dt = dt;
+    _sprites = [.. Bodies.Values.Where(x => x.ObjectType == Enums.ObjectType.Sprite)];
 
-    HandleSprites(sprites);
-    HandleGravity(dt);
+    _ = ThreadPool.QueueUserWorkItem(new WaitCallback(HandleSprites!));
+    _ = ThreadPool.QueueUserWorkItem(HandleGravity!);
 
     return Task.CompletedTask;
   }
 
-  internal void HandleGravity(float dt) {
+  internal void HandleGravity(object state) {
     foreach (var body in Bodies) {
       if (body.Value.MotionType == Enums.MotionType.Dynamic) {
-        HandleGrounded(body.Value, dt);
+        HandleGrounded(body.Value, _dt);
       }
 
       if (body.Value.MotionType != Enums.MotionType.Static) {
-        var x = body.Value.Velocity.X * dt;
-        var y = body.Value.Velocity.Y * dt;
+        var x = body.Value.Velocity.X * _dt;
+        var y = body.Value.Velocity.Y * _dt;
 
         body.Value.Velocity.X -= x;
         body.Value.Velocity.Y -= y;
@@ -58,12 +62,12 @@ public class HammerWorld {
     }
   }
 
-  internal void HandleSprites(ReadOnlySpan<HammerObject> sprites) {
+  internal void HandleSprites(object state) {
     var tilemaps = Bodies.Values.Where(x => x.ObjectType == Enums.ObjectType.Tilemap).ToArray();
 
-    foreach (var sprite1 in sprites) {
+    foreach (var sprite1 in _sprites) {
       var collidesWithAnythingGround = false;
-      foreach (var sprite2 in sprites) {
+      foreach (var sprite2 in _sprites) {
         if (sprite1 == sprite2) continue;
 
         var isColl = AABB.CheckCollisionMTV(sprite1, sprite2, out var mtv);
@@ -108,7 +112,14 @@ public class HammerWorld {
             mtv.Y *= -1;
           }
 
-          sprite.Velocity.Y = 0;
+          if (MathF.Abs(mtv.X) > MathF.Abs(mtv.Y)) {
+            sprite.Velocity.X = 0;
+            sprite.Velocity.Y = 0;
+          } else {
+            sprite.Velocity.Y = 0;
+          }
+
+
           sprite.Position.Y += mtv.Y;
 
           collidesWithAnythingGround = true;

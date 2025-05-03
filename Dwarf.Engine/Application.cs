@@ -23,7 +23,6 @@ namespace Dwarf;
 
 public class Application {
   public static Application Instance { get; private set; } = null!;
-
   public delegate void EventCallback();
 
   public void SetUpdateCallback(EventCallback eventCallback) {

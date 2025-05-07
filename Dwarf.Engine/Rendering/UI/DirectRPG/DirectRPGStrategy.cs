@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Numerics;
 using Dwarf.AbstractionLayer;
 using ImGuiNET;
@@ -9,9 +10,11 @@ public partial class DirectRPG {
   private static float s_RTS_Cols = 0.0f;
 
   private static ITexture? s_MainBg;
+  private static ITexture? s_RTSAtlas;
 
-  public static void CreateRTSTheme(Application app) {
+  public static void CreateRTSTheme(Application app, ITexture atlasTexture) {
     s_MainBg = CreateTexture(app, "./Resources/UI/Banners/Carved_9Slides.png");
+    s_RTSAtlas = atlasTexture;
   }
 
   public static void CreateBottomRTSPanel() {
@@ -33,13 +36,62 @@ public partial class DirectRPG {
     ImGui.End();
   }
 
-  public static void CreateGrid(int cols, int rows) {
-    for (int y = 0; y < cols; y++) {
-      for (int x = 0; x < rows; x++) {
+  public static void CreateRightRTSPanel() {
+    var size = new Vector2(200, DisplaySize.Y);
+
+    ImGui.SetNextWindowSize(size);
+    ImGui.SetNextWindowPos(new(DisplaySize.X - size.X, 0));
+    ImGui.Begin("RTS_Panel", ImGuiWindowFlags.NoDecoration |
+                             ImGuiWindowFlags.NoBringToFrontOnFocus |
+                             ImGuiWindowFlags.NoMove
+    );
+
+    if (s_MainBg == null) return;
+  }
+
+  public static void EndRightRTSPanel() {
+    ImGui.End();
+  }
+
+  public static void CreateGrid(PanelGridItem[,] items) {
+    Debug.Assert(s_RTSAtlas != null);
+    var size = new Vector2(55, 55);
+    for (int y = 0; y < items.GetLength(1); y++) {
+      for (int x = 0; x < items.GetLength(0); x++) {
+        GetUVCoords(
+          items[x, y].TextureIndex,
+          16,
+          16,
+          out var min,
+          out var max
+        );
+        CreateTexturedButton(
+          $"grid_btn_{x}_{y}",
+          s_RTSAtlas,
+          s_RTSAtlas,
+          size,
+          size,
+          min,
+          max,
+          items[x, y].OnClickEvent
+        );
         ImGui.SameLine();
       }
 
       ImGui.NewLine();
+    }
+  }
+
+  public static void CreateEmptyGrid(int in_x, int in_y, out PanelGridItem[,] items) {
+    items = new PanelGridItem[in_x, in_y];
+    for (int y = 0; y < in_y; y++) {
+      for (int x = 0; x < in_x; x++) {
+        items[x, y] = new() {
+          TextureIndex = 1,
+          OnClickEvent = () => { },
+          HoverText = ""
+        };
+      }
     }
   }
 }

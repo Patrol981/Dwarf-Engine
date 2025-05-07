@@ -5,6 +5,12 @@ using ImGuiNET;
 namespace Dwarf.Rendering.UI.DirectRPG;
 
 public partial class DirectRPG {
+  public struct PanelGridItem {
+    public int TextureIndex;
+    public string HoverText;
+    public ButtonClickedDelegate OnClickEvent;
+  }
+
   public static void CreateTexturedPanel(
     ITexture texture,
     Vector2 size

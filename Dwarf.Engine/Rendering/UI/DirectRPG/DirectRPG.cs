@@ -31,6 +31,10 @@ public partial class DirectRPG {
     ImGui.End();
   }
 
+  public static void SameLine() {
+    ImGui.SameLine();
+  }
+
   public static void UploadTexture(ITexture texture) {
     Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
   }
@@ -94,5 +98,23 @@ public partial class DirectRPG {
 
   public static void StickyImage(ITexture texture, Vector2 pos, Vector2 size) {
 
+  }
+
+  private static void GetUVCoords(int texId, int rows, int cols, out Vector2 min, out Vector2 max) {
+    int row = texId / rows;
+    int col = texId % cols;
+
+    float uvSize = 1.0f / MathF.Max(rows, cols);
+    float uMin = col * uvSize;
+    float vMin = 1.0f - (row + 1) * uvSize;
+    float uMax = (col + 1) * uvSize;
+    float vMax = 1.0f - row * uvSize;
+
+    (vMax, vMin) = (vMin, vMax);
+    min.X = uMin;
+    min.Y = vMin;
+
+    max.X = uMax;
+    max.Y = vMax;
   }
 }

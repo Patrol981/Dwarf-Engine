@@ -166,6 +166,15 @@ public class SpriteRenderer : Component, IDrawable2D {
       return this;
     }
 
+    // public Builder AddSprite(ITexture spriteTexture) {
+
+    //   return this;
+    // }
+
+    // public Builder AddSprite(ITexture spriteTexture, float vertexSize, int repeatCount) {
+    //   return this;
+    // }
+
     public SpriteRenderer? Build() {
       var spriteRenderer = new SpriteRenderer() {
         Sprites = [.. _sprites]

@@ -15,4 +15,7 @@ public partial class DirectRPG {
   public static Vector2 Uv1 => s_uv1;
   public static Vector4 BgColor4 => s_bgCol4;
   public static Vector4 TintColor4 => s_tintCol4;
+
+  public static Vector2 PreviousChildSize { get; private set; }
+  public static Vector2 PreviousParentSize { get; private set; }
 }

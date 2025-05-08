@@ -15,6 +15,9 @@ public partial class DirectRPG {
   ) {
     var pos = ImGui.GetCursorScreenPos();
 
+    var sizeOffset = (PreviousParentSize - size) / 2;
+    pos.X += sizeOffset.X;
+
     ImGui.SetCursorScreenPos(pos);
     ImGui.InvisibleButton(buttonId, clickArea);
 
@@ -41,22 +44,30 @@ public partial class DirectRPG {
     Vector2 uv1,
     ButtonClickedDelegate buttonClicked
   ) {
+    var padding = new Vector2(1.25f, 1.25f);
     var pos = ImGui.GetCursorScreenPos();
+    var paddedPos = pos + padding;
+    var paddedClickArea = clickArea + padding * 2;
 
-    ImGui.SetCursorScreenPos(pos);
-    ImGui.InvisibleButton(buttonId, clickArea);
+    ImGui.SetCursorScreenPos(paddedPos);
+    ImGui.InvisibleButton(buttonId, paddedClickArea);
+
+    var drawPosStart = paddedPos;
+    var drawPosEnd = paddedPos + size;
 
     if (ImGui.IsItemHovered()) {
       var texId = GetStoredTexture(textureHovered);
-      ImGui.GetWindowDrawList().AddImage(texId, pos, pos + size, uv0, uv1);
+      ImGui.GetWindowDrawList().AddImage(texId, drawPosStart, drawPosEnd, uv0, uv1);
     } else {
       var texId = GetStoredTexture(textureStandard);
-      ImGui.GetWindowDrawList().AddImage(texId, pos, pos + size, uv0, uv1);
+      ImGui.GetWindowDrawList().AddImage(texId, drawPosStart, drawPosEnd, uv0, uv1);
     }
 
     if (ImGui.IsItemClicked()) {
       buttonClicked.Invoke();
     }
+
+    ImGui.SetCursorScreenPos(pos + new Vector2(0, paddedClickArea.Y));
   }
 
   public static void CreateTexturedButtonWithLabel(
@@ -70,6 +81,9 @@ public partial class DirectRPG {
     ButtonClickedDelegate buttonClicked
   ) {
     var pos = ImGui.GetCursorScreenPos();
+
+    var sizeOffset = (PreviousParentSize - size) / 2;
+    pos.X += sizeOffset.X;
 
     ImGui.SetCursorScreenPos(pos);
     ImGui.InvisibleButton(buttonId, clickArea);

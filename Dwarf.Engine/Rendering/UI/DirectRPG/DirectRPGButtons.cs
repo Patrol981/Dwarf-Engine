@@ -68,6 +68,7 @@ public partial class DirectRPG {
     }
 
     ImGui.SetCursorScreenPos(pos + new Vector2(0, paddedClickArea.Y));
+    ImGui.Dummy(size);
   }
 
   public static void CreateTexturedButtonWithLabel(

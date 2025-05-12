@@ -12,7 +12,7 @@ public partial class DirectRPG {
   private static ITexture? s_MainBg;
   private static ITexture? s_RTSAtlas;
 
-  public static void CreateRTSTheme(Application app, ITexture atlasTexture) {
+  public static void CreateRTSTheme(Application app, ref ITexture atlasTexture) {
     s_MainBg = CreateTexture(app, "./Resources/UI/Banners/Carved_9Slides.png");
     s_RTSAtlas = atlasTexture;
   }

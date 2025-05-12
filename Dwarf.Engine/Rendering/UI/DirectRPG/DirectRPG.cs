@@ -35,6 +35,10 @@ public partial class DirectRPG {
     ImGui.SameLine();
   }
 
+  public static void NewLine() {
+    ImGui.NewLine();
+  }
+
   public static void UploadTexture(ITexture texture) {
     Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
   }

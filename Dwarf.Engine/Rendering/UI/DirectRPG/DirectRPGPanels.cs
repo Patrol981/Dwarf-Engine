@@ -11,6 +11,10 @@ public partial class DirectRPG {
     public ButtonClickedDelegate OnClickEvent;
   }
 
+  public struct IndexedImage {
+    public int TextureIndex;
+  }
+
   public static void CreateTexturedPanel(
     ITexture texture,
     Vector2 size

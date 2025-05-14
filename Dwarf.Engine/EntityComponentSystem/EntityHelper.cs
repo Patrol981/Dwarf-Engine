@@ -117,6 +117,8 @@ public static class EntityHelper {
     private Drawable2DComparer() { }
 
     public int Compare(IDrawable2D? a, IDrawable2D? b) {
+      if (a != null && a.Entity.CanBeDisposed) return 0;
+      if (b != null && b.Entity.CanBeDisposed) return 0;
       float az = a!.Entity.GetComponent<Transform>().Position.Z;
       float bz = b!.Entity.GetComponent<Transform>().Position.Z;
       if (az < bz) return -1;

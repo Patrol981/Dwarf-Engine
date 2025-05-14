@@ -9,23 +9,73 @@ public class HammerWorld {
   internal float Gravity = 9.80665f;
   const float THRESHOLD = 0.5f;
 
-  private HammerObject[] _sprites = [];
+  private Dictionary<BodyId, HammerObject> _sprites = [];
+  private Dictionary<(BodyId, BodyId), bool> _contactMap = [];
   private float _dt;
 
+  private readonly HammerInstance _hammerInstance;
+  private readonly object _hammerWorldLock = new();
+  private readonly object _bodiesLock = new();
+  private readonly object _spritesLock = new();
+
+  public HammerWorld(HammerInstance hammerInstance) {
+    _hammerInstance = hammerInstance;
+  }
+
   public Task Simulate(float dt) {
-    // await Task.Delay(TimeSpan.FromMilliseconds(dt));
-    // Thread.Sleep(TimeSpan.FromMilliseconds(dt));
-
     _dt = dt;
-    _sprites = [.. Bodies.Values.Where(x => x.ObjectType == Enums.ObjectType.Sprite)];
 
-    _ = ThreadPool.QueueUserWorkItem(new WaitCallback(HandleSprites!));
+    Dictionary<BodyId, HammerObject> snapshot;
+    lock (_bodiesLock) {
+      snapshot = new Dictionary<BodyId, HammerObject>(Bodies);
+    }
+
+    _sprites.Clear();
+    var keys = new List<BodyId>(snapshot.Keys);
+    for (int i = 0; i < keys.Count; i++) {
+      var key = keys[i];
+      var value = snapshot[key];
+      if (value.ObjectType == ObjectType.Sprite) {
+        _sprites[key] = value;
+      }
+    }
+
+    // _ = ThreadPool.QueueUserWorkItem(new WaitCallback(HandleSprites!));
+    Task.Run(() => HandleSprites());
     _ = ThreadPool.QueueUserWorkItem(HandleGravity!);
 
     return Task.CompletedTask;
   }
 
   internal void HandleGravity(object state) {
+    HammerObject[] values;
+
+    lock (_bodiesLock) {
+      values = new HammerObject[Bodies.Count];
+      Bodies.Values.CopyTo(values, 0);
+    }
+
+    for (int i = 0; i < values.Length; i++) {
+      var body = values[i];
+
+      if (body.MotionType == MotionType.Dynamic) {
+        HandleGrounded(body, _dt);
+      }
+
+      if (body.MotionType != MotionType.Static) {
+        float x = body.Velocity.X * _dt;
+        float y = body.Velocity.Y * _dt;
+
+        body.Velocity.X -= x;
+        body.Velocity.Y -= y;
+
+        body.Position.X += x;
+        body.Position.Y += y;
+      }
+    }
+  }
+
+  internal void HandleGravity_Old(object state) {
     foreach (var body in Bodies) {
       if (body.Value.MotionType == Enums.MotionType.Dynamic) {
         HandleGrounded(body.Value, _dt);
@@ -62,34 +112,118 @@ public class HammerWorld {
     }
   }
 
-  internal void HandleSprites(object state) {
-    var tilemaps = Bodies.Values.Where(x => x.ObjectType == Enums.ObjectType.Tilemap).ToArray();
+  internal void HandleSprites() {
+    HammerObject[] spriteValues;
+    BodyId[] spriteKeys;
 
-    foreach (var sprite1 in _sprites) {
-      var collidesWithAnythingGround = false;
-      foreach (var sprite2 in _sprites) {
-        if (sprite1 == sprite2) continue;
+    lock (_spritesLock) {
+      spriteValues = new HammerObject[_sprites.Count];
+      _sprites.Values.CopyTo(spriteValues, 0);
 
-        var isColl = AABB.CheckCollisionMTV(sprite1, sprite2, out var mtv);
-        if (isColl) {
-          var dotProduct = Vector2.Dot(sprite1.Velocity, sprite2.Position);
+      spriteKeys = new BodyId[_sprites.Count];
+      _sprites.Keys.CopyTo(spriteKeys, 0);
+    }
 
-          sprite1.Position += mtv;
-          sprite1.Velocity.Y = 0;
+    HammerObject[] tilemaps;
+
+    lock (_bodiesLock) {
+      var allBodies = new HammerObject[Bodies.Count];
+      Bodies.Values.CopyTo(allBodies, 0);
+
+      List<HammerObject> tilemapList = new();
+      for (int i = 0; i < allBodies.Length; i++) {
+        if (allBodies[i].ObjectType == ObjectType.Tilemap) {
+          tilemapList.Add(allBodies[i]);
         }
       }
 
-      float spriteMinX = sprite1.Position.X;
-      float spriteMaxX = spriteMinX + sprite1.AABB.Width;
-      float spriteMinY = sprite1.Position.Y;
-      float spriteMaxY = spriteMinY + sprite1.AABB.Height;
+      tilemaps = tilemapList.ToArray();
+    }
 
-      HandleTilemaps(sprite1, tilemaps, ref collidesWithAnythingGround);
+    for (int i = 0; i < spriteValues.Length; i++) {
+      var sprite1 = spriteValues[i];
+      var sprite1Id = spriteKeys[i];
+
+      bool collidesWithAnythingGround = false;
+
+      for (int j = 0; j < spriteValues.Length; j++) {
+        if (i == j) continue;
+
+        var sprite2 = spriteValues[j];
+        var isColl = AABB.CheckCollisionMTV(sprite1, sprite2, out var mtv);
+
+        if (isColl) {
+          if (sprite1 != null) {
+            sprite1.Position += mtv;
+            sprite1.Velocity.Y = 0;
+          }
+
+          lock (_hammerWorldLock) {
+            var pair = (sprite1Id, spriteKeys[j]);
+
+            if (_contactMap.TryAdd(pair, true))
+              _hammerInstance?.OnContactAdded?.Invoke(sprite1Id, spriteKeys[j]);
+            else
+              _hammerInstance?.OnContactPersisted?.Invoke(sprite1Id, spriteKeys[j]);
+          }
+        }
+      }
+
+      if (sprite1 != null) {
+        HandleTilemaps(sprite1, tilemaps, ref collidesWithAnythingGround);
+        sprite1.Grounded = collidesWithAnythingGround;
+      }
+    }
+  }
+
+
+  internal void HandleSprites_(object state) {
+    var cp = Bodies.Values.ToArray();
+    var tilemaps = cp.Where(x => x.ObjectType == Enums.ObjectType.Tilemap).ToArray();
+    var spriteCp = _sprites.ToArray();
+
+    // for(int s1 = 0; s1 < _sprites.)
+
+    foreach (var sprite1 in spriteCp) {
+      var collidesWithAnythingGround = false;
+      foreach (var sprite2 in spriteCp) {
+        if (sprite1.Value == sprite2.Value) continue;
+
+        var isColl = AABB.CheckCollisionMTV(sprite1.Value, sprite2.Value, out var mtv);
+        if (isColl) {
+          var dotProduct = Vector2.Dot(sprite1.Value.Velocity, sprite2.Value.Position);
+
+          sprite1.Value.Position += mtv;
+          sprite1.Value.Velocity.Y = 0;
+
+          lock (_hammerWorldLock) {
+            if (_contactMap.TryAdd((sprite1.Key, sprite2.Key), true)) {
+              _hammerInstance?.OnContactAdded?.Invoke(sprite1.Key, sprite2.Key);
+            } else {
+              _hammerInstance?.OnContactPersisted?.Invoke(sprite1.Key, sprite2.Key);
+            }
+          }
+        } else {
+          // lock (_hammerWorldLock) {
+          //   if (_contactMap.ContainsKey((sprite1.Key, sprite2.Key))) {
+          //     _contactMap.Remove((sprite1.Key, sprite2.Key));
+          //     _hammerInstance?.OnContactExit?.Invoke(sprite1.Key, sprite2.Key);
+          //   }
+          // }
+        }
+      }
+
+      float spriteMinX = sprite1.Value.Position.X;
+      float spriteMaxX = spriteMinX + sprite1.Value.AABB.Width;
+      float spriteMinY = sprite1.Value.Position.Y;
+      float spriteMaxY = spriteMinY + sprite1.Value.AABB.Height;
+
+      HandleTilemaps(sprite1.Value, tilemaps, ref collidesWithAnythingGround);
 
       if (collidesWithAnythingGround) {
-        sprite1.Grounded = true;
+        sprite1.Value.Grounded = true;
       } else {
-        sprite1.Grounded = false;
+        sprite1.Value.Grounded = false;
       }
     }
   }

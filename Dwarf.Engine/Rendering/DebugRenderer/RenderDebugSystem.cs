@@ -48,6 +48,7 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
     );
 
     for (int i = 0; i < entities.Length; i++) {
+      if (entities[i].CanBeDisposed) continue;
       if (entities[i].GetDrawable<IDebugRenderObject>() is not IDebugRenderObject targetEntity) continue;
       if (!targetEntity.Enabled) continue;
 

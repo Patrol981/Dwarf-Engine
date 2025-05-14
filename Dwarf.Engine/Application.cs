@@ -62,7 +62,7 @@ public class Application {
   private List<Entity> _entities = [];
   private readonly Queue<Entity> _entitiesQueue = new();
   private readonly Queue<MeshRenderer> _reloadQueue = new();
-  private readonly object _entitiesLock = new object();
+  public readonly object EntitiesLock = new object();
 
   private Entity _camera = new();
 
@@ -306,7 +306,8 @@ public class Application {
 
       PerformCalculations();
 
-      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
+      var cp = _entities.ToArray();
+      var updatable = cp.Where(x => x.CanBeDisposed == false).ToArray();
       MasterFixedUpdate(updatable.GetScriptsAsSpan());
       _onUpdate?.Invoke();
       MasterUpdate(updatable.GetScriptsAsArray());
@@ -569,17 +570,21 @@ public class Application {
 #endif
   }
 
-  public void AddEntity(Entity entity) {
-    lock (_entitiesLock) {
-      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
+  public void AddEntity(Entity entity, bool fenced = true) {
+    Mutex.WaitOne();
+    lock (EntitiesLock) {
       MasterAwake(new[] { entity }.GetScriptsAsSpan());
       MasterStart(new[] { entity }.GetScriptsAsSpan());
-      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
-      unsafe {
-        vkDestroyFence(Device.LogicalDevice, fence);
+      if (fenced) {
+        var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
+        vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+        unsafe {
+          vkDestroyFence(Device.LogicalDevice, fence);
+        }
       }
       _entitiesQueue.Enqueue(entity);
     }
+    Mutex.ReleaseMutex();
   }
 
   public void AddEntities(Entity[] entities) {
@@ -589,19 +594,19 @@ public class Application {
   }
 
   public List<Entity> GetEntities() {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       return _entities;
     }
   }
 
   public Entity? GetEntity(Guid entitiyId) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       return _entities.Where(x => x.EntityID == entitiyId).First();
     }
   }
 
   public void RemoveEntityAt(int index) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.RemoveAt(index);
@@ -609,7 +614,7 @@ public class Application {
   }
 
   public void RemoveEntity(Entity entity) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.Remove(entity);
@@ -617,7 +622,7 @@ public class Application {
   }
 
   public void RemoveEntity(Guid id) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       if (_entities.Count == 0) return;
       var target = _entities.Where((x) => x.EntityID == id).FirstOrDefault();
       if (target == null) return;
@@ -628,13 +633,13 @@ public class Application {
   }
 
   public void DestroyEntity(Entity entity) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       entity.CanBeDisposed = true;
     }
   }
 
   public void RemoveEntityRange(int index, int count) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       _entities.RemoveRange(index, count);
     }
   }

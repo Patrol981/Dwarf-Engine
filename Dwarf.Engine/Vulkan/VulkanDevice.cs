@@ -321,11 +321,13 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
+    Application.Instance.Mutex.WaitOne();
     vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
     vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
     if (destroy) {
       vkDestroyFence(_logicalDevice, fence);
     }
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public unsafe void SubmitQueue2(uint submitCount, VkSubmitInfo2* pSubmits, VkFence fence, bool destroy = false) {

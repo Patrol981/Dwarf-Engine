@@ -24,9 +24,11 @@ public class Entity {
   }
 
   public void AddComponent(Component component) {
+    Application.Instance.Mutex.WaitOne();
     if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     component.Owner = this;
     _componentManager.AddComponent(component);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public T GetComponent<T>() where T : Component, new() {

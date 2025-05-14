@@ -52,14 +52,18 @@ public static class EntityCreator {
   /// Adds <c>Transform</c> component to an <c>Entity</c>
   /// </summary>
   public static void AddTransform(this Entity entity, Vector3 position) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddTransform(position, Vector3.Zero, Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   /// <summary>
   /// Adds <c>Transform</c> component to an <c>Entity</c>
   /// </summary>
   public static void AddTransform(this Entity entity, Vector3 position, Vector3 rotation) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddTransform(position, rotation, Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   /// <summary>
@@ -70,17 +74,23 @@ public static class EntityCreator {
     if (rotation == null) { rotation = Vector3.Zero; }
     if (scale == null) { scale = Vector3.One; }
 
+    Application.Instance.Mutex.WaitOne();
     entity.AddComponent(new Transform(position.Value));
     entity.GetComponent<Transform>().Rotation = rotation.Value;
     entity.GetComponent<Transform>().Scale = scale.Value;
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddMaterial(Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity, MaterialData materialData) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddComponent(new MaterialComponent(materialData));
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity, Vector3? color) {
@@ -141,7 +151,9 @@ public static class EntityCreator {
   }
 
   public static SpriteRenderer.Builder AddSpriteBuilder(this Entity entity) {
-    return new SpriteRenderer.Builder(Application.Instance, entity);
+    var app = Application.Instance;
+    var builder = new SpriteRenderer.Builder(app, entity);
+    return builder;
   }
 
   public static void AddSprite(this Entity entity, string spritePath) {

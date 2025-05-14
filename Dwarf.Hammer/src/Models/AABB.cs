@@ -81,7 +81,12 @@ internal class AABB {
     return collX && collY;
   }
 
-  internal static bool CheckCollisionMTV(HammerObject a, HammerObject b, out Vector2 mtv) {
+  internal static bool CheckCollisionMTV(HammerObject? a, HammerObject? b, out Vector2 mtv) {
+    if (a == null || b == null) {
+      mtv = Vector2.Zero;
+      return false;
+    }
+
     float aMinX = a.Position.X;
     float aMaxX = aMinX + a.AABB.Width;
     float aMinY = a.Position.Y;

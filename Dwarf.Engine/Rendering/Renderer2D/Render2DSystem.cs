@@ -71,7 +71,6 @@ public class Render2DSystem : SystemBase {
       .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
       .Build();
 
-
     _spriteBuffer = new DwarfBuffer(
       _vmaAllocator,
       _device,
@@ -126,7 +125,7 @@ public class Render2DSystem : SystemBase {
     );
 
     for (int i = 0; i < drawables.Length; i++) {
-      if (!drawables[i].Active) continue;
+      if (!drawables[i].Active || drawables[i].Entity.CanBeDisposed) continue;
 
       var pushConstantData = new SpritePushConstant {
         SpriteMatrix = drawables[i].Entity.GetComponent<Transform>().Matrix4,

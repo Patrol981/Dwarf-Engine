@@ -1,5 +1,6 @@
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
 using Dwarf.Hammer.Models;
 using Dwarf.Math;
@@ -15,7 +16,7 @@ namespace Dwarf.Physics;
 public class Rigidbody2D : Component, IDisposable {
   private readonly Application _app;
   private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
-  private IPhysicsBody2D _physicsBody2D = null!;
+  public IPhysicsBody2D PhysicsBody2D { get; private set; } = null!;
   private Mesh? _collisionShape;
   public Vector2 Min { get; private set; } = Vector2.Zero;
   public Vector2 Max { get; private set; } = Vector2.Zero;
@@ -63,12 +64,12 @@ public class Rigidbody2D : Component, IDisposable {
     if (_collisionShape == null) throw new ArgumentNullException(nameof(_collisionShape));
     if (_app.Device == null) throw new Exception("Device cannot be null!");
 
-    _physicsBody2D = physicsBody2D;
+    PhysicsBody2D = physicsBody2D;
 
     var pos = Owner.GetComponent<Transform>().Position;
-    var shapeSettings = _physicsBody2D.ColldierMeshToPhysicsShape(Owner, _collisionShape);
-    _physicsBody2D.CreateAndAddBody(MotionType, shapeSettings, pos.ToVector2());
-    _physicsBody2D.GravityFactor = 0.1f;
+    var shapeSettings = PhysicsBody2D.ColldierMeshToPhysicsShape(Owner, _collisionShape);
+    PhysicsBody2D.CreateAndAddBody(MotionType, shapeSettings, pos.ToVector2());
+    PhysicsBody2D.GravityFactor = 0.1f;
   }
 
   public void InitBase() {
@@ -100,7 +101,7 @@ public class Rigidbody2D : Component, IDisposable {
   public void Update() {
     if (Owner.CanBeDisposed) return;
 
-    var pos = _physicsBody2D?.Position;
+    var pos = PhysicsBody2D?.Position;
     var transform = Owner!.GetComponent<Transform>();
 
     transform.Position.X = pos.HasValue ? pos.Value.X : 0;
@@ -109,27 +110,27 @@ public class Rigidbody2D : Component, IDisposable {
 
   public void AddForce(Vector2 vec2) {
     if (Owner.CanBeDisposed) return;
-    _physicsBody2D.AddForce(vec2);
+    PhysicsBody2D.AddForce(vec2);
   }
 
   public void AddVelocity(Vector2 vec2) {
     if (Owner.CanBeDisposed) return;
-    _physicsBody2D.AddLinearVelocity(vec2);
+    PhysicsBody2D.AddLinearVelocity(vec2);
   }
 
   public void AddImpule(Vector2 vec2) {
     if (Owner.CanBeDisposed) return;
-    _physicsBody2D.AddImpulse(vec2);
+    PhysicsBody2D.AddImpulse(vec2);
   }
 
   public void Translate(Vector2 vec2) {
     if (Owner.CanBeDisposed) return;
-    _physicsBody2D.AddLinearVelocity(vec2);
+    PhysicsBody2D.AddLinearVelocity(vec2);
   }
 
   public void SetPosition(Vector2 vec2) {
     if (Owner.CanBeDisposed) return;
-    _physicsBody2D.Position = vec2;
+    PhysicsBody2D.Position = vec2;
   }
 
   public void InvokeCollision(CollisionState collisionState, Entity otherColl) {
@@ -138,6 +139,7 @@ public class Rigidbody2D : Component, IDisposable {
     for (short i = 0; i < scripts.Length; i++) {
       switch (collisionState) {
         case CollisionState.Enter:
+          Logger.Info("Invoke Enter");
           scripts[i].CollisionEnter(otherColl);
           break;
         case CollisionState.Stay:
@@ -153,7 +155,7 @@ public class Rigidbody2D : Component, IDisposable {
   }
 
   public void Dispose() {
-    _physicsBody2D.Dispose();
+    PhysicsBody2D.Dispose();
     GC.SuppressFinalize(this);
   }
 }

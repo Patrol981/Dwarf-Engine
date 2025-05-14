@@ -146,10 +146,17 @@ public class SpriteRenderer : Component, IDrawable2D {
     return _cachedSize;
   }
 
-  public class Builder(Application app, Entity? entity = null!) {
-    private readonly Application _app = app;
+  public class Builder {
+    private readonly Application _app;
     private readonly List<Sprite> _sprites = [];
-    private readonly Entity? _entity = entity;
+    private readonly Entity? _entity;
+
+    public Builder(Application app, Entity? entity = null!) {
+      _app = app;
+      _entity = entity;
+
+      _app.Mutex.WaitOne();
+    }
 
     public Builder AddSpriteSheet(string spriteTexture, int rows, int columns) {
       _sprites.Add(new Sprite(_app, spriteTexture, rows, columns, true));
@@ -181,8 +188,10 @@ public class SpriteRenderer : Component, IDrawable2D {
       };
       if (_entity != null) {
         _entity.AddComponent(spriteRenderer);
+        _app.Mutex.ReleaseMutex();
         return null!;
       } else {
+        _app.Mutex.ReleaseMutex();
         return spriteRenderer;
       }
     }

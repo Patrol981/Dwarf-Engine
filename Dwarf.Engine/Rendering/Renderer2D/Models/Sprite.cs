@@ -106,12 +106,15 @@ public class Sprite {
 
     if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), path);
 
+    app.Mutex.WaitOne();
     _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
     _isSpriteSheet = false;
     _repeatCount = repeatCount;
 
     Init(vertexSize);
+
+    app.Mutex.ReleaseMutex();
   }
 
   public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {

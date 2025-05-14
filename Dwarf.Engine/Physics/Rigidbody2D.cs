@@ -139,7 +139,6 @@ public class Rigidbody2D : Component, IDisposable {
     for (short i = 0; i < scripts.Length; i++) {
       switch (collisionState) {
         case CollisionState.Enter:
-          Logger.Info("Invoke Enter");
           scripts[i].CollisionEnter(otherColl);
           break;
         case CollisionState.Stay:

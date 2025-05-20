@@ -1,19 +1,14 @@
 using System.Numerics;
 
 using Dwarf.AbstractionLayer;
-using Dwarf.EntityComponentSystem;
-using Dwarf.Extensions.Logging;
 using Dwarf.Math;
-using Dwarf.Rendering;
-using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
-
-using StbImageSharp;
 
 using Vortice.Vulkan;
 
 
 namespace Dwarf.Rendering.Renderer2D.Models;
+
 public class Sprite {
   private const float ASPECT_ONE = 1.0f;
   public const float VERTEX_SIZE = 0.2f;
@@ -29,7 +24,7 @@ public class Sprite {
 
   private Guid _textureIdRef = Guid.Empty;
   private Mesh _spriteMesh = null!;
-  private VulkanTexture _spriteTexture = null!;
+  private ITexture _spriteTexture = null!;
   private float _aspectRatio = ASPECT_ONE;
   private float _spriteSheetTileSize = SPRITE_TILE_SIZE_NONE;
   private int _spritesPerRow = 1;
@@ -61,7 +56,7 @@ public class Sprite {
 
     if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), path);
 
-    _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
+    _spriteTexture = _textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
     _spritesPerRow = spritesPerRow;
     _spritesPerColumn = spritesPerColumn;
@@ -84,7 +79,7 @@ public class Sprite {
 
     if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), path);
 
-    _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
+    _spriteTexture = _textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
     _spriteSheetTileSize = spriteSheetTileSize;
     _isSpriteSheet = isSpriteSheet;
@@ -107,7 +102,7 @@ public class Sprite {
     if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path), path);
 
     app.Mutex.WaitOne();
-    _spriteTexture = (VulkanTexture)_textureManager.AddTextureLocal(path, flip).Result;
+    _spriteTexture = _textureManager.AddTextureLocal(path, flip).Result;
     _textureIdRef = _textureManager.GetTextureIdLocal(_spriteTexture.TextureName);
     _isSpriteSheet = false;
     _repeatCount = repeatCount;

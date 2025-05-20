@@ -31,6 +31,7 @@ public class SpriteRenderer : Component, IDrawable2D {
   public bool FlipX { get; set; }
   public bool FlipY { get; set; }
   public bool NeedPipelineCache => false;
+  public bool DescriptorBuilt => Sprites.Any(x => x.Texture.TextureDescriptor != 0);
 
   public float DirectionX => FlipX ? -1 : 1;
 

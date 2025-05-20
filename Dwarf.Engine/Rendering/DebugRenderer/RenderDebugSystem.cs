@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 using Dwarf.EntityComponentSystem;
+using Dwarf.Globals;
 using Dwarf.Physics;
 using Dwarf.Physics.Interfaces;
 using Dwarf.Rendering.Renderer3D;
@@ -34,6 +35,8 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
   }
 
   public unsafe void Render(FrameInfo frameInfo, ReadOnlySpan<Entity> entities) {
+    if (!PerfMonitor.IsDebug) return;
+
     BindPipeline(frameInfo.CommandBuffer);
 
     vkCmdBindDescriptorSets(
@@ -66,9 +69,10 @@ public class RenderDebugSystem : SystemBase, IRenderSystem {
       );
 
       if (!entities[i].CanBeDisposed) {
+        targetEntity.Bind(frameInfo.CommandBuffer, 0);
+
         for (uint x = 0; x < targetEntity!.MeshsesCount; x++) {
           if (!targetEntity.FinishedInitialization) continue;
-          targetEntity.Bind(frameInfo.CommandBuffer, x);
           targetEntity.Draw(frameInfo.CommandBuffer, x);
         }
       }

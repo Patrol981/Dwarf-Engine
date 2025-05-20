@@ -9,6 +9,8 @@ public interface IDrawable2D : IDrawable {
   void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool);
   void CachePipelineLayout(object pipelineLayout);
 
+  bool DescriptorBuilt { get; }
+
   Entity Entity { get; }
   bool Active { get; }
   ITexture Texture { get; }

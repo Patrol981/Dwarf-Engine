@@ -9,6 +9,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering;
+
 public class Skybox : IDisposable {
   protected class SkyboxMesh {
     public TexturedVertex[] Vertices = [];
@@ -249,7 +250,7 @@ public class Skybox : IDisposable {
     _material = new(new Vector3(1.0f, 1.0f, 1.0f));
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-    .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+    .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.Fragment)
     .Build();
 
     var meshVertices = new List<TexturedVertex>();
@@ -393,14 +394,14 @@ public class Skybox : IDisposable {
   private void CreateBuffers() {
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(1000)
-      .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.UniformBufferDynamic, 1000)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _texturePool = new DescriptorPool.Builder(_device)
       .SetMaxSets(6)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 1)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 1)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _skyboxBuffer = new DwarfBuffer(

@@ -1,3 +1,4 @@
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Lists;
 
 using Vortice.Vulkan;
@@ -6,7 +7,7 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class DescriptorPool : IDisposable {
+public class DescriptorPool : IDescriptorPool {
   private VkDescriptorPool _descriptorPool;
   public class Builder {
     private readonly VulkanDevice _device;
@@ -25,19 +26,19 @@ public class DescriptorPool : IDisposable {
       this._device = device;
     }
 
-    public Builder AddPoolSize(VkDescriptorType descriptorType, uint count) {
+    public Builder AddPoolSize(DescriptorType descriptorType, uint count) {
       VkDescriptorPoolSize poolSize = new() {
         descriptorCount = count,
-        type = descriptorType
+        type = (VkDescriptorType)descriptorType
       };
       var tmpList = _poolSizes.ToList();
       tmpList.Add(poolSize);
-      _poolSizes = tmpList.ToArray();
+      _poolSizes = [.. tmpList];
       return this;
     }
 
-    public Builder SetPoolFlags(VkDescriptorPoolCreateFlags flags) {
-      _poolFlags = flags;
+    public Builder SetPoolFlags(DescriptorPoolCreateFlags flags) {
+      _poolFlags = (VkDescriptorPoolCreateFlags)flags;
       return this;
     }
 
@@ -109,6 +110,10 @@ public class DescriptorPool : IDisposable {
 
   public VkDescriptorPool GetVkDescriptorPool() {
     return _descriptorPool;
+  }
+
+  public ulong GetHandle() {
+    return _descriptorPool.Handle;
   }
 
   public VulkanDevice Device { get; }

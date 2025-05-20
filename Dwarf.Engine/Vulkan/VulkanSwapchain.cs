@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Pathfinding;
 using Dwarf.Utils;
@@ -913,19 +914,19 @@ public class VulkanSwapchain : IDisposable {
 
   private unsafe void CreateDescriptors() {
     _inputAttachmentsLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.InputAttachment, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.InputAttachment, ShaderStageFlags.Fragment)
       .Build();
 
     _postProcessLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(100)
-      .AddPoolSize(VkDescriptorType.InputAttachment, 10)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
+      .AddPoolSize(DescriptorType.InputAttachment, 10)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 20)
       .Build();
 
     _imageDescriptors = new VkDescriptorSet[_colorImageViews.Length];

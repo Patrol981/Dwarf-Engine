@@ -348,29 +348,29 @@ public class Application {
   private unsafe Task InitResources() {
     _globalPool = new DescriptorPool.Builder(Device)
       .SetMaxSets(10)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
+      .AddPoolSize(DescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
       .Build();
 
     _descriptorSetLayouts.TryAdd("Global", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("PointLight", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("ObjectData", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
       // .AddBinding(1, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
       .Build());
 
     // _descriptorSetLayouts.TryAdd("InputAttachments", new DescriptorSetLayout.Builder(Device)
@@ -570,20 +570,21 @@ public class Application {
 #endif
   }
 
-  public void AddEntity(Entity entity, bool fenced = true) {
+  public void AddEntity(Entity entity, bool fenced = false) {
     Mutex.WaitOne();
-    lock (EntitiesLock) {
-      MasterAwake(new[] { entity }.GetScriptsAsSpan());
-      MasterStart(new[] { entity }.GetScriptsAsSpan());
-      if (fenced) {
-        var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-        vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
-        unsafe {
-          vkDestroyFence(Device.LogicalDevice, fence);
-        }
+    // lock (EntitiesLock) {
+
+    // }
+    MasterAwake(new[] { entity }.GetScriptsAsSpan());
+    MasterStart(new[] { entity }.GetScriptsAsSpan());
+    if (fenced) {
+      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
+      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      unsafe {
+        vkDestroyFence(Device.LogicalDevice, fence);
       }
-      _entitiesQueue.Enqueue(entity);
     }
+    _entitiesQueue.Enqueue(entity);
     Mutex.ReleaseMutex();
   }
 
@@ -843,7 +844,7 @@ public class Application {
   }
 
   private void PerformCalculations() {
-    Systems.UpdateCalculationSystems([.. GetEntities()]);
+    Systems?.UpdateCalculationSystems([.. GetEntities()]);
   }
 
   internal unsafe void LoaderLoop() {

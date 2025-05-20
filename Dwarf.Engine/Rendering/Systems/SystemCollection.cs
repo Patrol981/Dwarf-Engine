@@ -185,14 +185,14 @@ public class SystemCollection : IDisposable {
     PipelineConfigInfo pipelineConfig,
     ReadOnlySpan<Entity> entities
   ) {
-    _render2DSystem?.Dispose();
-    _render2DSystem = new Render2DSystem(
-      vmaAllocator,
-      device,
-      renderer,
-      globalLayout,
-      pipelineConfig
-    );
+    // _render2DSystem?.Dispose();
+    // _render2DSystem = new Render2DSystem(
+    //   vmaAllocator,
+    //   device,
+    //   renderer,
+    //   globalLayout,
+    //   pipelineConfig
+    // );
     _render2DSystem?.Setup(entities.ToArray().DistinctI2D(), ref textureManager);
   }
 

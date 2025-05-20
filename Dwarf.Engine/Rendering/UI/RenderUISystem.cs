@@ -25,11 +25,11 @@ public class RenderUISystem : SystemBase {
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.Fragment)
       .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [

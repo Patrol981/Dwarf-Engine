@@ -26,6 +26,7 @@ public class Tilemap : Component, IDrawable2D {
   public Entity Entity => Owner;
   public bool Active => Owner.Active;
   public bool NeedPipelineCache => true;
+  public bool DescriptorBuilt => Texture.TextureDescriptor != 0;
   public ITexture Texture => null!;
 
   public Tilemap() {
@@ -93,8 +94,6 @@ public class Tilemap : Component, IDrawable2D {
   }
 
   public void CreateTilemap(string[] imageSource) {
-    // _tilemapAtlas = (VulkanTexture)_application.TextureManager.AddTextureLocal(imageSource).Result;
-
     for (int i = 0; i < Layers.Count; i++) {
       Logger.Info($"Is coll: {Layers[i].IsCollision}");
       Layers[i].GenerateMesh();

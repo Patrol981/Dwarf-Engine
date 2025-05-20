@@ -40,13 +40,13 @@ public partial class DirectRPG {
   }
 
   public static void UploadTexture(ITexture texture) {
-    Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
+    Application.Instance.GuiController.GetOrCreateImGuiBinding(texture);
   }
 
   public static ITexture CreateTexture(Application app, string path) {
     app.TextureManager.AddTextureGlobal(path).Wait();
     var textureId = app.TextureManager.GetTextureIdGlobal(path);
-    var texture = (VulkanTexture)app.TextureManager.GetTextureGlobal(textureId);
+    var texture = app.TextureManager.GetTextureGlobal(textureId);
     UploadTexture(texture);
     return texture;
   }
@@ -58,7 +58,7 @@ public partial class DirectRPG {
   }
 
   public static nint GetStoredTexture(ITexture texture) {
-    return Application.Instance.GuiController.GetOrCreateImGuiBinding((VulkanTexture)texture);
+    return Application.Instance.GuiController.GetOrCreateImGuiBinding(texture);
   }
 
   public static void AlignNextWindow(Anchor anchor, Vector2 size, bool stick = true) {

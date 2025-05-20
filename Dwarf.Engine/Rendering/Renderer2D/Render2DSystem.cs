@@ -16,9 +16,14 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.Renderer2D;
+
 public class Render2DSystem : SystemBase {
   private DwarfBuffer _spriteBuffer = null!;
   // private unsafe SpritePushConstant* _spritePushConstant;
+
+  private int _prevTexCount = -1;
+  private const uint MAX_SETS = 10000;
+  // private int _texCount = -1;
 
   public Render2DSystem(
     VmaAllocator vmaAllocator,
@@ -28,12 +33,12 @@ public class Render2DSystem : SystemBase {
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.SampledImage, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.Sampler, ShaderStageFlags.Fragment)
       .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
@@ -49,6 +54,15 @@ public class Render2DSystem : SystemBase {
       PipelineProvider = new PipelineSpriteProvider(),
       DescriptorSetLayouts = descriptorSetLayouts,
     });
+
+    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
+      .SetMaxSets(MAX_SETS)
+      .AddPoolSize(DescriptorType.SampledImage, (uint)_texturesCount)
+      .AddPoolSize(DescriptorType.Sampler, (uint)_texturesCount)
+      .SetPoolFlags(DescriptorPoolCreateFlags.None)
+      .Build();
+
+    _texturesCount = -1;
   }
 
   public unsafe void Setup(ReadOnlySpan<IDrawable2D> drawables, ref TextureManager textures) {
@@ -64,30 +78,48 @@ public class Render2DSystem : SystemBase {
 
     _texturesCount = CalculateTextureCount(drawables);
 
-    _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
+    if (_texturesCount > MAX_SETS) {
+      _descriptorPool?.Dispose();
+      _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.None)
+      .AddPoolSize(DescriptorType.SampledImage, (uint)_texturesCount)
+      .AddPoolSize(DescriptorType.Sampler, (uint)_texturesCount)
+      .SetPoolFlags(DescriptorPoolCreateFlags.None)
       .Build();
+    }
 
-    _spriteBuffer = new DwarfBuffer(
-      _vmaAllocator,
-      _device,
-      (ulong)Unsafe.SizeOf<SpritePushConstant>(),
-      (uint)_texturesCount,
-      BufferUsage.UniformBuffer,
-      MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-      ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
-    );
+    // _spriteBuffer?.Dispose();
+    // _spriteBuffer = new DwarfBuffer(
+    //   _vmaAllocator,
+    //   _device,
+    //   (ulong)Unsafe.SizeOf<VkDrawIndexedIndirectCommand>(),
+    //   (uint)_texturesCount,
+    //   BufferUsage.IndirectBuffer,
+    //   MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
+    //   ((VulkanDevice)_device).Properties.limits.minUniformBufferOffsetAlignment
+    // );
 
 
     for (int i = 0; i < drawables.Length; i++) {
+      if (drawables[i].DescriptorBuilt) continue;
       drawables[i].BuildDescriptors(_textureSetLayout, _descriptorPool);
     }
   }
 
   public bool CheckSizes(ReadOnlySpan<IDrawable2D> drawables) {
+    // if (_texturesCount == -1) {
+    //   var textureManager = Application.Instance.TextureManager;
+    //   // Setup(drawables, ref textureManager);
+    // }
+    var newCount = CalculateTextureCount(drawables);
+    if (newCount > _texturesCount) {
+      return false;
+    }
+
+    return true;
+  }
+
+  public bool CheckSizesOld(ReadOnlySpan<IDrawable2D> drawables) {
     if (_spriteBuffer == null) {
       var textureManager = Application.Instance.TextureManager;
       Setup(drawables, ref textureManager);
@@ -124,6 +156,9 @@ public class Render2DSystem : SystemBase {
       null
     );
 
+    string lastTexture = "";
+    uint lastVertCount = 0;
+
     for (int i = 0; i < drawables.Length; i++) {
       if (!drawables[i].Active || drawables[i].Entity.CanBeDisposed) continue;
 
@@ -144,14 +179,21 @@ public class Render2DSystem : SystemBase {
         );
 
       if (!drawables[i].Entity.CanBeDisposed && drawables[i].Active) {
-        var pipelineLayout = _pipelines["main"].PipelineLayout;
-        if (drawables[i].NeedPipelineCache) {
-          drawables[i].CachePipelineLayout(pipelineLayout);
-        } else {
-          Descriptor.BindDescriptorSet(drawables[i].Texture.TextureDescriptor, frameInfo, pipelineLayout, 2, 1);
+        if (lastTexture != drawables[i].Texture.TextureName) {
+          var pipelineLayout = _pipelines["main"].PipelineLayout;
+          if (drawables[i].NeedPipelineCache) {
+            drawables[i].CachePipelineLayout(pipelineLayout);
+          } else {
+            Descriptor.BindDescriptorSet(drawables[i].Texture.TextureDescriptor, frameInfo, pipelineLayout, 2, 1);
+          }
+          lastTexture = drawables[i].Texture.TextureName;
         }
 
-        drawables[i].Bind(frameInfo.CommandBuffer, 0);
+        if (lastVertCount != drawables[i].CollisionMesh.VertexCount) {
+          drawables[i].Bind(frameInfo.CommandBuffer, 0);
+          lastVertCount = (uint)drawables[i].CollisionMesh.VertexCount;
+        }
+
         drawables[i].Draw(frameInfo.CommandBuffer);
       }
     }

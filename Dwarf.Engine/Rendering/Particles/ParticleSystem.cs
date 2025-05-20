@@ -31,8 +31,8 @@ public class ParticleSystem : SystemBase {
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _textureLayout = new DescriptorSetLayout.Builder(device)
-      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.SampledImage, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.Sampler, ShaderStageFlags.Fragment)
       .Build();
 
     VkDescriptorSetLayout[] descriptorSetLayouts = [
@@ -84,8 +84,8 @@ public class ParticleSystem : SystemBase {
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)s_particles.Count)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)s_particles.Count)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.UniformBuffer, (uint)s_particles.Count)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _requiredCapacity = requiredCapacity;
@@ -94,13 +94,13 @@ public class ParticleSystem : SystemBase {
     if (_texturesCount > 0) {
       _texturePool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets((uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.SampledImage, (uint)_texturesCount)
-      .AddPoolSize(VkDescriptorType.Sampler, (uint)_texturesCount)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.SampledImage, (uint)_texturesCount)
+      .AddPoolSize(DescriptorType.Sampler, (uint)_texturesCount)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
       foreach (var textureId in s_textures) {
-        var targetTexture = (VulkanTexture)_textureManager.GetTextureLocal(textureId);
+        var targetTexture = textureManager.GetTextureLocal(textureId);
         targetTexture.BuildDescriptor(_textureLayout, _texturePool);
       }
     }
@@ -156,9 +156,11 @@ public class ParticleSystem : SystemBase {
 
       if (prevTexture != particles[i].ParticleTexture) {
         prevTexture = particles[i].ParticleTexture;
+        ;
+        // if (vkTexture.VkTextureDescriptor.IsNull) {
 
-        var vkTexture = (VulkanTexture)prevTexture!;
-        if (vkTexture.VkTextureDescriptor.IsNull) {
+        var vkTexture = prevTexture!;
+        if (vkTexture.TextureDescriptor == 0) {
           validDesc = false;
         } else {
           Descriptor.BindDescriptorSet(

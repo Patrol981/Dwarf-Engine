@@ -55,9 +55,9 @@ public class PostProcessingSystem : SystemBase {
     (PostProcessInfo*)Marshal.AllocHGlobal(Unsafe.SizeOf<PostProcessInfo>());
   private readonly TextureManager _textureManager;
 
-  // private VulkanTexture _inputTexture1 = null!;
-  // private VulkanTexture _inputTexture2 = null!;
-  // private VulkanTexture _inputTexture3 = null!;
+  // private ITexture _inputTexture1 = null!;
+  // private ITexture _inputTexture2 = null!;
+  // private ITexture _inputTexture3 = null!;
 
   // private const string HatchOneTextureName = "./Resources/zaarg.png";
   // // "./Resources/twilight-5-1x.png";
@@ -66,7 +66,7 @@ public class PostProcessingSystem : SystemBase {
   // private const string HatchTwoTextureName = "./Resources/slso8-1x.png";
   // private const string HatchThreeTextureName = "./Resources/justparchment8-1x.png";
 
-  private readonly VulkanTexture[] _inputTextures = [];
+  private readonly ITexture[] _inputTextures = [];
 
   public PostProcessingSystem(
     VmaAllocator vmaAllocator,
@@ -79,15 +79,15 @@ public class PostProcessingSystem : SystemBase {
     _textureManager = Application.Instance.TextureManager;
 
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       // .AddBinding(2, VkDescriptorType.SampledImage, VkShaderStageFlags.AllGraphics)
       // .AddBinding(3, VkDescriptorType.Sampler, VkShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.SampledImage, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.Sampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     VkDescriptorSetLayout[] layouts = [
@@ -110,7 +110,7 @@ public class PostProcessingSystem : SystemBase {
     });
 
     if (systemConfiguration.PostProcessInputTextures != null) {
-      _inputTextures = new VulkanTexture[systemConfiguration.PostProcessInputTextures.Length];
+      _inputTextures = new ITexture[systemConfiguration.PostProcessInputTextures.Length];
     }
 
     Setup(systemConfiguration);
@@ -121,10 +121,10 @@ public class PostProcessingSystem : SystemBase {
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(4)
-      .AddPoolSize(VkDescriptorType.SampledImage, 10)
-      .AddPoolSize(VkDescriptorType.Sampler, 10)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.SampledImage, 10)
+      .AddPoolSize(DescriptorType.Sampler, 10)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 20)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     var texLen = systemConfiguration.PostProcessInputTextures?.Length;
@@ -134,7 +134,7 @@ public class PostProcessingSystem : SystemBase {
       if (_inputTextures[i] != null) continue;
       _textureManager.AddTextureGlobal(systemConfiguration.PostProcessInputTextures![i]).Wait();
       var id = _textureManager.GetTextureIdGlobal(systemConfiguration.PostProcessInputTextures[i]);
-      _inputTextures[i] = (VulkanTexture)_textureManager.GetTextureGlobal(id);
+      _inputTextures[i] = _textureManager.GetTextureGlobal(id);
       _inputTextures[i].BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
   }

@@ -121,14 +121,14 @@ public unsafe class DynamicRenderer : IRenderer {
 
   private unsafe void CreateDescriptors() {
     _postProcessLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(100)
-      .AddPoolSize(VkDescriptorType.InputAttachment, 10)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
+      .AddPoolSize(DescriptorType.InputAttachment, 10)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 20)
       .Build();
 
     ImageDescriptors = new VkDescriptorSet[Swapchain.ImageViews.Length];

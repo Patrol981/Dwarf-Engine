@@ -10,7 +10,7 @@ public class TilemapLayer {
   private readonly Tilemap _parent;
 
   public Mesh LayerMesh { get; private set; } = null!;
-  public VulkanTexture LayerTexture { get; private set; } = null!;
+  public ITexture LayerTexture { get; private set; } = null!;
   public TileInfo[,] Tiles { get; set; }
   public bool IsCollision { get; init; }
 
@@ -165,7 +165,7 @@ public class TilemapLayer {
   }
 
   public void SetupTexture(string path) {
-    LayerTexture = (VulkanTexture)_app.TextureManager.AddTextureLocal(path).Result;
+    LayerTexture = _app.TextureManager.AddTextureLocal(path).Result;
   }
 
   private (float, float, float, float) GetUVCoords(TileInfo tileInfo) {

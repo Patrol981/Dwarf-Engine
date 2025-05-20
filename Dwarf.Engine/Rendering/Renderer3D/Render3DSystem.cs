@@ -52,7 +52,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private List<(string, int)> _skinnedGroups = [];
   private List<(string, int)> _notSkinnedGroups = [];
 
-  private VulkanTexture _hatchTexture = null!;
+  private ITexture _hatchTexture = null!;
   private DescriptorSetLayout _previousTexturesLayout = null!;
 
   public Render3DSystem(
@@ -63,24 +63,24 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBufferDynamic, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBufferDynamic, ShaderStageFlags.AllGraphics)
       .Build();
 
     _jointDescriptorLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
       .Build();
 
     _textureSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.SampledImage, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.Sampler, ShaderStageFlags.Fragment)
 
       // .AddBinding(2, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
       // .AddBinding(3, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
       .Build();
 
     _previousTexturesLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     VkDescriptorSetLayout[] basicLayouts = [
@@ -134,10 +134,10 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private void BuildTargetDescriptorTexture(Entity entity, ref TextureManager textures, int modelPart = 0) {
     var target = entity.GetDrawable<IRender3DElement>() as IRender3DElement;
     var id = target!.GetTextureIdReference(modelPart);
-    var texture = (VulkanTexture)textures.GetTextureLocal(id);
+    var texture = textures.GetTextureLocal(id);
     if (texture == null) {
       var nid = textures.GetTextureIdLocal("./Resources/Textures/base/no_texture.png");
-      texture = (VulkanTexture)textures.GetTextureLocal(nid);
+      texture = textures.GetTextureLocal(nid);
     }
 
     texture.BuildDescriptor(_textureSetLayout, _descriptorPool);
@@ -146,11 +146,11 @@ public class Render3DSystem : SystemBase, IRenderSystem {
   private void BuildTargetDescriptorTexture(IRender3DElement target, ref TextureManager textureManager) {
     for (int i = 0; i < target.MeshedNodesCount; i++) {
       var textureId = target.GetTextureIdReference(i);
-      var texture = (VulkanTexture)textureManager.GetTextureLocal(textureId);
+      var texture = textureManager.GetTextureLocal(textureId);
 
       if (texture == null) {
         var nid = textureManager.GetTextureIdLocal("./Resources/Textures/base/no_texture.png");
-        texture = (VulkanTexture)textureManager.GetTextureLocal(nid);
+        texture = textureManager.GetTextureLocal(nid);
       }
 
       if (texture == null) return;
@@ -227,13 +227,13 @@ public class Render3DSystem : SystemBase, IRenderSystem {
 
     _descriptorPool = new DescriptorPool.Builder((VulkanDevice)_device)
       .SetMaxSets(10000)
-      .AddPoolSize(VkDescriptorType.SampledImage, 1000)
-      .AddPoolSize(VkDescriptorType.Sampler, 1000)
-      .AddPoolSize(VkDescriptorType.UniformBufferDynamic, 1000)
-      .AddPoolSize(VkDescriptorType.InputAttachment, 1000)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, 1000)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.SampledImage, 1000)
+      .AddPoolSize(DescriptorType.Sampler, 1000)
+      .AddPoolSize(DescriptorType.UniformBufferDynamic, 1000)
+      .AddPoolSize(DescriptorType.InputAttachment, 1000)
+      .AddPoolSize(DescriptorType.UniformBuffer, 1000)
+      .AddPoolSize(DescriptorType.StorageBuffer, 1000)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
     _texturesCount = CalculateLengthOfPool(entities);
@@ -275,7 +275,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     if (_hatchTexture == null) {
       textures.AddTextureGlobal(HatchTextureName).Wait();
       var id = textures.GetTextureIdGlobal(HatchTextureName);
-      _hatchTexture = (VulkanTexture)textures.GetTextureGlobal(id);
+      _hatchTexture = textures.GetTextureGlobal(id);
       _hatchTexture.BuildDescriptor(_textureSetLayout, _descriptorPool);
     }
 

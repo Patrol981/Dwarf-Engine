@@ -9,7 +9,6 @@ using Dwarf.Vulkan;
 using glTFLoader;
 using glTFLoader.Schema;
 using Vortice.Vulkan;
-using static Dwarf.VulkanTexture;
 using Node = glTFLoader.Schema.Node;
 
 namespace Dwarf.Loaders;
@@ -117,11 +116,11 @@ public static partial class GLTFLoaderKHR {
       var gltfImage = gltf.Images[src];
       var textureSampler = new TextureSampler();
       if (!gltfTexture.Sampler.HasValue) {
-        textureSampler.MagFilter = VkFilter.Linear;
-        textureSampler.MinFilter = VkFilter.Linear;
-        textureSampler.AddressModeU = VkSamplerAddressMode.Repeat;
-        textureSampler.AddressModeV = VkSamplerAddressMode.Repeat;
-        textureSampler.AddressModeW = VkSamplerAddressMode.Repeat;
+        textureSampler.MagFilter = IFilter.Linear;
+        textureSampler.MinFilter = IFilter.Linear;
+        textureSampler.AddressModeU = ISamplerAddressMode.Repeat;
+        textureSampler.AddressModeV = ISamplerAddressMode.Repeat;
+        textureSampler.AddressModeW = ISamplerAddressMode.Repeat;
       } else {
         textureSampler = textureSamplers[gltfTexture.Sampler.Value];
       }
@@ -129,7 +128,7 @@ public static partial class GLTFLoaderKHR {
       var id = app.TextureManager.GetTextureIdLocal($"{textureName}_{textureIds.Count}");
       ITexture texture = null!;
       if (id == Guid.Empty) {
-        texture = VulkanTexture.LoadFromGLTF(
+        texture = TextureLoader.LoadFromGLTF(
           app.VmaAllocator,
           app.Device,
           gltf,
@@ -321,35 +320,35 @@ public static partial class GLTFLoaderKHR {
     }
   }
 
-  private static VkFilter GetFilterMode(int filterMode) {
+  private static IFilter GetFilterMode(int filterMode) {
     switch (filterMode) {
       case -1:
       case 9728:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9729:
-        return VkFilter.Linear;
+        return IFilter.Linear;
       case 9984:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9985:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9986:
-        return VkFilter.Linear;
+        return IFilter.Linear;
       case 9987:
-        return VkFilter.Linear;
+        return IFilter.Linear;
     }
 
     throw new ArgumentException($"Unknkown filter {filterMode}");
   }
 
-  private static VkSamplerAddressMode GetWrapMode(int wrapMode) {
+  private static ISamplerAddressMode GetWrapMode(int wrapMode) {
     switch (wrapMode) {
       case -1:
       case 10497:
-        return VkSamplerAddressMode.Repeat;
+        return ISamplerAddressMode.Repeat;
       case 33071:
-        return VkSamplerAddressMode.ClampToEdge;
+        return ISamplerAddressMode.ClampToEdge;
       case 33648:
-        return VkSamplerAddressMode.MirroredRepeat;
+        return ISamplerAddressMode.MirroredRepeat;
     }
 
     throw new ArgumentException($"Unknown wrap mode {wrapMode}");

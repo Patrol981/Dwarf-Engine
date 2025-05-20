@@ -42,12 +42,13 @@ public class HammerWorld {
 
     // _ = ThreadPool.QueueUserWorkItem(new WaitCallback(HandleSprites!));
     Task.Run(() => HandleSprites());
-    _ = ThreadPool.QueueUserWorkItem(HandleGravity!);
+    Task.Run(() => HandleGravity());
+    // _ = ThreadPool.QueueUserWorkItem(HandleGravity!);
 
     return Task.CompletedTask;
   }
 
-  internal void HandleGravity(object state) {
+  internal void HandleGravity() {
     HammerObject[] values;
 
     lock (_bodiesLock) {

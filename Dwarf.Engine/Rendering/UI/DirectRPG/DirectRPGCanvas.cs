@@ -1,6 +1,7 @@
 using System.Numerics;
 
 using Dwarf;
+using Dwarf.AbstractionLayer;
 using Dwarf.Rendering.UI;
 
 using ImGuiNET;
@@ -57,7 +58,7 @@ public partial class DirectRPG {
   }
 
   public static unsafe void CanvasImage(
-    ref VulkanTexture texture,
+    ref ITexture texture,
     Vector2 size,
     Anchor anchor = Anchor.Middle,
     Vector2 offset = default

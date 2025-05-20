@@ -6,12 +6,12 @@ using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Vulkan;
 
-public class DescriptorSetLayout {
+public class DescriptorSetLayout : IDescriptorSetLayout {
   private readonly IDevice _device = null!;
   private readonly VkDescriptorSetLayout _descriptorSetLayout = VkDescriptorSetLayout.Null;
   public class Builder {
     private readonly IDevice _device = null!;
-    private readonly Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = new();
+    private readonly Dictionary<uint, VkDescriptorSetLayoutBinding> _bindings = [];
     public Builder(IDevice device, Dictionary<uint, VkDescriptorSetLayoutBinding> bindings) {
       _device = device;
       _bindings = bindings;
@@ -23,15 +23,15 @@ public class DescriptorSetLayout {
 
     public Builder AddBinding(
       uint binding,
-      VkDescriptorType descriptorType,
-      VkShaderStageFlags shaderStageFlags,
+      DescriptorType descriptorType,
+      ShaderStageFlags shaderStageFlags,
       uint count = 1
     ) {
       VkDescriptorSetLayoutBinding layoutBinding = new() {
         binding = binding,
-        descriptorType = descriptorType,
+        descriptorType = (VkDescriptorType)descriptorType,
         descriptorCount = count,
-        stageFlags = shaderStageFlags
+        stageFlags = (VkShaderStageFlags)shaderStageFlags
       };
       _bindings[binding] = layoutBinding;
       return this;
@@ -64,6 +64,10 @@ public class DescriptorSetLayout {
 
   public VkDescriptorSetLayout GetDescriptorSetLayout() {
     return _descriptorSetLayout;
+  }
+
+  public ulong GetDescriptorSetLayoutPointer() {
+    return _descriptorSetLayout.Handle;
   }
 
   public Dictionary<uint, VkDescriptorSetLayoutBinding> Bindings { get; } = new();

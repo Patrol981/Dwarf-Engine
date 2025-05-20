@@ -25,14 +25,6 @@ public class VulkanTexture : ITexture {
     public VkSampler ImageSampler;
   }
 
-  public struct TextureSampler {
-    public VkFilter MagFilter;
-    public VkFilter MinFilter;
-    public VkSamplerAddressMode AddressModeU;
-    public VkSamplerAddressMode AddressModeV;
-    public VkSamplerAddressMode AddressModeW;
-  };
-
   internal VulkanTextureData _textureSampler;
 
   protected int _width = 0;
@@ -139,17 +131,48 @@ public class VulkanTexture : ITexture {
     SetTextureData(rgbaData);
   }
 
-  public unsafe void BuildDescriptor(nint descriptorSetLayout, nint descriptorPool) {
-    VkDescriptorImageInfo imageInfo = new() {
-      sampler = _textureSampler.ImageSampler,
+  public unsafe void BuildDescriptor(
+    IDescriptorSetLayout descriptorSetLayout,
+    IDescriptorPool descriptorPool,
+    uint dstBindingStartIndex = 0
+  ) {
+    VkDescriptorSet descriptorSet = new();
+    VkDescriptorImageInfo descriptorImageInfo = new() {
       imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
-      imageView = _textureSampler.ImageView
+      imageView = ImageView
     };
-    unsafe {
-      _ = new VulkanDescriptorWriter(descriptorSetLayout, descriptorPool)
-      .WriteImage(0, &imageInfo)
-      .Build(out _textureDescriptor);
-    }
+    VkDescriptorImageInfo descriptorSamplerInfo = new() {
+      sampler = Sampler
+    };
+
+    var allocInfo = new VkDescriptorSetAllocateInfo();
+    allocInfo.descriptorPool = descriptorPool.GetHandle();
+    allocInfo.descriptorSetCount = 1;
+    var setLayout = descriptorSetLayout.GetDescriptorSetLayoutPointer();
+    allocInfo.pSetLayouts = (VkDescriptorSetLayout*)&setLayout;
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkWriteDescriptorSet* writes = stackalloc VkWriteDescriptorSet[2];
+
+    writes[0] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.SampledImage,
+      dstBinding = dstBindingStartIndex,
+      pImageInfo = &descriptorImageInfo,
+      descriptorCount = 1,
+      dstSet = descriptorSet
+    };
+
+    writes[1] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.Sampler,
+      dstBinding = dstBindingStartIndex + 1,
+      descriptorCount = 1,
+      pImageInfo = &descriptorSamplerInfo,
+      dstSet = descriptorSet
+    };
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writes, 0, null);
+
+    _textureDescriptor = descriptorSet;
   }
 
   public unsafe void BuildDescriptor(
@@ -202,6 +225,50 @@ public class VulkanTexture : ITexture {
     //  .WriteSampler(1, Image)
     //  .Build(out _textureDescriptor);
     //}
+  }
+
+  public unsafe void AddDescriptor(IDescriptorSetLayout descriptorSetLayout, IDescriptorPool descriptorPool) {
+    if (descriptorSetLayout.GetDescriptorSetLayoutPointer() == 0) throw new ArgumentException("Layout is null");
+
+    VkDescriptorSet descriptorSet = new();
+
+    var allocInfo = new VkDescriptorSetAllocateInfo();
+    allocInfo.descriptorPool = descriptorPool.GetHandle();
+    allocInfo.descriptorSetCount = 1;
+    var setLayout = descriptorSetLayout.GetDescriptorSetLayoutPointer();
+    allocInfo.pSetLayouts = (VkDescriptorSetLayout*)setLayout;
+    vkAllocateDescriptorSets(_device.LogicalDevice, &allocInfo, &descriptorSet);
+
+    VkDescriptorImageInfo descriptorImageInfo = new() {
+      imageLayout = VkImageLayout.ShaderReadOnlyOptimal,
+      imageView = ImageView
+    };
+    VkDescriptorImageInfo descriptorSamplerInfo = new() {
+      sampler = Sampler
+    };
+
+    VkWriteDescriptorSet* writes = stackalloc VkWriteDescriptorSet[2];
+
+    writes[0] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.SampledImage,
+      dstBinding = 0,
+      pImageInfo = &descriptorImageInfo,
+      descriptorCount = 1,
+      dstSet = descriptorSet
+    };
+
+    writes[1] = new VkWriteDescriptorSet() {
+      descriptorType = VkDescriptorType.Sampler,
+      dstBinding = 1,
+      descriptorCount = 1,
+      pImageInfo = &descriptorSamplerInfo,
+      dstSet = descriptorSet
+    };
+
+
+    vkUpdateDescriptorSets(_device.LogicalDevice, 2, writes, 0, null);
+
+    _textureDescriptor = descriptorSet;
   }
 
   public unsafe void AddDescriptor(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {

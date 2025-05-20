@@ -29,8 +29,8 @@ public class StorageCollection : IDisposable {
 
     _dynamicPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(30)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 30)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
+      .AddPoolSize(DescriptorType.StorageBuffer, 30)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet | DescriptorPoolCreateFlags.UpdateAfterBind)
       .Build();
   }
 

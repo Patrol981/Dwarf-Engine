@@ -26,4 +26,8 @@ public static class Converter {
   public static Vector4I ToVec4I(this Vector4 vec4) {
     return new Vector4I((int)vec4.X, (int)vec4.Y, (int)vec4.Z, (int)vec4.W);
   }
+
+  public static Vector2 ToVector2(this Vector3 vec3) {
+    return new Vector2(vec3.X, vec3.Y);
+  }
 }

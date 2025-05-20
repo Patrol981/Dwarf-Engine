@@ -52,7 +52,7 @@ public partial class DirectRPG {
     );
     if (s_menuConfig.BackgroundTexture != null) {
       var controller = Application.Instance.GuiController;
-      var binding = controller.GetOrCreateImGuiBinding((VulkanTexture)s_menuConfig.BackgroundTexture);
+      var binding = controller.GetOrCreateImGuiBinding(s_menuConfig.BackgroundTexture);
       // ImGui.Image(binding, ImGui.GetWindowSize(), s_uv0, s_uv1);
       DirectRPG.Image(s_menuConfig.BackgroundTexture);
     }

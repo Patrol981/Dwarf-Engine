@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
@@ -28,8 +29,8 @@ public class StorageCollection : IDisposable {
 
     _dynamicPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(30)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, 30)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet | VkDescriptorPoolCreateFlags.UpdateAfterBind)
+      .AddPoolSize(DescriptorType.StorageBuffer, 30)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet | DescriptorPoolCreateFlags.UpdateAfterBind)
       .Build();
   }
 

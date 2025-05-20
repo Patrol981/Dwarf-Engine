@@ -1,6 +1,6 @@
-namespace Dwarf.Hammer;
+namespace Dwarf.Hammer.Structs;
 
-public class Mesh {
-  public List<Vertex> Vertices = [];
-  public List<uint> Indices = [];
+public struct Mesh {
+  public uint[] Indices;
+  public Vertex[] Vertices;
 }

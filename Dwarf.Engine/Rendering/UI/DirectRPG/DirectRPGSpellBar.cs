@@ -47,7 +47,7 @@ public partial class DirectRPG {
     var app = Application.Instance;
     await app.TextureManager.AddTextureGlobal("./Resources/crawler_atlas.png", 1);
     var textureId = app.TextureManager.GetTextureIdGlobal("./Resources/crawler_atlas.png");
-    var texture = (VulkanTexture)app.TextureManager.GetTextureGlobal(textureId);
+    var texture = app.TextureManager.GetTextureGlobal(textureId);
     UploadTexture(texture);
   }
 
@@ -73,7 +73,13 @@ public partial class DirectRPG {
     for (int i = 0; i < s_spellBarSlotLength; i++) {
       nint imTex = GetStoredTexture("./Resources/crawler_atlas.png");
 
-      GetUVCoords(s_spellBarItems[i].TextureIndex);
+      GetUVCoords(
+        s_spellBarItems[i].TextureIndex,
+        s_texturesPerRow,
+        s_texturesPerRow,
+        out s_uvMin,
+        out s_uvMax
+      );
 
       if (ImGui.ImageButton($"{i}", imTex, s_spellItemSize, s_uvMin, s_uvMax)) {
         s_spellBarItems[i].OnClick?.Invoke();
@@ -93,23 +99,5 @@ public partial class DirectRPG {
       }
     }
     ImGui.EndChild();
-  }
-
-  private static void GetUVCoords(int texId) {
-    int row = texId / s_texturesPerRow;
-    int col = texId % s_texturesPerRow;
-
-    float uvSize = 1.0f / s_texturesPerRow; // Assuming atlasWidth is textureSize * maxRowLength and it's square
-    float uMin = col * uvSize;
-    float vMin = 1.0f - (row + 1) * uvSize;
-    float uMax = (col + 1) * uvSize;
-    float vMax = 1.0f - row * uvSize;
-
-    (vMax, vMin) = (vMin, vMax);
-    s_uvMin.X = uMin;
-    s_uvMin.Y = vMin;
-
-    s_uvMax.X = uMax;
-    s_uvMax.Y = vMax;
   }
 }

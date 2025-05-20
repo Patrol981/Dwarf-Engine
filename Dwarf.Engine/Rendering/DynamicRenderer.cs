@@ -16,6 +16,8 @@ namespace Dwarf.Rendering;
 public unsafe class DynamicRenderer : IRenderer {
   private readonly Window _window = null!;
   private readonly VulkanDevice _device;
+  private readonly Application _application;
+
   private VkCommandBuffer[] _commandBuffers = [];
   private DescriptorPool _descriptorPool = null!;
   private uint _imageIndex = 0;
@@ -43,9 +45,10 @@ public unsafe class DynamicRenderer : IRenderer {
   }
   private Semaphores[] _semaphores = [];
 
-  public DynamicRenderer(Window window, VulkanDevice device) {
-    _window = window;
-    _device = device;
+  public DynamicRenderer(Application application) {
+    _application = application;
+    _window = _application.Window;
+    _device = _application.Device;
 
     CommandList = new VulkanCommandList();
 
@@ -118,14 +121,14 @@ public unsafe class DynamicRenderer : IRenderer {
 
   private unsafe void CreateDescriptors() {
     _postProcessLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(100)
-      .AddPoolSize(VkDescriptorType.InputAttachment, 10)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
+      .AddPoolSize(DescriptorType.InputAttachment, 10)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 20)
       .Build();
 
     ImageDescriptors = new VkDescriptorSet[Swapchain.ImageViews.Length];
@@ -292,7 +295,7 @@ public unsafe class DynamicRenderer : IRenderer {
     }
 
     Swapchain?.Dispose();
-    Swapchain = new(_device, extent);
+    Swapchain = new(_device, extent, _application.VSync);
     if (_depthStencil.Length < 1) {
       _depthStencil = new AttachmentImage[Swapchain.Images.Length];
       for (int i = 0; i < Swapchain.Images.Length; i++) {

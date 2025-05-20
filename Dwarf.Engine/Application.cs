@@ -1,7 +1,6 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
@@ -9,14 +8,13 @@ using Dwarf.Globals;
 using Dwarf.Math;
 using Dwarf.Rendering;
 using Dwarf.Rendering.Lightning;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Rendering.UI;
 using Dwarf.Rendering.UI.DirectRPG;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using Dwarf.Windowing;
-
 using Vortice.Vulkan;
-
 using static Vortice.Vulkan.Vma;
 // using static Dwarf.GLFW.GLFW;
 using static Vortice.Vulkan.Vulkan;
@@ -25,7 +23,6 @@ namespace Dwarf;
 
 public class Application {
   public static Application Instance { get; private set; } = null!;
-
   public delegate void EventCallback();
 
   public void SetUpdateCallback(EventCallback eventCallback) {
@@ -65,7 +62,7 @@ public class Application {
   private List<Entity> _entities = [];
   private readonly Queue<Entity> _entitiesQueue = new();
   private readonly Queue<MeshRenderer> _reloadQueue = new();
-  private readonly object _entitiesLock = new object();
+  public readonly object EntitiesLock = new object();
 
   private Entity _camera = new();
 
@@ -136,7 +133,7 @@ public class Application {
     VmaAllocator = allocator;
 
     // Renderer = new Renderer(Window, Device);
-    Renderer = new DynamicRenderer(Window, Device);
+    Renderer = new DynamicRenderer(this);
     Systems = new SystemCollection();
     StorageCollection = new StorageCollection(VmaAllocator, Device);
 
@@ -281,7 +278,6 @@ public class Application {
 
     _renderShouldClose = true;
     Logger.Info("Waiting for renderer to close...");
-    int x = 0;
     while (_renderShouldClose) { Console.Write(""); }
     _renderThread?.Join();
 
@@ -310,7 +306,8 @@ public class Application {
 
       PerformCalculations();
 
-      var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
+      var cp = _entities.ToArray();
+      var updatable = cp.Where(x => x.CanBeDisposed == false).ToArray();
       MasterFixedUpdate(updatable.GetScriptsAsSpan());
       _onUpdate?.Invoke();
       MasterUpdate(updatable.GetScriptsAsArray());
@@ -351,29 +348,29 @@ public class Application {
   private unsafe Task InitResources() {
     _globalPool = new DescriptorPool.Builder(Device)
       .SetMaxSets(10)
-      .AddPoolSize(VkDescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(VkDescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
+      .AddPoolSize(DescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
+      .AddPoolSize(DescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
       .Build();
 
     _descriptorSetLayouts.TryAdd("Global", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.UniformBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("PointLight", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("ObjectData", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
       // .AddBinding(1, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
       .Build());
 
     _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, VkDescriptorType.StorageBuffer, VkShaderStageFlags.Vertex)
+      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
       .Build());
 
     // _descriptorSetLayouts.TryAdd("InputAttachments", new DescriptorSetLayout.Builder(Device)
@@ -430,33 +427,35 @@ public class Application {
       ref _textureManager
     );
 
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.StorageBuffer,
-      BufferUsage.StorageBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<ObjectData>(),
-      (ulong)Systems.Render3DSystem.LastKnownElemCount,
-      _descriptorSetLayouts["ObjectData"],
-      null!,
-      "ObjectStorage",
-      Device.Properties.limits.minStorageBufferOffsetAlignment,
-      true
-   );
+    if (Systems.Render3DSystem != null) {
+      StorageCollection.CreateStorage(
+        Device,
+        VkDescriptorType.StorageBuffer,
+        BufferUsage.StorageBuffer,
+        Renderer.MAX_FRAMES_IN_FLIGHT,
+        (ulong)Unsafe.SizeOf<ObjectData>(),
+        (ulong)Systems.Render3DSystem.LastKnownElemCount,
+        _descriptorSetLayouts["ObjectData"],
+        null!,
+        "ObjectStorage",
+        Device.Properties.limits.minStorageBufferOffsetAlignment,
+        true
+      );
 
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.StorageBuffer,
-      BufferUsage.StorageBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<Matrix4x4>(),
-      Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
-      _descriptorSetLayouts["JointsBuffer"],
-      null!,
-      "JointsStorage",
-      Device.Properties.limits.minStorageBufferOffsetAlignment,
-      true
-    );
+      StorageCollection.CreateStorage(
+        Device,
+        VkDescriptorType.StorageBuffer,
+        BufferUsage.StorageBuffer,
+        Renderer.MAX_FRAMES_IN_FLIGHT,
+        (ulong)Unsafe.SizeOf<Matrix4x4>(),
+        Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
+        _descriptorSetLayouts["JointsBuffer"],
+        null!,
+        "JointsStorage",
+        Device.Properties.limits.minStorageBufferOffsetAlignment,
+        true
+      );
+    }
 
     if (UseSkybox) {
       _skybox = new(
@@ -521,11 +520,6 @@ public class Application {
     _entities.AddRange(CurrentScene.GetEntities());
     Mutex.ReleaseMutex();
 
-    var targetCnv = _entities.Distinct<Canvas>();
-    if (targetCnv.Length > 0) {
-      Systems.Canvas = targetCnv[0].GetComponent<Canvas>();
-    }
-
     var endTime = DateTime.Now;
     Logger.Info($"[Entities] Load Time {endTime - startTime}");
     return Task.CompletedTask;
@@ -576,17 +570,22 @@ public class Application {
 #endif
   }
 
-  public void AddEntity(Entity entity) {
-    lock (_entitiesLock) {
+  public void AddEntity(Entity entity, bool fenced = false) {
+    Mutex.WaitOne();
+    // lock (EntitiesLock) {
+
+    // }
+    MasterAwake(new[] { entity }.GetScriptsAsSpan());
+    MasterStart(new[] { entity }.GetScriptsAsSpan());
+    if (fenced) {
       var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      MasterAwake(new[] { entity }.GetScriptsAsSpan());
-      MasterStart(new[] { entity }.GetScriptsAsSpan());
       vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
       unsafe {
         vkDestroyFence(Device.LogicalDevice, fence);
       }
-      _entitiesQueue.Enqueue(entity);
     }
+    _entitiesQueue.Enqueue(entity);
+    Mutex.ReleaseMutex();
   }
 
   public void AddEntities(Entity[] entities) {
@@ -596,19 +595,19 @@ public class Application {
   }
 
   public List<Entity> GetEntities() {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       return _entities;
     }
   }
 
   public Entity? GetEntity(Guid entitiyId) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       return _entities.Where(x => x.EntityID == entitiyId).First();
     }
   }
 
   public void RemoveEntityAt(int index) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.RemoveAt(index);
@@ -616,7 +615,7 @@ public class Application {
   }
 
   public void RemoveEntity(Entity entity) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       Device.WaitDevice();
       Device.WaitQueue();
       _entities.Remove(entity);
@@ -624,7 +623,7 @@ public class Application {
   }
 
   public void RemoveEntity(Guid id) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       if (_entities.Count == 0) return;
       var target = _entities.Where((x) => x.EntityID == id).FirstOrDefault();
       if (target == null) return;
@@ -635,13 +634,13 @@ public class Application {
   }
 
   public void DestroyEntity(Entity entity) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       entity.CanBeDisposed = true;
     }
   }
 
   public void RemoveEntityRange(int index, int count) {
-    lock (_entitiesLock) {
+    lock (EntitiesLock) {
       _entities.RemoveRange(index, count);
     }
   }
@@ -716,6 +715,7 @@ public class Application {
       // _ubo->ImportantEntityPosition = new(6, 9);
       _ubo->ScreenSize = new(Window.Extent.Width, Window.Extent.Height);
       _ubo->HatchScale = Render3DSystem.HatchScale;
+      _ubo->DeltaTime = Time.DeltaTime;
 
       _ubo->DirectionalLight = DirectionalLight;
 
@@ -738,30 +738,36 @@ public class Application {
         }
       }
 
-      Systems.Render3DSystem.Update(
-        _entities.ToArray().DistinctI3D(),
-        out var objectData,
-        out var skinnedObjects,
-        out var flatJoints
-      );
-      fixed (ObjectData* pObjectData = objectData) {
-        StorageCollection.WriteBuffer(
-          "ObjectStorage",
-          frameIndex,
-          (nint)pObjectData,
-          (ulong)Unsafe.SizeOf<ObjectData>() * (ulong)objectData.Length
+      var i3D = _entities.ToArray().DistinctI3D();
+
+      if (Systems.Render3DSystem != null) {
+        Systems.Render3DSystem.Update(
+          i3D,
+          out var objectData,
+          out var skinnedObjects,
+          out var flatJoints
         );
+        fixed (ObjectData* pObjectData = objectData) {
+          StorageCollection.WriteBuffer(
+            "ObjectStorage",
+            frameIndex,
+            (nint)pObjectData,
+            (ulong)Unsafe.SizeOf<ObjectData>() * (ulong)objectData.Length
+          );
+        }
+
+        ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
+        fixed (Matrix4x4* pMatrices = flatArray) {
+          StorageCollection.WriteBuffer(
+            "JointsStorage",
+            frameIndex,
+            (nint)pMatrices,
+            (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
+          );
+        }
       }
 
-      ReadOnlySpan<Matrix4x4> flatArray = [.. flatJoints];
-      fixed (Matrix4x4* pMatrices = flatArray) {
-        StorageCollection.WriteBuffer(
-          "JointsStorage",
-          frameIndex,
-          (nint)pMatrices,
-          (ulong)Unsafe.SizeOf<Matrix4x4>() * (ulong)flatArray.Length
-        );
-      }
+      Systems.ShadowRenderSystem?.Update(i3D);
 
       StorageCollection.WriteBuffer(
         "GlobalStorage",
@@ -777,22 +783,27 @@ public class Application {
       Entity[] toUpdate = [.. _entities];
       Systems.UpdateSystems(toUpdate, _currentFrame);
 
-      Systems.UpdateSecondPassSystems(toUpdate, _currentFrame);
+      // Renderer.EndRendering(commandBuffer);
+
+      // Renderer.BeginRendering(commandBuffer);
       if (UseImGui) {
         GuiController.Update(Time.StopwatchDelta);
       }
+      Systems.UpdateSystems2(toUpdate, _currentFrame);
       var updatable = _entities.Where(x => x.CanBeDisposed == false).ToArray();
       MasterRenderUpdate(updatable.GetScriptsAsSpan());
       _onGUI?.Invoke();
       if (UseImGui) {
         GuiController.Render(_currentFrame);
       }
-
       Renderer.EndRendering(commandBuffer);
+
       Renderer.EndFrame();
 
-      StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
-      StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+      if (Systems.Render3DSystem != null) {
+        StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
+        StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+      }
 
       while (_reloadQueue.Count > 0) {
         var item = _reloadQueue.Dequeue();
@@ -833,7 +844,7 @@ public class Application {
   }
 
   private void PerformCalculations() {
-    Systems.UpdateCalculationSystems([.. GetEntities()]);
+    Systems?.UpdateCalculationSystems([.. GetEntities()]);
   }
 
   internal unsafe void LoaderLoop() {

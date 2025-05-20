@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
+using Dwarf.Physics.Interfaces;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Vulkan;
 
 namespace Dwarf.Globals;
@@ -32,9 +34,9 @@ public static class PerfMonitor {
   public static void ChangeDebugVisiblity() {
     s_debug = !s_debug;
     var entities = Application.Instance.GetEntities();
-    var debugObjects = entities.DistinctInterface<IDebugRender3DObject>();
+    var debugObjects = entities.DistinctInterface<IDebugRenderObject>();
     foreach (var entity in debugObjects) {
-      var e = entity.GetDrawable<IDebugRender3DObject>() as IDebugRender3DObject;
+      var e = entity.GetDrawable<IDebugRenderObject>() as IDebugRenderObject;
       if (s_debug) {
         e?.Enable();
       } else {

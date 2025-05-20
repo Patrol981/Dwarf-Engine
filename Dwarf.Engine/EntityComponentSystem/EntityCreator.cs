@@ -1,10 +1,14 @@
 using System.Numerics;
-
 using Dwarf.Extensions.Logging;
 using Dwarf.Loaders;
-using Dwarf.Model;
-using Dwarf.Model.Animation;
+using Dwarf.Loaders.Tiled;
 using Dwarf.Physics;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer2D;
+using Dwarf.Rendering.Renderer2D.Components;
+using Dwarf.Rendering.Renderer2D.Models;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
 
 namespace Dwarf.EntityComponentSystem;
@@ -48,14 +52,18 @@ public static class EntityCreator {
   /// Adds <c>Transform</c> component to an <c>Entity</c>
   /// </summary>
   public static void AddTransform(this Entity entity, Vector3 position) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddTransform(position, Vector3.Zero, Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   /// <summary>
   /// Adds <c>Transform</c> component to an <c>Entity</c>
   /// </summary>
   public static void AddTransform(this Entity entity, Vector3 position, Vector3 rotation) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddTransform(position, rotation, Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   /// <summary>
@@ -66,17 +74,23 @@ public static class EntityCreator {
     if (rotation == null) { rotation = Vector3.Zero; }
     if (scale == null) { scale = Vector3.One; }
 
+    Application.Instance.Mutex.WaitOne();
     entity.AddComponent(new Transform(position.Value));
     entity.GetComponent<Transform>().Rotation = rotation.Value;
     entity.GetComponent<Transform>().Scale = scale.Value;
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddMaterial(Vector3.One);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity, MaterialData materialData) {
+    Application.Instance.Mutex.WaitOne();
     entity.AddComponent(new MaterialComponent(materialData));
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public static void AddMaterial(this Entity entity, Vector3? color) {
@@ -136,6 +150,50 @@ public static class EntityCreator {
     return model;
   }
 
+  public static SpriteRenderer.Builder AddSpriteBuilder(this Entity entity) {
+    var app = Application.Instance;
+    var builder = new SpriteRenderer.Builder(app, entity);
+    return builder;
+  }
+
+  public static void AddSprite(this Entity entity, string spritePath) {
+    var app = Application.Instance;
+    var sprite = new Sprite(app, spritePath, default, false);
+
+    entity.AddComponent(new SpriteRenderer() { Sprites = [sprite] });
+  }
+
+  public static void AddSpriteSheetWithTileSize(
+    this Entity entity,
+    string spritePath,
+    float spriteSheetTileSize,
+    int flip = 1
+  ) {
+    var app = Application.Instance;
+    var sprite = new Sprite(app, spritePath, spriteSheetTileSize, true, flip);
+
+    entity.AddComponent(new SpriteRenderer() { Sprites = [sprite] });
+  }
+
+  public static void AddSpriteSheetWithCount(
+    this Entity entity,
+    string spritePath,
+    int spritesPerRow,
+    int spritesPerColumn,
+    int flip = 1
+  ) {
+    var app = Application.Instance;
+    var sprite = new Sprite(app, spritePath, spritesPerRow, spritesPerColumn, true, flip);
+
+    entity.AddComponent(new SpriteRenderer() { Sprites = [sprite] });
+  }
+
+  public static void AddTileMap(this Entity entity, string tmxPath) {
+    var app = Application.Instance;
+
+    entity.AddComponent(TiledLoader.LoadTilemap(app, tmxPath));
+  }
+
   public static async Task<Entity> Create3DPrimitive(
     string entityName,
     string texturePath,
@@ -155,7 +213,6 @@ public static class EntityCreator {
     model.AddLinearNode(node);
     model.Init();
     entity.AddComponent(model);
-    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
 
     return entity;
@@ -173,7 +230,6 @@ public static class EntityCreator {
     model.Init();
     entity.AddComponent(model);
     await app.TextureManager.AddTextureLocal(texturePath);
-    // entity.GetComponent<MeshRenderer>().BindToTexture(app.TextureManager, texturePath);
     app.Mutex.ReleaseMutex();
   }
 
@@ -350,5 +406,27 @@ public static class EntityCreator {
       motionType: motionType,
       flip: flip
     );
+  }
+
+  public static void AddRigidbody2D(
+    this Entity entity,
+    PrimitiveType primitiveType,
+    MotionType motionType
+  ) {
+    var app = Application.Instance;
+    entity.AddComponent(new Rigidbody2D(app, primitiveType, motionType));
+    entity.GetComponent<Rigidbody2D>().InitBase();
+  }
+
+  public static void AddRigidbody2D(
+    this Entity entity,
+    PrimitiveType primitiveType,
+    MotionType motionType,
+    Vector2 min,
+    Vector2 max
+  ) {
+    var app = Application.Instance;
+    entity.AddComponent(new Rigidbody2D(app, primitiveType, motionType, min, max));
+    entity.GetComponent<Rigidbody2D>().InitBase();
   }
 }

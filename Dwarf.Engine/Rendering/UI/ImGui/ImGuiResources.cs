@@ -11,6 +11,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.UI;
+
 public partial class ImGuiController {
   private unsafe void CreatePipelineLayout(VkDescriptorSetLayout[] layouts) {
     var pipelineInfo = new VkPipelineLayoutCreateInfo() {
@@ -58,10 +59,9 @@ public partial class ImGuiController {
     io.Fonts.GetTexDataAsRGBA32(out nint fontData, out int texWidth, out int texHeight, out int bytesPerPixel);
     var uploadSize = texWidth * texHeight * bytesPerPixel * sizeof(byte);
 
-    _fontTexture = new VulkanTexture(_vmaAllocator, _device, texWidth, texHeight, "im_gui_texture");
-    _fontTexture.SetTextureData(fontData);
-
-    _fontTexture.BuildDescriptor(_systemSetLayout, _systemDescriptorPool);
+    // _fontTexture = new ITexture(_vmaAllocator, _device, texWidth, texHeight, "im_gui_texture");
+    // _fontTexture.SetTextureData(fontData);
+    // _fontTexture.BuildDescriptor(_systemSetLayout, _systemDescriptorPool);
 
     //VkDescriptorImageInfo imageInfo = new() {
     //   imageLayout = VkImageLayout.ShaderReadOnlyOptimal,

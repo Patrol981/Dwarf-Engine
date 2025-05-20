@@ -2,8 +2,12 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dwarf.EntityComponentSystem;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Loaders;
+
+[JsonSerializable(typeof(DwarfFile[]))]
+internal partial class DwarfFileJsonSerializerContext : JsonSerializerContext { }
 
 public static class DwarfFileParser {
   public readonly static JsonSerializerOptions ParserOptions = new() {

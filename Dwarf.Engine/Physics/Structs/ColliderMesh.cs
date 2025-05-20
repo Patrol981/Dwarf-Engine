@@ -1,19 +1,17 @@
 
+using System.Numerics;
 using System.Runtime.CompilerServices;
-
 using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
-using Dwarf.Vulkan;
-
-using System.Numerics;
-
+using Dwarf.Physics.Interfaces;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 using Vortice.Vulkan;
-
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Physics;
-public class ColliderMesh : Component, IDebugRender3DObject {
+public class ColliderMesh : Component, IDebugRenderObject {
   private readonly IDevice _device = null!;
   private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
 

@@ -18,6 +18,7 @@ using Vortice.Vulkan;
 using static Vortice.Vulkan.Vulkan;
 
 namespace Dwarf.Rendering.UI;
+
 public partial class ImGuiController : IDisposable {
   private readonly VulkanDevice _device;
   private readonly VmaAllocator _vmaAllocator;
@@ -44,7 +45,7 @@ public partial class ImGuiController : IDisposable {
   protected VkDescriptorSet _systemDescriptorSet = VkDescriptorSet.Null;
   protected VulkanDescriptorWriter _descriptorWriter = null!;
 
-  private VulkanTexture _fontTexture = default!;
+  private ITexture _fontTexture = default!;
 
   private bool _frameBegun = false;
   private bool _firstFrame = false;
@@ -82,15 +83,15 @@ public partial class ImGuiController : IDisposable {
     var descriptorCount = (uint)_renderer.MAX_FRAMES_IN_FLIGHT * 2;
 
     _systemSetLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.SampledImage, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.Sampler, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.SampledImage, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.Sampler, ShaderStageFlags.Fragment)
       .Build();
 
     _systemDescriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(10000)
-      .AddPoolSize(VkDescriptorType.SampledImage, 1000)
-      .AddPoolSize(VkDescriptorType.Sampler, 1000)
-      .SetPoolFlags(VkDescriptorPoolCreateFlags.FreeDescriptorSet)
+      .AddPoolSize(DescriptorType.SampledImage, 1000)
+      .AddPoolSize(DescriptorType.Sampler, 1000)
+      .SetPoolFlags(DescriptorPoolCreateFlags.FreeDescriptorSet)
       .Build();
 
 
@@ -559,7 +560,7 @@ public partial class ImGuiController : IDisposable {
 
   public unsafe void Dispose() {
     foreach (var userTex in _userTextures) {
-      MemoryUtils.FreeIntPtr<VulkanTexture>(userTex.Key);
+      MemoryUtils.FreeIntPtr<ITexture>(userTex.Key);
     }
 
     ImGui.DestroyContext();

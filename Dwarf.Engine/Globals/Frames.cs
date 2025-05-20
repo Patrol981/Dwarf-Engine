@@ -11,6 +11,11 @@ public static class Frames {
     return lastUpdate;
   }
 
+  public static double GetFramesDeltaMain() {
+    var lastUpdate = Time.DeltaTime;
+    return lastUpdate;
+  }
+
   public static double GetFrames() {
     var frame = (s_startTime - s_endTime).TotalMilliseconds;
     // return Time.DeltaTime;

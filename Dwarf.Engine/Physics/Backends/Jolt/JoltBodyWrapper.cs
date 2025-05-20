@@ -1,6 +1,8 @@
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 using JoltPhysicsSharp;
 using static Dwarf.Physics.JoltConfig;
 

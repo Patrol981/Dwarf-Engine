@@ -1,6 +1,7 @@
-using Dwarf.Model.Animation;
 using Dwarf.Physics;
 using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Renderer3D.Animations;
 namespace Dwarf.EntityComponentSystem;
 
 public class Entity {
@@ -10,7 +11,7 @@ public class Entity {
   public bool IsImportant = false;
 
   private readonly ComponentManager _componentManager;
-  private readonly object _componentLock = new object();
+  private readonly object _componentLock = new();
 
   public Entity() {
     EntityID = Guid.NewGuid();
@@ -23,9 +24,11 @@ public class Entity {
   }
 
   public void AddComponent(Component component) {
+    Application.Instance.Mutex.WaitOne();
     if (CanBeDisposed) throw new ArgumentException("Cannot access disposed entity!");
     component.Owner = this;
     _componentManager.AddComponent(component);
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public T GetComponent<T>() where T : Component, new() {

@@ -202,6 +202,13 @@ public static class DwarfNativeInterop {
     }
   }
 
+  public static void Entity_AddComponent(
+    IntPtr pEntity,
+    IntPtr pComponent
+  ) {
+
+  }
+
   #endregion
 }
 

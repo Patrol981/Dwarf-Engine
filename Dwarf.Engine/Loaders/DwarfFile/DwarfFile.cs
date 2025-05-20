@@ -2,8 +2,9 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 using Dwarf.AbstractionLayer;
 using Dwarf.Math;
-using Dwarf.Model;
-using Dwarf.Model.Animation;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
+using Dwarf.Rendering.Renderer3D.Animations;
 
 namespace Dwarf.Loaders;
 

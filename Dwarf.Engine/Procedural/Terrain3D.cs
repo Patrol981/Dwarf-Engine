@@ -2,7 +2,8 @@ using System.Numerics;
 
 using Dwarf.EntityComponentSystem;
 using Dwarf.Math;
-using Dwarf.Model;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Procedural;
 public class Terrain3D : Component {

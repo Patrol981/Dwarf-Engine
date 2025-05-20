@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 
 using Dwarf.Rendering;
+using Dwarf.Rendering.Guizmos;
 
 namespace Dwarf.Globals;
 public static class Guizmos {

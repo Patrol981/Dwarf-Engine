@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Pathfinding;
 using Dwarf.Utils;
@@ -45,13 +46,13 @@ public class VulkanSwapchain : IDisposable {
   private unsafe VkFence* _imagesInFlight;
 
   // private Swapchain _oldSwapchain = null!;
-  private DescriptorPool _descriptorPool;
-  private DescriptorSetLayout _inputAttachmentsLayout;
-  private DescriptorSetLayout _postProcessLayout;
+  private DescriptorPool _descriptorPool = null!;
+  private DescriptorSetLayout _inputAttachmentsLayout = null!;
+  private DescriptorSetLayout _postProcessLayout = null!;
   // private VkDescriptorSet[] _colorDescriptors;
   // private VkDescriptorSet[] _depthDescriptors;
-  private VkDescriptorSet[] _imageDescriptors;
-  private VkDescriptorSet[] _postProcessDescriptors;
+  private VkDescriptorSet[] _imageDescriptors = [];
+  private VkDescriptorSet[] _postProcessDescriptors = [];
 
   private int _currentFrame = 0;
   private uint _imageIndex = 0;
@@ -675,17 +676,17 @@ public class VulkanSwapchain : IDisposable {
     out VkFormat imageFormat
   ) {
     VkImageAspectFlags aspectMask = 0;
-    VkImageLayout imageLayout = new();
+    // VkImageLayout imageLayout = new();
 
     imageFormat = format;
 
     if ((usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) != 0) {
       aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      // imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
     if ((usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
       aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-      imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      // imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     }
 
     VkImageCreateInfo imageCreateInfo = new() {
@@ -913,19 +914,19 @@ public class VulkanSwapchain : IDisposable {
 
   private unsafe void CreateDescriptors() {
     _inputAttachmentsLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
-      .AddBinding(1, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
+      .AddBinding(0, DescriptorType.InputAttachment, ShaderStageFlags.Fragment)
+      .AddBinding(1, DescriptorType.InputAttachment, ShaderStageFlags.Fragment)
       .Build();
 
     _postProcessLayout = new DescriptorSetLayout.Builder(_device)
-      .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
-      .AddBinding(1, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.AllGraphics)
+      .AddBinding(0, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
+      .AddBinding(1, DescriptorType.CombinedImageSampler, ShaderStageFlags.AllGraphics)
       .Build();
 
     _descriptorPool = new DescriptorPool.Builder(_device)
       .SetMaxSets(100)
-      .AddPoolSize(VkDescriptorType.InputAttachment, 10)
-      .AddPoolSize(VkDescriptorType.CombinedImageSampler, 20)
+      .AddPoolSize(DescriptorType.InputAttachment, 10)
+      .AddPoolSize(DescriptorType.CombinedImageSampler, 20)
       .Build();
 
     _imageDescriptors = new VkDescriptorSet[_colorImageViews.Length];

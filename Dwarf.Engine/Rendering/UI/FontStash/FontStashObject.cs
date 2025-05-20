@@ -18,7 +18,7 @@ public class FontStashObject : IDisposable {
   private const int MAX_INDICES = MAX_SPRITES * 6;
 
   private readonly VulkanDevice _device = null!;
-  private readonly VmaAllocator _vmaAllocator;
+  private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private DwarfBuffer _vertexBuffer = null!;
   private DwarfBuffer _indexBuffer = null!;
   private readonly ulong _vertexCount = 0;

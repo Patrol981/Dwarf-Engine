@@ -4,10 +4,19 @@ layout (location = 0) in vec2 texCoord;
 
 layout (location = 0) out vec4 outColor;
 
+// layout (push_constant) uniform Push {
+//   mat4 transform;
+//   vec3 spriteColor;
+//   bool useTexture;
+//   ivec2 spriteSheetSize;
+//   int spriteIndex;
+// } push;
+
 layout (push_constant) uniform Push {
   mat4 transform;
-  vec3 spriteColor;
-  bool useTexture;
+  vec3 spriteSheetData;
+  bool flipX;
+  bool flipY;
 } push;
 
 
@@ -22,19 +31,28 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
 } globalUBO;
 
 
-layout (set = 1, binding = 0) uniform SpriteUBO {
-  mat4 spriteMatrix;
-  vec3 spriteColor;
-  bool useTexture;
-} spriteUBO;
-
-
-layout (set = 2, binding = 0) uniform sampler2D textureSampler;
+layout (set = 2, binding = 0) uniform texture2D _texture;
+layout (set = 2, binding = 1) uniform sampler _sampler;
 
 void main() {
-  if(push.useTexture) {
-    outColor = vec4(push.spriteColor, 1.0) * texture(textureSampler, texCoord);
-  } else {
-    outColor = vec4(push.spriteColor, 1.0);
-  }
+  vec2 cellSize = vec2(1.0) / vec2(push.spriteSheetData.xy);
+
+  int col = int(push.spriteSheetData.z) % int(push.spriteSheetData.x);
+  int row = int(push.spriteSheetData.z) / int(push.spriteSheetData.x);
+
+  vec2 offset = vec2(col, row) * cellSize;
+
+  vec2 adjustedTexCoord = texCoord;
+    if (push.flipX)
+        adjustedTexCoord.x = 1.0 - adjustedTexCoord.x;
+
+  vec2 spriteUV = offset + adjustedTexCoord * cellSize;
+
+  outColor = texture(sampler2D(_texture, _sampler), spriteUV);
+
+  // if(push.useTexture) {
+  //   outColor = vec4(push.spriteColor, 1.0) * texture(sampler2D(_texture, _sampler), spriteUV);
+  // } else {
+  //   outColor = vec4(push.spriteColor, 1.0);
+  // }
 }

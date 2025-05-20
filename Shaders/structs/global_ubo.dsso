@@ -13,6 +13,7 @@ uniform GlobalUbo {
   vec4 fogColor;
   vec2 screenSize;
   float hatchScale;
+  float deltaTime;
 } ubo;
 
 vec2 worldToScreenPos(vec3 worldPos, mat4 mvp) {

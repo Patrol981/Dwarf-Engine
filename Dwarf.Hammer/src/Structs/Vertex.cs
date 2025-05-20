@@ -1,7 +1,6 @@
-using System.Numerics;
-
-namespace Dwarf.Hammer;
+namespace Dwarf.Hammer.Structs;
 
 public struct Vertex {
-  public Vector3 Position;
+  public float X;
+  public float Y;
 }

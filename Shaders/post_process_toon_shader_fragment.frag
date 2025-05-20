@@ -66,9 +66,9 @@ void main() {
   screen_normal = normalize(screen_normal);
 
   vec2 texelSize = vec2(1.0 / ubo.screenSize.x, 1.0 / ubo.screenSize.y);
-  float edge = detectEdgeSobel(_depthSampler, uv, texelSize) * 100;
+  float edge = detectEdgeSobel(_depthSampler, uv, texelSize);
   edge = pow(edge, 0.6);
   vec3 final_color = mix(screen_color, vec3(0.0), edge);
 
-  outColor = vec4(screen_color, 1.0);
+  outColor = vec4(final_color, 1.0);
 }

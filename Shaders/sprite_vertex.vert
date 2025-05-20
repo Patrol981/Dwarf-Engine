@@ -9,8 +9,9 @@ layout (location = 0) out vec2 texCoord;
 
 layout (push_constant) uniform Push {
   mat4 transform;
-  vec3 spriteColor;
-  bool useTexture;
+  vec3 spriteSheetData;
+  bool flipX;
+  bool flipY;
 } push;
 
 
@@ -23,13 +24,6 @@ layout (set = 0, binding = 0) uniform GlobalUbo {
   vec3 cameraPosition;
   int layer;
 } globalUBO;
-
-
-layout (set = 1, binding = 0) uniform SpriteUBO {
-  mat4 spriteMatrix;
-  vec3 spriteColor;
-  bool useTexture;
-} spriteUBO;
 
 
 void main() {

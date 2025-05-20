@@ -1,6 +1,7 @@
 using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Globals;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf;
 

@@ -31,7 +31,7 @@ public partial class DirectRPG {
   }
 
   public static void DrawDialogBubble(Vector2 anchorPos, string text) {
-    var drawList = ImGui.GetForegroundDrawList();
+    var drawList = ImGui.GetBackgroundDrawList();
     var radius = 50;
 
     float bubbleWidth = 150f;

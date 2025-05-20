@@ -88,7 +88,7 @@ public static class Input {
   private static Dictionary<int, InputState> EnumerateKeys() {
     var keys = new Dictionary<int, InputState>();
 
-    foreach (var enumValue in Enum.GetValues(typeof(Keycode))) {
+    foreach (var enumValue in Enum.GetValuesAsUnderlyingType(typeof(Keycode))) {
       keys.TryAdd((int)(uint)enumValue, new());
     }
 
@@ -125,7 +125,7 @@ public static class Input {
   private static Dictionary<int, InputState> EnumerateGamepadButtons() {
     var keys = new Dictionary<int, InputState>();
 
-    foreach (var enumValue in Enum.GetValues(typeof(GamepadButtons))) {
+    foreach (var enumValue in Enum.GetValuesAsUnderlyingType(typeof(GamepadButtons))) {
       keys.TryAdd((int)enumValue, new());
     }
 

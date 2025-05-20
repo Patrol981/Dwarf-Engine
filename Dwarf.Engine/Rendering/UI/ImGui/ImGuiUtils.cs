@@ -1,14 +1,21 @@
+using Dwarf.AbstractionLayer;
 using Dwarf.Utils;
 
 namespace Dwarf.Rendering.UI;
+
 public partial class ImGuiController {
-  // private readonly Dictionary<VulkanTexture, VkImageView> _autoViewsByTexture;
   private readonly List<string> _addedTextures = new List<string>();
-  private readonly Dictionary<IntPtr, VulkanTexture> _userTextures = new();
-  // private readonly Dictionary<VulkanTexture, IntPtr> _userTextures = new();
+  private readonly Dictionary<IntPtr, ITexture> _userTextures = new();
   private int _lastId = 100;
 
-  public unsafe IntPtr GetOrCreateImGuiBinding(VulkanTexture texture) {
+  public unsafe IntPtr GetOrCreateImGuiBinding(ITexture texture) {
+    return Application.Instance.CurrentAPI switch {
+      RenderAPI.Vulkan => VkGetOrCreateImGuiBinding((VulkanTexture)texture),
+      _ => throw new NotImplementedException("Other apis are not currently supported"),
+    };
+  }
+
+  private unsafe IntPtr VkGetOrCreateImGuiBinding(VulkanTexture texture) {
     if (texture == null) return IntPtr.Zero;
     if (!_addedTextures.Contains(texture.TextureName)) {
       texture.AddDescriptor(_systemSetLayout, _systemDescriptorPool);
@@ -24,10 +31,10 @@ public partial class ImGuiController {
     }
   }
 
-  public VulkanTexture[] StoredTextures => [.. _userTextures.Values];
+  public ITexture[] StoredTextures => [.. _userTextures.Values];
 
   private IntPtr GetNextImGuiBinding() {
     int newId = _lastId++;
-    return (IntPtr)newId;
+    return newId;
   }
 }

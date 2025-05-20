@@ -1,6 +1,7 @@
 using System.Numerics;
 
 using Dwarf;
+using Dwarf.AbstractionLayer;
 using Dwarf.Rendering.UI;
 
 using ImGuiNET;
@@ -14,9 +15,6 @@ public partial class DirectRPG {
 
   private static ImGuiWindowFlags s_subWindowFlags = ImGuiWindowFlags.ChildWindow;
   private static ImGuiChildFlags s_subWidnowChildFlags = ImGuiChildFlags.None;
-
-  private static Vector2 s_uv0 = new(0, 1);
-  private static Vector2 s_uv1 = new(1, 0);
 
   public static void BeginCanvas() {
     var io = ImGui.GetIO();
@@ -60,7 +58,7 @@ public partial class DirectRPG {
   }
 
   public static unsafe void CanvasImage(
-    ref VulkanTexture texture,
+    ref ITexture texture,
     Vector2 size,
     Anchor anchor = Anchor.Middle,
     Vector2 offset = default

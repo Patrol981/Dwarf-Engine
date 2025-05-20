@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf.Loaders;
 
@@ -95,7 +96,7 @@ public static class DwarfFileLoader {
   }
 
   private static void LoadNode(
-    Dwarf.Model.Node parentNode,
+    Dwarf.Rendering.Renderer3D.Node parentNode,
     FileNode fileNode,
     ref MeshRenderer meshRenderer,
     BinaryReader reader,

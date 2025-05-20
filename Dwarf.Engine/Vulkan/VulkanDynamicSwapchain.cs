@@ -24,12 +24,12 @@ public class VulkanDynamicSwapchain : IDisposable {
   public int CurrentFrame { get; set; }
   public int PreviousFrame { get; set; } = -1;
 
-  public VulkanDynamicSwapchain(VulkanDevice device, VkExtent2D extent2D) {
+  public VulkanDynamicSwapchain(VulkanDevice device, VkExtent2D extent2D, bool vsync) {
     _device = device;
     Extent2D = extent2D;
 
     InitSurface();
-    Init(true);
+    Init(vsync);
   }
 
   private unsafe void InitSurface() {
@@ -166,6 +166,7 @@ public class VulkanDynamicSwapchain : IDisposable {
 
     // Find a supported composite alpha format (not all devices support alpha opaque)
     VkCompositeAlphaFlagsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    // VkCompositeAlphaFlagsKHR compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
     // Simply select the first composite alpha format available
     VkCompositeAlphaFlagsKHR[] compositeAlphaFlags = [
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,

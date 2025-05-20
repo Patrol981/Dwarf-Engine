@@ -1,6 +1,6 @@
 using System.Numerics;
-
-using Dwarf.Model;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 
 namespace Dwarf;
 
@@ -184,6 +184,34 @@ public static class Primitives {
     return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
       Vertices = [.. vertices],
       Indices = [.. mesh.Indices],
+      Matrix = Matrix4x4.Identity
+    };
+  }
+
+  public static Mesh CreatePlanePrimitive(float scale) {
+    Vector3 normal = new(0, 1, 0); // Upward-facing normal (Y-axis)
+    Vector2[] uvs = [
+        new Vector2(0, 0),
+        new Vector2(1, 0),
+        new Vector2(1, 1),
+        new Vector2(0, 1)
+    ];
+
+    Vertex[] vertices = [
+        new Vertex { Position = new Vector3(-scale, 0, -scale), Color = Color, Normal = normal, Uv = uvs[0] },
+        new Vertex { Position = new Vector3(scale, 0, -scale), Color = Color, Normal = normal, Uv = uvs[1] },
+        new Vertex { Position = new Vector3(scale, 0, scale), Color = Color, Normal = normal, Uv = uvs[2] },
+        new Vertex { Position = new Vector3(-scale, 0, scale), Color = Color, Normal = normal, Uv = uvs[3] }
+    ];
+
+    uint[] indices = [
+        0, 1, 2, // First triangle
+        2, 3, 0  // Second triangle
+    ];
+
+    return new Mesh(Application.Instance.VmaAllocator, Application.Instance.Device) {
+      Vertices = vertices,
+      Indices = indices,
       Matrix = Matrix4x4.Identity
     };
   }

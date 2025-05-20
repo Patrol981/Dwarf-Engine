@@ -2,12 +2,14 @@ using System.Numerics;
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Math;
+using Dwarf.Rendering;
+using Dwarf.Rendering.Renderer3D;
 using Dwarf.Utils;
 using Dwarf.Vulkan;
 using glTFLoader;
 using glTFLoader.Schema;
 using Vortice.Vulkan;
-using static Dwarf.VulkanTexture;
+using Node = glTFLoader.Schema.Node;
 
 namespace Dwarf.Loaders;
 
@@ -114,11 +116,11 @@ public static partial class GLTFLoaderKHR {
       var gltfImage = gltf.Images[src];
       var textureSampler = new TextureSampler();
       if (!gltfTexture.Sampler.HasValue) {
-        textureSampler.MagFilter = VkFilter.Linear;
-        textureSampler.MinFilter = VkFilter.Linear;
-        textureSampler.AddressModeU = VkSamplerAddressMode.Repeat;
-        textureSampler.AddressModeV = VkSamplerAddressMode.Repeat;
-        textureSampler.AddressModeW = VkSamplerAddressMode.Repeat;
+        textureSampler.MagFilter = IFilter.Linear;
+        textureSampler.MinFilter = IFilter.Linear;
+        textureSampler.AddressModeU = ISamplerAddressMode.Repeat;
+        textureSampler.AddressModeV = ISamplerAddressMode.Repeat;
+        textureSampler.AddressModeW = ISamplerAddressMode.Repeat;
       } else {
         textureSampler = textureSamplers[gltfTexture.Sampler.Value];
       }
@@ -126,7 +128,7 @@ public static partial class GLTFLoaderKHR {
       var id = app.TextureManager.GetTextureIdLocal($"{textureName}_{textureIds.Count}");
       ITexture texture = null!;
       if (id == Guid.Empty) {
-        texture = VulkanTexture.LoadFromGLTF(
+        texture = TextureLoader.LoadFromGLTF(
           app.VmaAllocator,
           app.Device,
           gltf,
@@ -198,7 +200,7 @@ public static partial class GLTFLoaderKHR {
 
   private static void LoadAnimations(Gltf gltf, byte[] globalBuffer, MeshRenderer meshRenderer) {
     foreach (var anim in gltf.Animations) {
-      var animation = new Dwarf.Model.Animation.Animation();
+      var animation = new Dwarf.Rendering.Renderer3D.Animations.Animation();
       animation.Name = anim.Name;
       if (anim.Name == string.Empty) {
         animation.Name = meshRenderer.Animations.Count.ToString();
@@ -206,14 +208,14 @@ public static partial class GLTFLoaderKHR {
 
       // Samplers
       foreach (var samp in anim.Samplers) {
-        var sampler = new Dwarf.Model.Animation.AnimationSampler();
+        var sampler = new Dwarf.Rendering.Renderer3D.Animations.AnimationSampler();
 
         if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.LINEAR) {
-          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.Linear;
+          sampler.Interpolation = Dwarf.Rendering.Renderer3D.Animations.AnimationSampler.InterpolationType.Linear;
         } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.STEP) {
-          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.Step;
+          sampler.Interpolation = Dwarf.Rendering.Renderer3D.Animations.AnimationSampler.InterpolationType.Step;
         } else if (samp.Interpolation == glTFLoader.Schema.AnimationSampler.InterpolationEnum.CUBICSPLINE) {
-          sampler.Interpolation = Dwarf.Model.Animation.AnimationSampler.InterpolationType.CubicSpline;
+          sampler.Interpolation = Dwarf.Rendering.Renderer3D.Animations.AnimationSampler.InterpolationType.CubicSpline;
         }
 
         // Read sampler input time values
@@ -248,16 +250,16 @@ public static partial class GLTFLoaderKHR {
 
       // channels
       foreach (var source in anim.Channels) {
-        var channel = new Dwarf.Model.Animation.AnimationChannel();
+        var channel = new Dwarf.Rendering.Renderer3D.Animations.AnimationChannel();
 
         if (source.Target.Path == AnimationChannelTarget.PathEnum.rotation) {
-          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Rotation;
+          channel.Path = Dwarf.Rendering.Renderer3D.Animations.AnimationChannel.PathType.Rotation;
         }
         if (source.Target.Path == AnimationChannelTarget.PathEnum.translation) {
-          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Translation;
+          channel.Path = Dwarf.Rendering.Renderer3D.Animations.AnimationChannel.PathType.Translation;
         }
         if (source.Target.Path == AnimationChannelTarget.PathEnum.scale) {
-          channel.Path = Dwarf.Model.Animation.AnimationChannel.PathType.Scale;
+          channel.Path = Dwarf.Rendering.Renderer3D.Animations.AnimationChannel.PathType.Scale;
         }
         if (source.Target.Path == AnimationChannelTarget.PathEnum.weights) {
           Logger.Warn("Weights not supported, skipping channel");
@@ -284,7 +286,7 @@ public static partial class GLTFLoaderKHR {
     if (gltf.Skins == null) return;
 
     foreach (var source in gltf.Skins) {
-      var newSkin = new Dwarf.Model.Animation.Skin();
+      var newSkin = new Dwarf.Rendering.Renderer3D.Animations.Skin();
       newSkin.Name = source.Name;
 
       // find skeleton root node
@@ -318,35 +320,35 @@ public static partial class GLTFLoaderKHR {
     }
   }
 
-  private static VkFilter GetFilterMode(int filterMode) {
+  private static IFilter GetFilterMode(int filterMode) {
     switch (filterMode) {
       case -1:
       case 9728:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9729:
-        return VkFilter.Linear;
+        return IFilter.Linear;
       case 9984:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9985:
-        return VkFilter.Nearest;
+        return IFilter.Nearest;
       case 9986:
-        return VkFilter.Linear;
+        return IFilter.Linear;
       case 9987:
-        return VkFilter.Linear;
+        return IFilter.Linear;
     }
 
     throw new ArgumentException($"Unknkown filter {filterMode}");
   }
 
-  private static VkSamplerAddressMode GetWrapMode(int wrapMode) {
+  private static ISamplerAddressMode GetWrapMode(int wrapMode) {
     switch (wrapMode) {
       case -1:
       case 10497:
-        return VkSamplerAddressMode.Repeat;
+        return ISamplerAddressMode.Repeat;
       case 33071:
-        return VkSamplerAddressMode.ClampToEdge;
+        return ISamplerAddressMode.ClampToEdge;
       case 33648:
-        return VkSamplerAddressMode.MirroredRepeat;
+        return ISamplerAddressMode.MirroredRepeat;
     }
 
     throw new ArgumentException($"Unknown wrap mode {wrapMode}");
@@ -355,7 +357,7 @@ public static partial class GLTFLoaderKHR {
   private static void LoadNode(
     VmaAllocator vmaAllocator,
     IDevice device,
-    Dwarf.Model.Node parent,
+    Dwarf.Rendering.Renderer3D.Node parent,
     Node node,
     int nodeIdx,
     Gltf gltf,
@@ -364,7 +366,7 @@ public static partial class GLTFLoaderKHR {
     ref MeshRenderer meshRenderer,
     ref List<Material> materials
   ) {
-    Dwarf.Model.Node newNode = new() {
+    Dwarf.Rendering.Renderer3D.Node newNode = new() {
       Index = nodeIdx,
       Name = node.Name,
       SkinIndex = node.Skin.HasValue ? node.Skin.Value : -1,
@@ -415,7 +417,7 @@ public static partial class GLTFLoaderKHR {
     // Node contains mesh data
     if (node.Mesh.HasValue) {
       var gltfMesh = gltf.Meshes[node.Mesh.Value];
-      var newMesh = new Mesh(vmaAllocator, device, newNode.NodeMatrix);
+      var newMesh = new Rendering.Mesh(vmaAllocator, device, newNode.NodeMatrix);
 
       var indices = new List<uint>();
       var vertices = new List<Vertex>();

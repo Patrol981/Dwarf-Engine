@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Physics;
+using Dwarf.Rendering;
 
 namespace Dwarf.Math;
 

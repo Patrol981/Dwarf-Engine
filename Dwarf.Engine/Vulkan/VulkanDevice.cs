@@ -321,11 +321,13 @@ public class VulkanDevice : IDevice {
   }
 
   public unsafe void SubmitQueue(uint submitCount, VkSubmitInfo* pSubmits, VkFence fence, bool destroy = false) {
+    Application.Instance.Mutex.WaitOne();
     vkQueueSubmit(_graphicsQueue, submitCount, pSubmits, fence).CheckResult();
     vkWaitForFences(_logicalDevice, 1, &fence, VkBool32.True, UInt64.MaxValue);
     if (destroy) {
       vkDestroyFence(_logicalDevice, fence);
     }
+    Application.Instance.Mutex.ReleaseMutex();
   }
 
   public unsafe void SubmitQueue2(uint submitCount, VkSubmitInfo2* pSubmits, VkFence fence, bool destroy = false) {
@@ -550,18 +552,18 @@ public class VulkanDevice : IDevice {
     VkPhysicalDeviceVulkan14Features vk14Features = new() {
       hostImageCopy = true,
       pushDescriptor = true,
-      dynamicRenderingLocalRead = true,
+      // dynamicRenderingLocalRead = true,
       pNext = &vk13Features
     };
 
-    VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeaturesEXT = new() {
-      dynamicRenderingUnusedAttachments = true,
-      pNext = &vk14Features
-    };
+    // VkPhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeaturesEXT = new() {
+    //   dynamicRenderingUnusedAttachments = true,
+    //   pNext = &vk14Features
+    // };
 
     VkDeviceCreateInfo createInfo = new() {
       queueCreateInfoCount = queueCount,
-      pNext = &unusedAttachmentsFeaturesEXT
+      pNext = &vk14Features
     };
 
     fixed (VkDeviceQueueCreateInfo* ptr = queueCreateInfos) {
@@ -572,15 +574,15 @@ public class VulkanDevice : IDevice {
     if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
       enabledExtensions = [
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
-        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME,
+        // VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        // VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME,
         VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME,
       ];
     } else {
       enabledExtensions = [
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
-        VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
+        // VK_EXT_DYNAMIC_RENDERING_UNUSED_ATTACHMENTS_EXTENSION_NAME,
+        // VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
       ];
     }
 

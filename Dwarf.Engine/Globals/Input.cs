@@ -8,6 +8,7 @@ using SDL3;
 using static SDL3.SDL3;
 
 namespace Dwarf.Globals;
+
 public class MouseButtons {
   public bool Left { get; set; }
   public bool Right { get; set; }
@@ -60,7 +61,7 @@ public static class Input {
   }
 
   public static bool GetGamepadButtonDown(GamepadButtons gamepadButton) {
-    if (Window.GameController.IsNull) return false;
+    if (Window.IsGameControllerNull) return false;
 
     bool buttonPressed = s_gamepadButtons[(int)gamepadButton].Pressed;
     s_gamepadButtons[(int)gamepadButton].Pressed = false;
@@ -69,7 +70,7 @@ public static class Input {
   }
 
   public static bool GetGamepadButton(GamepadButtons gamepadButton) {
-    if (Window.GameController.IsNull) return false;
+    if (Window.IsGameControllerNull) return false;
     if (SDL_GetGamepadButton(Window.GameController, (SDL_GamepadButton)gamepadButton)) {
       return true;
     }

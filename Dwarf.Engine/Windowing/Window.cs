@@ -12,28 +12,21 @@ using static SDL3.SDL3;
 
 namespace Dwarf.Windowing;
 
-[Flags]
-public enum WindowFlags {
-  None = 0,
-  Fullscreen = 1 << 0,
-  Borderless = 1 << 1,
-  Resizable = 1 << 2,
-  Minimized = 1 << 3,
-  Maximized = 1 << 4,
-}
-
-public enum CursorState {
-  Normal,
-  Centered,
-  Hidden
-}
-
-public class Window : IDisposable {
+public class Window : IWindow {
   public VkUtf8String AppName = "Dwarf App"u8;
   public VkUtf8String EngineName = "Dwarf Engine"u8;
-  private DwarfExtent2D _extent;
-  private readonly bool _windowMinimalized = false;
 
+  public DwarfExtent2D Extent { get; private set; }
+  public bool ShouldClose { get; set; } = false;
+  public bool FramebufferResized { get; private set; } = false;
+  public bool IsMinimalized { get; private set; } = false;
+  public event EventHandler? OnResizedEventDispatcher;
+  public float RefreshRate { get; private set; }
+  public static SDL_Gamepad GameController { get; private set; }
+  protected SDL_Window SDLWindow { get; private set; }
+  public static CursorState MouseCursorState = CursorState.Normal;
+
+  private readonly bool _windowMinimalized = false;
   private SDL_Cursor _cursor;
 
   internal void Init(string windowName, bool fullscreen, int width, int height, bool debug = false) {
@@ -60,13 +53,20 @@ public class Window : IDisposable {
       throw new Exception("Failed to initialize Vulkan");
     }
 
-    var windowFlags = SDL_WindowFlags.Vulkan |
+    var windowFlags =
                       // SDL_WindowFlags.Maximized |
                       // SDL_WindowFlags.Transparent |
                       SDL_WindowFlags.Occluded |
                       SDL_WindowFlags.MouseFocus |
                       SDL_WindowFlags.InputFocus |
                       SDL_WindowFlags.Resizable;
+
+    if (
+      RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+      RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    ) {
+      windowFlags |= SDL_WindowFlags.Vulkan;
+    }
 
     if (fullscreen) {
       windowFlags |= SDL_WindowFlags.Fullscreen | SDL_WindowFlags.Borderless;
@@ -105,10 +105,6 @@ public class Window : IDisposable {
     _cursor = SDL_CreateColorCursor(cursorSurface, 0, 0);
     SDL_SetCursor(_cursor);
     cursorIcoStream.Dispose();
-  }
-
-  public void Terminate() {
-
   }
 
   public void Show() {
@@ -275,16 +271,5 @@ public class Window : IDisposable {
     }
   }
 
-  public DwarfExtent2D Extent {
-    get { return _extent; }
-    private set { _extent = value; }
-  }
-  public bool ShouldClose { get; set; } = false;
-  public bool FramebufferResized { get; private set; } = false;
-  public bool IsMinimalized { get; private set; } = false;
-  public event EventHandler? OnResizedEventDispatcher;
-  public float RefreshRate { get; private set; }
-  public static SDL_Gamepad GameController { get; private set; }
-  public SDL_Window SDLWindow { get; private set; }
-  public static CursorState MouseCursorState = CursorState.Normal;
+  public static bool IsGameControllerNull => GameController.IsNull;
 }

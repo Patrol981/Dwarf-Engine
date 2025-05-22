@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Dwarf.Rendering.Renderer3D;
+using Dwarf.Vulkan;
 
 namespace Dwarf.Loaders;
 
@@ -123,7 +124,7 @@ public static class DwarfFileLoader {
 
       var texture = VulkanTexture.LoadFromBytesDirect(
         app.VmaAllocator,
-        app.Device,
+        (VulkanDevice)app.Device,
         textureData,
         (int)fileNode.Mesh.BinaryTextureSize,
         fileNode.Mesh.TextureWidth,

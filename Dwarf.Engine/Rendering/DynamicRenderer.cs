@@ -14,7 +14,7 @@ using static Vortice.Vulkan.Vulkan;
 namespace Dwarf.Rendering;
 
 public unsafe class DynamicRenderer : IRenderer {
-  private readonly Window _window = null!;
+  private readonly IWindow _window = null!;
   private readonly VulkanDevice _device;
   private readonly Application _application;
 
@@ -48,7 +48,7 @@ public unsafe class DynamicRenderer : IRenderer {
   public DynamicRenderer(Application application) {
     _application = application;
     _window = _application.Window;
-    _device = _application.Device;
+    _device = (VulkanDevice)_application.Device;
 
     CommandList = new VulkanCommandList();
 

@@ -67,8 +67,8 @@ public class Application {
   private Entity _camera = new();
 
   // ubos
-  private DescriptorPool _globalPool = null!;
-  private Dictionary<string, DescriptorSetLayout> _descriptorSetLayouts = [];
+  private IDescriptorPool _globalPool = null!;
+  private Dictionary<string, IDescriptorSetLayout> _descriptorSetLayouts = [];
 
   private readonly SystemCreationFlags _systemCreationFlags;
   private readonly SystemConfiguration _systemConfiguration;
@@ -121,21 +121,13 @@ public class Application {
 
     Device = new VulkanDevice(Window);
 
-    VmaAllocatorCreateFlags allocatorFlags = VmaAllocatorCreateFlags.KHRDedicatedAllocation | VmaAllocatorCreateFlags.KHRBindMemory2;
-    VmaAllocatorCreateInfo allocatorCreateInfo = new() {
-      flags = allocatorFlags,
-      instance = Device.VkInstance,
-      vulkanApiVersion = VkVersion.Version_1_4,
-      physicalDevice = Device.PhysicalDevice,
-      device = Device.LogicalDevice,
-    };
-    vmaCreateAllocator(allocatorCreateInfo, out var allocator);
+    ResourceInitializer.VkInitAllocator(Device, out var allocator);
     VmaAllocator = allocator;
 
     // Renderer = new Renderer(Window, Device);
     Renderer = new DynamicRenderer(this);
     Systems = new SystemCollection();
-    StorageCollection = new StorageCollection(VmaAllocator, Device);
+    StorageCollection = new VkStorageCollection(VmaAllocator, (VulkanDevice)Device);
 
     _textureManager = new(VmaAllocator, Device);
     _systemCreationFlags = systemCreationFlags;
@@ -225,7 +217,7 @@ public class Application {
     _skybox?.Dispose();
     _textureManager.DisposeLocal();
 
-    StorageCollection = new(VmaAllocator, Device);
+    StorageCollection = new VkStorageCollection(VmaAllocator, (VulkanDevice)Device);
     Mutex.ReleaseMutex();
     await Init();
 
@@ -346,72 +338,7 @@ public class Application {
   }
   #region RESOURCES
   private unsafe Task InitResources() {
-    _globalPool = new DescriptorPool.Builder(Device)
-      .SetMaxSets(10)
-      .AddPoolSize(DescriptorType.UniformBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(DescriptorType.CombinedImageSampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(DescriptorType.InputAttachment, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(DescriptorType.SampledImage, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(DescriptorType.Sampler, (uint)Renderer.MAX_FRAMES_IN_FLIGHT)
-      .AddPoolSize(DescriptorType.StorageBuffer, (uint)Renderer.MAX_FRAMES_IN_FLIGHT * 45)
-      .Build();
-
-    _descriptorSetLayouts.TryAdd("Global", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, DescriptorType.UniformBuffer, ShaderStageFlags.AllGraphics)
-      .Build());
-
-    _descriptorSetLayouts.TryAdd("PointLight", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.AllGraphics)
-      .Build());
-
-    _descriptorSetLayouts.TryAdd("ObjectData", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
-      // .AddBinding(1, VkDescriptorType.StorageBuffer, VkShaderStageFlags.AllGraphics)
-      .Build());
-
-    _descriptorSetLayouts.TryAdd("JointsBuffer", new DescriptorSetLayout.Builder(Device)
-      .AddBinding(0, DescriptorType.StorageBuffer, ShaderStageFlags.Vertex)
-      .Build());
-
-    // _descriptorSetLayouts.TryAdd("InputAttachments", new DescriptorSetLayout.Builder(Device)
-    //   .AddBinding(0, VkDescriptorType.InputAttachment, VkShaderStageFlags.Fragment)
-    //   .Build());
-
-    // StorageCollection.CreateStorage(
-    //   Device,
-    //   VkDescriptorType.InputAttachment,
-    //   BufferUsage.UniformBuffer
-    // )
-
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.UniformBuffer,
-      BufferUsage.UniformBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<GlobalUniformBufferObject>(),
-      1,
-      _descriptorSetLayouts["Global"],
-      _globalPool,
-      "GlobalStorage",
-      Device.Properties.limits.minUniformBufferOffsetAlignment
-    );
-
-    StorageCollection.CreateStorage(
-      Device,
-      VkDescriptorType.StorageBuffer,
-      BufferUsage.StorageBuffer,
-      Renderer.MAX_FRAMES_IN_FLIGHT,
-      (ulong)Unsafe.SizeOf<PointLight>(),
-      MAX_POINT_LIGHTS_COUNT,
-      _descriptorSetLayouts["PointLight"],
-      _globalPool,
-      "PointStorage",
-      Device.Properties.limits.minStorageBufferOffsetAlignment
-    );
-
-    //_descriptorSetLayouts.TryAdd("Texture", new DescriptorSetLayout.Builder(Device)
-    //  .AddBinding(0, VkDescriptorType.CombinedImageSampler, VkShaderStageFlags.Fragment)
-    //  .Build());
+    ResourceInitializer.VkInitResources(Device, Renderer, StorageCollection, ref _globalPool, ref _descriptorSetLayouts);
 
     Mutex.WaitOne();
     // SetupSystems(_systemCreationFlags, Device, Renderer, _globalSetLayout, null!);
@@ -427,45 +354,7 @@ public class Application {
       ref _textureManager
     );
 
-    if (Systems.Render3DSystem != null) {
-      StorageCollection.CreateStorage(
-        Device,
-        VkDescriptorType.StorageBuffer,
-        BufferUsage.StorageBuffer,
-        Renderer.MAX_FRAMES_IN_FLIGHT,
-        (ulong)Unsafe.SizeOf<ObjectData>(),
-        (ulong)Systems.Render3DSystem.LastKnownElemCount,
-        _descriptorSetLayouts["ObjectData"],
-        null!,
-        "ObjectStorage",
-        Device.Properties.limits.minStorageBufferOffsetAlignment,
-        true
-      );
-
-      StorageCollection.CreateStorage(
-        Device,
-        VkDescriptorType.StorageBuffer,
-        BufferUsage.StorageBuffer,
-        Renderer.MAX_FRAMES_IN_FLIGHT,
-        (ulong)Unsafe.SizeOf<Matrix4x4>(),
-        Systems.Render3DSystem.LastKnownSkinnedElemJointsCount,
-        _descriptorSetLayouts["JointsBuffer"],
-        null!,
-        "JointsStorage",
-        Device.Properties.limits.minStorageBufferOffsetAlignment,
-        true
-      );
-    }
-
-    if (UseSkybox) {
-      _skybox = new(
-        VmaAllocator,
-        Device,
-        _textureManager,
-        Renderer,
-        _descriptorSetLayouts["Global"].GetDescriptorSetLayout()
-      );
-    }
+    ResourceInitializer.VkSetupResources(Device, Renderer, Systems, StorageCollection, ref _globalPool, ref _descriptorSetLayouts, UseSkybox);
     Mutex.ReleaseMutex();
     // _imguiController.InitResources(_renderer.GetSwapchainRenderPass(), _device.GraphicsQueue, "imgui_vertex", "imgui_fragment");
 
@@ -578,11 +467,8 @@ public class Application {
     MasterAwake(new[] { entity }.GetScriptsAsSpan());
     MasterStart(new[] { entity }.GetScriptsAsSpan());
     if (fenced) {
-      var fence = Device.CreateFence(VkFenceCreateFlags.Signaled);
-      vkWaitForFences(Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
-      unsafe {
-        vkDestroyFence(Device.LogicalDevice, fence);
-      }
+      var fence = Device.CreateFence(FenceCreateFlags.Signaled);
+      Device.WaitFence(fence, true);
     }
     _entitiesQueue.Enqueue(entity);
     Mutex.ReleaseMutex();
@@ -801,8 +687,8 @@ public class Application {
       Renderer.EndFrame();
 
       if (Systems.Render3DSystem != null) {
-        StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"]);
-        StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"]);
+        StorageCollection.CheckSize("ObjectStorage", frameIndex, Systems.Render3DSystem.LastKnownElemCount, _descriptorSetLayouts["ObjectData"], default);
+        StorageCollection.CheckSize("JointsStorage", frameIndex, (int)Systems.Render3DSystem.LastKnownSkinnedElemJointsCount, _descriptorSetLayouts["JointsBuffer"], default);
       }
 
       while (_reloadQueue.Count > 0) {
@@ -1010,9 +896,9 @@ public class Application {
     System.Environment.Exit(1);
   }
 
-  public VulkanDevice Device { get; } = null!;
+  public IDevice Device { get; } = null!;
   public Mutex Mutex { get; private set; }
-  public Window Window { get; } = null!;
+  public IWindow Window { get; } = null!;
   public TextureManager TextureManager => _textureManager;
   // public Renderer Renderer { get; } = null!;
   public DynamicRenderer Renderer { get; } = null!;
@@ -1021,7 +907,7 @@ public class Application {
   public DirectionalLight DirectionalLight = DirectionalLight.New();
   public ImGuiController GuiController { get; private set; } = null!;
   public SystemCollection Systems { get; } = null!;
-  public StorageCollection StorageCollection { get; private set; } = null!;
+  public IStorageCollection StorageCollection { get; private set; } = null!;
   public Scene CurrentScene { get; private set; } = null!;
   public bool UseImGui { get; } = true;
   public unsafe GlobalUniformBufferObject GlobalUbo => *_ubo;

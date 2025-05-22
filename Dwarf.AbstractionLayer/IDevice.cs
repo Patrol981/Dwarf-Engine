@@ -25,15 +25,24 @@ public interface IDevice : IDisposable {
   public void WaitAllQueues();
   public void WaitDevice();
 
+  public object CreateFence(FenceCreateFlags fenceCreateFlags);
+  public void WaitFence(object fence, bool waitAll);
+  public void BeginWaitFence(object fence, bool waitAll);
+  public void EndWaitFence(object fence);
+
   public nint BeginSingleTimeCommands();
   public void EndSingleTimeCommands(nint commandBuffer);
   public uint FindMemoryType(uint typeFilter, MemoryProperty properties);
 
-  public ulong CommandPool { get; }
+  ulong CommandPool { get; }
+  ulong CreateCommandPool();
 
-  public IntPtr LogicalDevice { get; }
-  public IntPtr PhysicalDevice { get; }
+  IntPtr LogicalDevice { get; }
+  IntPtr PhysicalDevice { get; }
 
-  public nint GraphicsQueue { get; }
-  public nint PresentQueue { get; }
+  nint GraphicsQueue { get; }
+  nint PresentQueue { get; }
+
+  ulong MinStorageBufferOffsetAlignment { get; }
+  ulong MinUniformBufferOffsetAlignment { get; }
 }

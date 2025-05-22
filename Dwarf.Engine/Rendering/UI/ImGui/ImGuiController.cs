@@ -69,8 +69,8 @@ public partial class ImGuiController : IDisposable {
     [FieldOffset(0)] public Matrix4x4 Projection;
   }
 
-  public unsafe ImGuiController(VmaAllocator vmaAllocator, VulkanDevice device, IRenderer renderer) {
-    _device = device;
+  public unsafe ImGuiController(VmaAllocator vmaAllocator, IDevice device, IRenderer renderer) {
+    _device = (VulkanDevice)device;
     _vmaAllocator = vmaAllocator;
     _renderer = renderer;
 
@@ -442,14 +442,15 @@ public partial class ImGuiController : IDisposable {
     if ((_vertexBuffer.GetBuffer() == VkBuffer.Null) || (_vertexCount < drawData.TotalVtxCount)) {
       _vertexCount = drawData.TotalVtxCount;
 
-      Application.Instance.Mutex.WaitOne();
+      var app = Application.Instance;
+      app.Mutex.WaitOne();
 
-      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
-      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      var fence = app.Device.CreateFence(FenceCreateFlags.Signaled);
+      app.Device.BeginWaitFence(fence, true);
 
       _vertexBuffer?.Dispose();
 
-      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+      app.Device.EndWaitFence(fence);
 
       _vertexBuffer = new(
         _vmaAllocator,
@@ -460,20 +461,21 @@ public partial class ImGuiController : IDisposable {
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
         allocationStrategy: AllocationStrategy.Custom
       );
-      Application.Instance.Mutex.ReleaseMutex();
+      app.Mutex.ReleaseMutex();
     }
 
     if ((_indexBuffer.GetBuffer() == VkBuffer.Null) || (_indexCount < drawData.TotalIdxCount)) {
       _indexCount = drawData.TotalIdxCount;
 
-      Application.Instance.Mutex.WaitOne();
+      var app = Application.Instance;
+      app.Mutex.WaitOne();
 
-      var fence = Application.Instance.Device.CreateFence(VkFenceCreateFlags.Signaled);
-      vkWaitForFences(Application.Instance.Device.LogicalDevice, fence, true, VulkanDevice.FenceTimeout);
+      var fence = app.Device.CreateFence(FenceCreateFlags.Signaled);
+      app.Device.BeginWaitFence(fence, true);
 
       _indexBuffer?.Dispose();
 
-      vkDestroyFence(Application.Instance.Device.LogicalDevice, fence);
+      app.Device.EndWaitFence(fence);
 
       _indexBuffer = new(
         _vmaAllocator,
@@ -484,7 +486,7 @@ public partial class ImGuiController : IDisposable {
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
         allocationStrategy: AllocationStrategy.Custom
       );
-      Application.Instance.Mutex.ReleaseMutex();
+      app.Mutex.ReleaseMutex();
     }
 
     ImDrawVert* vtxDst = null;

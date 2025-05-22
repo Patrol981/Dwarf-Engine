@@ -13,12 +13,9 @@ using static SDL3.SDL3;
 namespace Dwarf.Windowing;
 
 public class Window : IWindow {
-  public VkUtf8String AppName = "Dwarf App"u8;
-  public VkUtf8String EngineName = "Dwarf Engine"u8;
-
-  public DwarfExtent2D Extent { get; private set; }
+  public DwarfExtent2D Extent { get; set; }
   public bool ShouldClose { get; set; } = false;
-  public bool FramebufferResized { get; private set; } = false;
+  public bool FramebufferResized { get; set; } = false;
   public bool IsMinimalized { get; private set; } = false;
   public event EventHandler? OnResizedEventDispatcher;
   public float RefreshRate { get; private set; }
@@ -29,7 +26,7 @@ public class Window : IWindow {
   private readonly bool _windowMinimalized = false;
   private SDL_Cursor _cursor;
 
-  internal void Init(string windowName, bool fullscreen, int width, int height, bool debug = false) {
+  public void Init(string windowName, bool fullscreen, int width, int height, bool debug = false) {
     InitWindow(windowName, fullscreen, debug, width, height);
     LoadIcons();
     Show();
@@ -49,10 +46,6 @@ public class Window : IWindow {
       SDL_SetLogOutputFunction(LogSDL);
     }
 
-    if (!SDL_Vulkan_LoadLibrary()) {
-      throw new Exception("Failed to initialize Vulkan");
-    }
-
     var windowFlags =
                       // SDL_WindowFlags.Maximized |
                       // SDL_WindowFlags.Transparent |
@@ -65,6 +58,10 @@ public class Window : IWindow {
       RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
       RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
     ) {
+      if (!SDL_Vulkan_LoadLibrary()) {
+        throw new Exception("Failed to initialize Vulkan");
+      }
+
       windowFlags |= SDL_WindowFlags.Vulkan;
     }
 
@@ -205,14 +202,14 @@ public class Window : IWindow {
     }
   }
 
-  private void OnResizedEvent(EventArgs e) {
-    Application.Instance.Window.OnResizedEventDispatcher?.Invoke(this, e);
+  public void OnResizedEvent(EventArgs e) {
+    // Application.Instance.Window.OnResizedEventDispatcher?.Invoke(this, e);
   }
 
   public bool WasWindowResized() => FramebufferResized;
   public bool WasWindowMinimalized() => _windowMinimalized;
 
-  public unsafe VkSurfaceKHR CreateSurface(VkInstance instance) {
+  public unsafe VkSurfaceKHR CreateVkSurface(VkInstance instance) {
     VkSurfaceKHR surface;
     return SDL_Vulkan_CreateSurface(SDLWindow, instance, IntPtr.Zero, (ulong**)&surface) == false
       ? throw new Exception("Failed to create SDL Surface")
@@ -225,7 +222,7 @@ public class Window : IWindow {
     return displayMode->refresh_rate;
   }
 
-  public static unsafe void SetCursorMode(CursorState cursorState) {
+  public unsafe void SetCursorMode(CursorState cursorState) {
     var prevMousePos = Input.MousePosition;
 
     MouseCursorState = cursorState;
@@ -234,21 +231,21 @@ public class Window : IWindow {
 
     switch (cursorState) {
       case CursorState.Normal:
-        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        SDL_SetWindowRelativeMouseMode(SDLWindow, false);
         break;
       case CursorState.Centered:
-        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, true);
+        SDL_SetWindowRelativeMouseMode(SDLWindow, true);
         Input.MousePosition = prevMousePos;
         // SDL_WarpMouseInWindow(s_Window.SDLWindow, s_Window.Size.X / 2, s_Window.Size.Y / 2);
         break;
       case CursorState.Hidden:
-        SDL_SetWindowRelativeMouseMode(Application.Instance.Window.SDLWindow, false);
+        SDL_SetWindowRelativeMouseMode(SDLWindow, false);
         SDL_HideCursor();
         break;
     }
   }
 
-  public static void FocusOnWindow() {
+  public void FocusOnWindow() {
     if (MouseCursorState == CursorState.Centered) {
       SetCursorMode(CursorState.Normal);
     } else {
@@ -256,9 +253,9 @@ public class Window : IWindow {
     }
   }
 
-  public static unsafe void MaximizeWindow() {
+  public unsafe void MaximizeWindow() {
     Application.Instance.Device.WaitDevice();
-    SDL_MaximizeWindow(Application.Instance.Window.SDLWindow);
+    SDL_MaximizeWindow(SDLWindow);
   }
 
   public void EnumerateAvailableGameControllers() {

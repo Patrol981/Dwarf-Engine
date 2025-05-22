@@ -1,5 +1,5 @@
 namespace Dwarf.AbstractionLayer;
 
-public interface IDescriptorSetLayout {
+public interface IDescriptorSetLayout : IDisposable {
   public ulong GetDescriptorSetLayoutPointer();
 }

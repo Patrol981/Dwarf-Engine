@@ -16,6 +16,7 @@ using Dwarf.Vulkan;
 using Vortice.Vulkan;
 
 namespace Dwarf.Rendering;
+
 public class SystemCollection : IDisposable {
   // Render Systems
   private Render3DSystem? _render3DSystem;
@@ -67,9 +68,9 @@ public class SystemCollection : IDisposable {
   public void ValidateSystems(
     ReadOnlySpan<Entity> entities,
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     IRenderer renderer,
-    Dictionary<string, DescriptorSetLayout> layouts,
+    Dictionary<string, IDescriptorSetLayout> layouts,
     PipelineConfigInfo pipelineConfigInfo,
     ref TextureManager textureManager
   ) {
@@ -91,7 +92,7 @@ public class SystemCollection : IDisposable {
       // var textures = _render2DSystem.CheckTextures(spriteEntities);
       if (!sizes || Reload2DRenderSystem) {
         Reload2DRenderSystem = false;
-        Reload2DRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, pipelineConfigInfo, entities);
+        Reload2DRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), ref textureManager, pipelineConfigInfo, entities);
       }
     }
 
@@ -109,7 +110,7 @@ public class SystemCollection : IDisposable {
       var particles = _particleSystem.Validate();
       if (!particles || ReloadParticleSystem) {
         ReloadParticleSystem = false;
-        ReloadParticleRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), ref textureManager, new ParticlePipelineConfigInfo());
+        ReloadParticleRenderer(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), ref textureManager, new ParticlePipelineConfigInfo());
       }
     }
   }
@@ -121,7 +122,7 @@ public class SystemCollection : IDisposable {
     VmaAllocator vmaAllocator,
     IDevice device,
     IRenderer renderer,
-    Dictionary<string, DescriptorSetLayout> layouts,
+    Dictionary<string, IDescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo,
     ref TextureManager textureManager
   ) {
@@ -158,9 +159,9 @@ public class SystemCollection : IDisposable {
 
   public void Reload3DRenderer(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     IRenderer renderer,
-    Dictionary<string, DescriptorSetLayout> externalLayouts,
+    Dictionary<string, IDescriptorSetLayout> externalLayouts,
     ref TextureManager textureManager,
     PipelineConfigInfo pipelineConfig,
     ReadOnlySpan<Entity> entities
@@ -178,7 +179,7 @@ public class SystemCollection : IDisposable {
 
   public void Reload2DRenderer(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -198,7 +199,7 @@ public class SystemCollection : IDisposable {
 
   public void ReloadUIRenderer(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,
@@ -207,7 +208,7 @@ public class SystemCollection : IDisposable {
     _renderUISystem?.Dispose();
     _renderUISystem = new RenderUISystem(
       vmaAllocator,
-      device,
+      (VulkanDevice)device,
       renderer,
       globalLayout,
       pipelineConfig
@@ -217,7 +218,7 @@ public class SystemCollection : IDisposable {
 
   public void ReloadParticleRenderer(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     IRenderer renderer,
     VkDescriptorSetLayout globalLayout,
     ref TextureManager textureManager,

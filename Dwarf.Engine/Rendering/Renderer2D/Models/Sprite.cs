@@ -17,7 +17,7 @@ public class Sprite {
   public const int SPRITE_COUNT_NONE = -1;
   public const int SPRITE_COUNT_AUTO = 0;
 
-  private readonly VulkanDevice _device;
+  private readonly IDevice _device;
   private readonly VmaAllocator _vmaAllocator;
   private readonly TextureManager _textureManager;
   private readonly IRenderer _renderer;

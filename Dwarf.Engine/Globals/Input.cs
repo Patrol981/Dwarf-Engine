@@ -102,8 +102,8 @@ public static class Input {
         s_keyStates[(int)e.key].Down = true;
         s_keyStates[(int)e.key].Pressed = true;
 
-        if (e.key == SDL_Keycode.F) Window.FocusOnWindow();
-        if (e.key == SDL_Keycode.F1) Window.MaximizeWindow();
+        if (e.key == SDL_Keycode.F) Application.Instance.Window.FocusOnWindow();
+        if (e.key == SDL_Keycode.F1) Application.Instance.Window.MaximizeWindow();
         if (e.key == SDL_Keycode.Grave) PerfMonitor.ChangeWireframeMode();
         if (e.key == SDL_Keycode._1) PerfMonitor.ChangeDebugVisiblity();
 

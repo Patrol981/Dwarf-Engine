@@ -1,3 +1,4 @@
+using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering.Particles;
 using Dwarf.Rendering.PostProcessing;
@@ -48,7 +49,7 @@ public class SystemCreator {
     VmaAllocator vmaAllocator,
     VulkanDevice device,
     IRenderer renderer,
-    Dictionary<string, DescriptorSetLayout> layouts,
+    Dictionary<string, IDescriptorSetLayout> layouts,
     PipelineConfigInfo configInfo = null!
   ) {
     var hasRenderer3D = flags.HasFlag(SystemCreationFlags.Renderer3D);
@@ -67,7 +68,7 @@ public class SystemCreator {
     if (hasRendererUI) {
       Logger.Info("[SYSTEM CREATOR] Creating UI Renderer");
       systemCollection.RenderUISystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), configInfo);
     }
 
     if (hasRenderer3D) {
@@ -80,13 +81,13 @@ public class SystemCreator {
       Logger.Info("[SYSTEM CREATOR] Creating Debug Renderer");
       var debugConfig = new VertexDebugPipeline();
       systemCollection.RenderDebugSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), debugConfig);
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), debugConfig);
     }
 
     if (hasRenderer2D) {
       Logger.Info("[SYSTEM CREATOR] Creating 2D Renderer");
       systemCollection.Render2DSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), configInfo);
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), configInfo);
     }
 
     if (usePhysics3D) {
@@ -102,19 +103,19 @@ public class SystemCreator {
     if (hasDirectionalLight) {
       Logger.Info("[SYSTEM CREATOR] Creating Directional Light System");
       systemCollection.DirectionalLightSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer());
     }
 
     if (hasPointLights) {
       Logger.Info("[SYSTEM CREATOR] Creating Point Light System");
       systemCollection.PointLightSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer());
     }
 
     if (hasGuizmos) {
       Logger.Info("[SYSTEM CREATOR] Creating Guizmos Rendering System");
       systemCollection.GuizmoRenderSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout());
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer());
     }
 
     if (hasWebApi) {
@@ -125,7 +126,7 @@ public class SystemCreator {
     if (hasParticles) {
       Logger.Info("[SYSTEM CREATOR] Creating Particle System");
       systemCollection.ParticleSystem =
-        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayout(), new ParticlePipelineConfigInfo());
+        new(vmaAllocator, device, renderer, layouts["Global"].GetDescriptorSetLayoutPointer(), new ParticlePipelineConfigInfo());
     }
 
     if (hasShadows) {

@@ -1,5 +1,5 @@
 using System.Numerics;
-
+using Dwarf.AbstractionLayer;
 using Dwarf.EntityComponentSystem;
 using Dwarf.Extensions.Logging;
 using Dwarf.Globals;
@@ -15,7 +15,7 @@ using static Dwarf.Physics.JoltConfig;
 namespace Dwarf.Physics;
 
 public class Rigidbody : Component, IDisposable {
-  private readonly VulkanDevice _device = null!;
+  private readonly IDevice _device = null!;
   private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private IPhysicsBody _bodyInterface = null!;
   private MotionType _motionType = MotionType.Dynamic;
@@ -36,7 +36,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Rigidbody(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     PrimitiveType primitiveType,
     MotionType motionType,
     Vector3 size,
@@ -63,7 +63,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Rigidbody(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     PrimitiveType colliderShape,
     float inputRadius,
     MotionType motionType,
@@ -83,7 +83,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Rigidbody(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     PrimitiveType primitiveType,
     float sizeX,
     float sizeY,
@@ -107,7 +107,7 @@ public class Rigidbody : Component, IDisposable {
 
   public Rigidbody(
     VmaAllocator vmaAllocator,
-    VulkanDevice device,
+    IDevice device,
     PrimitiveType primitiveType,
     float sizeX,
     float sizeY,

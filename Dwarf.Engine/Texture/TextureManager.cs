@@ -6,10 +6,10 @@ using Vortice.Vulkan;
 namespace Dwarf;
 
 public class TextureManager : IDisposable {
-  private readonly VulkanDevice _device;
+  private readonly IDevice _device;
   private readonly VmaAllocator _vmaAllocator;
 
-  public TextureManager(VmaAllocator vmaAllocator, VulkanDevice device) {
+  public TextureManager(VmaAllocator vmaAllocator, IDevice device) {
     _device = device;
     _vmaAllocator = vmaAllocator;
     PerSceneLoadedTextures = [];
@@ -32,7 +32,7 @@ public class TextureManager : IDisposable {
   public async Task<Task> AddTextureArray(string textureName, params string[] paths) {
     var baseData = await VulkanTextureArray.LoadDataFromPath(paths[0]);
     var id = Guid.NewGuid();
-    var texture = new VulkanTextureArray(_vmaAllocator, _device, baseData.Width, baseData.Height, paths, textureName);
+    var texture = new VulkanTextureArray(_vmaAllocator, (VulkanDevice)_device, baseData.Width, baseData.Height, paths, textureName);
     TextureArray.TryAdd(id, texture);
 
     return Task.CompletedTask;

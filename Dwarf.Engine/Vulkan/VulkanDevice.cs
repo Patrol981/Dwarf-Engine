@@ -17,7 +17,7 @@ namespace Dwarf.Vulkan;
 public class VulkanDevice : IDevice {
   private readonly string[] VALIDATION_LAYERS = ["VK_LAYER_KHRONOS_validation"];
   public static bool s_EnableValidationLayers = true;
-  private readonly Window _window;
+  private readonly IWindow _window;
 
   private VkDebugUtilsMessengerEXT _debugMessenger = VkDebugUtilsMessengerEXT.Null;
 
@@ -45,7 +45,7 @@ public class VulkanDevice : IDevice {
   public VkPhysicalDeviceFeatures Features { get; private set; }
   public List<VkUtf8String> DeviceExtensions { get; private set; } = [];
 
-  public VulkanDevice(Window window) {
+  public VulkanDevice(IWindow window) {
     _window = window;
     CreateInstance();
     CreateSurface();
@@ -382,9 +382,9 @@ public class VulkanDevice : IDevice {
     HashSet<VkUtf8String> availableInstanceExtensions = [.. DeviceHelper.GetInstanceExtensions()];
 
     var appInfo = new VkApplicationInfo {
-      pApplicationName = _window.AppName,
+      pApplicationName = AppName,
       applicationVersion = new(1, 0, 0),
-      pEngineName = _window.EngineName,
+      pEngineName = EngineName,
       engineVersion = new(1, 0, 0),
       apiVersion = VkVersion.Version_1_4
     };
@@ -490,7 +490,7 @@ public class VulkanDevice : IDevice {
   }
 
   private unsafe void CreateSurface() {
-    Surface = _window.CreateSurface(_vkInstance.Handle);
+    Surface = _window.CreateVkSurface(_vkInstance.Handle);
   }
 
   private unsafe void PickPhysicalDevice() {
@@ -616,6 +616,24 @@ public class VulkanDevice : IDevice {
     return result != VkResult.Success ? throw new Exception("Failed to create command pool!") : (ulong)commandPool;
   }
 
+  public object CreateFence(FenceCreateFlags fenceCreateFlags) {
+    return CreateFence((VkFenceCreateFlags)fenceCreateFlags);
+  }
+
+  public void WaitFence(object fence, bool waitAll) {
+    vkWaitForFences(LogicalDevice, (VkFence)fence, waitAll, VulkanDevice.FenceTimeout);
+    unsafe {
+      vkDestroyFence(LogicalDevice, (VkFence)fence);
+    }
+  }
+
+  public void BeginWaitFence(object fence, bool waitAll) {
+    vkWaitForFences(LogicalDevice, (VkFence)fence, waitAll, FenceTimeout);
+  }
+  public unsafe void EndWaitFence(object fence) {
+    vkDestroyFence(LogicalDevice, (VkFence)fence);
+  }
+
   public unsafe void Dispose() {
     vkDestroyCommandPool(_logicalDevice, _commandPool);
     vkDestroyDevice(_logicalDevice);
@@ -627,6 +645,11 @@ public class VulkanDevice : IDevice {
   public IntPtr LogicalDevice => _logicalDevice;
   public IntPtr PhysicalDevice => _physicalDevice;
   public ulong Surface { get; private set; } = VkSurfaceKHR.Null;
+  public ulong MinStorageBufferOffsetAlignment => Properties.limits.minStorageBufferOffsetAlignment;
+  public ulong MinUniformBufferOffsetAlignment => Properties.limits.minUniformBufferOffsetAlignment;
+
+  public VkUtf8String AppName = "Dwarf App"u8;
+  public VkUtf8String EngineName = "Dwarf Engine"u8;
 
   public ulong CommandPool {
     get {

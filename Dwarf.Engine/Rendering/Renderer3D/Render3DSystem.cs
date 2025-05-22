@@ -59,7 +59,7 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     VmaAllocator vmaAllocator,
     IDevice device,
     IRenderer renderer,
-    Dictionary<string, DescriptorSetLayout> externalLayouts,
+    Dictionary<string, IDescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _setLayout = new DescriptorSetLayout.Builder(_device)
@@ -86,15 +86,15 @@ public class Render3DSystem : SystemBase, IRenderSystem {
     VkDescriptorSetLayout[] basicLayouts = [
       _textureSetLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout(),
-      externalLayouts["Global"].GetDescriptorSetLayout(),
-      externalLayouts["ObjectData"].GetDescriptorSetLayout(),
+      externalLayouts["Global"].GetDescriptorSetLayoutPointer(),
+      externalLayouts["ObjectData"].GetDescriptorSetLayoutPointer(),
       _setLayout.GetDescriptorSetLayout(),
-      externalLayouts["PointLight"].GetDescriptorSetLayout(),
+      externalLayouts["PointLight"].GetDescriptorSetLayoutPointer(),
     ];
 
     VkDescriptorSetLayout[] complexLayouts = [
       .. basicLayouts,
-      externalLayouts["JointsBuffer"].GetDescriptorSetLayout(),
+      externalLayouts["JointsBuffer"].GetDescriptorSetLayoutPointer(),
       // _jointDescriptorLayout.GetDescriptorSetLayout(),
       // _previousTexturesLayout.GetDescriptorSetLayout()
     ];

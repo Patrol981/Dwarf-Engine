@@ -73,7 +73,7 @@ public class PostProcessingSystem : SystemBase {
     IDevice device,
     IRenderer renderer,
     SystemConfiguration systemConfiguration,
-    Dictionary<string, DescriptorSetLayout> externalLayouts,
+    Dictionary<string, IDescriptorSetLayout> externalLayouts,
     PipelineConfigInfo configInfo = null!
   ) : base(vmaAllocator, device, renderer, configInfo) {
     _textureManager = Application.Instance.TextureManager;
@@ -94,7 +94,7 @@ public class PostProcessingSystem : SystemBase {
       // renderer.Swapchain.InputAttachmentLayout.GetDescriptorSetLayout(),
       // externalLayouts["Global"].GetDescriptorSetLayout()
       _setLayout.GetDescriptorSetLayout(),
-      externalLayouts["Global"].GetDescriptorSetLayout(),
+      externalLayouts["Global"].GetDescriptorSetLayoutPointer(),
       _textureSetLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout(),
       _textureSetLayout.GetDescriptorSetLayout()

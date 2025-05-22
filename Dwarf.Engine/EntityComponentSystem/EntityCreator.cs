@@ -12,6 +12,7 @@ using Dwarf.Rendering.Renderer3D.Animations;
 using Dwarf.Vulkan;
 
 namespace Dwarf.EntityComponentSystem;
+
 public static class EntityCreator {
 
   /// <summary>

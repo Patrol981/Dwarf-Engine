@@ -3,13 +3,12 @@ using System.Runtime.CompilerServices;
 using Dwarf.AbstractionLayer;
 using Dwarf.Extensions.Logging;
 using Dwarf.Rendering.Renderer3D;
-using Dwarf.Vulkan;
 
 using Vortice.Vulkan;
 
 using static Vortice.Vulkan.Vulkan;
 
-namespace Dwarf.Rendering;
+namespace Dwarf.Vulkan;
 
 public struct StorageData {
   public VkDescriptorSet[] Descriptors;
@@ -18,12 +17,12 @@ public struct StorageData {
   public BufferUsage BufferUsage;
 }
 
-public class StorageCollection : IDisposable {
+public class VkStorageCollection : IStorageCollection {
   private readonly VulkanDevice _device = null!;
   private readonly VmaAllocator _vmaAllocator = VmaAllocator.Null;
   private readonly DescriptorPool _dynamicPool = null!;
 
-  public StorageCollection(VmaAllocator vmaAllocator, VulkanDevice device) {
+  public VkStorageCollection(VmaAllocator vmaAllocator, VulkanDevice device) {
     _device = device;
     _vmaAllocator = vmaAllocator;
 
@@ -35,14 +34,14 @@ public class StorageCollection : IDisposable {
   }
 
   public unsafe void CreateStorage(
-    VulkanDevice device,
-    VkDescriptorType descriptorType,
+    IDevice device,
+    DescriptorType descriptorType,
     BufferUsage usageType,
     int arraySize,
     ulong bufferSize,
     ulong bufferCount,
-    DescriptorSetLayout layout,
-    DescriptorPool pool,
+    IDescriptorSetLayout layout,
+    IDescriptorPool pool,
     string storageName,
     ulong offsetAlignment,
     bool mapWholeBuffer = false
@@ -62,7 +61,7 @@ public class StorageCollection : IDisposable {
         bufferCount,
         usageType,
         MemoryProperty.HostVisible | MemoryProperty.HostCoherent,
-        device.Properties.limits.minStorageBufferOffsetAlignment
+        device.MinStorageBufferOffsetAlignment
       );
       if (mapWholeBuffer) {
         storage.Buffers[i].Map();
@@ -76,7 +75,7 @@ public class StorageCollection : IDisposable {
       var bufferInfo = mapWholeBuffer ?
         storage.Buffers[i].GetDescriptorBufferInfo() :
         storage.Buffers[i].GetDescriptorBufferInfo(bufferSize * bufferCount);
-      _ = new VulkanDescriptorWriter(layout, pool)
+      _ = new VulkanDescriptorWriter((DescriptorSetLayout)layout, (DescriptorPool)pool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out storage.Descriptors[i]);
     }
@@ -88,7 +87,7 @@ public class StorageCollection : IDisposable {
     string key,
     int index,
     int elemCount,
-    DescriptorSetLayout layout,
+    IDescriptorSetLayout layout,
     bool mapWholeBuffer = false) {
     if (!Storages.TryGetValue(key, out var storageData)) return;
     if (storageData.Buffers.Length < index) return;
@@ -112,7 +111,7 @@ public class StorageCollection : IDisposable {
       _dynamicPool.FreeDescriptors([Storages[key].Descriptors[index]]);
 
       var bufferInfo = Storages[key].Buffers[index].GetDescriptorBufferInfo();
-      _ = new VulkanDescriptorWriter(layout, _dynamicPool)
+      _ = new VulkanDescriptorWriter((DescriptorSetLayout)layout, _dynamicPool)
         .WriteBuffer(0, &bufferInfo)
         .Build(out Storages[key].Descriptors[index]);
 
@@ -128,7 +127,7 @@ public class StorageCollection : IDisposable {
     Application.Instance.Mutex.ReleaseMutex();
   }
 
-  public VkDescriptorSet GetDescriptor(string key, int index) {
+  public ulong GetDescriptor(string key, int index) {
     // Storages[key].Descriptors[index]
     return Storages.TryGetValue(key, out var storageData)
       ? storageData.Descriptors[index] != VkDescriptorSet.Null ? storageData.Descriptors[index] : VkDescriptorSet.Null

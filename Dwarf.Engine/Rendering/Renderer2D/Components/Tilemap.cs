@@ -26,7 +26,7 @@ public class Tilemap : Component, IDrawable2D {
   public Entity Entity => Owner;
   public bool Active => Owner.Active;
   public bool NeedPipelineCache => true;
-  public bool DescriptorBuilt => Texture.TextureDescriptor != 0;
+  public bool DescriptorBuilt => Texture != null && Texture.TextureDescriptor != 0;
   public ITexture Texture => null!;
 
   public Tilemap() {
@@ -86,7 +86,7 @@ public class Tilemap : Component, IDrawable2D {
     }
   }
 
-  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+  public void BuildDescriptors(IDescriptorSetLayout descriptorSetLayout, IDescriptorPool descriptorPool) {
     foreach (var layer in Layers) {
       layer.LayerTexture.BuildDescriptor(descriptorSetLayout, descriptorPool);
     }

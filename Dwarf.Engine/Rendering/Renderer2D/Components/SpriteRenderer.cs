@@ -70,7 +70,7 @@ public class SpriteRenderer : Component, IDrawable2D {
     CurrentSprite = index;
   }
 
-  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+  public void BuildDescriptors(IDescriptorSetLayout descriptorSetLayout, IDescriptorPool descriptorPool) {
     foreach (var sprite in Sprites) {
       sprite.BuildDescriptors(descriptorSetLayout, descriptorPool);
     }

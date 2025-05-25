@@ -133,7 +133,7 @@ public class Rigidbody2D : Component, IDisposable {
     PhysicsBody2D.Position = vec2;
   }
 
-  public void InvokeCollision(CollisionState collisionState, Entity otherColl) {
+  public void InvokeCollision(CollisionState collisionState, Entity? otherColl) {
     if (Owner.CanBeDisposed) return;
     var scripts = Owner!.GetScripts();
     for (short i = 0; i < scripts.Length; i++) {

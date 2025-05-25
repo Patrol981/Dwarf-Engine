@@ -112,7 +112,7 @@ public class Sprite {
     app.Mutex.ReleaseMutex();
   }
 
-  public void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool) {
+  public void BuildDescriptors(IDescriptorSetLayout descriptorSetLayout, IDescriptorPool descriptorPool) {
     _spriteTexture.BuildDescriptor(descriptorSetLayout, descriptorPool);
   }
 

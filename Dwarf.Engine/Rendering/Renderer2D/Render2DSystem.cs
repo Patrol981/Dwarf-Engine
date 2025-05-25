@@ -179,14 +179,14 @@ public class Render2DSystem : SystemBase {
         );
 
       if (!drawables[i].Entity.CanBeDisposed && drawables[i].Active) {
-        if (lastTexture != drawables[i].Texture.TextureName) {
+        if (lastTexture != drawables[i].Texture?.TextureName) {
           var pipelineLayout = _pipelines["main"].PipelineLayout;
           if (drawables[i].NeedPipelineCache) {
             drawables[i].CachePipelineLayout(pipelineLayout);
           } else {
             Descriptor.BindDescriptorSet(drawables[i].Texture.TextureDescriptor, frameInfo, pipelineLayout, 2, 1);
           }
-          lastTexture = drawables[i].Texture.TextureName;
+          lastTexture = drawables[i].Texture?.TextureName ?? "";
         }
 
         if (lastVertCount != drawables[i].CollisionMesh.VertexCount) {

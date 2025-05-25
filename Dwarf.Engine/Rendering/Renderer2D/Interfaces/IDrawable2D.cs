@@ -6,7 +6,7 @@ using Dwarf.Vulkan;
 namespace Dwarf.Rendering.Renderer2D.Interfaces;
 
 public interface IDrawable2D : IDrawable {
-  void BuildDescriptors(DescriptorSetLayout descriptorSetLayout, DescriptorPool descriptorPool);
+  void BuildDescriptors(IDescriptorSetLayout descriptorSetLayout, IDescriptorPool descriptorPool);
   void CachePipelineLayout(object pipelineLayout);
 
   bool DescriptorBuilt { get; }

@@ -63,6 +63,8 @@ public class Window : IWindow {
       }
 
       windowFlags |= SDL_WindowFlags.Vulkan;
+    } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+      windowFlags |= SDL_WindowFlags.Metal;
     }
 
     if (fullscreen) {

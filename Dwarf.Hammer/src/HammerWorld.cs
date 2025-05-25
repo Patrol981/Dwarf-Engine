@@ -126,6 +126,98 @@ public class HammerWorld {
     }
 
     HammerObject[] tilemaps;
+    lock (_bodiesLock) {
+      var allBodies = new HammerObject[Bodies.Count];
+      Bodies.Values.CopyTo(allBodies, 0);
+
+      var tilemapList = new List<HammerObject>();
+      foreach (var body in allBodies) {
+        if (body.ObjectType == ObjectType.Tilemap) {
+          tilemapList.Add(body);
+        }
+      }
+
+      tilemaps = [.. tilemapList];
+    }
+
+    List<(BodyId, BodyId)> oldContacts;
+    List<(BodyId, BodyId)> removedContacts;
+    lock (_hammerWorldLock) {
+      oldContacts = [.. _contactMap.Keys];
+      removedContacts = [.. oldContacts.Where(x => !Bodies.ContainsKey(x.Item1))];
+      oldContacts = [.. oldContacts.Except(removedContacts)];
+    }
+
+    for (int i = 0; i < spriteValues.Length; i++) {
+      var sprite1 = spriteValues[i];
+      var sprite1Id = spriteKeys[i];
+
+      bool collidesWithAnythingGround = false;
+
+      for (int j = 0; j < spriteValues.Length; j++) {
+        if (i == j) continue;
+
+        var sprite2 = spriteValues[j];
+        if (AABB.CheckCollisionMTV(sprite1, sprite2, out var mtv)) {
+          sprite1.Position += mtv;
+          sprite1.Velocity = new Vector2(sprite1.Velocity.X, 0);
+
+          lock (_hammerWorldLock) {
+            var pair = (sprite1Id, spriteKeys[j]);
+
+            if (_contactMap.TryAdd(pair, true)) {
+              _hammerInstance?.OnContactAdded?.Invoke(sprite1Id, spriteKeys[j]);
+            } else {
+              _hammerInstance?.OnContactPersisted?.Invoke(sprite1Id, spriteKeys[j]);
+            }
+          }
+        }
+      }
+
+      if (sprite1 != null) {
+        HandleTilemaps(sprite1, tilemaps, ref collidesWithAnythingGround);
+        sprite1.Grounded = collidesWithAnythingGround;
+      }
+    }
+
+    List<(BodyId, BodyId)> stillThere;
+    lock (_hammerWorldLock) {
+      stillThere = [.. _contactMap.Keys];
+      foreach (var pair in removedContacts) {
+        _hammerInstance?.OnContactExit?.Invoke(pair.Item1, pair.Item2);
+        _contactMap.Remove(pair);
+      }
+      foreach (var pair in oldContacts) {
+        var threshold = Bodies[pair.Item1].AABB.Width + Bodies[pair.Item2].AABB.Width;
+        var dist = Vector2.Distance(Bodies[pair.Item1].Position, Bodies[pair.Item2].Position);
+        if (dist > threshold) {
+          _hammerInstance?.OnContactExit?.Invoke(pair.Item1, pair.Item2);
+          _contactMap.Remove(pair);
+        }
+      }
+      // foreach (var pair in oldContacts) {
+      //   if (!stillThere.Contains(pair)) {
+      //     _hammerInstance?.OnContactExit?.Invoke(pair.Item1, pair.Item2);
+      //     _contactMap.Remove(pair);
+      //   }
+      // }
+    }
+  }
+
+
+  internal void HandleSprites_Old() {
+    HammerObject[] spriteValues;
+    BodyId[] spriteKeys;
+
+    lock (_spritesLock) {
+      spriteValues = new HammerObject[_sprites.Count];
+      _sprites.Values.CopyTo(spriteValues, 0);
+
+      spriteKeys = new BodyId[_sprites.Count];
+      _sprites.Keys.CopyTo(spriteKeys, 0);
+    }
+
+    HammerObject[] tilemaps;
 
     lock (_bodiesLock) {
       var allBodies = new HammerObject[Bodies.Count];
@@ -138,7 +230,7 @@ public class HammerWorld {
         }
       }
 
-      tilemaps = tilemapList.ToArray();
+      tilemaps = [.. tilemapList];
     }
 
     for (int i = 0; i < spriteValues.Length; i++) {
